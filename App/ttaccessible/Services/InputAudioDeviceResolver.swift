@@ -92,12 +92,8 @@ enum InputAudioDeviceResolver {
     }
 
     nonisolated static func summary(for preferences: AdvancedInputAudioPreferences) -> String {
-        let aecSummary = preferences.echoCancellationEnabled
-            ? L10n.text("preferences.audio.advanced.summary.aecEnabled")
-            : L10n.text("preferences.audio.advanced.summary.aecDisabled")
-
         guard preferences.isEnabled else {
-            return L10n.format("preferences.audio.advanced.summary.disabledWithAECState", aecSummary)
+            return L10n.text("preferences.audio.advanced.summary.disabled")
         }
 
         let presetTitle = title(for: preferences.preset)
@@ -121,7 +117,7 @@ enum InputAudioDeviceResolver {
         }
 
         guard preferences.limiterEnabled else {
-            return L10n.format("preferences.audio.advanced.summary.enabledWithoutLimiter", presetTitle, dynamicSummary) + ", " + aecSummary
+            return L10n.format("preferences.audio.advanced.summary.enabledWithoutLimiter", presetTitle, dynamicSummary)
         }
 
         let limiterSummary: String
@@ -141,7 +137,7 @@ enum InputAudioDeviceResolver {
             presetTitle,
             dynamicSummary,
             limiterSummary
-        ) + ", " + aecSummary
+        )
     }
 
     nonisolated static func formatThresholdDB(_ value: Double) -> String {

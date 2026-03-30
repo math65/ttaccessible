@@ -1113,7 +1113,6 @@ final class ConnectedServerViewController: NSViewController {
             guard let self else {
                 return
             }
-
             guard granted else {
                 self.presentActionError(L10n.text("connectedServer.audio.error.microphonePermissionDenied"))
                 return

@@ -507,8 +507,6 @@ extension TeamTalkConnectionController {
                     lastLoggedAudioInputQueueBucket = bucket
                     logAudio("TeamTalk audio queue state: queueMSec=\(queueMSec) elapsedMSec=\(message.audioinputprogress.uElapsedMSec)")
                 }
-            case CLIENTEVENT_USER_AUDIOBLOCK:
-                handleUserAudioBlockEventLocked(message, instance: instance)
             case CLIENTEVENT_CMD_MYSELF_KICKED:
                 if connectedRecord != nil {
                     appendKickHistoryLocked(message, instance: instance)

@@ -115,12 +115,6 @@ final class TeamTalkConnectionController {
         }
     }
 
-    lazy var appleVoiceChatEngine = AppleVoiceChatAudioEngine(diagnosticsScope: "audio-apple-voicechat") { [weak self] chunk in
-        self?.queue.async { [weak self] in
-            self?.insertAdvancedMicrophoneAudioChunkLocked(chunk)
-        }
-    }
-
     init(preferencesStore: AppPreferencesStore) {
         self.preferencesStore = preferencesStore
         queue.setSpecific(key: queueKey, value: ())
@@ -131,7 +125,7 @@ final class TeamTalkConnectionController {
     }
 
     var isAnyMicrophoneEngineRunning: Bool {
-        advancedMicrophoneEngine.isRunning || appleVoiceChatEngine.isRunning
+        advancedMicrophoneEngine.isRunning
     }
 
     // MARK: - Audio (see TeamTalkConnectionController+Audio.swift)

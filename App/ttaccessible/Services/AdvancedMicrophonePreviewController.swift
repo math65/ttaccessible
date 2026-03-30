@@ -33,26 +33,37 @@ final class AdvancedMicrophonePreviewController {
     func start(configuration: AdvancedMicrophoneAudioConfiguration) throws {
         stop()
 
+        // Start capture first so the engine resolves the actual hardware sample rate.
+        _ = try captureEngine.start(configuration: configuration)
+
+        let actualSampleRate = captureEngine.effectiveSampleRate ?? configuration.targetFormat.sampleRate
         let channelCount = AVAudioChannelCount(max(configuration.targetFormat.channels, 1))
         guard let playbackFormat = AVAudioFormat(
             commonFormat: .pcmFormatInt16,
-            sampleRate: configuration.targetFormat.sampleRate,
+            sampleRate: actualSampleRate,
             channels: channelCount,
             interleaved: false
         ) else {
+            captureEngine.stop()
             throw AdvancedMicrophoneAudioEngineError.queueCreationFailed
         }
 
         self.playbackFormat = playbackFormat
         diagnosticsLogger.log(
             "audio-preview",
-            "Start. playbackRate=\(playbackFormat.sampleRate) playbackChannels=\(playbackFormat.channelCount) targetRate=\(configuration.targetFormat.sampleRate) targetChannels=\(configuration.targetFormat.channels)"
+            "Start. playbackRate=\(playbackFormat.sampleRate) playbackChannels=\(playbackFormat.channelCount) hwRate=\(actualSampleRate) targetChannels=\(configuration.targetFormat.channels)"
         )
         playbackEngine.connect(playerNode, to: playbackEngine.mainMixerNode, format: playbackFormat)
         playbackEngine.prepare()
-        try playbackEngine.start()
+
+        do {
+            try playbackEngine.start()
+        } catch {
+            captureEngine.stop()
+            throw error
+        }
+
         playerNode.play()
-        _ = try captureEngine.start(configuration: configuration)
     }
 
     func stop() {

@@ -209,16 +209,6 @@ struct AdvancedMicrophoneSettingsView: View {
             )
             .toggleStyle(.switch)
 
-            Toggle(
-                L10n.text("preferences.audio.advanced.echoCancellation"),
-                isOn: Binding(
-                    get: { store.advancedPreferences.echoCancellationEnabled },
-                    set: { store.updateEchoCancellationEnabled($0) }
-                )
-            )
-            .toggleStyle(.switch)
-            .help(L10n.text("preferences.audio.advanced.echoCancellation.help"))
-
             VStack(alignment: .leading, spacing: 6) {
                 Text(L10n.text("preferences.audio.advanced.preset.label"))
                 Picker(

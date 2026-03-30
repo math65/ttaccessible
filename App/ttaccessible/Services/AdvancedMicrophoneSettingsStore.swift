@@ -67,12 +67,6 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
         apply(preferences)
     }
 
-    func updateEchoCancellationEnabled(_ enabled: Bool) {
-        var preferences = advancedPreferences
-        preferences.echoCancellationEnabled = enabled
-        apply(preferences)
-    }
-
     func updatePreset(_ preset: InputChannelPreset) {
         var preferences = advancedPreferences
         preferences.preset = preset
@@ -288,7 +282,6 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
             device: deviceInfo,
             preset: effectivePreferences.preset,
             inputGainDB: preferencesStore.preferences.inputGainDB,
-            echoCancellationEnabled: effectivePreferences.echoCancellationEnabled,
             dynamicProcessorEnabled: effectivePreferences.dynamicProcessorEnabled,
             dynamicProcessorMode: effectivePreferences.dynamicProcessorMode,
             gateThresholdDB: effectivePreferences.gate.thresholdDB,

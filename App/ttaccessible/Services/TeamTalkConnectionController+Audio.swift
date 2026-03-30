@@ -122,7 +122,6 @@ extension TeamTalkConnectionController {
             }
 
             self.advancedMicrophoneEngine.updateInputGainDB(clamped)
-            self.appleVoiceChatEngine.updateInputGainDB(clamped)
             self.logAudio("Input gain applied. value=\(Self.formatGainDB(clamped))")
         }
     }
@@ -139,7 +138,6 @@ extension TeamTalkConnectionController {
             }
 
             self.applyOutputGainLocked(instance: instance, gainDB: clamped)
-            self.appleVoiceChatEngine.updateOutputGainDB(clamped)
             self.logAudio("Output gain applied. value=\(Self.formatGainDB(clamped))")
         }
     }
@@ -250,7 +248,7 @@ extension TeamTalkConnectionController {
                 device: deviceInfo,
                 preset: effectivePreferences.preset,
                 inputGainDB: preferencesStore.preferences.inputGainDB,
-                echoCancellationEnabled: effectivePreferences.echoCancellationEnabled,
+
                 dynamicProcessorEnabled: effectivePreferences.dynamicProcessorEnabled,
                 dynamicProcessorMode: effectivePreferences.dynamicProcessorMode,
                 gateThresholdDB: effectivePreferences.gate.thresholdDB,
@@ -269,37 +267,12 @@ extension TeamTalkConnectionController {
                 targetFormat: targetFormat
             )
             logAudio(
-                "Starting Apple capture. device=\(deviceInfo.name) channels=\(deviceInfo.inputChannels) sampleRate=\(deviceInfo.nominalSampleRate) aec=\(effectivePreferences.echoCancellationEnabled) preset=\(describe(effectivePreferences.preset)) dynamic=\(describeDynamicProcessor(effectivePreferences)) limiter=\(describeLimiter(effectivePreferences)) targetRate=\(targetFormat.sampleRate) targetChannels=\(targetFormat.channels) txInterval=\(targetFormat.txIntervalMSec)"
+                "Starting Apple capture. device=\(deviceInfo.name) channels=\(deviceInfo.inputChannels) sampleRate=\(deviceInfo.nominalSampleRate) preset=\(describe(effectivePreferences.preset)) dynamic=\(describeDynamicProcessor(effectivePreferences)) limiter=\(describeLimiter(effectivePreferences)) targetRate=\(targetFormat.sampleRate) targetChannels=\(targetFormat.channels) txInterval=\(targetFormat.txIntervalMSec)"
             )
             try ensureTeamTalkVirtualInputReadyLocked(instance: instance)
-            if effectivePreferences.echoCancellationEnabled {
-                let outputUID = try selectedOutputDeviceUIDLocked()
-                let voiceChatConfig = AppleVoiceChatAudioConfiguration(
-                    microphone: configuration,
-                    outputDeviceUID: outputUID,
-                    outputGainDB: preferencesStore.preferences.outputGainDB
-                )
-                if outputAudioReady {
-                    _ = TT_CloseSoundOutputDevice(instance)
-                    outputAudioReady = false
-                    logAudio("TeamTalk output closed for AEC handover.")
-                }
-                let result = try appleVoiceChatEngine.start(configuration: voiceChatConfig)
-                var audioFmt = AudioFormat()
-                audioFmt.nAudioFmt = AFF_WAVE_FORMAT
-                audioFmt.nSampleRate = result.playbackFormat.sampleRate
-                audioFmt.nChannels = result.playbackFormat.channels
-                withUnsafePointer(to: audioFmt) { fmtPtr in
-                    _ = TT_EnableAudioBlockEventEx(instance, TT_MUXED_USERID, STREAMTYPE_VOICE.rawValue, fmtPtr, 1)
-                }
-                logAudio(
-                    "AppleVoiceChat engine started. streamID=\(result.streamID) playbackRate=\(result.playbackFormat.sampleRate) playbackChannels=\(result.playbackFormat.channels)"
-                )
-            } else {
-                try ensureDirectOutputAudioReadyLocked(instance: instance)
-                _ = try advancedMicrophoneEngine.start(configuration: configuration)
-                logAudio("Microphone capture started.")
-            }
+            try ensureDirectOutputAudioReadyLocked(instance: instance)
+            _ = try advancedMicrophoneEngine.start(configuration: configuration)
+            logAudio("Microphone capture started.")
             advancedMicrophoneTargetFormat = targetFormat
             inputAudioReady = true
             insertedAudioChunkCount = 0
@@ -436,31 +409,14 @@ extension TeamTalkConnectionController {
     }
 
     func stopAdvancedMicrophoneInputLocked(instance: UnsafeMutableRawPointer, reason: String) {
-        logAudio("Stopping Apple capture. reason=\(reason) virtualReady=\(teamTalkVirtualInputReady) inserted=\(insertedAudioChunkCount) failed=\(failedAudioChunkInsertCount)")
-        if appleVoiceChatEngine.isRunning {
-            logAudio("Microphone teardown: disabling muxed audio block events...")
-            _ = TT_EnableAudioBlockEvent(instance, TT_MUXED_USERID, STREAMTYPE_VOICE.rawValue, 0)
-            logAudio("Microphone teardown: stopping AppleVoiceChat engine...")
-            appleVoiceChatEngine.stop()
-            logAudio("Microphone teardown: AppleVoiceChat engine stopped.")
-        } else {
-            logAudio("Microphone teardown: stopping Apple engine...")
-            advancedMicrophoneEngine.stop()
-            logAudio("Microphone teardown: Apple engine stopped.")
-        }
+        logAudio("Stopping microphone capture. reason=\(reason) virtualReady=\(teamTalkVirtualInputReady) inserted=\(insertedAudioChunkCount) failed=\(failedAudioChunkInsertCount)")
+        advancedMicrophoneEngine.stop()
+        logAudio("Microphone engine stopped.")
         let didEndRawInput = TT_InsertAudioBlock(instance, nil) != 0
         logAudio("Microphone teardown: TT_InsertAudioBlock(nil)=\(didEndRawInput)")
         inputAudioReady = false
         advancedMicrophoneTargetFormat = nil
         logAudio("Microphone teardown: local state reset.")
-        if outputAudioReady == false {
-            do {
-                try ensureDirectOutputAudioReadyLocked(instance: instance)
-                logAudio("TeamTalk direct output restored after AEC stop.")
-            } catch {
-                logAudio("Failed to restore TeamTalk output after AEC stop: \(error.localizedDescription)")
-            }
-        }
     }
 
     func ensureTeamTalkVirtualInputReadyLocked(instance: UnsafeMutableRawPointer) throws {
@@ -498,38 +454,6 @@ extension TeamTalkConnectionController {
     ) -> AdvancedInputAudioPreferences {
         let deviceID = InputAudioDeviceResolver.currentInputDeviceID(for: preferences.preferredInputDevice)
         return preferencesStore.advancedInputAudio(for: deviceID)
-    }
-
-    func handleUserAudioBlockEventLocked(
-        _ message: TTMessage,
-        instance: UnsafeMutableRawPointer
-    ) {
-        guard appleVoiceChatEngine.isRunning else {
-            return
-        }
-        let userID = message.nSource
-        guard let block = TT_AcquireUserAudioBlock(instance, STREAMTYPE_VOICE.rawValue, userID) else {
-            return
-        }
-        defer { _ = TT_ReleaseUserAudioBlock(instance, block) }
-        let sampleCount = block.pointee.nSamples
-        let sampleRate = block.pointee.nSampleRate
-        let channels = block.pointee.nChannels
-        let streamID = block.pointee.nStreamID
-        guard sampleCount > 0, channels > 0, let rawAudio = block.pointee.lpRawAudio else {
-            return
-        }
-        let byteCount = Int(sampleCount) * Int(channels) * 2
-        let data = Data(bytes: rawAudio, count: byteCount)
-        let chunk = TeamTalkPlaybackAudioChunk(
-            sourceID: streamID,
-            streamTypes: STREAMTYPE_VOICE.rawValue,
-            sampleRate: sampleRate,
-            channels: channels,
-            sampleCount: sampleCount,
-            data: data
-        )
-        appleVoiceChatEngine.enqueuePlaybackChunk(chunk)
     }
 
     func insertAdvancedMicrophoneAudioChunkLocked(_ chunk: AdvancedMicrophoneAudioChunk) {
@@ -683,51 +607,6 @@ extension TeamTalkConnectionController {
         )
     }
 
-    func selectedOutputDeviceUIDLocked() throws -> String {
-        let preference = preferencesStore.preferences.preferredOutputDevice
-        // If the user picked a specific device, its persistentID is already the CoreAudio UID
-        // (for non-legacy devices, makeAudioDeviceOption sets persistentID = szDeviceID = CoreAudio UID).
-        if let prefID = preference.persistentID,
-           prefID.isEmpty == false,
-           !prefID.hasPrefix("legacy:") {
-            let availableDevices = availableAudioDevicesLocked(forceRefresh: false).outputDevices
-            if availableDevices.contains(where: { $0.persistentID == prefID }) {
-                return prefID
-            }
-        }
-        // Fall back to the system default output device via CoreAudio directly.
-        return try systemDefaultOutputDeviceUID()
-    }
-
-    func systemDefaultOutputDeviceUID() throws -> String {
-        var address = AudioObjectPropertyAddress(
-            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
-        var deviceID = AudioDeviceID()
-        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
-        guard AudioObjectGetPropertyData(
-            AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &deviceID
-        ) == noErr, deviceID != kAudioDeviceUnknown else {
-            throw TeamTalkConnectionError.internalError(L10n.text("connectedServer.audio.error.outputStartFailed"))
-        }
-        var uidAddress = AudioObjectPropertyAddress(
-            mSelector: kAudioDevicePropertyDeviceUID,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
-        var cfUID: CFString?
-        var uidSize = UInt32(MemoryLayout<CFString?>.size)
-        let status = withUnsafeMutablePointer(to: &cfUID) { ptr in
-            AudioObjectGetPropertyData(deviceID, &uidAddress, 0, nil, &uidSize, ptr)
-        }
-        guard status == noErr, let uid = cfUID else {
-            throw TeamTalkConnectionError.internalError(L10n.text("connectedServer.audio.error.outputStartFailed"))
-        }
-        return uid as String
-    }
-
     func selectedInputDeviceIDLocked() throws -> INT32 {
         try selectedDeviceIDLocked(
             preference: preferencesStore.preferences.preferredInputDevice,
@@ -798,4 +677,5 @@ extension TeamTalkConnectionController {
         }
         return String(format: "%.0f dB", rounded)
     }
+
 }

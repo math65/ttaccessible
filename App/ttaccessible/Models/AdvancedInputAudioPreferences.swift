@@ -192,7 +192,6 @@ struct AdvancedInputAudioPreferences: Codable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case isEnabled
         case preset
-        case echoCancellationEnabled
         case dynamicProcessorEnabled
         case dynamicProcessorMode
         case gate
@@ -222,7 +221,6 @@ struct AdvancedInputAudioPreferences: Codable, Equatable {
 
     var isEnabled: Bool
     var preset: InputChannelPreset
-    var echoCancellationEnabled: Bool
     var dynamicProcessorEnabled: Bool
     var dynamicProcessorMode: DynamicProcessorMode
     var gate: Gate
@@ -236,7 +234,6 @@ struct AdvancedInputAudioPreferences: Codable, Equatable {
     init(
         isEnabled: Bool = false,
         preset: InputChannelPreset = .auto,
-        echoCancellationEnabled: Bool = false,
         dynamicProcessorEnabled: Bool = false,
         dynamicProcessorMode: DynamicProcessorMode = .gate,
         gate: Gate = Gate(),
@@ -249,7 +246,6 @@ struct AdvancedInputAudioPreferences: Codable, Equatable {
     ) {
         self.isEnabled = isEnabled
         self.preset = preset
-        self.echoCancellationEnabled = echoCancellationEnabled
         self.dynamicProcessorEnabled = dynamicProcessorEnabled
         self.dynamicProcessorMode = dynamicProcessorMode
         self.gate = gate
@@ -265,7 +261,6 @@ struct AdvancedInputAudioPreferences: Codable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? false
         let preset = try container.decodeIfPresent(InputChannelPreset.self, forKey: .preset) ?? .auto
-        let echoCancellationEnabled = try container.decodeIfPresent(Bool.self, forKey: .echoCancellationEnabled) ?? false
         let legacyGate = try container.decodeIfPresent(Gate.self, forKey: .noiseGate) ?? Gate()
         let gate = try container.decodeIfPresent(Gate.self, forKey: .gate) ?? legacyGate
         let dynamicProcessorEnabled = try container.decodeIfPresent(Bool.self, forKey: .dynamicProcessorEnabled) ?? legacyGate.enabled
@@ -285,7 +280,6 @@ struct AdvancedInputAudioPreferences: Codable, Equatable {
             self.init(
                 isEnabled: isEnabled,
                 preset: preset,
-                echoCancellationEnabled: echoCancellationEnabled,
                 dynamicProcessorEnabled: dynamicProcessorEnabled,
                 dynamicProcessorMode: dynamicProcessorMode,
                 gate: gate,
@@ -328,7 +322,6 @@ struct AdvancedInputAudioPreferences: Codable, Equatable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(isEnabled, forKey: .isEnabled)
         try container.encode(preset, forKey: .preset)
-        try container.encode(echoCancellationEnabled, forKey: .echoCancellationEnabled)
         try container.encode(dynamicProcessorEnabled, forKey: .dynamicProcessorEnabled)
         try container.encode(dynamicProcessorMode, forKey: .dynamicProcessorMode)
         try container.encode(gate, forKey: .gate)

@@ -20,7 +20,6 @@ struct AdvancedMicrophoneAudioConfiguration: Equatable {
     let device: InputAudioDeviceInfo
     let preset: InputChannelPreset
     var inputGainDB: Double
-    let echoCancellationEnabled: Bool
     let dynamicProcessorEnabled: Bool
     let dynamicProcessorMode: DynamicProcessorMode
     let gateThresholdDB: Double
@@ -49,7 +48,6 @@ struct AdvancedMicrophoneAudioChunk {
 
 enum AdvancedMicrophoneAudioEngineError: LocalizedError {
     case deviceUnavailable
-    case voiceProcessingUnavailable
     case playbackRoutingUnavailable
     case playbackEngineStartFailed
     case queueCreationFailed
@@ -61,8 +59,6 @@ enum AdvancedMicrophoneAudioEngineError: LocalizedError {
         switch self {
         case .deviceUnavailable:
             return L10n.text("preferences.audio.advanced.error.deviceUnavailable")
-        case .voiceProcessingUnavailable:
-            return L10n.text("preferences.audio.advanced.error.voiceProcessingUnavailable")
         case .playbackRoutingUnavailable:
             return L10n.text("connectedServer.audio.error.playbackInterceptionUnavailable")
         case .playbackEngineStartFailed:
@@ -151,6 +147,12 @@ final class AdvancedMicrophoneAudioEngine {
         }
     }
 
+    var effectiveSampleRate: Double? {
+        withStateLock {
+            currentConfiguration?.targetFormat.sampleRate
+        }
+    }
+
     func start(configuration: AdvancedMicrophoneAudioConfiguration) throws -> Int32 {
         try startLocked(configuration: configuration)
     }
@@ -184,39 +186,57 @@ final class AdvancedMicrophoneAudioEngine {
         lastLoggedBufferSignature = ""
 
         // Set the input device via the underlying Audio Unit.
+        // Skip AudioUnitSetProperty if the requested device is already the system default,
+        // as setting it explicitly can break the AVAudioEngine internal graph on built-in devices.
         if let deviceID = Self.audioDeviceID(forUID: configuration.device.uid) {
-            var devID = deviceID
-            let status = AudioUnitSetProperty(
-                inputNode.audioUnit!,
-                kAudioOutputUnitProperty_CurrentDevice,
-                kAudioUnitScope_Global,
-                0,
-                &devID,
-                UInt32(MemoryLayout<AudioDeviceID>.size)
-            )
-            if status != noErr {
-                throw AdvancedMicrophoneAudioEngineError.deviceUnavailable
+            let defaultDeviceID = Self.systemDefaultInputDeviceID()
+            // Skip AudioUnitSetProperty when the device is already the system default.
+            // Setting the property on the already-active default device breaks AVAudioEngine's
+            // internal graph state, causing the tap to silently receive no buffers.
+            if deviceID != defaultDeviceID {
+                var devID = deviceID
+                let status = AudioUnitSetProperty(
+                    inputNode.audioUnit!,
+                    kAudioOutputUnitProperty_CurrentDevice,
+                    kAudioUnitScope_Global,
+                    0,
+                    &devID,
+                    UInt32(MemoryLayout<AudioDeviceID>.size)
+                )
+                if status != noErr {
+                    throw AdvancedMicrophoneAudioEngineError.deviceUnavailable
+                }
             }
         } else {
             throw AdvancedMicrophoneAudioEngineError.deviceUnavailable
         }
 
-        // Enable or disable voice processing (AEC).
-        if #available(macOS 13.0, *) {
-            do {
-                try inputNode.setVoiceProcessingEnabled(configuration.echoCancellationEnabled)
-                if configuration.echoCancellationEnabled {
-                    applyMinimumOtherAudioDucking(to: inputNode)
-                }
-            } catch {
-                if configuration.echoCancellationEnabled {
-                    throw AdvancedMicrophoneAudioEngineError.voiceProcessingUnavailable
-                }
-                throw AdvancedMicrophoneAudioEngineError.engineStartFailed
-            }
-        } else {
-            if configuration.echoCancellationEnabled {
-                throw AdvancedMicrophoneAudioEngineError.voiceProcessingUnavailable
+        // Request all input channels from the device. Multi-stream USB interfaces
+        // (e.g. Komplete Audio 6) expose only the first stream's channels by default.
+        // Setting the output scope format on element 1 (hardware input) to the full
+        // channel count makes the AUHAL aggregate all streams into one buffer.
+        let deviceInputChannels = UInt32(configuration.device.inputChannels)
+        if deviceInputChannels > 1, let au = inputNode.audioUnit {
+            var asbd = AudioStreamBasicDescription()
+            var asbdSize = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
+            let getStatus = AudioUnitGetProperty(
+                au,
+                kAudioUnitProperty_StreamFormat,
+                kAudioUnitScope_Output,
+                1,
+                &asbd,
+                &asbdSize
+            )
+            if getStatus == noErr, asbd.mChannelsPerFrame < deviceInputChannels {
+                asbd.mChannelsPerFrame = deviceInputChannels
+                AudioUnitSetProperty(
+                    au,
+                    kAudioUnitProperty_StreamFormat,
+                    kAudioUnitScope_Output,
+                    1,
+                    &asbd,
+                    asbdSize
+                )
             }
         }
 
@@ -226,7 +246,7 @@ final class AdvancedMicrophoneAudioEngine {
             throw AdvancedMicrophoneAudioEngineError.deviceUnavailable
         }
         logDiagnostics(
-            "Start. device=\(configuration.device.name) uid=\(configuration.device.uid) hwRate=\(hardwareFormat.sampleRate) hwChannels=\(inputChannelCount) commonFormat=\(describe(hardwareFormat.commonFormat)) interleaved=\(hardwareFormat.isInterleaved) aec=\(configuration.echoCancellationEnabled) preset=\(describe(configuration.preset)) targetRate=\(configuration.targetFormat.sampleRate) targetChannels=\(configuration.targetFormat.channels) tx=\(configuration.targetFormat.txIntervalMSec)"
+            "Start. device=\(configuration.device.name) uid=\(configuration.device.uid) hwRate=\(hardwareFormat.sampleRate) hwChannels=\(inputChannelCount) commonFormat=\(describe(hardwareFormat.commonFormat)) interleaved=\(hardwareFormat.isInterleaved) preset=\(describe(configuration.preset)) targetRate=\(configuration.targetFormat.sampleRate) targetChannels=\(configuration.targetFormat.channels) tx=\(configuration.targetFormat.txIntervalMSec)"
         )
 
         let intervalMSec = max(configuration.targetFormat.txIntervalMSec, 20)
@@ -258,7 +278,6 @@ final class AdvancedMicrophoneAudioEngine {
                 ),
                 preset: configuration.preset,
                 inputGainDB: configuration.inputGainDB,
-                echoCancellationEnabled: configuration.echoCancellationEnabled,
                 dynamicProcessorEnabled: configuration.dynamicProcessorEnabled,
                 dynamicProcessorMode: configuration.dynamicProcessorMode,
                 gateThresholdDB: configuration.gateThresholdDB,
@@ -283,11 +302,19 @@ final class AdvancedMicrophoneAudioEngine {
             return activeStreamID
         }
 
+        // Use an AVAudioSinkNode to pull audio from the inputNode.
+        // A plain installTap without a connected graph produces silent callbacks.
+        // AVAudioSinkNode acts as a consumer that keeps the input graph active.
+        let sinkNode = AVAudioSinkNode { timestamp, frameCount, inputBus -> OSStatus in
+            return noErr
+        }
+        newEngine.attach(sinkNode)
+        newEngine.connect(inputNode, to: sinkNode, format: hardwareFormat)
+
         inputNode.installTap(onBus: 0, bufferSize: bufferFrameCount, format: hardwareFormat) { [weak self] buffer, _ in
             self?.handleAVAudioBuffer(buffer, channelCount: inputChannelCount)
         }
 
-        newEngine.prepare()
         do {
             try newEngine.start()
         } catch {
@@ -524,6 +551,24 @@ final class AdvancedMicrophoneAudioEngine {
 
     // MARK: - Device Resolution
 
+    private static func systemDefaultInputDeviceID() -> AudioDeviceID? {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultInputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var deviceID = AudioDeviceID()
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        let status = AudioObjectGetPropertyData(
+            AudioObjectID(kAudioObjectSystemObject),
+            &address, 0, nil, &size, &deviceID
+        )
+        guard status == noErr, deviceID != kAudioObjectUnknown else {
+            return nil
+        }
+        return deviceID
+    }
+
     private static func audioDeviceID(forUID uid: String) -> AudioDeviceID? {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyTranslateUIDToDevice,
@@ -566,18 +611,6 @@ final class AdvancedMicrophoneAudioEngine {
         stateLock.lock()
         defer { stateLock.unlock() }
         return try body()
-    }
-
-    private func applyMinimumOtherAudioDucking(to inputNode: AVAudioInputNode) {
-        guard #available(macOS 14.0, *) else {
-            return
-        }
-
-        inputNode.voiceProcessingOtherAudioDuckingConfiguration = AVAudioVoiceProcessingOtherAudioDuckingConfiguration(
-            enableAdvancedDucking: false,
-            duckingLevel: .min
-        )
-        logDiagnostics("AEC ducking configured. advanced=false level=min")
     }
 
     private func logDiagnostics(_ message: String) {
@@ -988,4 +1021,5 @@ final class AdvancedMicrophoneAudioEngine {
         }
         return Int16((clamped * 32767).rounded())
     }
+
 }
