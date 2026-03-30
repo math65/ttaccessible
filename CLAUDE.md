@@ -78,3 +78,14 @@ String files: `App/ttaccessible/en.lproj/Localizable.strings`, `fr.lproj/Localiz
 ### App Sandbox
 
 The app is sandboxed. File I/O goes to `~/Library/Containers/com.math65.ttaccessible/`. Diagnostics logs are in the Caches subdirectory.
+
+### Original TeamTalk Reference
+
+The original Qt/C++ TeamTalk client is at `../ttoriginal/Client/qtTeamTalk/`. Key reference files: `mainwindow.cpp` (features), `utilsound.cpp` (audio init). The original uses `TT_InitSoundInputDevice` + `TT_EnableVoiceTransmission` (direct SDK path) — we cannot use this due to audio saturation.
+
+### Missing Features (vs original Qt client)
+
+- **Recording** — record conversations to disk (`TT_SetUserRecordingState` not implemented)
+- **Channel Operator** — assign channel operator (`TT_DoChannelOp` not wired)
+- **Hear Myself** — subscribe to own voice via `TT_DoSubscribe(SUBSCRIBE_VOICE, myUserID)` (original uses Ctrl+Shift+4). The subscription mechanism exists but no dedicated action/shortcut.
+- **Video/Desktop/Media streaming** — not implemented (low priority for accessibility)
