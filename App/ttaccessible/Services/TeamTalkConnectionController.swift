@@ -30,7 +30,7 @@ protocol TeamTalkConnectionControllerDelegate: AnyObject {
 }
 
 final class TeamTalkConnectionController {
-    private struct SessionPublishInvalidation: OptionSet {
+    struct SessionPublishInvalidation: OptionSet {
         let rawValue: Int
 
         static let rootTree = SessionPublishInvalidation(rawValue: 1 << 0)
@@ -56,66 +56,66 @@ final class TeamTalkConnectionController {
         ]
     }
 
-    private let queueKey = DispatchSpecificKey<Void>()
-    private let queue = DispatchQueue(label: "com.math65.ttaccessible.teamtalk")
-    private let clientName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "TTAccessible"
-    private let preferencesStore: AppPreferencesStore
+    let queueKey = DispatchSpecificKey<Void>()
+    let queue = DispatchQueue(label: "com.math65.ttaccessible.teamtalk")
+    let clientName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "TTAccessible"
+    let preferencesStore: AppPreferencesStore
     let userVolumeStore = UserVolumeStore()
-    private let lastChannelStore = LastChannelStore()
-    private let audioDiagnosticsLogger = AudioDiagnosticsLogger.shared
-    private let performanceLogger = AppPerformanceLogger.shared
+    let lastChannelStore = LastChannelStore()
+    let audioDiagnosticsLogger = AudioDiagnosticsLogger.shared
+    let performanceLogger = AppPerformanceLogger.shared
 
     @MainActor weak var delegate: TeamTalkConnectionControllerDelegate?
     @MainActor private(set) var sessionSnapshot: ConnectedServerSession?
     @MainActor private(set) var isConnected = false
 
-    private var instance: UnsafeMutableRawPointer?
-    private var pollTimer: DispatchSourceTimer?
-    private var connectedRecord: SavedServerRecord?
-    private var channelChatHistory: [ChannelChatMessage] = []
-    private var sessionHistory: [SessionHistoryEntry] = []
-    private var activeTransferProgress: [Int32: FileTransferProgress] = [:]
-    private var pendingTextMessages: [UInt64: [TextMessage]] = [:]
-    private var pendingChannelMessageCommandIDs = Set<Int32>()
-    private var observedSubscriptionStates: [Int32: [UserSubscriptionOption: Bool]] = [:]
-    private var suppressLoginHistoryDepth = 0
-    private var suppressJoinHistoryDepth = 0
-    private var suppressLoginHistoryUntil = Date.distantPast
-    private var suppressJoinHistoryUntil = Date.distantPast
-    private var channelPasswords: [Int32: String] = [:]
-    private var privateConversations: [Int32: PrivateConversation] = [:]
-    private var selectedPrivateConversationUserID: Int32?
-    private var visiblePrivateConversationUserID: Int32?
-    private var isPrivateMessagesWindowVisible = false
-    private var outputAudioReady = false
-    private var inputAudioReady = false
-    private var voiceTransmissionEnabled = false
-    private var teamTalkVirtualInputReady = false
-    private var advancedMicrophoneTargetFormat: AdvancedMicrophoneAudioTargetFormat?
-    private var insertedAudioChunkCount = 0
-    private var failedAudioChunkInsertCount = 0
-    private var lastLoggedAudioInputQueueBucket: UInt32?
-    private var reconnectTimer: DispatchSourceTimer?
-    private var reconnectRecord: SavedServerRecord?
-    private var reconnectPassword: String?
-    private var reconnectOptions = TeamTalkConnectOptions()
-    private var lastChannelID: Int32 = 0
-    private var isAutoAwayActive = false
-    private var autoAwayRestoreStatusMessage = ""
-    private var pendingUserAccounts: [UserAccountProperties] = []
-    private var listUserAccountsCmdID: Int32 = -1
-    private var pendingBannedUsers: [BannedUserProperties] = []
-    private var listBansCmdID: Int32 = -1
-    private var lastBuiltSessionSnapshot: ConnectedServerSession?
-    private var cachedSoundDevices: [SoundDevice] = []
-    private var cachedAudioDeviceCatalog: AudioDeviceCatalog?
-    private lazy var advancedMicrophoneEngine = AdvancedMicrophoneAudioEngine(diagnosticsScope: "audio-teamtalk-capture") { [weak self] chunk in
+    var instance: UnsafeMutableRawPointer?
+    var pollTimer: DispatchSourceTimer?
+    var connectedRecord: SavedServerRecord?
+    var channelChatHistory: [ChannelChatMessage] = []
+    var sessionHistory: [SessionHistoryEntry] = []
+    var activeTransferProgress: [Int32: FileTransferProgress] = [:]
+    var pendingTextMessages: [UInt64: [TextMessage]] = [:]
+    var pendingChannelMessageCommandIDs = Set<Int32>()
+    var observedSubscriptionStates: [Int32: [UserSubscriptionOption: Bool]] = [:]
+    var suppressLoginHistoryDepth = 0
+    var suppressJoinHistoryDepth = 0
+    var suppressLoginHistoryUntil = Date.distantPast
+    var suppressJoinHistoryUntil = Date.distantPast
+    var channelPasswords: [Int32: String] = [:]
+    var privateConversations: [Int32: PrivateConversation] = [:]
+    var selectedPrivateConversationUserID: Int32?
+    var visiblePrivateConversationUserID: Int32?
+    var isPrivateMessagesWindowVisible = false
+    var outputAudioReady = false
+    var inputAudioReady = false
+    var voiceTransmissionEnabled = false
+    var teamTalkVirtualInputReady = false
+    var advancedMicrophoneTargetFormat: AdvancedMicrophoneAudioTargetFormat?
+    var insertedAudioChunkCount = 0
+    var failedAudioChunkInsertCount = 0
+    var lastLoggedAudioInputQueueBucket: UInt32?
+    var reconnectTimer: DispatchSourceTimer?
+    var reconnectRecord: SavedServerRecord?
+    var reconnectPassword: String?
+    var reconnectOptions = TeamTalkConnectOptions()
+    var lastChannelID: Int32 = 0
+    var isAutoAwayActive = false
+    var autoAwayRestoreStatusMessage = ""
+    var pendingUserAccounts: [UserAccountProperties] = []
+    var listUserAccountsCmdID: Int32 = -1
+    var pendingBannedUsers: [BannedUserProperties] = []
+    var listBansCmdID: Int32 = -1
+    var lastBuiltSessionSnapshot: ConnectedServerSession?
+    var cachedSoundDevices: [SoundDevice] = []
+    var cachedAudioDeviceCatalog: AudioDeviceCatalog?
+    lazy var advancedMicrophoneEngine = AdvancedMicrophoneAudioEngine(diagnosticsScope: "audio-teamtalk-capture") { [weak self] chunk in
         self?.queue.async { [weak self] in
             self?.insertAdvancedMicrophoneAudioChunkLocked(chunk)
         }
     }
 
-    private lazy var appleVoiceChatEngine = AppleVoiceChatAudioEngine(diagnosticsScope: "audio-apple-voicechat") { [weak self] chunk in
+    lazy var appleVoiceChatEngine = AppleVoiceChatAudioEngine(diagnosticsScope: "audio-apple-voicechat") { [weak self] chunk in
         self?.queue.async { [weak self] in
             self?.insertAdvancedMicrophoneAudioChunkLocked(chunk)
         }
@@ -126,15 +126,15 @@ final class TeamTalkConnectionController {
         queue.setSpecific(key: queueKey, value: ())
     }
 
-    private func logAudio(_ message: String) {
+    func logAudio(_ message: String) {
         audioDiagnosticsLogger.log("audio", message)
     }
 
-    private var isAnyMicrophoneEngineRunning: Bool {
+    var isAnyMicrophoneEngineRunning: Bool {
         advancedMicrophoneEngine.isRunning || appleVoiceChatEngine.isRunning
     }
 
-    private func describe(_ preset: InputChannelPreset) -> String {
+    func describe(_ preset: InputChannelPreset) -> String {
         switch preset {
         case .auto:
             return "auto"
@@ -147,7 +147,7 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func describeLimiter(_ preferences: AdvancedInputAudioPreferences) -> String {
+    func describeLimiter(_ preferences: AdvancedInputAudioPreferences) -> String {
         guard preferences.limiterEnabled else {
             return "off"
         }
@@ -160,7 +160,7 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func describeDynamicProcessor(_ preferences: AdvancedInputAudioPreferences) -> String {
+    func describeDynamicProcessor(_ preferences: AdvancedInputAudioPreferences) -> String {
         guard preferences.dynamicProcessorEnabled else {
             return "off"
         }
@@ -987,7 +987,7 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func makeSDKAccount(from properties: UserAccountProperties) -> UserAccount {
+    func makeSDKAccount(from properties: UserAccountProperties) -> UserAccount {
         var account = UserAccount()
         copyTTString(properties.username, into: &account.szUsername)
         copyTTString(properties.password, into: &account.szPassword)
@@ -1008,7 +1008,7 @@ final class TeamTalkConnectionController {
         return account
     }
 
-    private func makeUserAccountProperties(from account: UserAccount) -> UserAccountProperties {
+    func makeUserAccountProperties(from account: UserAccount) -> UserAccountProperties {
         var props = UserAccountProperties()
         props.username = ttString(from: account.szUsername)
         props.password = ""  // SDK does not return plaintext passwords
@@ -1091,7 +1091,7 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func makeBannedUserProperties(from ban: BannedUser) -> BannedUserProperties {
+    func makeBannedUserProperties(from ban: BannedUser) -> BannedUserProperties {
         BannedUserProperties(
             ipAddress:   ttString(from: ban.szIPAddress),
             channelPath: ttString(from: ban.szChannelPath),
@@ -1103,7 +1103,7 @@ final class TeamTalkConnectionController {
         )
     }
 
-    private func handleFileTransferEventLocked(_ transfer: FileTransfer) {
+    func handleFileTransferEventLocked(_ transfer: FileTransfer) {
         switch transfer.nStatus {
         case FILETRANSFER_ACTIVE:
             activeTransferProgress[transfer.nTransferID] = FileTransferProgress(
@@ -1526,7 +1526,7 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func createInstanceLocked() throws -> UnsafeMutableRawPointer {
+    func createInstanceLocked() throws -> UnsafeMutableRawPointer {
         guard let instance = TT_InitTeamTalkPoll() else {
             throw TeamTalkConnectionError.sdkUnavailable
         }
@@ -1534,7 +1534,7 @@ final class TeamTalkConnectionController {
     }
 
 
-    private func withSuppressedLoginHistoryLocked<T>(_ body: () throws -> T) rethrows -> T {
+    func withSuppressedLoginHistoryLocked<T>(_ body: () throws -> T) rethrows -> T {
         suppressLoginHistoryDepth += 1
         defer {
             suppressLoginHistoryDepth = max(0, suppressLoginHistoryDepth - 1)
@@ -1543,7 +1543,7 @@ final class TeamTalkConnectionController {
         return try body()
     }
 
-    private func withSuppressedJoinHistoryLocked<T>(_ body: () throws -> T) rethrows -> T {
+    func withSuppressedJoinHistoryLocked<T>(_ body: () throws -> T) rethrows -> T {
         suppressJoinHistoryDepth += 1
         defer {
             suppressJoinHistoryDepth = max(0, suppressJoinHistoryDepth - 1)
@@ -1552,21 +1552,21 @@ final class TeamTalkConnectionController {
         return try body()
     }
 
-    private var isSuppressingLoginHistoryLocked: Bool {
+    var isSuppressingLoginHistoryLocked: Bool {
         suppressLoginHistoryDepth > 0 || Date() < suppressLoginHistoryUntil
     }
 
-    private var isSuppressingJoinHistoryLocked: Bool {
+    var isSuppressingJoinHistoryLocked: Bool {
         suppressJoinHistoryDepth > 0 || Date() < suppressJoinHistoryUntil
     }
 
-    private var isSuppressingFileHistoryLocked: Bool {
+    var isSuppressingFileHistoryLocked: Bool {
         isSuppressingLoginHistoryLocked || isSuppressingJoinHistoryLocked
     }
 
     // MARK: - Reconnexion automatique
 
-    private func startReconnectTimerLocked() {
+    func startReconnectTimerLocked() {
         cancelReconnectLocked()
         logAudio("Automatic reconnection scheduled in 5 seconds.")
         let timer = DispatchSource.makeTimerSource(queue: queue)
@@ -1578,7 +1578,7 @@ final class TeamTalkConnectionController {
         timer.resume()
     }
 
-    private func attemptReconnectLocked() {
+    func attemptReconnectLocked() {
         guard let record = reconnectRecord, let password = reconnectPassword else {
             cancelReconnectLocked()
             publishDisconnected(message: L10n.text("connectedServer.disconnect.connectionLost"))
@@ -1633,7 +1633,7 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func cancelReconnectLocked() {
+    func cancelReconnectLocked() {
         reconnectTimer?.setEventHandler {}
         reconnectTimer?.cancel()
         reconnectTimer = nil
@@ -1643,18 +1643,18 @@ final class TeamTalkConnectionController {
         lastChannelID = 0
     }
 
-    private func publishReconnecting() {
+    func publishReconnecting() {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.delegate?.teamTalkConnectionControllerDidStartReconnecting(self)
         }
     }
 
-    private func autoJoinAfterLoginLocked(instance: UnsafeMutableRawPointer) {
+    func autoJoinAfterLoginLocked(instance: UnsafeMutableRawPointer) {
         autoJoinAfterLoginLocked(instance: instance, options: TeamTalkConnectOptions())
     }
 
-    private func autoJoinAfterLoginLocked(instance: UnsafeMutableRawPointer, options: TeamTalkConnectOptions) {
+    func autoJoinAfterLoginLocked(instance: UnsafeMutableRawPointer, options: TeamTalkConnectOptions) {
         if let initialChannelPath = options.initialChannelPath?.trimmingCharacters(in: .whitespacesAndNewlines),
            initialChannelPath.isEmpty == false {
             let channelID = initialChannelPath.withCString { pathPointer in
@@ -1721,7 +1721,7 @@ final class TeamTalkConnectionController {
         _ = TT_DoJoinChannelByID(instance, rootChannelID, "")
     }
 
-    private func connectAndLoginLocked(
+    func connectAndLoginLocked(
         instance: UnsafeMutableRawPointer,
         record: SavedServerRecord,
         password: String,
@@ -1800,7 +1800,7 @@ final class TeamTalkConnectionController {
         throw TeamTalkConnectionError.connectionTimeout
     }
 
-    private func applyPostLoginOptionsLocked(
+    func applyPostLoginOptionsLocked(
         instance: UnsafeMutableRawPointer,
         options: TeamTalkConnectOptions
     ) throws {
@@ -1825,7 +1825,7 @@ final class TeamTalkConnectionController {
         try waitForCommandCompletionLocked(instance: instance, commandID: commandID)
     }
 
-    private func nextMessageLocked(
+    func nextMessageLocked(
         instance: UnsafeMutableRawPointer,
         waitMSec: INT32
     ) -> TTMessage? {
@@ -1839,7 +1839,7 @@ final class TeamTalkConnectionController {
         return message
     }
 
-    private func startPollingLocked() {
+    func startPollingLocked() {
         stopPollingLocked()
 
         let timer = DispatchSource.makeTimerSource(queue: queue)
@@ -1851,13 +1851,13 @@ final class TeamTalkConnectionController {
         timer.resume()
     }
 
-    private func stopPollingLocked() {
+    func stopPollingLocked() {
         pollTimer?.setEventHandler {}
         pollTimer?.cancel()
         pollTimer = nil
     }
 
-    private func drainMessagesLocked() {
+    func drainMessagesLocked() {
         guard let instance else {
             return
         }
@@ -2092,11 +2092,11 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func resetLocked() {
+    func resetLocked() {
         destroyLocked()
     }
 
-    private func destroyLocked() {
+    func destroyLocked() {
         logAudio("Tearing down TeamTalk session. voiceEnabled=\(voiceTransmissionEnabled) engineRunning=\(isAnyMicrophoneEngineRunning) inputReady=\(inputAudioReady) outputReady=\(outputAudioReady)")
         stopPollingLocked()
 
@@ -2144,12 +2144,12 @@ final class TeamTalkConnectionController {
         autoAwayRestoreStatusMessage = ""
     }
 
-    private func clearAutoAwayStateLocked() {
+    func clearAutoAwayStateLocked() {
         isAutoAwayActive = false
         autoAwayRestoreStatusMessage = ""
     }
 
-    private func currentIdleSecondsLocked() -> Double {
+    func currentIdleSecondsLocked() -> Double {
         var iterator: io_iterator_t = 0
         guard IOServiceGetMatchingServices(kIOMainPortDefault, IOServiceMatching("IOHIDSystem"), &iterator) == KERN_SUCCESS else {
             return 0
@@ -2172,7 +2172,7 @@ final class TeamTalkConnectionController {
         return Double(idleTime.uint64Value) / 1_000_000_000
     }
 
-    private func updateAutoAwayIfNeededLocked(instance: UnsafeMutableRawPointer) -> Bool {
+    func updateAutoAwayIfNeededLocked(instance: UnsafeMutableRawPointer) -> Bool {
         guard (TT_GetFlags(instance) & UInt32(CLIENT_AUTHORIZED.rawValue)) != 0 else {
             if isAutoAwayActive {
                 clearAutoAwayStateLocked()
@@ -2238,7 +2238,7 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func deactivateAutoAwayLocked(instance: UnsafeMutableRawPointer) -> Bool {
+    func deactivateAutoAwayLocked(instance: UnsafeMutableRawPointer) -> Bool {
         guard isAutoAwayActive, let currentUser = currentUserLocked(instance: instance) else {
             clearAutoAwayStateLocked()
             return false
@@ -2262,7 +2262,7 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func clientErrorMessage(from message: TTMessage) -> String? {
+    func clientErrorMessage(from message: TTMessage) -> String? {
         guard message.ttType == __CLIENTERRORMSG else {
             return nil
         }
@@ -2271,7 +2271,7 @@ final class TeamTalkConnectionController {
         return value.isEmpty ? nil : value
     }
 
-    private func waitForCommandCompletionLocked(
+    func waitForCommandCompletionLocked(
         instance: UnsafeMutableRawPointer,
         commandID: Int32
     ) throws {
@@ -2385,7 +2385,7 @@ final class TeamTalkConnectionController {
         throw TeamTalkConnectionError.connectionTimeout
     }
 
-    private func publishActiveTransfersLocked(currentChannelID: Int32) {
+    func publishActiveTransfersLocked(currentChannelID: Int32) {
         let transfers = Array(activeTransferProgress.values)
         performanceLogger.increment("teamtalk.publishActiveTransfers")
         DispatchQueue.main.async { [weak self] in
@@ -2396,7 +2396,7 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func publishAudioRuntimeUpdateLocked(instance: UnsafeMutableRawPointer) {
+    func publishAudioRuntimeUpdateLocked(instance: UnsafeMutableRawPointer) {
         let users = fetchServerUsersLocked(instance: instance)
         let update = ConnectedServerAudioRuntimeUpdate(
             userAudioStates: Dictionary(
@@ -2425,7 +2425,7 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func publishSessionLocked(
+    func publishSessionLocked(
         instance: UnsafeMutableRawPointer,
         record: SavedServerRecord,
         invalidation: SessionPublishInvalidation = .all
@@ -2447,7 +2447,7 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func publishDisconnected(message: String?) {
+    func publishDisconnected(message: String?) {
         DispatchQueue.main.async { [weak self] in
             guard let self else {
                 return
@@ -2459,7 +2459,7 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func makeSessionSnapshotLocked(
+    func makeSessionSnapshotLocked(
         instance: UnsafeMutableRawPointer,
         record: SavedServerRecord,
         invalidation: SessionPublishInvalidation
@@ -2680,318 +2680,10 @@ final class TeamTalkConnectionController {
         )
     }
 
-    private func appendHistoryLocked(
-        kind: SessionHistoryEntry.Kind,
-        message: String,
-        channelID: Int32? = nil,
-        userID: Int32? = nil,
-        timestamp: Date = Date()
-    ) {
-        sessionHistory.append(
-            SessionHistoryEntry(
-                id: UUID(),
-                kind: kind,
-                message: message,
-                timestamp: timestamp,
-                channelID: channelID,
-                userID: userID
-            )
-        )
-    }
-
-    private func appendConnectedHistoryLocked(record: SavedServerRecord) {
-        appendHistoryLocked(
-            kind: .connected,
-            message: L10n.format("history.connected", record.name)
-        )
-    }
-
-    private func appendDisconnectedHistoryLocked() {
-        appendHistoryLocked(
-            kind: .disconnected,
-            message: L10n.text("history.disconnected")
-        )
-    }
-
-    private func appendConnectionLostHistoryLocked() {
-        appendHistoryLocked(
-            kind: .connectionLost,
-            message: L10n.text("history.connectionLost")
-        )
-    }
-
-    private func appendAutoAwayActivatedHistoryLocked() {
-        appendHistoryLocked(
-            kind: .autoAwayActivated,
-            message: L10n.text("history.autoAwayActivated")
-        )
-    }
-
-    private func appendAutoAwayDeactivatedHistoryLocked() {
-        appendHistoryLocked(
-            kind: .autoAwayDeactivated,
-            message: L10n.text("history.autoAwayDeactivated")
-        )
-    }
-
-    private func saveLastChannelLocked(channelID: Int32, instance: UnsafeMutableRawPointer) {
-        guard channelID > 0, let record = connectedRecord else { return }
-        var pathBuffer = [TTCHAR](repeating: 0, count: Int(TT_STRLEN))
-        guard TT_GetChannelPath(instance, channelID, &pathBuffer) != 0 else { return }
-        let path = String(cString: pathBuffer)
-        guard !path.isEmpty else { return }
-        let serverKey = LastChannelStore.serverKey(host: record.host, tcpPort: record.tcpPort, username: record.username)
-        lastChannelStore.setChannelPath(path, forServerKey: serverKey)
-    }
-
-    private func appendJoinedChannelHistoryLocked(channelID: Int32, instance: UnsafeMutableRawPointer) {
-        appendHistoryLocked(
-            kind: .joinedChannel,
-            message: L10n.format("history.joinedChannel", historyChannelNameLocked(channelID: channelID, instance: instance)),
-            channelID: channelID
-        )
-    }
-
-    private func appendLeftChannelHistoryLocked(channelID: Int32, instance: UnsafeMutableRawPointer) {
-        appendHistoryLocked(
-            kind: .leftChannel,
-            message: L10n.format("history.leftChannel", historyChannelNameLocked(channelID: channelID, instance: instance)),
-            channelID: channelID
-        )
-    }
-
-    private func appendUserLoggedInHistoryLocked(_ user: User, currentUserID: Int32) {
-        guard user.nUserID != currentUserID else {
-            return
-        }
-        appendHistoryLocked(
-            kind: .userLoggedIn,
-            message: L10n.format("history.userLoggedIn", displayName(for: user)),
-            userID: user.nUserID
-        )
-    }
-
-    private func appendUserLoggedOutHistoryLocked(_ user: User, currentUserID: Int32) {
-        guard user.nUserID != currentUserID else {
-            return
-        }
-        appendHistoryLocked(
-            kind: .userLoggedOut,
-            message: L10n.format("history.userLoggedOut", displayName(for: user)),
-            userID: user.nUserID
-        )
-    }
-
-    private func appendUserJoinedChannelHistoryLocked(
-        _ user: User,
-        currentUserID: Int32,
-        instance: UnsafeMutableRawPointer
-    ) {
-        guard user.nUserID != currentUserID else {
-            return
-        }
-        appendHistoryLocked(
-            kind: .userJoinedChannel,
-            message: L10n.format(
-                "history.userJoinedChannel",
-                displayName(for: user),
-                historyChannelNameLocked(channelID: user.nChannelID, instance: instance)
-            ),
-            channelID: user.nChannelID,
-            userID: user.nUserID
-        )
-    }
-
-    private func appendUserLeftChannelHistoryLocked(
-        _ user: User,
-        currentUserID: Int32,
-        instance: UnsafeMutableRawPointer
-    ) {
-        guard user.nUserID != currentUserID else {
-            return
-        }
-        appendHistoryLocked(
-            kind: .userLeftChannel,
-            message: L10n.format(
-                "history.userLeftChannel",
-                displayName(for: user),
-                historyChannelNameLocked(channelID: user.nChannelID, instance: instance)
-            ),
-            channelID: user.nChannelID,
-            userID: user.nUserID
-        )
-    }
-
-    private func appendKickHistoryLocked(_ message: TTMessage, instance: UnsafeMutableRawPointer) {
-        let actorName: String
-        if message.ttType == __USER {
-            actorName = displayName(for: message.user)
-        } else {
-            actorName = L10n.text("history.unknownUser")
-        }
-
-        if message.nSource == 0 {
-            appendHistoryLocked(
-                kind: .kickedFromServer,
-                message: L10n.format("history.kickedFromServer", actorName),
-                userID: message.ttType == __USER ? message.user.nUserID : nil
-            )
-        } else {
-            let channelID = TT_GetMyChannelID(instance)
-            appendHistoryLocked(
-                kind: .kickedFromChannel,
-                message: L10n.format("history.kickedFromChannel", actorName),
-                channelID: channelID > 0 ? channelID : nil,
-                userID: message.ttType == __USER ? message.user.nUserID : nil
-            )
-        }
-    }
-
-    private func appendFileHistoryLocked(
-        _ file: RemoteFile,
-        isAdded: Bool,
-        instance: UnsafeMutableRawPointer,
-        record: SavedServerRecord
-    ) {
-        guard isSuppressingFileHistoryLocked == false else {
-            return
-        }
-        let username = ttString(from: file.szUsername)
-        let actorName = historyActorNameLocked(username: username, instance: instance, record: record)
-        let key = isAdded ? "history.fileAdded" : "history.fileRemoved"
-        appendHistoryLocked(
-            kind: isAdded ? .fileAdded : .fileRemoved,
-            message: L10n.format(key, actorName, ttString(from: file.szFileName)),
-            channelID: file.nChannelID,
-            userID: userIDForUsernameLocked(username, instance: instance)
-        )
-        if file.nChannelID == TT_GetMyChannelID(instance) {
-            SoundPlayer.shared.play(.fileUpdate)
-        }
-    }
-
-    private func appendTransmissionBlockedHistoryLocked() {
-        appendHistoryLocked(
-            kind: .transmissionBlocked,
-            message: L10n.text("history.transmissionBlocked")
-        )
-    }
-
-    private func appendBroadcastSentHistoryLocked(senderName: String, content: String, userID: Int32?) {
-        appendHistoryLocked(
-            kind: .broadcastSent,
-            message: L10n.format("history.broadcastSent", senderName, content),
-            userID: userID
-        )
-    }
-
-    private func appendBroadcastReceivedHistoryLocked(
-        senderName: String,
-        content: String,
-        userID: Int32?,
-        timestamp: Date = Date()
-    ) {
-        appendHistoryLocked(
-            kind: .broadcastReceived,
-            message: L10n.format("history.broadcastReceived", senderName, content),
-            userID: userID,
-            timestamp: timestamp
-        )
-    }
-
-    private func appendSubscriptionHistoryLocked(
-        _ option: UserSubscriptionOption,
-        userName: String,
-        enabled: Bool,
-        userID: Int32?
-    ) {
-        appendHistoryLocked(
-            kind: option.isIntercept ? .interceptSubscriptionChanged : .subscriptionChanged,
-            message: L10n.format(
-                option.historyKey,
-                userName,
-                L10n.text(option.localizationKey),
-                L10n.text(enabled ? "common.state.on" : "common.state.off")
-            ),
-            userID: userID
-        )
-    }
-
-    private func appendSubscriptionHistoryIfNeededLocked(_ user: User) {
-        let currentStates = Dictionary(uniqueKeysWithValues: UserSubscriptionOption.allCases.map { option in
-            (option, option.isPeerEnabled(for: user))
-        })
-        let previousStates = observedSubscriptionStates[user.nUserID] ?? [:]
-
-        for option in UserSubscriptionOption.allCases {
-            let currentValue = currentStates[option] ?? false
-            if let previousValue = previousStates[option], previousValue != currentValue {
-                appendSubscriptionHistoryLocked(
-                    option,
-                    userName: displayName(for: user),
-                    enabled: currentValue,
-                    userID: user.nUserID
-                )
-                if option.isIntercept {
-                    SoundPlayer.shared.play(currentValue ? .intercept : .interceptEnd)
-                }
-            }
-        }
-        observedSubscriptionStates[user.nUserID] = currentStates
-    }
-
-    private func historyChannelNameLocked(channelID: Int32, instance: UnsafeMutableRawPointer) -> String {
-        guard channelID > 0 else {
-            return L10n.text("connectedServer.channel.rootName")
-        }
-
-        var channel = Channel()
-        guard TT_GetChannel(instance, channelID, &channel) != 0 else {
-            return L10n.text("connectedServer.channel.rootName")
-        }
-
-        if channel.nChannelID == TT_GetRootChannelID(instance) {
-            return L10n.text("connectedServer.channel.rootName")
-        }
-
-        let name = ttString(from: channel.szName)
-        return name.isEmpty ? L10n.text("connectedServer.channel.rootName") : name
-    }
-
-    private func historyActorNameLocked(
-        username: String,
-        instance: UnsafeMutableRawPointer,
-        record: SavedServerRecord
-    ) -> String {
-        guard username.isEmpty == false else {
-            return L10n.text("history.unknownUser")
-        }
-
-        if username == record.username {
-            return L10n.text("chat.sender.you")
-        }
-
-        var user = User()
-        if username.withCString({ TT_GetUserByUsername(instance, $0, &user) != 0 }) {
-            return displayName(for: user)
-        }
-        return username
-    }
-
-    private func userIDForUsernameLocked(_ username: String, instance: UnsafeMutableRawPointer) -> Int32? {
-        guard username.isEmpty == false else {
-            return nil
-        }
-
-        var user = User()
-        guard username.withCString({ TT_GetUserByUsername(instance, $0, &user) != 0 }) else {
-            return nil
-        }
-        return user.nUserID
-    }
+    // MARK: - Session history (see TeamTalkConnectionController+SessionHistory.swift)
 
     @discardableResult
-    private func handleTextMessageEventLocked(
+    func handleTextMessageEventLocked(
         _ textMessage: TextMessage,
         instance: UnsafeMutableRawPointer,
         record: SavedServerRecord
@@ -3134,7 +2826,7 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func mergeTextMessageLocked(_ textMessage: TextMessage) -> String? {
+    func mergeTextMessageLocked(_ textMessage: TextMessage) -> String? {
         let key = textMessageMergeKey(for: textMessage)
         pendingTextMessages[key, default: []].append(textMessage)
 
@@ -3150,14 +2842,14 @@ final class TeamTalkConnectionController {
         return merged
     }
 
-    private func textMessageMergeKey(for textMessage: TextMessage) -> UInt64 {
+    func textMessageMergeKey(for textMessage: TextMessage) -> UInt64 {
         let type = UInt64(UInt32(textMessage.nMsgType.rawValue))
         let fromUserID = UInt64(UInt32(bitPattern: textMessage.nFromUserID))
         let toUserID = UInt64(UInt32(bitPattern: textMessage.nToUserID))
         return (type << 32) | (fromUserID << 16) | toUserID
     }
 
-    private func makeOutgoingChannelTextMessage(channelID: Int32, fromUserID: Int32) -> TextMessage {
+    func makeOutgoingChannelTextMessage(channelID: Int32, fromUserID: Int32) -> TextMessage {
         var message = TextMessage()
         message.nMsgType = MSGTYPE_CHANNEL
         message.nFromUserID = fromUserID
@@ -3167,7 +2859,7 @@ final class TeamTalkConnectionController {
         return message
     }
 
-    private func makeOutgoingBroadcastTextMessage(fromUserID: Int32) -> TextMessage {
+    func makeOutgoingBroadcastTextMessage(fromUserID: Int32) -> TextMessage {
         var message = TextMessage()
         message.nMsgType = MSGTYPE_BROADCAST
         message.nFromUserID = fromUserID
@@ -3177,7 +2869,7 @@ final class TeamTalkConnectionController {
         return message
     }
 
-    private func makeOutgoingPrivateTextMessage(toUserID: Int32, fromUserID: Int32) -> TextMessage {
+    func makeOutgoingPrivateTextMessage(toUserID: Int32, fromUserID: Int32) -> TextMessage {
         var message = TextMessage()
         message.nMsgType = MSGTYPE_USER
         message.nFromUserID = fromUserID
@@ -3187,7 +2879,7 @@ final class TeamTalkConnectionController {
         return message
     }
 
-    private func buildTextMessages(from baseMessage: TextMessage, content: String) -> [TextMessage] {
+    func buildTextMessages(from baseMessage: TextMessage, content: String) -> [TextMessage] {
         guard content.isEmpty == false else {
             return []
         }
@@ -3228,7 +2920,7 @@ final class TeamTalkConnectionController {
         return [message] + buildTextMessages(from: baseMessage, content: remainder)
     }
 
-    private func copyTTString<T>(_ string: String, into target: inout T) {
+    func copyTTString<T>(_ string: String, into target: inout T) {
         var copy = target
         withUnsafeMutablePointer(to: &copy) { pointer in
             pointer.withMemoryRebound(to: CChar.self, capacity: MemoryLayout<T>.size) { charPointer in
@@ -3241,7 +2933,7 @@ final class TeamTalkConnectionController {
         target = copy
     }
 
-    private func displayName(forUserID userID: Int32, instance: UnsafeMutableRawPointer) -> String {
+    func displayName(forUserID userID: Int32, instance: UnsafeMutableRawPointer) -> String {
         var user = User()
         if TT_GetUser(instance, userID, &user) != 0 {
             return displayName(for: user)
@@ -3250,7 +2942,7 @@ final class TeamTalkConnectionController {
         return L10n.format("connectedServer.chat.sender.unknown", String(userID))
     }
 
-    private func currentUserLocked(instance: UnsafeMutableRawPointer) -> User? {
+    func currentUserLocked(instance: UnsafeMutableRawPointer) -> User? {
         let currentUserID = TT_GetMyUserID(instance)
         guard currentUserID > 0 else {
             return nil
@@ -3263,7 +2955,7 @@ final class TeamTalkConnectionController {
         return user
     }
 
-    private func ensurePrivateConversationLocked(peerUserID: Int32, peerDisplayName: String) {
+    func ensurePrivateConversationLocked(peerUserID: Int32, peerDisplayName: String) {
         if var conversation = privateConversations[peerUserID] {
             conversation.peerDisplayName = peerDisplayName
             privateConversations[peerUserID] = conversation
@@ -3280,12 +2972,12 @@ final class TeamTalkConnectionController {
         )
     }
 
-    private func isUserOnlineLocked(userID: Int32, instance: UnsafeMutableRawPointer) -> Bool {
+    func isUserOnlineLocked(userID: Int32, instance: UnsafeMutableRawPointer) -> Bool {
         var user = User()
         return TT_GetUser(instance, userID, &user) != 0
     }
 
-    private func privatePeerDisplayName(
+    func privatePeerDisplayName(
         forUserID userID: Int32,
         fallback: String,
         instance: UnsafeMutableRawPointer
@@ -3297,7 +2989,7 @@ final class TeamTalkConnectionController {
         return fallback
     }
 
-    private func applyDefaultSubscriptionPreferencesLocked(
+    func applyDefaultSubscriptionPreferencesLocked(
         instance: UnsafeMutableRawPointer,
         preferences: AppPreferences
     ) {
@@ -3307,7 +2999,7 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func applyDefaultSubscriptionPreferencesLocked(
+    func applyDefaultSubscriptionPreferencesLocked(
         instance: UnsafeMutableRawPointer,
         userID: Int32,
         preferences: AppPreferences
@@ -3322,7 +3014,7 @@ final class TeamTalkConnectionController {
     }
 
     @discardableResult
-    private func setSubscriptionLocked(
+    func setSubscriptionLocked(
         instance: UnsafeMutableRawPointer,
         userID: Int32,
         option: UserSubscriptionOption,
@@ -3334,7 +3026,7 @@ final class TeamTalkConnectionController {
         return TT_DoUnsubscribe(instance, userID, Subscriptions(option.subscriptionMask))
     }
 
-    private func updateObservedSubscriptionStateLocked(
+    func updateObservedSubscriptionStateLocked(
         _ option: UserSubscriptionOption,
         enabled: Bool,
         userID: Int32
@@ -3344,7 +3036,7 @@ final class TeamTalkConnectionController {
         observedSubscriptionStates[userID] = states
     }
 
-    private func publishPrivateMessagesWindowRequest(userID: Int32?, reason: PrivateMessagesPresentationReason) {
+    func publishPrivateMessagesWindowRequest(userID: Int32?, reason: PrivateMessagesPresentationReason) {
         DispatchQueue.main.async { [weak self] in
             guard let self else {
                 return
@@ -3353,7 +3045,7 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func publishIncomingTextMessage(_ event: IncomingTextMessageEvent) {
+    func publishIncomingTextMessage(_ event: IncomingTextMessageEvent) {
         DispatchQueue.main.async { [weak self] in
             guard let self else {
                 return
@@ -3362,7 +3054,7 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func makeStatusText(
+    func makeStatusText(
         currentChannelID: Int32,
         nickname: String,
         currentStatusMode: TeamTalkStatusMode,
@@ -3390,7 +3082,7 @@ final class TeamTalkConnectionController {
         return L10n.format("connectedServer.status.inChannel", identity, channelName)
     }
 
-    private func ensureOutputAudioReadyLocked(instance: UnsafeMutableRawPointer) throws {
+    func ensureOutputAudioReadyLocked(instance: UnsafeMutableRawPointer) throws {
         guard outputAudioReady == false else {
             return
         }
@@ -3398,7 +3090,7 @@ final class TeamTalkConnectionController {
         try ensureDirectOutputAudioReadyLocked(instance: instance)
     }
 
-    private func ensureAdvancedMicrophoneInputReadyLocked(instance: UnsafeMutableRawPointer) throws {
+    func ensureAdvancedMicrophoneInputReadyLocked(instance: UnsafeMutableRawPointer) throws {
         guard inputAudioReady == false else {
             return
         }
@@ -3488,7 +3180,7 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func reinitializeAudioDevicesLocked(
+    func reinitializeAudioDevicesLocked(
         instance: UnsafeMutableRawPointer,
         preferences: AppPreferences
     ) throws {
@@ -3518,7 +3210,7 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func makeAudioStatusText() -> String {
+    func makeAudioStatusText() -> String {
         if voiceTransmissionEnabled {
             return L10n.text("connectedServer.audio.status.microphoneActive")
         }
@@ -3531,12 +3223,12 @@ final class TeamTalkConnectionController {
         return L10n.text("connectedServer.audio.status.unavailable")
     }
 
-    private enum AudioDirection {
+    enum AudioDirection {
         case input
         case output
     }
 
-    private func loadSoundDevicesLocked(forceRefresh: Bool) -> [SoundDevice] {
+    func loadSoundDevicesLocked(forceRefresh: Bool) -> [SoundDevice] {
         if forceRefresh == false, cachedSoundDevices.isEmpty == false {
             return cachedSoundDevices
         }
@@ -3559,7 +3251,7 @@ final class TeamTalkConnectionController {
         return cachedSoundDevices
     }
 
-    private func availableAudioDevicesLocked(forceRefresh: Bool) -> AudioDeviceCatalog {
+    func availableAudioDevicesLocked(forceRefresh: Bool) -> AudioDeviceCatalog {
         if forceRefresh == false, let cachedAudioDeviceCatalog {
             return cachedAudioDeviceCatalog
         }
@@ -3579,7 +3271,7 @@ final class TeamTalkConnectionController {
         return catalog
     }
 
-    private func makeAudioDeviceOption(from device: SoundDevice) -> AudioDeviceOption {
+    func makeAudioDeviceOption(from device: SoundDevice) -> AudioDeviceOption {
         let persistentID = ttString(from: device.szDeviceID).isEmpty
             ? "legacy:\(device.nDeviceID)"
             : ttString(from: device.szDeviceID)
@@ -3590,7 +3282,7 @@ final class TeamTalkConnectionController {
         )
     }
 
-    private func ensureDirectOutputAudioReadyLocked(instance: UnsafeMutableRawPointer) throws {
+    func ensureDirectOutputAudioReadyLocked(instance: UnsafeMutableRawPointer) throws {
         guard outputAudioReady == false else {
             return
         }
@@ -3605,7 +3297,7 @@ final class TeamTalkConnectionController {
         logAudio("TeamTalk direct output initialized. deviceID=\(outputDeviceID)")
     }
 
-    private func stopAdvancedMicrophoneInputLocked(instance: UnsafeMutableRawPointer, reason: String) {
+    func stopAdvancedMicrophoneInputLocked(instance: UnsafeMutableRawPointer, reason: String) {
         logAudio("Stopping Apple capture. reason=\(reason) virtualReady=\(teamTalkVirtualInputReady) inserted=\(insertedAudioChunkCount) failed=\(failedAudioChunkInsertCount)")
         if appleVoiceChatEngine.isRunning {
             logAudio("Microphone teardown: disabling muxed audio block events...")
@@ -3633,7 +3325,7 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func ensureTeamTalkVirtualInputReadyLocked(instance: UnsafeMutableRawPointer) throws {
+    func ensureTeamTalkVirtualInputReadyLocked(instance: UnsafeMutableRawPointer) throws {
         guard teamTalkVirtualInputReady == false else {
             return
         }
@@ -3647,7 +3339,7 @@ final class TeamTalkConnectionController {
         logAudio("TeamTalk virtual input initialized.")
     }
 
-    private func effectiveMicrophoneProcessingPreferencesLocked(
+    func effectiveMicrophoneProcessingPreferencesLocked(
         for deviceInfo: InputAudioDeviceInfo
     ) -> AdvancedInputAudioPreferences {
         var effectivePreferences = preferencesStore.advancedInputAudio(for: deviceInfo.uid)
@@ -3663,14 +3355,14 @@ final class TeamTalkConnectionController {
         ).preferences
     }
 
-    private func currentAdvancedInputAudioPreferencesLocked(
+    func currentAdvancedInputAudioPreferencesLocked(
         preferences: AppPreferences
     ) -> AdvancedInputAudioPreferences {
         let deviceID = InputAudioDeviceResolver.currentInputDeviceID(for: preferences.preferredInputDevice)
         return preferencesStore.advancedInputAudio(for: deviceID)
     }
 
-    private func handleUserAudioBlockEventLocked(
+    func handleUserAudioBlockEventLocked(
         _ message: TTMessage,
         instance: UnsafeMutableRawPointer
     ) {
@@ -3702,7 +3394,7 @@ final class TeamTalkConnectionController {
         appleVoiceChatEngine.enqueuePlaybackChunk(chunk)
     }
 
-    private func insertAdvancedMicrophoneAudioChunkLocked(_ chunk: AdvancedMicrophoneAudioChunk) {
+    func insertAdvancedMicrophoneAudioChunkLocked(_ chunk: AdvancedMicrophoneAudioChunk) {
         guard voiceTransmissionEnabled,
               let instance,
               TT_GetMyChannelID(instance) > 0 else {
@@ -3741,7 +3433,7 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func chunkLevelStats(_ data: Data) -> (peak: Float, rms: Float) {
+    func chunkLevelStats(_ data: Data) -> (peak: Float, rms: Float) {
         data.withUnsafeBytes { rawBuffer in
             let samples = rawBuffer.bindMemory(to: Int16.self)
             guard let baseAddress = samples.baseAddress, samples.count > 0 else {
@@ -3762,14 +3454,14 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func formatDecibels(_ value: Float) -> String {
+    func formatDecibels(_ value: Float) -> String {
         guard value > 0 else {
             return "-inf dBFS"
         }
         return String(format: "%.1f dBFS", 20 * log10(Double(value)))
     }
 
-    private func refreshAdvancedMicrophoneTargetIfNeededLocked(instance: UnsafeMutableRawPointer) {
+    func refreshAdvancedMicrophoneTargetIfNeededLocked(instance: UnsafeMutableRawPointer) {
         guard isAnyMicrophoneEngineRunning else {
             return
         }
@@ -3793,7 +3485,7 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func currentAdvancedMicrophoneTargetFormatLocked(instance: UnsafeMutableRawPointer) throws -> AdvancedMicrophoneAudioTargetFormat {
+    func currentAdvancedMicrophoneTargetFormatLocked(instance: UnsafeMutableRawPointer) throws -> AdvancedMicrophoneAudioTargetFormat {
         let channelID = TT_GetMyChannelID(instance)
         guard channelID > 0 else {
             throw TeamTalkConnectionError.internalError(L10n.text("connectedServer.audio.error.notInChannel"))
@@ -3834,7 +3526,7 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func sampleRate(forSpeexBandmode bandmode: Int32) -> Double {
+    func sampleRate(forSpeexBandmode bandmode: Int32) -> Double {
         switch bandmode {
         case 1:
             return 16_000
@@ -3845,7 +3537,7 @@ final class TeamTalkConnectionController {
         }
     }
 
-    private func selectedOutputDeviceIDLocked() throws -> INT32 {
+    func selectedOutputDeviceIDLocked() throws -> INT32 {
         try selectedDeviceIDLocked(
             preference: preferencesStore.preferences.preferredOutputDevice,
             availableDevices: availableAudioDevicesLocked(forceRefresh: false).outputDevices,
@@ -3853,7 +3545,7 @@ final class TeamTalkConnectionController {
         )
     }
 
-    private func selectedOutputDeviceUIDLocked() throws -> String {
+    func selectedOutputDeviceUIDLocked() throws -> String {
         let preference = preferencesStore.preferences.preferredOutputDevice
         // If the user picked a specific device, its persistentID is already the CoreAudio UID
         // (for non-legacy devices, makeAudioDeviceOption sets persistentID = szDeviceID = CoreAudio UID).
@@ -3869,7 +3561,7 @@ final class TeamTalkConnectionController {
         return try systemDefaultOutputDeviceUID()
     }
 
-    private func systemDefaultOutputDeviceUID() throws -> String {
+    func systemDefaultOutputDeviceUID() throws -> String {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyDefaultOutputDevice,
             mScope: kAudioObjectPropertyScopeGlobal,
@@ -3898,7 +3590,7 @@ final class TeamTalkConnectionController {
         return uid as String
     }
 
-    private func selectedInputDeviceIDLocked() throws -> INT32 {
+    func selectedInputDeviceIDLocked() throws -> INT32 {
         try selectedDeviceIDLocked(
             preference: preferencesStore.preferences.preferredInputDevice,
             availableDevices: availableAudioDevicesLocked(forceRefresh: false).inputDevices,
@@ -3906,7 +3598,7 @@ final class TeamTalkConnectionController {
         )
     }
 
-    private func applyOutputGainLocked(instance: UnsafeMutableRawPointer, gainDB: Double) {
+    func applyOutputGainLocked(instance: UnsafeMutableRawPointer, gainDB: Double) {
         let volume = Self.teamTalkVolume(for: gainDB)
         guard TT_SetSoundOutputVolume(instance, volume) != 0 else {
             logAudio("Output gain application failed. value=\(Self.formatGainDB(gainDB)) volume=\(volume)")
@@ -3932,7 +3624,7 @@ final class TeamTalkConnectionController {
         return String(format: "%.0f dB", rounded)
     }
 
-    private func selectedDeviceIDLocked(
+    func selectedDeviceIDLocked(
         preference: AudioDevicePreference,
         availableDevices: [AudioDeviceOption],
         direction: AudioDirection
@@ -3969,7 +3661,7 @@ final class TeamTalkConnectionController {
         return direction == .input ? defaultInputDeviceID : defaultOutputDeviceID
     }
 
-    private func fetchServerChannelsLocked(instance: UnsafeMutableRawPointer) -> [Channel] {
+    func fetchServerChannelsLocked(instance: UnsafeMutableRawPointer) -> [Channel] {
         var count: INT32 = 0
         guard TT_GetServerChannels(instance, nil, &count) != 0, count > 0 else {
             return []
@@ -3992,7 +3684,7 @@ final class TeamTalkConnectionController {
         return Array(channels.prefix(Int(actualCount)))
     }
 
-    private func fetchServerUsersLocked(instance: UnsafeMutableRawPointer) -> [User] {
+    func fetchServerUsersLocked(instance: UnsafeMutableRawPointer) -> [User] {
         var count: INT32 = 0
         guard TT_GetServerUsers(instance, nil, &count) != 0, count > 0 else {
             return []
@@ -4015,7 +3707,7 @@ final class TeamTalkConnectionController {
         return Array(users.prefix(Int(actualCount)))
     }
 
-    private func displayName(for user: User) -> String {
+    func displayName(for user: User) -> String {
         let nickname = ttString(from: user.szNickname)
         if nickname.isEmpty == false {
             return nickname
@@ -4023,7 +3715,7 @@ final class TeamTalkConnectionController {
         return ttString(from: user.szUsername)
     }
 
-    private func effectiveNickname(for record: SavedServerRecord, override nicknameOverride: String? = nil) -> String {
+    func effectiveNickname(for record: SavedServerRecord, override nicknameOverride: String? = nil) -> String {
         let overriddenNickname = nicknameOverride?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if overriddenNickname.isEmpty == false {
             return overriddenNickname
@@ -4042,11 +3734,11 @@ final class TeamTalkConnectionController {
         return "TTAccessible"
     }
 
-    private func clientVersion(for user: User) -> String {
+    func clientVersion(for user: User) -> String {
         "\(user.uVersion >> 16).\((user.uVersion >> 8) & 0xFF).\(user.uVersion & 0xFF)"
     }
 
-    private func ttString<T>(from value: T) -> String {
+    func ttString<T>(from value: T) -> String {
         var copy = value
         return withUnsafePointer(to: &copy) { pointer in
             pointer.withMemoryRebound(to: CChar.self, capacity: MemoryLayout<T>.size) { charPointer in
