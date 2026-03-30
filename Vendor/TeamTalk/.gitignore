@@ -1,0 +1,9 @@
+*.a
+*.dll
+*.dylib
+*.exp
+*.ilk
+*.lib
+*.pdb
+*.so
+!libTeamTalk5.dylib
