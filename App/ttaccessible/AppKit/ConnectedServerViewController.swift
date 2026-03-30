@@ -1430,7 +1430,7 @@ final class ConnectedServerViewController: NSViewController {
             return
         }
 
-        let props = TeamTalkConnectionController.ChannelProperties(
+        let props = ChannelProperties(
             name: "", topic: "", password: "", maxUsers: 200,
             isPermanent: false, isSoloTransmit: false, isNoVoiceActivation: false, isNoRecording: false
         )
@@ -1463,7 +1463,7 @@ final class ConnectedServerViewController: NSViewController {
 
         guard let info = connectionController.channelInfo(forChannelID: channel.id) else { return }
 
-        let props = TeamTalkConnectionController.ChannelProperties(
+        let props = ChannelProperties(
             name: info.name, topic: info.topic, password: info.password,
             maxUsers: info.maxUsers, isPermanent: info.isPermanent,
             isSoloTransmit: info.isSoloTransmit, isNoVoiceActivation: info.isNoVoiceActivation,
@@ -1514,10 +1514,10 @@ final class ConnectedServerViewController: NSViewController {
 
     private func presentChannelDialog(
         title: String,
-        properties: TeamTalkConnectionController.ChannelProperties,
+        properties: ChannelProperties,
         isCreate: Bool,
         window: NSWindow,
-        completion: @escaping (TeamTalkConnectionController.ChannelProperties, Bool) -> Void
+        completion: @escaping (ChannelProperties, Bool) -> Void
     ) {
         let alert = NSAlert()
         alert.messageText = title
@@ -1622,7 +1622,7 @@ final class ConnectedServerViewController: NSViewController {
         alert.beginSheetModal(for: window) { response in
             guard response == .alertFirstButtonReturn else { return }
             let maxUsers = Int32(maxUsersField.stringValue) ?? 200
-            let result = TeamTalkConnectionController.ChannelProperties(
+            let result = ChannelProperties(
                 name: nameField.stringValue,
                 topic: topicField.stringValue,
                 password: passwordField.stringValue,
