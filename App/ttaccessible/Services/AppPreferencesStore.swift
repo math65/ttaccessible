@@ -31,6 +31,7 @@ final class AppPreferencesStore: ObservableObject {
             preferences = AppPreferences()
         }
         SoundPlayer.shared.isEnabled = preferences.soundNotificationsEnabled
+        SoundPlayer.shared.loadPack(preferences.soundPack)
     }
 
     func updateDefaultNickname(_ nickname: String) {
@@ -179,6 +180,11 @@ final class AppPreferencesStore: ObservableObject {
 
     func updateRecordingMode(_ mode: Int) {
         mutate { $0.recordingMode = mode }
+    }
+
+    func updateSoundPack(_ pack: String) {
+        mutate { $0.soundPack = pack }
+        SoundPlayer.shared.loadPack(pack)
     }
 
     func resolveRecordingFolderURL() -> URL? {
@@ -579,6 +585,7 @@ final class AudioPreferencesStore: ObservableObject {
 final class NotificationsPreferencesStore: ObservableObject {
     struct State: Equatable {
         var soundNotificationsEnabled: Bool
+        var soundPack: String
         var modes: [BackgroundMessageAnnouncementType: BackgroundMessageAnnouncementMode]
         var macOSTTSVoiceIdentifier: String?
         var macOSTTSSpeechRate: Double
@@ -602,6 +609,7 @@ final class NotificationsPreferencesStore: ObservableObject {
                 guard let self else { return }
                 let nextState = Self.makeState(from: preferences)
                 guard self.state.soundNotificationsEnabled != nextState.soundNotificationsEnabled
+                    || self.state.soundPack != nextState.soundPack
                     || self.state.modes != nextState.modes
                     || self.state.macOSTTSVoiceIdentifier != nextState.macOSTTSVoiceIdentifier
                     || self.state.macOSTTSSpeechRate != nextState.macOSTTSSpeechRate
@@ -609,6 +617,7 @@ final class NotificationsPreferencesStore: ObservableObject {
                     return
                 }
                 self.state.soundNotificationsEnabled = nextState.soundNotificationsEnabled
+                self.state.soundPack = nextState.soundPack
                 self.state.modes = nextState.modes
                 self.state.macOSTTSVoiceIdentifier = nextState.macOSTTSVoiceIdentifier
                 self.state.macOSTTSSpeechRate = nextState.macOSTTSSpeechRate
@@ -634,6 +643,10 @@ final class NotificationsPreferencesStore: ObservableObject {
         rootStore.updateSoundNotificationsEnabled(enabled)
     }
 
+    func updateSoundPack(_ pack: String) {
+        rootStore.updateSoundPack(pack)
+    }
+
     func backgroundAnnouncementMode(for type: BackgroundMessageAnnouncementType) -> BackgroundMessageAnnouncementMode {
         state.modes[type] ?? .systemNotification
     }
@@ -657,6 +670,7 @@ final class NotificationsPreferencesStore: ObservableObject {
     private static func makeState(from preferences: AppPreferences) -> State {
         State(
             soundNotificationsEnabled: preferences.soundNotificationsEnabled,
+            soundPack: preferences.soundPack,
             modes: Dictionary(
                 uniqueKeysWithValues: BackgroundMessageAnnouncementType.allCases.map { type in
                     (type, preferences.backgroundAnnouncementMode(for: type))

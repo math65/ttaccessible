@@ -222,6 +222,18 @@ struct PreferencesNotificationsView: View {
                 )
                 .toggleStyle(.switch)
 
+                Picker(
+                    L10n.text("preferences.notifications.soundPack"),
+                    selection: Binding(
+                        get: { store.state.soundPack },
+                        set: { store.updateSoundPack($0) }
+                    )
+                ) {
+                    ForEach(SoundPlayer.availablePacks, id: \.self) { pack in
+                        Text(pack).tag(pack)
+                    }
+                }
+
                 VStack(alignment: .leading, spacing: 12) {
                     Text(L10n.text("preferences.notifications.backgroundAnnouncements.title"))
                         .font(.headline)

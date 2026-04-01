@@ -37,26 +37,28 @@ enum NotificationSound: String, CaseIterable {
 
 final class SoundPlayer {
     static let shared = SoundPlayer()
+    static let defaultPack = "Default"
+
+    static let availablePacks: [String] = [defaultPack] + packPrefixes.keys.sorted()
 
     private var players: [NotificationSound: AVAudioPlayer] = [:]
     private let queue = DispatchQueue(label: "com.math65.ttaccessible.soundplayer")
     var isEnabled = true
+    private(set) var currentPack: String = defaultPack
 
     private init() {
-        preload()
+        loadPack(SoundPlayer.defaultPack)
     }
 
-    private func preload() {
+    func loadPack(_ packName: String) {
+        currentPack = packName
+        players.removeAll()
         for sound in NotificationSound.allCases {
-            guard let url = Bundle.main.url(forResource: sound.rawValue, withExtension: "wav") else {
-                continue
-            }
-            do {
-                let player = try AVAudioPlayer(contentsOf: url)
-                player.prepareToPlay()
-                players[sound] = player
-            } catch {
-                // Sound unavailable — silently skip
+            if let url = soundURL(for: sound, pack: packName) {
+                if let player = try? AVAudioPlayer(contentsOf: url) {
+                    player.prepareToPlay()
+                    players[sound] = player
+                }
             }
         }
     }
@@ -72,5 +74,21 @@ final class SoundPlayer {
             player.prepareToPlay()
             player.play()
         }
+    }
+
+    private static let packPrefixes: [String: String] = [
+        "Majorly-G": "majorlyg_",
+        "Old": "old_",
+    ]
+
+    private func soundURL(for sound: NotificationSound, pack: String) -> URL? {
+        // Try the selected pack first (prefixed files).
+        if pack != SoundPlayer.defaultPack,
+           let prefix = Self.packPrefixes[pack],
+           let url = Bundle.main.url(forResource: "\(prefix)\(sound.rawValue)", withExtension: "wav") {
+            return url
+        }
+        // Fall back to Default (unprefixed).
+        return Bundle.main.url(forResource: sound.rawValue, withExtension: "wav")
     }
 }

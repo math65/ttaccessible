@@ -353,6 +353,7 @@
 "shortcuts.hearMyself" = "S'entendre soi-même";
 "shortcuts.hearMyself.announced.on" = "Retour audio activé";
 "shortcuts.hearMyself.announced.off" = "Retour audio désactivé";
+"preferences.notifications.soundPack" = "Pack de sons";
 "shortcuts.recording.start" = "Démarrer l'enregistrement";
 "shortcuts.recording.stop" = "Arrêter l'enregistrement";
 "recording.announced.started" = "Enregistrement démarré : %@";

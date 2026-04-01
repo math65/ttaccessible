@@ -80,6 +80,7 @@ struct AppPreferences: Codable, Equatable {
         case recordingFolderBookmark
         case recordingAudioFileFormat
         case recordingMode
+        case soundPack
     }
 
     var defaultNickname: String
@@ -121,6 +122,7 @@ struct AppPreferences: Codable, Equatable {
     var recordingFolderBookmark: Data?
     var recordingAudioFileFormat: Int
     var recordingMode: Int
+    var soundPack: String
     init(
         defaultNickname: String = "TTAccessible",
         defaultStatusMessage: String = "",
@@ -160,7 +162,8 @@ struct AppPreferences: Codable, Equatable {
         macOSTTSVolume: Double = 1.0,
         recordingFolderBookmark: Data? = nil,
         recordingAudioFileFormat: Int = 2,
-        recordingMode: Int = 1
+        recordingMode: Int = 1,
+        soundPack: String = "Default"
     ) {
         self.defaultNickname = defaultNickname
         self.defaultStatusMessage = defaultStatusMessage
@@ -201,6 +204,7 @@ struct AppPreferences: Codable, Equatable {
         self.recordingFolderBookmark = recordingFolderBookmark
         self.recordingAudioFileFormat = recordingAudioFileFormat
         self.recordingMode = recordingMode
+        self.soundPack = soundPack
     }
 
     nonisolated static func clampGainDB(_ value: Double) -> Double {
@@ -273,6 +277,7 @@ struct AppPreferences: Codable, Equatable {
         recordingFolderBookmark = try container.decodeIfPresent(Data.self, forKey: .recordingFolderBookmark)
         recordingAudioFileFormat = try container.decodeIfPresent(Int.self, forKey: .recordingAudioFileFormat) ?? 2
         recordingMode = try container.decodeIfPresent(Int.self, forKey: .recordingMode) ?? 1
+        soundPack = try container.decodeIfPresent(String.self, forKey: .soundPack) ?? "Default"
     }
 
     func encode(to encoder: Encoder) throws {
@@ -316,6 +321,7 @@ struct AppPreferences: Codable, Equatable {
         try container.encodeIfPresent(recordingFolderBookmark, forKey: .recordingFolderBookmark)
         try container.encode(recordingAudioFileFormat, forKey: .recordingAudioFileFormat)
         try container.encode(recordingMode, forKey: .recordingMode)
+        try container.encode(soundPack, forKey: .soundPack)
     }
 
     func isSubscriptionEnabledByDefault(_ option: UserSubscriptionOption) -> Bool {
