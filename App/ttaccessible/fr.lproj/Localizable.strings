@@ -151,6 +151,8 @@
 "connectedServer.volume.ok" = "Appliquer";
 "connectedServer.volume.cancel" = "Annuler";
 "connectedServer.volume.sliderLabel" = "Volume en pourcentage";
+"connectedServer.mute.announced.muted" = "%@ coupé";
+"connectedServer.mute.announced.unmuted" = "%@ rétabli";
 "connectedServer.menu.createChannel" = "Créer un canal";
 "connectedServer.menu.editChannel" = "Modifier le canal";
 "connectedServer.menu.deleteChannel" = "Supprimer le canal";
@@ -189,6 +191,9 @@
 "broadcast.error.subscriptionUpdateFailed" = "Impossible de modifier l'abonnement aux messages généraux.";
 "user.menu.title" = "Utilisateur";
 "user.menu.info" = "Informations utilisateur";
+"user.menu.mute" = "Couper localement";
+"user.menu.unmute" = "Rétablir localement";
+"user.menu.volume" = "Régler le volume…";
 "user.menu.subscriptions" = "Abonnements";
 "user.menu.broadcastMessages" = "Messages généraux";
 "subscriptions.privateMessages" = "Messages privés";
@@ -326,6 +331,10 @@
 "shortcuts.focus.history" = "Historique de session";
 "shortcuts.messages" = "Messages privés";
 "shortcuts.microphone" = "Activer ou couper le micro";
+"shortcuts.masterMute" = "Couper le volume principal";
+"shortcuts.masterUnmute" = "Rétablir le volume principal";
+"shortcuts.masterMute.announced.muted" = "Volume principal coupé";
+"shortcuts.masterMute.announced.unmuted" = "Volume principal rétabli";
 "privateMessages.window.title" = "Messages privés";
 "privateMessages.menu.open" = "Messages privés";
 "privateMessages.subtitle" = "Toutes les conversations privées de la session active sont regroupées ici.";

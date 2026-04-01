@@ -25,6 +25,9 @@ final class SavedServersMenuState: ObservableObject {
     @Published private(set) var canSendBroadcast = false
     @Published private(set) var hasSelectedUsers = false
     @Published private(set) var hasSingleSelectedUser = false
+    @Published private(set) var hasSingleSelectedOtherUser = false
+    @Published private(set) var isSelectedUserMuted = false
+    @Published private(set) var isMasterMuted = false
     @Published private(set) var selectedUserSubscriptionStates: [UserSubscriptionOption: Bool] = [:]
 
     private init() {
@@ -54,7 +57,8 @@ final class SavedServersMenuState: ObservableObject {
 
     func resetConnectedTransientState() {
         setCanSendBroadcast(false)
-        setSelectedUsersState(hasSelectedUsers: false, hasSingleSelectedUser: false, states: [:])
+        setSelectedUsersState(hasSelectedUsers: false, hasSingleSelectedUser: false, hasSingleSelectedOtherUser: false, isSelectedUserMuted: false, states: [:])
+        setMasterMuted(false)
     }
 
     func setAdministrator(_ value: Bool) {
@@ -65,12 +69,22 @@ final class SavedServersMenuState: ObservableObject {
         if canSendBroadcast != value { canSendBroadcast = value }
     }
 
-    func setSelectedUsersState(hasSelectedUsers: Bool, hasSingleSelectedUser: Bool, states: [UserSubscriptionOption: Bool]) {
+    func setMasterMuted(_ value: Bool) {
+        if isMasterMuted != value { isMasterMuted = value }
+    }
+
+    func setSelectedUsersState(hasSelectedUsers: Bool, hasSingleSelectedUser: Bool, hasSingleSelectedOtherUser: Bool, isSelectedUserMuted: Bool, states: [UserSubscriptionOption: Bool]) {
         if self.hasSelectedUsers != hasSelectedUsers {
             self.hasSelectedUsers = hasSelectedUsers
         }
         if self.hasSingleSelectedUser != hasSingleSelectedUser {
             self.hasSingleSelectedUser = hasSingleSelectedUser
+        }
+        if self.hasSingleSelectedOtherUser != hasSingleSelectedOtherUser {
+            self.hasSingleSelectedOtherUser = hasSingleSelectedOtherUser
+        }
+        if self.isSelectedUserMuted != isSelectedUserMuted {
+            self.isSelectedUserMuted = isSelectedUserMuted
         }
         if self.selectedUserSubscriptionStates != states {
             self.selectedUserSubscriptionStates = states

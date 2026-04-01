@@ -503,6 +503,19 @@ extension TeamTalkConnectionController {
         _ = TT_SetSoundOutputVolume(instance, volume)
     }
 
+    func toggleMasterMute(completion: @escaping @MainActor (Bool) -> Void) {
+        queue.async { [weak self] in
+            guard let self, let instance = self.instance else { return }
+            let newMuted = !self.masterMuted
+            _ = TT_SetSoundOutputMute(instance, newMuted ? 1 : 0)
+            self.masterMuted = newMuted
+            SoundPlayer.shared.play(newMuted ? .muteAll : .unmuteAll)
+            DispatchQueue.main.async {
+                completion(newMuted)
+            }
+        }
+    }
+
     func selectedDeviceIDLocked(
         preference: AudioDevicePreference,
         availableDevices: [AudioDeviceOption],

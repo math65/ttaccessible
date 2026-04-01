@@ -312,10 +312,14 @@ extension TeamTalkConnectionController {
         }
     }
 
-    func muteUser(userID: Int32, mute: Bool) {
+    func muteUser(userID: Int32, mute: Bool, completion: (@MainActor (Bool) -> Void)? = nil) {
         queue.async { [weak self] in
             guard let self, let instance = self.instance else { return }
             _ = TT_SetUserMute(instance, userID, STREAMTYPE_VOICE, mute ? 1 : 0)
+            _ = TT_PumpMessage(instance, CLIENTEVENT_USER_STATECHANGE, userID)
+            if let completion {
+                DispatchQueue.main.async { completion(mute) }
+            }
         }
     }
 
@@ -413,6 +417,13 @@ extension TeamTalkConnectionController {
 
     func setUserVoiceVolume(userID: Int32, username: String, volume: Int32) {
         userVolumeStore.setVolume(volume, forUsername: username)
+        queue.async { [weak self] in
+            guard let self, let instance = self.instance else { return }
+            _ = TT_SetUserVolume(instance, userID, STREAMTYPE_VOICE, volume)
+        }
+    }
+
+    func setUserVoiceVolumeImmediate(userID: Int32, volume: Int32) {
         queue.async { [weak self] in
             guard let self, let instance = self.instance else { return }
             _ = TT_SetUserVolume(instance, userID, STREAMTYPE_VOICE, volume)

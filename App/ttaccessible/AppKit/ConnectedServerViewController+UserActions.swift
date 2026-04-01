@@ -14,6 +14,7 @@ extension ConnectedServerViewController {
         let storedVolume = connectionController.userVolumeStore.volume(forUsername: user.username)
         let effectiveVolume = storedVolume ?? user.volumeVoice
         let currentPercent = Int(Double(effectiveVolume) / volDefault * 100)
+        let originalVolume = effectiveVolume
 
         let alert = NSAlert()
         alert.messageText = L10n.format("connectedServer.volume.title", user.displayName)
@@ -21,7 +22,8 @@ extension ConnectedServerViewController {
         alert.addButton(withTitle: L10n.text("connectedServer.volume.ok"))
         alert.addButton(withTitle: L10n.text("connectedServer.volume.cancel"))
 
-        let slider = NSSlider(value: Double(currentPercent), minValue: 0, maxValue: 200, target: nil, action: nil)
+        let handler = VolumeSliderHandler(userID: user.id, connectionController: connectionController)
+        let slider = NSSlider(value: Double(currentPercent), minValue: 0, maxValue: 200, target: handler, action: #selector(VolumeSliderHandler.sliderChanged(_:)))
         slider.numberOfTickMarks = 0
         slider.isContinuous = true
         slider.frame = NSRect(x: 0, y: 0, width: 280, height: 24)
@@ -29,18 +31,41 @@ extension ConnectedServerViewController {
         alert.accessoryView = slider
         alert.window.initialFirstResponder = slider
 
+        objc_setAssociatedObject(alert, &VolumeSliderHandler.associatedKey, handler, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+
         alert.beginSheetModal(for: window) { [weak self] response in
-            guard response == .alertFirstButtonReturn, let self else { return }
-            let percent = Int(slider.doubleValue)
-            let raw = Int32(Double(percent) / 100.0 * Double(SOUND_VOLUME_DEFAULT.rawValue))
-            let clamped = max(Int32(SOUND_VOLUME_MIN.rawValue), min(Int32(SOUND_VOLUME_MAX.rawValue), raw))
-            self.connectionController.setUserVoiceVolume(userID: user.id, username: user.username, volume: clamped)
+            guard let self else { return }
+            if response == .alertFirstButtonReturn {
+                let percent = Int(slider.doubleValue)
+                let raw = Int32(Double(percent) / 100.0 * Double(SOUND_VOLUME_DEFAULT.rawValue))
+                let clamped = max(Int32(SOUND_VOLUME_MIN.rawValue), min(Int32(SOUND_VOLUME_MAX.rawValue), raw))
+                self.connectionController.setUserVoiceVolume(userID: user.id, username: user.username, volume: clamped)
+            } else {
+                self.connectionController.setUserVoiceVolumeImmediate(userID: user.id, volume: originalVolume)
+            }
         }
     }
 
     @objc func toggleMuteUserAction(_ sender: Any? = nil) {
-        guard case .user(let user)? = selectedNode, !user.isCurrentUser else { return }
-        connectionController.muteUser(userID: user.id, mute: !user.isMuted)
+        guard case .user(let outlineUser)? = selectedNode, !outlineUser.isCurrentUser else { return }
+        let userID = outlineUser.id
+        let displayName = outlineUser.displayName
+        let currentlyMuted = localMuteState[userID] ?? outlineUser.isMuted
+        let newMuted = !currentlyMuted
+        localMuteState[userID] = newMuted
+        connectionController.muteUser(userID: userID, mute: newMuted)
+        let announcement = newMuted
+            ? L10n.format("connectedServer.mute.announced.muted", displayName)
+            : L10n.format("connectedServer.mute.announced.unmuted", displayName)
+        let element: Any = view.window ?? NSApp as Any
+        NSAccessibility.post(
+            element: element,
+            notification: .announcementRequested,
+            userInfo: [
+                NSAccessibility.NotificationUserInfoKey.announcement: announcement,
+                NSAccessibility.NotificationUserInfoKey.priority: NSAccessibilityPriorityLevel.high.rawValue
+            ]
+        )
     }
 
     @objc func kickUserAction(_ sender: Any? = nil) {
@@ -157,5 +182,23 @@ extension ConnectedServerViewController {
                 self?.presentActionError(error.localizedDescription)
             }
         }
+    }
+}
+
+private class VolumeSliderHandler: NSObject {
+    static var associatedKey: UInt8 = 0
+    let userID: Int32
+    let connectionController: TeamTalkConnectionController
+
+    init(userID: Int32, connectionController: TeamTalkConnectionController) {
+        self.userID = userID
+        self.connectionController = connectionController
+    }
+
+    @objc func sliderChanged(_ sender: NSSlider) {
+        let percent = Int(sender.doubleValue)
+        let raw = Int32(Double(percent) / 100.0 * Double(SOUND_VOLUME_DEFAULT.rawValue))
+        let clamped = max(Int32(SOUND_VOLUME_MIN.rawValue), min(Int32(SOUND_VOLUME_MAX.rawValue), raw))
+        connectionController.setUserVoiceVolumeImmediate(userID: userID, volume: clamped)
     }
 }

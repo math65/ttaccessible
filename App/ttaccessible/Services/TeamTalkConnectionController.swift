@@ -89,6 +89,7 @@ final class TeamTalkConnectionController {
     var outputAudioReady = false
     var inputAudioReady = false
     var voiceTransmissionEnabled = false
+    var masterMuted = false
     var teamTalkVirtualInputReady = false
     var advancedMicrophoneTargetFormat: AdvancedMicrophoneAudioTargetFormat?
     var reconnectTimer: DispatchSourceTimer?

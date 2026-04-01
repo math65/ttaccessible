@@ -565,6 +565,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         connectedServerViewController?.promptChangeStatus()
     }
 
+    func toggleMuteSelectedUser() {
+        guard menuState.mode == .connectedServer else { return }
+        restoreMainWindow()
+        connectedServerViewController?.toggleMuteUserAction()
+    }
+
+    func adjustSelectedUserVolume() {
+        guard menuState.mode == .connectedServer else { return }
+        restoreMainWindow()
+        connectedServerViewController?.adjustUserVolume()
+    }
+
+    func toggleMasterMute() {
+        guard menuState.mode == .connectedServer else { return }
+        connectionController.toggleMasterMute { [weak self] muted in
+            self?.menuState.setMasterMuted(muted)
+            let key = muted
+                ? "shortcuts.masterMute.announced.muted"
+                : "shortcuts.masterMute.announced.unmuted"
+            self?.announceWithVoiceOver(L10n.text(key))
+        }
+    }
+
     func openSelectedUserInfo() {
         guard menuState.mode == .connectedServer,
               let user = connectedServerViewController?.selectedUserForInfo() else {

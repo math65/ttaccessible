@@ -60,6 +60,7 @@ final class ConnectedServerViewController: NSViewController {
     lazy var contextMenu: NSMenu = makeContextMenu()
 
     var session: ConnectedServerSession
+    var localMuteState: [Int32: Bool] = [:]
     var selectedKey: SelectionKey?
     var needsInitialFocus = true
     var lastAnnouncedChannelID: Int32 = 0
@@ -527,6 +528,7 @@ final class ConnectedServerViewController: NSViewController {
 
         updateAudioControls()
         reloadVisibleUserRows(for: changedUserIDs)
+        updateMenuState()
     }
 
     func updateMenuState() {
@@ -537,9 +539,16 @@ final class ConnectedServerViewController: NSViewController {
             hasSelectedChannel: selectedChannel != nil,
             isInChannel: session.currentChannelID > 0
         )
+        let singleOtherUser = selectedUsers.count == 1 ? selectedUsers.first : nil
+        let currentMuted: Bool = {
+            guard let userID = singleOtherUser?.id else { return false }
+            return localMuteState[userID] ?? singleOtherUser?.isMuted ?? false
+        }()
         menuState.setSelectedUsersState(
             hasSelectedUsers: selectedUsers.isEmpty == false,
             hasSingleSelectedUser: allSelectedUsers.count == 1,
+            hasSingleSelectedOtherUser: singleOtherUser != nil,
+            isSelectedUserMuted: currentMuted,
             states: Dictionary(
                 uniqueKeysWithValues: UserSubscriptionOption.allCases.map { option in
                     (option, selectedUsers.isEmpty == false && selectedUsers.allSatisfy { $0.isSubscriptionEnabled(option) })

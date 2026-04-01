@@ -160,11 +160,12 @@ extension ConnectedServerViewController: NSOutlineViewDelegate {
                 }
             ]
             if !user.isCurrentUser {
-                let muteTitle = user.isMuted
+                let isMuted = localMuteState[user.id] ?? user.isMuted
+                let muteTitle = isMuted
                     ? L10n.text("connectedServer.menu.unmuteUser")
                     : L10n.text("connectedServer.menu.muteUser")
                 actions.append(NSAccessibilityCustomAction(name: muteTitle) { [weak self] in
-                    self?.connectionController.muteUser(userID: user.id, mute: !user.isMuted); return true
+                    self?.toggleMuteUserAction(); return true
                 })
                 let me = session.currentUser
                 if me?.isAdministrator == true || me?.isChannelOperator == true {

@@ -165,6 +165,20 @@ struct ttaccessibleApp: App {
                     }
                     .disabled(menuState.hasSingleSelectedUser == false)
 
+                    Button(menuState.isSelectedUserMuted
+                           ? L10n.text("user.menu.unmute")
+                           : L10n.text("user.menu.mute")) {
+                        appDelegate.toggleMuteSelectedUser()
+                    }
+                    .keyboardShortcut("m", modifiers: [.command, .shift])
+                    .disabled(menuState.hasSingleSelectedOtherUser == false)
+
+                    Button(L10n.text("user.menu.volume")) {
+                        appDelegate.adjustSelectedUserVolume()
+                    }
+                    .keyboardShortcut("u", modifiers: [.command])
+                    .disabled(menuState.hasSingleSelectedUser == false)
+
                     Divider()
 
                     Menu(L10n.text("user.menu.subscriptions")) {
@@ -247,6 +261,14 @@ struct ttaccessibleApp: App {
                 }
                 .keyboardShortcut("a", modifiers: [.command, .shift])
                 .disabled(menuState.mode != .connectedServer || menuState.isInChannel == false)
+
+                Button(menuState.isMasterMuted
+                       ? L10n.text("shortcuts.masterUnmute")
+                       : L10n.text("shortcuts.masterMute")) {
+                    appDelegate.toggleMasterMute()
+                }
+                .keyboardShortcut("m", modifiers: [.command])
+                .disabled(menuState.mode != .connectedServer)
 
                 Button(L10n.text("shortcuts.announceAudio")) {
                     appDelegate.announceAudioState()

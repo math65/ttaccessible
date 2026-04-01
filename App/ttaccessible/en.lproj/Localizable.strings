@@ -151,6 +151,8 @@
 "connectedServer.volume.ok" = "Apply";
 "connectedServer.volume.cancel" = "Cancel";
 "connectedServer.volume.sliderLabel" = "Volume percentage";
+"connectedServer.mute.announced.muted" = "%@ muted";
+"connectedServer.mute.announced.unmuted" = "%@ unmuted";
 "connectedServer.menu.createChannel" = "Create Channel";
 "connectedServer.menu.editChannel" = "Edit Channel";
 "connectedServer.menu.deleteChannel" = "Delete Channel";
@@ -189,6 +191,9 @@
 "broadcast.error.subscriptionUpdateFailed" = "Unable to update the broadcast subscription.";
 "user.menu.title" = "User";
 "user.menu.info" = "User Information";
+"user.menu.mute" = "Mute locally";
+"user.menu.unmute" = "Unmute locally";
+"user.menu.volume" = "Adjust volume…";
 "user.menu.subscriptions" = "Subscriptions";
 "user.menu.broadcastMessages" = "Broadcast Messages";
 "subscriptions.privateMessages" = "Private Messages";
@@ -326,6 +331,10 @@
 "shortcuts.focus.history" = "Session history";
 "shortcuts.messages" = "Private Messages";
 "shortcuts.microphone" = "Toggle microphone";
+"shortcuts.masterMute" = "Mute master volume";
+"shortcuts.masterUnmute" = "Unmute master volume";
+"shortcuts.masterMute.announced.muted" = "Master volume muted";
+"shortcuts.masterMute.announced.unmuted" = "Master volume unmuted";
 "privateMessages.window.title" = "Private Messages";
 "privateMessages.menu.open" = "Private Messages";
 "privateMessages.subtitle" = "All private conversations from the active session are grouped here.";
