@@ -354,6 +354,10 @@
 "shortcuts.hearMyself.announced.on" = "Retour audio activé";
 "shortcuts.hearMyself.announced.off" = "Retour audio désactivé";
 "preferences.notifications.soundPack" = "Pack de sons";
+"preferences.general.title" = "Général";
+"preferences.sounds.title" = "Sons";
+"preferences.announcements.title" = "Annonces";
+"preferences.announcements.voiceover.title" = "Annonces VoiceOver";
 "preferences.notifications.soundEvents.title" = "Événements sonores";
 "sound.event.newuser" = "Utilisateur rejoint le canal";
 "sound.event.removeuser" = "Utilisateur quitte le canal";

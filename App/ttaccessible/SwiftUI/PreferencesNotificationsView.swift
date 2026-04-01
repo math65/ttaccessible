@@ -6,7 +6,7 @@
 import AppKit
 import SwiftUI
 
-private final class NotificationParameterSliderNSView: NSView {
+final class NotificationParameterSliderNSView: NSView {
     private let titleLabel = NSTextField(labelWithString: "")
     private let valueLabel = NSTextField(labelWithString: "")
     private let slider = NSSlider(value: 0, minValue: 0, maxValue: 1, target: nil, action: nil)
@@ -149,7 +149,7 @@ private final class NotificationParameterSliderNSView: NSView {
     }
 }
 
-private struct NotificationParameterSlider: NSViewRepresentable {
+struct NotificationParameterSlider: NSViewRepresentable {
     let title: String
     let minimum: Double
     let maximum: Double
@@ -238,6 +238,7 @@ struct PreferencesNotificationsView: View {
 
                 Text(L10n.text("preferences.notifications.soundEvents.title"))
                     .font(.headline)
+                        .accessibilityAddTraits(.isHeader)
 
                 VStack(alignment: .leading, spacing: 6) {
                     ForEach(NotificationSound.allCases, id: \.self) { sound in
@@ -257,6 +258,7 @@ struct PreferencesNotificationsView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(L10n.text("preferences.notifications.backgroundAnnouncements.title"))
                         .font(.headline)
+                        .accessibilityAddTraits(.isHeader)
 
                     ForEach(BackgroundMessageAnnouncementType.allCases) { type in
                         VStack(alignment: .leading, spacing: 6) {
@@ -280,6 +282,7 @@ struct PreferencesNotificationsView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(L10n.text("preferences.notifications.tts.title"))
                         .font(.headline)
+                        .accessibilityAddTraits(.isHeader)
 
                     VStack(alignment: .leading, spacing: 6) {
                         Text(L10n.text("preferences.notifications.tts.voice"))

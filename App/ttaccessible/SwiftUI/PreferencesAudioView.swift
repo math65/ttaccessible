@@ -49,6 +49,7 @@ struct PreferencesAudioView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(L10n.text("preferences.audio.advanced.title"))
                         .font(.headline)
+                        .accessibilityAddTraits(.isHeader)
 
                     Toggle(
                         L10n.text("preferences.audio.advanced.echoCancellation"),

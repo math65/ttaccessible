@@ -11,44 +11,44 @@ import SwiftUI
 @MainActor
 final class PreferencesWindowController: NSWindowController {
     enum Pane: CaseIterable {
+        case general
         case connection
         case audio
-        case notifications
+        case sounds
+        case announcements
         case recording
-        case `import`
-        case accessibility
 
         var title: String {
             switch self {
+            case .general:
+                return L10n.text("preferences.general.title")
             case .connection:
                 return L10n.text("preferences.connection.title")
             case .audio:
                 return L10n.text("preferences.audio.title")
-            case .notifications:
-                return L10n.text("preferences.notifications.title")
+            case .sounds:
+                return L10n.text("preferences.sounds.title")
+            case .announcements:
+                return L10n.text("preferences.announcements.title")
             case .recording:
                 return L10n.text("preferences.recording.title")
-            case .import:
-                return L10n.text("preferences.import.title")
-            case .accessibility:
-                return L10n.text("preferences.accessibility.title")
             }
         }
 
         var iconName: String {
             switch self {
+            case .general:
+                return "person"
             case .connection:
                 return "network"
             case .audio:
                 return "speaker.wave.2"
-            case .notifications:
-                return "bell"
+            case .sounds:
+                return "speaker.wave.3"
+            case .announcements:
+                return "megaphone"
             case .recording:
                 return "circle.fill"
-            case .import:
-                return "square.and.arrow.down"
-            case .accessibility:
-                return "accessibility"
             }
         }
     }
@@ -126,7 +126,7 @@ private final class PreferencesContainerViewController: NSViewController {
     private let sidebarViewController = PreferencesSidebarViewController()
     private let contentHostViewController = PreferencesContentHostViewController()
     private let sidebarWidth: CGFloat = 200
-    private var selectedPane: PreferencesWindowController.Pane = .connection
+    private var selectedPane: PreferencesWindowController.Pane = .general
     private var paneViewControllers = [PreferencesWindowController.Pane: NSViewController]()
 
     init(
@@ -164,7 +164,7 @@ private final class PreferencesContainerViewController: NSViewController {
         sidebarViewController.onSelectionChanged = { [weak self] pane in
             self?.selectPane(pane, updateSidebarSelection: false)
         }
-        selectPane(.connection)
+        selectPane(.general)
     }
 
     func warmupExpensiveDependencies() {
@@ -191,7 +191,7 @@ private final class PreferencesContainerViewController: NSViewController {
         switch pane {
         case .audio:
             audioPreferencesStore.prepareIfNeeded()
-        case .notifications:
+        case .announcements:
             notificationsPreferencesStore.prepareIfNeeded()
         default:
             break
@@ -200,6 +200,10 @@ private final class PreferencesContainerViewController: NSViewController {
 
     private func makePaneViewController(for pane: PreferencesWindowController.Pane) -> NSViewController {
         switch pane {
+        case .general:
+            return NSHostingController(
+                rootView: PreferencesGeneralView(store: connectionPreferencesStore, rootStore: preferencesStore)
+            )
         case .connection:
             return NSHostingController(
                 rootView: PreferencesConnectionView(store: connectionPreferencesStore)
@@ -208,14 +212,12 @@ private final class PreferencesContainerViewController: NSViewController {
             return NSHostingController(
                 rootView: PreferencesAudioView(store: audioPreferencesStore)
             )
-        case .notifications:
-            return NSHostingController(rootView: PreferencesNotificationsView(store: notificationsPreferencesStore))
-        case .import:
-            return NSHostingController(rootView: PreferencesImportView(store: preferencesStore))
+        case .sounds:
+            return NSHostingController(rootView: PreferencesSoundsView(store: notificationsPreferencesStore))
+        case .announcements:
+            return NSHostingController(rootView: PreferencesAnnouncementsView(notificationsStore: notificationsPreferencesStore, accessibilityStore: accessibilityPreferencesStore))
         case .recording:
             return NSHostingController(rootView: PreferencesRecordingView(store: recordingPreferencesStore))
-        case .accessibility:
-            return NSHostingController(rootView: PreferencesAccessibilityView(store: accessibilityPreferencesStore))
         }
     }
 

@@ -13,6 +13,7 @@ struct PreferencesRecordingView: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text(L10n.text("preferences.recording.folder.label"))
                     .font(.headline)
+                        .accessibilityAddTraits(.isHeader)
 
                 HStack {
                     Text(store.state.folderDisplayPath ?? L10n.text("preferences.recording.folder.none"))
@@ -41,6 +42,7 @@ struct PreferencesRecordingView: View {
 
                 Text(L10n.text("preferences.recording.mode.label"))
                     .font(.headline)
+                        .accessibilityAddTraits(.isHeader)
 
                 Picker(
                     L10n.text("preferences.recording.mode.label"),
@@ -59,6 +61,7 @@ struct PreferencesRecordingView: View {
 
                 Text(L10n.text("preferences.recording.format.label"))
                     .font(.headline)
+                        .accessibilityAddTraits(.isHeader)
 
                 Picker(
                     L10n.text("preferences.recording.format.label"),
