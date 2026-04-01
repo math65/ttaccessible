@@ -347,6 +347,9 @@
 "shortcuts.masterUnmute" = "Unmute master volume";
 "shortcuts.masterMute.announced.muted" = "Master volume muted";
 "shortcuts.masterMute.announced.unmuted" = "Master volume unmuted";
+"shortcuts.hearMyself" = "Hear myself";
+"shortcuts.hearMyself.announced.on" = "Hear myself enabled";
+"shortcuts.hearMyself.announced.off" = "Hear myself disabled";
 "shortcuts.recording.start" = "Start recording";
 "shortcuts.recording.stop" = "Stop recording";
 "recording.announced.started" = "Recording started: %@";

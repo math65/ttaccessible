@@ -682,6 +682,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         folder.stopAccessingSecurityScopedResource()
     }
 
+    func toggleHearMyself() {
+        guard menuState.mode == .connectedServer else { return }
+        connectionController.toggleHearMyself { [weak self] enabled in
+            let key = enabled ? "shortcuts.hearMyself.announced.on" : "shortcuts.hearMyself.announced.off"
+            self?.announceWithVoiceOver(L10n.text(key))
+        }
+    }
+
     func toggleMasterMute() {
         guard menuState.mode == .connectedServer else { return }
         connectionController.toggleMasterMute { [weak self] muted in

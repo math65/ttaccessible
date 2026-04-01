@@ -509,6 +509,25 @@ extension TeamTalkConnectionController {
         _ = TT_SetSoundOutputVolume(instance, volume)
     }
 
+    // MARK: - Hear Myself
+
+    func toggleHearMyself(completion: @escaping @MainActor (Bool) -> Void) {
+        queue.async { [weak self] in
+            guard let self, let instance = self.instance else { return }
+            let myUserID = TT_GetMyUserID(instance)
+            guard myUserID > 0 else { return }
+            let newEnabled = !self.hearMyselfEnabled
+            let sub = Subscriptions(SUBSCRIBE_VOICE.rawValue)
+            if newEnabled {
+                _ = TT_DoSubscribe(instance, myUserID, sub)
+            } else {
+                _ = TT_DoUnsubscribe(instance, myUserID, sub)
+            }
+            self.hearMyselfEnabled = newEnabled
+            DispatchQueue.main.async { completion(newEnabled) }
+        }
+    }
+
     // MARK: - Recording
 
     func startMuxedRecording(folder: URL, format: AudioFileFormat, completion: @escaping @MainActor (Result<String, Error>) -> Void) {

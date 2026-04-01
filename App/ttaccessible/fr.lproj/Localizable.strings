@@ -347,6 +347,9 @@
 "shortcuts.masterUnmute" = "Rétablir le volume principal";
 "shortcuts.masterMute.announced.muted" = "Volume principal coupé";
 "shortcuts.masterMute.announced.unmuted" = "Volume principal rétabli";
+"shortcuts.hearMyself" = "S'entendre soi-même";
+"shortcuts.hearMyself.announced.on" = "Retour audio activé";
+"shortcuts.hearMyself.announced.off" = "Retour audio désactivé";
 "shortcuts.recording.start" = "Démarrer l'enregistrement";
 "shortcuts.recording.stop" = "Arrêter l'enregistrement";
 "recording.announced.started" = "Enregistrement démarré : %@";

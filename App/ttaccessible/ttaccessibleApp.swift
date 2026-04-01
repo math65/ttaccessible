@@ -286,6 +286,12 @@ struct ttaccessibleApp: App {
                 .keyboardShortcut("r", modifiers: [.command])
                 .disabled(menuState.mode != .connectedServer || (!menuState.isRecordingActive && menuState.isInChannel == false))
 
+                Button(L10n.text("shortcuts.hearMyself")) {
+                    appDelegate.toggleHearMyself()
+                }
+                .keyboardShortcut("h", modifiers: [.command, .shift])
+                .disabled(menuState.mode != .connectedServer || menuState.isInChannel == false)
+
                 Button(L10n.text("shortcuts.announceAudio")) {
                     appDelegate.announceAudioState()
                 }

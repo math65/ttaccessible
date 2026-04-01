@@ -90,6 +90,7 @@ final class TeamTalkConnectionController {
     var inputAudioReady = false
     var voiceTransmissionEnabled = false
     var masterMuted = false
+    var hearMyselfEnabled = false
     var recordingMuxedActive = false
     var recordingSeparateActive = false
     var recordingFolder: URL?

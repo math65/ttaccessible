@@ -721,6 +721,7 @@ extension TeamTalkConnectionController {
         inputAudioReady = false
         voiceTransmissionEnabled = false
         masterMuted = false
+        hearMyselfEnabled = false
         teamTalkVirtualInputReady = false
         advancedMicrophoneTargetFormat = nil
         isAutoAwayActive = false
