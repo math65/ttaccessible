@@ -889,6 +889,14 @@ final class ConnectedServerViewController: NSViewController {
         kickItem.target = self
         menu.addItem(kickItem)
 
+        let kickServerItem = NSMenuItem(
+            title: L10n.text("connectedServer.menu.kickUserFromServer"),
+            action: #selector(kickUserFromServerAction),
+            keyEquivalent: ""
+        )
+        kickServerItem.target = self
+        menu.addItem(kickServerItem)
+
         let kickBanItem = NSMenuItem(
             title: L10n.text("connectedServer.menu.kickBanUser"),
             action: #selector(kickBanUserAction),
@@ -958,6 +966,8 @@ final class ConnectedServerViewController: NSViewController {
             return isOther
         case #selector(kickUserAction):
             return isOther && canModerate
+        case #selector(kickUserFromServerAction):
+            return isOther && session.isAdministrator
         case #selector(kickBanUserAction):
             return isOther && session.isAdministrator
         case #selector(moveUserAction):

@@ -158,6 +158,27 @@ extension ConnectedServerViewController {
         }
     }
 
+    @objc func kickUserFromServerAction(_ sender: Any? = nil) {
+        guard case .user(let user)? = selectedNode,
+              !user.isCurrentUser,
+              let window = view.window else { return }
+
+        let alert = NSAlert()
+        alert.messageText = L10n.format("connectedServer.kickServer.title", user.displayName)
+        alert.informativeText = L10n.text("connectedServer.kickServer.message")
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: L10n.text("connectedServer.kick.confirm"))
+        alert.addButton(withTitle: L10n.text("common.cancel"))
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard response == .alertFirstButtonReturn, let self else { return }
+            self.connectionController.kickUser(userID: user.id, channelID: 0) { [weak self] result in
+                if case .failure(let error) = result {
+                    self?.presentError(error)
+                }
+            }
+        }
+    }
+
     @objc func kickBanUserAction(_ sender: Any? = nil) {
         guard case .user(let user)? = selectedNode,
               !user.isCurrentUser,

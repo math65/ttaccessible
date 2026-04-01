@@ -161,6 +161,9 @@
 "connectedServer.op.passwordPrompt.title" = "Mot de passe opérateur";
 "connectedServer.op.passwordPrompt.message" = "Entrez le mot de passe opérateur du canal pour modifier le statut.";
 "connectedServer.op.passwordPrompt.placeholder" = "Mot de passe opérateur";
+"connectedServer.menu.kickUserFromServer" = "Expulser du serveur";
+"connectedServer.kickServer.title" = "Expulser %@ du serveur";
+"connectedServer.kickServer.message" = "L'utilisateur sera complètement déconnecté du serveur.";
 "connectedServer.volume.leftSpeaker" = "Haut-parleur gauche";
 "connectedServer.volume.rightSpeaker" = "Haut-parleur droit";
 "connectedServer.mute.announced.muted" = "%@ coupé";

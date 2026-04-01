@@ -161,6 +161,9 @@
 "connectedServer.op.passwordPrompt.title" = "Operator password";
 "connectedServer.op.passwordPrompt.message" = "Enter the channel operator password to change operator status.";
 "connectedServer.op.passwordPrompt.placeholder" = "Operator password";
+"connectedServer.menu.kickUserFromServer" = "Kick from server";
+"connectedServer.kickServer.title" = "Kick %@ from server";
+"connectedServer.kickServer.message" = "This will disconnect the user from the server entirely.";
 "connectedServer.volume.leftSpeaker" = "Left speaker";
 "connectedServer.volume.rightSpeaker" = "Right speaker";
 "connectedServer.mute.announced.muted" = "%@ muted";
