@@ -151,6 +151,8 @@
 "connectedServer.volume.ok" = "Apply";
 "connectedServer.volume.cancel" = "Cancel";
 "connectedServer.volume.sliderLabel" = "Volume percentage";
+"connectedServer.volume.leftSpeaker" = "Left speaker";
+"connectedServer.volume.rightSpeaker" = "Right speaker";
 "connectedServer.mute.announced.muted" = "%@ muted";
 "connectedServer.mute.announced.unmuted" = "%@ unmuted";
 "connectedServer.menu.createChannel" = "Create Channel";

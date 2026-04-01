@@ -423,6 +423,30 @@ extension TeamTalkConnectionController {
         }
     }
 
+    func setUserStereo(userID: Int32, leftSpeaker: Bool, rightSpeaker: Bool) {
+        queue.async { [weak self] in
+            guard let self, let instance = self.instance else { return }
+            _ = TT_SetUserStereo(instance, userID, STREAMTYPE_VOICE, leftSpeaker ? 1 : 0, rightSpeaker ? 1 : 0)
+        }
+    }
+
+    func getUserStereo(userID: Int32, completion: @escaping @MainActor (Bool, Bool) -> Void) {
+        queue.async { [weak self] in
+            guard let self, let instance = self.instance else {
+                DispatchQueue.main.async { completion(true, true) }
+                return
+            }
+            var user = User()
+            if TT_GetUser(instance, userID, &user) != 0 {
+                let left = user.stereoPlaybackVoice.0 != 0
+                let right = user.stereoPlaybackVoice.1 != 0
+                DispatchQueue.main.async { completion(left, right) }
+            } else {
+                DispatchQueue.main.async { completion(true, true) }
+            }
+        }
+    }
+
     func setUserVoiceVolumeImmediate(userID: Int32, volume: Int32) {
         queue.async { [weak self] in
             guard let self, let instance = self.instance else { return }

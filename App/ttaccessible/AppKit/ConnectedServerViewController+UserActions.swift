@@ -16,32 +16,59 @@ extension ConnectedServerViewController {
         let currentPercent = Int(Double(effectiveVolume) / volDefault * 100)
         let originalVolume = effectiveVolume
 
-        let alert = NSAlert()
-        alert.messageText = L10n.format("connectedServer.volume.title", user.displayName)
-        alert.informativeText = L10n.text("connectedServer.volume.info")
-        alert.addButton(withTitle: L10n.text("connectedServer.volume.ok"))
-        alert.addButton(withTitle: L10n.text("connectedServer.volume.cancel"))
+        connectionController.getUserStereo(userID: user.id) { [weak self] currentLeft, currentRight in
+            guard let self, let window = self.view.window else { return }
+            let originalLeft = currentLeft
+            let originalRight = currentRight
 
-        let handler = VolumeSliderHandler(userID: user.id, connectionController: connectionController)
-        let slider = NSSlider(value: Double(currentPercent), minValue: 0, maxValue: 200, target: handler, action: #selector(VolumeSliderHandler.sliderChanged(_:)))
-        slider.numberOfTickMarks = 0
-        slider.isContinuous = true
-        slider.frame = NSRect(x: 0, y: 0, width: 280, height: 24)
-        slider.setAccessibilityLabel(L10n.text("connectedServer.volume.sliderLabel"))
-        alert.accessoryView = slider
-        alert.window.initialFirstResponder = slider
+            let alert = NSAlert()
+            alert.messageText = L10n.format("connectedServer.volume.title", user.displayName)
+            alert.informativeText = L10n.text("connectedServer.volume.info")
+            alert.addButton(withTitle: L10n.text("connectedServer.volume.ok"))
+            alert.addButton(withTitle: L10n.text("connectedServer.volume.cancel"))
 
-        objc_setAssociatedObject(alert, &VolumeSliderHandler.associatedKey, handler, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            let handler = VolumeSliderHandler(userID: user.id, connectionController: self.connectionController)
+            let slider = NSSlider(value: Double(currentPercent), minValue: 0, maxValue: 200, target: handler, action: #selector(VolumeSliderHandler.sliderChanged(_:)))
+            slider.numberOfTickMarks = 0
+            slider.isContinuous = true
+            slider.frame = NSRect(x: 0, y: 0, width: 280, height: 24)
+            slider.setAccessibilityLabel(L10n.text("connectedServer.volume.sliderLabel"))
 
-        alert.beginSheetModal(for: window) { [weak self] response in
-            guard let self else { return }
-            if response == .alertFirstButtonReturn {
-                let percent = Int(slider.doubleValue)
-                let raw = Int32(Double(percent) / 100.0 * Double(SOUND_VOLUME_DEFAULT.rawValue))
-                let clamped = max(Int32(SOUND_VOLUME_MIN.rawValue), min(Int32(SOUND_VOLUME_MAX.rawValue), raw))
-                self.connectionController.setUserVoiceVolume(userID: user.id, username: user.username, volume: clamped)
-            } else {
-                self.connectionController.setUserVoiceVolumeImmediate(userID: user.id, volume: originalVolume)
+            let leftCheck = NSButton(checkboxWithTitle: L10n.text("connectedServer.volume.leftSpeaker"), target: nil, action: nil)
+            leftCheck.state = currentLeft ? .on : .off
+            leftCheck.setAccessibilityLabel(L10n.text("connectedServer.volume.leftSpeaker"))
+
+            let rightCheck = NSButton(checkboxWithTitle: L10n.text("connectedServer.volume.rightSpeaker"), target: nil, action: nil)
+            rightCheck.state = currentRight ? .on : .off
+            rightCheck.setAccessibilityLabel(L10n.text("connectedServer.volume.rightSpeaker"))
+
+            let container = NSStackView(views: [slider, leftCheck, rightCheck])
+            container.orientation = .vertical
+            container.alignment = .leading
+            container.spacing = 8
+            container.frame = NSRect(x: 0, y: 0, width: 280, height: 80)
+
+            alert.accessoryView = container
+            alert.window.initialFirstResponder = slider
+
+            objc_setAssociatedObject(alert, &VolumeSliderHandler.associatedKey, handler, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+
+            alert.beginSheetModal(for: window) { [weak self] response in
+                guard let self else { return }
+                if response == .alertFirstButtonReturn {
+                    let percent = Int(slider.doubleValue)
+                    let raw = Int32(Double(percent) / 100.0 * Double(SOUND_VOLUME_DEFAULT.rawValue))
+                    let clamped = max(Int32(SOUND_VOLUME_MIN.rawValue), min(Int32(SOUND_VOLUME_MAX.rawValue), raw))
+                    self.connectionController.setUserVoiceVolume(userID: user.id, username: user.username, volume: clamped)
+                    self.connectionController.setUserStereo(
+                        userID: user.id,
+                        leftSpeaker: leftCheck.state == .on,
+                        rightSpeaker: rightCheck.state == .on
+                    )
+                } else {
+                    self.connectionController.setUserVoiceVolumeImmediate(userID: user.id, volume: originalVolume)
+                    self.connectionController.setUserStereo(userID: user.id, leftSpeaker: originalLeft, rightSpeaker: originalRight)
+                }
             }
         }
     }
