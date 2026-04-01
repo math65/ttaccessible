@@ -29,7 +29,7 @@ The user speaks French. Respond in French when communicating. Code, comments, an
 
 The app wraps the TeamTalk 5 C library (`Vendor/TeamTalk/libTeamTalk5.dylib`) via a bridging header. The SDK instance is a raw `UnsafeMutableRawPointer` managed by `TeamTalkConnectionController`. All SDK calls (`TT_*` functions) must happen on the serial dispatch queue `com.math65.ttaccessible.teamtalk`.
 
-**Critical**: The app does NOT use `TT_InitSoundInputDevice` / `TT_EnableVoiceTransmission` for microphone capture because the SDK's direct audio path causes audio saturation/crackling. Instead, it uses a custom `AVAudioEngine` pipeline (`AdvancedMicrophoneAudioEngine`) that captures audio, applies DSP (gate, expander, limiter, gain), converts to Int16 PCM, and injects chunks via `TT_InsertAudioBlock` into the TeamTalk virtual sound device (`TT_SOUNDDEVICE_ID_TEAMTALK_VIRTUAL`).
+**Critical**: The app does NOT use `TT_InitSoundInputDevice` / `TT_EnableVoiceTransmission` for microphone capture because the SDK's direct audio path causes audio saturation/crackling. Instead, it uses a custom `AVAudioEngine` pipeline (`AdvancedMicrophoneAudioEngine`) that captures audio, applies input gain, converts to Int16 PCM, and injects chunks via `TT_InsertAudioBlock` into the TeamTalk virtual sound device (`TT_SOUNDDEVICE_ID_TEAMTALK_VIRTUAL`).
 
 ### Core Components
 
@@ -37,13 +37,33 @@ The app wraps the TeamTalk 5 C library (`Vendor/TeamTalk/libTeamTalk5.dylib`) vi
 - **`AppDelegate`** — Implements `TeamTalkConnectionControllerDelegate`. Owns the connection controller and window lifecycle.
 - **`ConnectedServerViewController`** — Main UI (AppKit) with channel tree, chat, history. Split across 7 extension files (`+ChannelActions`, `+UserActions`, `+Announcements`, `+OutlineDataSource`, `+OutlineDelegate`, `+TableViewDataDelegate`).
 - **`AppPreferencesStore`** — `ObservableObject` wrapping `AppPreferences` (Codable struct in UserDefaults with 150ms debounced persistence). Mutate via `mutate { $0.property = value }`.
-- **`AdvancedMicrophoneAudioEngine`** — AVAudioEngine-based capture with real-time DSP. Delivers `AdvancedMicrophoneAudioChunk` via callback. Uses `AVAudioSinkNode` to keep the input graph active (installTap alone doesn't fire callbacks without a connected consumer).
+- **`AdvancedMicrophoneAudioEngine`** — AVAudioEngine-based capture. No DSP processing — just input gain, channel selection, and format conversion. Delivers `AdvancedMicrophoneAudioChunk` via callback. Graph: `inputNode → mixerNode → sinkNode` with tap on mixer.
+
+### Audio Pipeline
+
+The audio pipeline with optional echo cancellation:
+```
+Microphone → AVAudioEngine (input gain) → Int16 PCM → [WebRTC AEC3] → TT_InsertAudioBlock → TeamTalk SDK
+                                                            ↑
+                                              TT_MUXED_USERID speaker reference
+```
+
+**WebRTC AEC3 echo cancellation** (optional, toggle in Advanced Microphone Settings):
+- Uses `webrtc-audio-processing` v2.0 (WebRTC M131) from freedesktop.org, compiled as a static library (`Vendor/WebRTC/libwebrtc-audio-processing.a`, 5.4 MB).
+- C++ API bridged to Swift via an Objective-C++ wrapper (`WebRTCEchoCanceller.mm` → `WebRTCEchoCanceller.h` → bridging header).
+- Reference signal (far-end/speakers) comes from `TT_EnableAudioBlockEvent(TT_MUXED_USERID)` → `CLIENTEVENT_USER_AUDIOBLOCK` → `feedReference()`.
+- Capture signal (near-end/mic) processed via `processCapture()` in 10ms Int16 PCM frames.
+- AEC3 handles delay estimation, double-talk detection, and echo suppression internally.
+
+**No custom DSP, no Audio Unit plugins** — gate/expander/limiter and AU chain were removed intentionally. The user preferred a clean passthrough (AEC excepted).
+
+**No app audio capture** — the ScreenCaptureKit/CATapDescription app audio capture feature was removed entirely.
 
 ### Audio Pipeline Gotchas
 
 **System default device**: Calling `AudioUnitSetProperty(kAudioOutputUnitProperty_CurrentDevice)` on the already-active system default device corrupts AVAudioEngine's internal state — the tap silently receives no buffers. Always skip this call when the target device matches the system default.
 
-**AVAudioSinkNode required**: `installTap` alone on `inputNode` does not fire callbacks — the input node must be connected through the audio graph. An `AVAudioSinkNode` (no-op consumer) is attached and connected to `inputNode` to keep the graph active without claiming the output device (which TeamTalk SDK uses).
+**AVAudioSinkNode required**: `installTap` alone on `inputNode` does not fire callbacks — the input node must be connected through the audio graph. An `AVAudioSinkNode` (no-op consumer) is attached and connected via a `AVAudioMixerNode` to `inputNode` to keep the graph active without claiming the output device (which TeamTalk SDK uses).
 
 **Multi-channel USB devices**: Multi-stream USB interfaces (e.g. Komplete Audio 6 MK2) only expose the first stream's channels by default via `inputNode.outputFormat(forBus: 0)`. The AUHAL audio unit must be configured to aggregate all streams by setting `kAudioUnitProperty_StreamFormat` on output scope element 1 with the full channel count from `InputAudioDeviceResolver`.
 
@@ -53,7 +73,15 @@ The app wraps the TeamTalk 5 C library (`Vendor/TeamTalk/libTeamTalk5.dylib`) vi
 
 ### Audio Latency Profile (measured)
 
-The app-side audio pipeline adds **< 0.3 ms** from DSP completion to `TT_InsertAudioBlock`. Breakdown: DSP ~0 ms, `queue.async` hop ~0.02 ms, SDK insert ~0.03 ms. The dominant capture latency is the tap buffer size (~100 ms at 44100 Hz / 4410 samples), determined by the codec's `txIntervalMSec`. Any perceived latency beyond that comes from the Opus codec, network, or server-side processing — not from the app pipeline.
+The app-side audio pipeline adds **< 0.3 ms** from gain application to `TT_InsertAudioBlock`. The dominant capture latency is the tap buffer size (~40-50 ms at 48000 Hz), capped by `min(txIntervalMSec, 40)`. The SDK internal queue adds 0-80 ms before encoding. Any perceived latency beyond that comes from the Opus codec, network, or server-side processing — not from the app pipeline.
+
+### CPU Performance
+
+The audio pipeline in Release mode uses **< 0.2% CPU**. Debug builds are ~75x slower due to Swift runtime overhead (bounds checks, generic metadata resolution) — always profile with Release builds.
+
+**Auto-away check** (`currentIdleSecondsLocked()`) queries IOKit via `IORegistryEntryCreateCFProperties` which involves expensive mach_msg round-trips. It is throttled to once every 5 seconds (not on every 100ms polling tick).
+
+**Profiling**: Use `sample <PID> <seconds> -file /tmp/output.txt` to capture CPU profiles.
 
 ### Threading Model
 
@@ -77,11 +105,34 @@ String files: `App/ttaccessible/en.lproj/Localizable.strings`, `fr.lproj/Localiz
 
 ### App Sandbox
 
-The app is sandboxed. File I/O goes to `~/Library/Containers/com.math65.ttaccessible/`. Diagnostics logs are in the Caches subdirectory.
+The app is sandboxed. File I/O goes to `~/Library/Containers/com.math65.ttaccessible/`.
+
+### WebRTC Audio Processing (Vendor)
+
+`Vendor/WebRTC/` contains the WebRTC AEC3 static library and headers:
+- **Source**: `webrtc-audio-processing` v2.0 from [freedesktop.org](https://gitlab.freedesktop.org/pulseaudio/webrtc-audio-processing), based on WebRTC M131.
+- **Build**: Meson static build for macOS arm64. Abseil-cpp 20240722 bundled as subproject. Combined into one `.a` via `libtool`.
+- **Rebuild**: `brew install meson ninja`, clone v2.0, `meson setup builddir --default-library=static`, `meson compile -C builddir`, combine all `.a` with `libtool -static`, `strip -S`.
+- **Headers**: vendored in `Vendor/WebRTC/include/` (WebRTC API + abseil 20240722). Do NOT use homebrew abseil headers (version mismatch).
+- **Integration**: `WebRTCEchoCanceller.h` (C API) + `WebRTCEchoCanceller.mm` (ObjC++ impl in `Services/`) + bridging header. Linked with `-lc++`.
+
+**Note**: The TeamTalk SDK also bundles WebRTC audio processing internally, but it only works with `TT_InitSoundDuplexDevices()` (real sound devices in duplex mode). It does NOT work with `TT_InsertAudioBlock` / virtual device. That's why we run our own AEC3 instance.
 
 ### Original TeamTalk Reference
 
 The original Qt/C++ TeamTalk client is at `../ttoriginal/Client/qtTeamTalk/`. Key reference files: `mainwindow.cpp` (features), `utilsound.cpp` (audio init). The original uses `TT_InitSoundInputDevice` + `TT_EnableVoiceTransmission` (direct SDK path) — we cannot use this due to audio saturation.
+
+### Removed Features
+
+The following features were explicitly removed by the user and should NOT be re-added:
+
+- **Custom DSP processing** — gate, expander, limiter were all removed from the audio engine. The old types (`DynamicProcessorMode`, `LimiterControlMode`, `LimiterPreset`, `Gate`, `Expander`) remain in `AdvancedInputAudioPreferences.swift` only for backward-compatible decoding of saved preferences.
+- **Audio Unit plugin chain** — was briefly implemented then removed. No AU instantiation, no effect chain.
+- **App audio capture** — ScreenCaptureKit / CATapDescription capture, ring buffer mixer, and all related UI were removed entirely (7 files deleted).
+- **Apple Voice Processing (VPIO)** — removed, didn't work well. Replaced by WebRTC AEC3.
+- **Custom NLMS echo canceller** — homemade NLMS adaptive filter was replaced by WebRTC AEC3 (much better quality, no CPU issues in Debug builds).
+- **Audio diagnostics logging** — `AudioDiagnosticsLogger` and all `logAudio`/`logDiagnostics` calls removed. Was causing unnecessary CPU usage (per-chunk stats computation).
+- **Performance loggers** — `AppPerformanceLogger` and `PreferencesPerformanceLogger` removed. They used `NSLog` on hot paths (10x/sec in the polling loop), costing more CPU than what they measured.
 
 ### Missing Features (vs original Qt client)
 
