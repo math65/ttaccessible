@@ -295,7 +295,8 @@ extension TeamTalkConnectionController {
             canSendBroadcast: canSendBroadcast,
             audioStatusText: makeAudioStatusText(),
             inputGainDB: preferences.inputGainDB,
-            outputGainDB: preferences.outputGainDB
+            outputGainDB: preferences.outputGainDB,
+            recordingActive: recordingMuxedActive
         )
     }
 

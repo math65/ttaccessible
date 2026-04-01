@@ -77,6 +77,8 @@ struct AppPreferences: Codable, Equatable {
         case macOSTTSVoiceIdentifier
         case macOSTTSSpeechRate
         case macOSTTSVolume
+        case recordingFolderBookmark
+        case recordingAudioFileFormat
     }
 
     var defaultNickname: String
@@ -115,6 +117,8 @@ struct AppPreferences: Codable, Equatable {
     var inputGainDB: Double
     var outputGainDB: Double
     var savedServersSort: SavedServersSortPreferences
+    var recordingFolderBookmark: Data?
+    var recordingAudioFileFormat: Int
     init(
         defaultNickname: String = "TTAccessible",
         defaultStatusMessage: String = "",
@@ -151,7 +155,9 @@ struct AppPreferences: Codable, Equatable {
         sessionHistoryBackgroundMode: BackgroundMessageAnnouncementMode = .systemNotification,
         macOSTTSVoiceIdentifier: String? = nil,
         macOSTTSSpeechRate: Double = 0.5,
-        macOSTTSVolume: Double = 1.0
+        macOSTTSVolume: Double = 1.0,
+        recordingFolderBookmark: Data? = nil,
+        recordingAudioFileFormat: Int = 2
     ) {
         self.defaultNickname = defaultNickname
         self.defaultStatusMessage = defaultStatusMessage
@@ -189,6 +195,8 @@ struct AppPreferences: Codable, Equatable {
         self.macOSTTSVoiceIdentifier = macOSTTSVoiceIdentifier?.isEmpty == true ? nil : macOSTTSVoiceIdentifier
         self.macOSTTSSpeechRate = Self.clampMacOSTTSSpeechRate(macOSTTSSpeechRate)
         self.macOSTTSVolume = Self.clampMacOSTTSVolume(macOSTTSVolume)
+        self.recordingFolderBookmark = recordingFolderBookmark
+        self.recordingAudioFileFormat = recordingAudioFileFormat
     }
 
     nonisolated static func clampGainDB(_ value: Double) -> Double {
@@ -258,6 +266,8 @@ struct AppPreferences: Codable, Equatable {
         macOSTTSVoiceIdentifier = try container.decodeIfPresent(String.self, forKey: .macOSTTSVoiceIdentifier)
         macOSTTSSpeechRate = Self.clampMacOSTTSSpeechRate(try container.decodeIfPresent(Double.self, forKey: .macOSTTSSpeechRate) ?? 0.5)
         macOSTTSVolume = Self.clampMacOSTTSVolume(try container.decodeIfPresent(Double.self, forKey: .macOSTTSVolume) ?? 1.0)
+        recordingFolderBookmark = try container.decodeIfPresent(Data.self, forKey: .recordingFolderBookmark)
+        recordingAudioFileFormat = try container.decodeIfPresent(Int.self, forKey: .recordingAudioFileFormat) ?? 2
     }
 
     func encode(to encoder: Encoder) throws {
@@ -298,6 +308,8 @@ struct AppPreferences: Codable, Equatable {
         try container.encodeIfPresent(macOSTTSVoiceIdentifier, forKey: .macOSTTSVoiceIdentifier)
         try container.encode(Self.clampMacOSTTSSpeechRate(macOSTTSSpeechRate), forKey: .macOSTTSSpeechRate)
         try container.encode(Self.clampMacOSTTSVolume(macOSTTSVolume), forKey: .macOSTTSVolume)
+        try container.encodeIfPresent(recordingFolderBookmark, forKey: .recordingFolderBookmark)
+        try container.encode(recordingAudioFileFormat, forKey: .recordingAudioFileFormat)
     }
 
     func isSubscriptionEnabledByDefault(_ option: UserSubscriptionOption) -> Bool {

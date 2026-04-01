@@ -268,16 +268,20 @@ extension TeamTalkConnectionController {
     }
 
     func makeAudioStatusText() -> String {
+        var status: String
         if voiceTransmissionEnabled {
-            return L10n.text("connectedServer.audio.status.microphoneActive")
+            status = L10n.text("connectedServer.audio.status.microphoneActive")
+        } else if inputAudioReady {
+            status = L10n.text("connectedServer.audio.status.inputReady")
+        } else if outputAudioReady {
+            status = L10n.text("connectedServer.audio.status.outputReady")
+        } else {
+            status = L10n.text("connectedServer.audio.status.unavailable")
         }
-        if inputAudioReady {
-            return L10n.text("connectedServer.audio.status.inputReady")
+        if recordingMuxedActive {
+            status += " — " + L10n.text("connectedServer.audio.status.recording")
         }
-        if outputAudioReady {
-            return L10n.text("connectedServer.audio.status.outputReady")
-        }
-        return L10n.text("connectedServer.audio.status.unavailable")
+        return status
     }
 
     func loadSoundDevicesLocked(forceRefresh: Bool) -> [SoundDevice] {
@@ -502,6 +506,89 @@ extension TeamTalkConnectionController {
         let volume = Self.teamTalkVolume(for: gainDB)
         _ = TT_SetSoundOutputVolume(instance, volume)
     }
+
+    // MARK: - Recording
+
+    func startMuxedRecording(folder: URL, format: AudioFileFormat, completion: @escaping @MainActor (Result<String, Error>) -> Void) {
+        queue.async { [weak self] in
+            guard let self, let instance = self.instance, let record = self.connectedRecord else {
+                DispatchQueue.main.async { completion(.failure(TeamTalkConnectionError.connectionFailed)) }
+                return
+            }
+            let channelID = TT_GetMyChannelID(instance)
+            guard channelID > 0 else {
+                DispatchQueue.main.async { completion(.failure(TeamTalkConnectionError.internalError(L10n.text("connectedServer.audio.error.notInChannel")))) }
+                return
+            }
+            var channel = Channel()
+            guard TT_GetChannel(instance, channelID, &channel) != 0 else {
+                DispatchQueue.main.async { completion(.failure(TeamTalkConnectionError.internalError(L10n.text("connectedServer.audio.error.notInChannel")))) }
+                return
+            }
+            var audioCodec = channel.audiocodec
+            let ext = Self.fileExtension(for: format)
+            let timestamp = Self.recordingTimestamp()
+            let fileName = "\(timestamp) Conference\(ext)"
+            let filePath = folder.appendingPathComponent(fileName).path
+
+            let ok = filePath.withCString { cPath in
+                TT_StartRecordingMuxedAudioFile(instance, &audioCodec, cPath, format)
+            }
+            guard ok != 0 else {
+                DispatchQueue.main.async { completion(.failure(TeamTalkConnectionError.internalError(L10n.text("recording.error.startFailed")))) }
+                return
+            }
+            self.recordingMuxedActive = true
+            self.recordingFolder = folder
+            self.recordingFormat = format
+            self.publishSessionLocked(instance: instance, record: record)
+            DispatchQueue.main.async { completion(.success(fileName)) }
+        }
+    }
+
+    func stopMuxedRecording(completion: (@MainActor () -> Void)? = nil) {
+        queue.async { [weak self] in
+            guard let self, let instance = self.instance else {
+                if let completion { DispatchQueue.main.async { completion() } }
+                return
+            }
+            if self.recordingMuxedActive {
+                _ = TT_StopRecordingMuxedAudioFile(instance)
+                self.recordingMuxedActive = false
+                if let record = self.connectedRecord {
+                    self.publishSessionLocked(instance: instance, record: record)
+                }
+            }
+            if let completion { DispatchQueue.main.async { completion() } }
+        }
+    }
+
+    func restartMuxedRecordingForChannelChange() {
+        guard recordingMuxedActive, let folder = recordingFolder else { return }
+        let format = recordingFormat
+        stopMuxedRecording { [weak self] in
+            self?.startMuxedRecording(folder: folder, format: format) { _ in }
+        }
+    }
+
+    nonisolated static func fileExtension(for format: AudioFileFormat) -> String {
+        switch format {
+        case AFF_WAVE_FORMAT: return ".wav"
+        case AFF_CHANNELCODEC_FORMAT: return ".ogg"
+        case AFF_MP3_16KBIT_FORMAT, AFF_MP3_32KBIT_FORMAT, AFF_MP3_64KBIT_FORMAT,
+             AFF_MP3_128KBIT_FORMAT, AFF_MP3_256KBIT_FORMAT, AFF_MP3_320KBIT_FORMAT:
+            return ".mp3"
+        default: return ".wav"
+        }
+    }
+
+    nonisolated static func recordingTimestamp() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH.mm.ss"
+        return formatter.string(from: Date())
+    }
+
+    // MARK: - Master Mute
 
     func toggleMasterMute(completion: @escaping @MainActor (Bool) -> Void) {
         queue.async { [weak self] in

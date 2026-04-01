@@ -151,6 +151,7 @@ struct ConnectedServerSession: Equatable {
     let audioStatusText: String
     let inputGainDB: Double
     let outputGainDB: Double
+    let recordingActive: Bool
 }
 
 struct ConnectedUserAudioState: Equatable {

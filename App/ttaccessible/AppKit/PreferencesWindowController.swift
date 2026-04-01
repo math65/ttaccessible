@@ -14,6 +14,7 @@ final class PreferencesWindowController: NSWindowController {
         case connection
         case audio
         case notifications
+        case recording
         case `import`
         case accessibility
 
@@ -25,6 +26,8 @@ final class PreferencesWindowController: NSWindowController {
                 return L10n.text("preferences.audio.title")
             case .notifications:
                 return L10n.text("preferences.notifications.title")
+            case .recording:
+                return L10n.text("preferences.recording.title")
             case .import:
                 return L10n.text("preferences.import.title")
             case .accessibility:
@@ -40,6 +43,8 @@ final class PreferencesWindowController: NSWindowController {
                 return "speaker.wave.2"
             case .notifications:
                 return "bell"
+            case .recording:
+                return "circle.fill"
             case .import:
                 return "square.and.arrow.down"
             case .accessibility:
@@ -117,6 +122,7 @@ private final class PreferencesContainerViewController: NSViewController {
     private let audioPreferencesStore: AudioPreferencesStore
     private let notificationsPreferencesStore: NotificationsPreferencesStore
     private let accessibilityPreferencesStore: AccessibilityPreferencesStore
+    private let recordingPreferencesStore: RecordingPreferencesStore
     private let sidebarViewController = PreferencesSidebarViewController()
     private let contentHostViewController = PreferencesContentHostViewController()
     private let sidebarWidth: CGFloat = 200
@@ -142,6 +148,7 @@ private final class PreferencesContainerViewController: NSViewController {
         )
         self.notificationsPreferencesStore = preferencesStore.makeNotificationsStore()
         self.accessibilityPreferencesStore = preferencesStore.makeAccessibilityStore()
+        self.recordingPreferencesStore = preferencesStore.makeRecordingStore()
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -205,6 +212,8 @@ private final class PreferencesContainerViewController: NSViewController {
             return NSHostingController(rootView: PreferencesNotificationsView(store: notificationsPreferencesStore))
         case .import:
             return NSHostingController(rootView: PreferencesImportView(store: preferencesStore))
+        case .recording:
+            return NSHostingController(rootView: PreferencesRecordingView(store: recordingPreferencesStore))
         case .accessibility:
             return NSHostingController(rootView: PreferencesAccessibilityView(store: accessibilityPreferencesStore))
         }

@@ -147,7 +147,8 @@ final class ChannelFilesViewController: NSViewController {
             canSendBroadcast: session.canSendBroadcast,
             audioStatusText: session.audioStatusText,
             inputGainDB: session.inputGainDB,
-            outputGainDB: session.outputGainDB
+            outputGainDB: session.outputGainDB,
+            recordingActive: session.recordingActive
         )
         if oldUploads != activeUploadTransfers {
             reloadFiles(previousFiles: oldFiles, previousUploads: oldUploads)

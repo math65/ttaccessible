@@ -5,6 +5,7 @@
 //  Created by Codex on 17/03/2026.
 //
 
+import AppKit
 import Combine
 import Foundation
 
@@ -168,6 +169,28 @@ final class AppPreferencesStore: ObservableObject {
         mutate { $0.setMacOSTTSVolume(value) }
     }
 
+    func updateRecordingFolderBookmark(_ bookmark: Data?) {
+        mutate { $0.recordingFolderBookmark = bookmark }
+    }
+
+    func updateRecordingAudioFileFormat(_ format: Int) {
+        mutate { $0.recordingAudioFileFormat = format }
+    }
+
+    func resolveRecordingFolderURL() -> URL? {
+        guard let bookmark = preferences.recordingFolderBookmark else { return nil }
+        var isStale = false
+        guard let url = try? URL(resolvingBookmarkData: bookmark, options: .withSecurityScope, bookmarkDataIsStale: &isStale) else {
+            return nil
+        }
+        if isStale {
+            if let fresh = try? url.bookmarkData(options: .withSecurityScope) {
+                updateRecordingFolderBookmark(fresh)
+            }
+        }
+        return url
+    }
+
     func makeConnectionStore(onSubscriptionPreferencesChanged: (() -> Void)? = nil) -> ConnectionPreferencesStore {
         ConnectionPreferencesStore(rootStore: self, onSubscriptionPreferencesChanged: onSubscriptionPreferencesChanged)
     }
@@ -189,6 +212,10 @@ final class AppPreferencesStore: ObservableObject {
 
     func makeAccessibilityStore() -> AccessibilityPreferencesStore {
         AccessibilityPreferencesStore(rootStore: self)
+    }
+
+    func makeRecordingStore() -> RecordingPreferencesStore {
+        RecordingPreferencesStore(rootStore: self)
     }
 
     private func mutate(_ mutation: (inout AppPreferences) -> Void) {
@@ -689,6 +716,75 @@ final class AccessibilityPreferencesStore: ObservableObject {
             privateMessagesEnabled: preferences.voiceOverAnnouncements.privateMessagesEnabled,
             broadcastMessagesEnabled: preferences.voiceOverAnnouncements.broadcastMessagesEnabled,
             sessionHistoryEnabled: preferences.voiceOverAnnouncements.sessionHistoryEnabled
+        )
+    }
+}
+
+@MainActor
+final class RecordingPreferencesStore: ObservableObject {
+    struct FormatOption: Identifiable, Hashable {
+        let id: Int
+        let label: String
+    }
+
+    static let formatOptions: [FormatOption] = [
+        FormatOption(id: 2, label: "WAV"),
+        FormatOption(id: 1, label: "OGG (Opus)"),
+    ]
+
+    struct State: Equatable {
+        var folderBookmark: Data?
+        var audioFileFormat: Int
+        var folderDisplayPath: String?
+    }
+
+    @Published private(set) var state: State
+
+    private let rootStore: AppPreferencesStore
+    private var cancellables = Set<AnyCancellable>()
+
+    init(rootStore: AppPreferencesStore) {
+        self.rootStore = rootStore
+        self.state = Self.makeState(from: rootStore)
+
+        rootStore.$preferences
+            .sink { [weak self] _ in
+                guard let self else { return }
+                let next = Self.makeState(from: rootStore)
+                if self.state != next { self.state = next }
+            }
+            .store(in: &cancellables)
+    }
+
+    func updateAudioFileFormat(_ format: Int) {
+        rootStore.updateRecordingAudioFileFormat(format)
+    }
+
+    func chooseFolder(from window: NSWindow) {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
+        panel.prompt = L10n.text("recording.panel.choose")
+        panel.message = L10n.text("recording.panel.message")
+        panel.beginSheetModal(for: window) { [weak self] response in
+            guard response == .OK, let url = panel.url, let self else { return }
+            if let bookmark = try? url.bookmarkData(options: .withSecurityScope) {
+                self.rootStore.updateRecordingFolderBookmark(bookmark)
+            }
+        }
+    }
+
+    func clearFolder() {
+        rootStore.updateRecordingFolderBookmark(nil)
+    }
+
+    private static func makeState(from rootStore: AppPreferencesStore) -> State {
+        let folderURL = rootStore.resolveRecordingFolderURL()
+        return State(
+            folderBookmark: rootStore.preferences.recordingFolderBookmark,
+            audioFileFormat: rootStore.preferences.recordingAudioFileFormat,
+            folderDisplayPath: folderURL?.path
         )
     }
 }

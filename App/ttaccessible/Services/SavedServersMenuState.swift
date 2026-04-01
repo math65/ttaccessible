@@ -28,6 +28,7 @@ final class SavedServersMenuState: ObservableObject {
     @Published private(set) var hasSingleSelectedOtherUser = false
     @Published private(set) var isSelectedUserMuted = false
     @Published private(set) var isMasterMuted = false
+    @Published private(set) var isRecordingActive = false
     @Published private(set) var selectedUserSubscriptionStates: [UserSubscriptionOption: Bool] = [:]
 
     private init() {
@@ -59,6 +60,7 @@ final class SavedServersMenuState: ObservableObject {
         setCanSendBroadcast(false)
         setSelectedUsersState(hasSelectedUsers: false, hasSingleSelectedUser: false, hasSingleSelectedOtherUser: false, isSelectedUserMuted: false, states: [:])
         setMasterMuted(false)
+        setRecordingActive(false)
     }
 
     func setAdministrator(_ value: Bool) {
@@ -71,6 +73,10 @@ final class SavedServersMenuState: ObservableObject {
 
     func setMasterMuted(_ value: Bool) {
         if isMasterMuted != value { isMasterMuted = value }
+    }
+
+    func setRecordingActive(_ value: Bool) {
+        if isRecordingActive != value { isRecordingActive = value }
     }
 
     func setSelectedUsersState(hasSelectedUsers: Bool, hasSingleSelectedUser: Bool, hasSingleSelectedOtherUser: Bool, isSelectedUserMuted: Bool, states: [UserSubscriptionOption: Bool]) {

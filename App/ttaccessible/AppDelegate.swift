@@ -577,6 +577,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         connectedServerViewController?.adjustUserVolume()
     }
 
+    func toggleRecording() {
+        guard menuState.mode == .connectedServer else { return }
+        if menuState.isRecordingActive {
+            connectionController.stopMuxedRecording {
+                self.announceWithVoiceOver(L10n.text("recording.announced.stopped"))
+            }
+            return
+        }
+        guard let folderURL = preferencesStore.resolveRecordingFolderURL() else {
+            promptRecordingFolder()
+            return
+        }
+        startRecordingToFolder(folderURL)
+    }
+
+    private func promptRecordingFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
+        panel.prompt = L10n.text("recording.panel.choose")
+        panel.message = L10n.text("recording.panel.message")
+        panel.beginSheetModal(for: NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first!) { [weak self] response in
+            guard response == .OK, let url = panel.url, let self else { return }
+            if let bookmark = try? url.bookmarkData(options: .withSecurityScope) {
+                self.preferencesStore.updateRecordingFolderBookmark(bookmark)
+            }
+            self.startRecordingToFolder(url)
+        }
+    }
+
+    private func startRecordingToFolder(_ folder: URL) {
+        guard folder.startAccessingSecurityScopedResource() else {
+            announceWithVoiceOver(L10n.text("recording.announced.error"))
+            return
+        }
+        let format = AudioFileFormat(rawValue: UInt32(preferencesStore.preferences.recordingAudioFileFormat))
+        connectionController.startMuxedRecording(folder: folder, format: format) { [weak self] result in
+            folder.stopAccessingSecurityScopedResource()
+            switch result {
+            case .success(let fileName):
+                self?.announceWithVoiceOver(L10n.format("recording.announced.started", fileName))
+            case .failure:
+                self?.announceWithVoiceOver(L10n.text("recording.announced.error"))
+            }
+        }
+    }
+
     func toggleMasterMute() {
         guard menuState.mode == .connectedServer else { return }
         connectionController.toggleMasterMute { [weak self] muted in

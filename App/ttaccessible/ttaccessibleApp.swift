@@ -270,6 +270,14 @@ struct ttaccessibleApp: App {
                 .keyboardShortcut("m", modifiers: [.command])
                 .disabled(menuState.mode != .connectedServer)
 
+                Button(menuState.isRecordingActive
+                       ? L10n.text("shortcuts.recording.stop")
+                       : L10n.text("shortcuts.recording.start")) {
+                    appDelegate.toggleRecording()
+                }
+                .keyboardShortcut("r", modifiers: [.command])
+                .disabled(menuState.mode != .connectedServer || (!menuState.isRecordingActive && menuState.isInChannel == false))
+
                 Button(L10n.text("shortcuts.announceAudio")) {
                     appDelegate.announceAudioState()
                 }

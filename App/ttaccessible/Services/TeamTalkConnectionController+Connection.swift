@@ -543,6 +543,14 @@ extension TeamTalkConnectionController {
                 if connectedRecord != nil {
                     publishAudioRuntimeUpdateLocked(instance: instance)
                 }
+            case CLIENTEVENT_USER_RECORD_MEDIAFILE:
+                if connectedRecord != nil {
+                    let status = message.mediafileinfo.nStatus
+                    if status == MFS_ERROR || status == MFS_ABORTED {
+                        recordingMuxedActive = false
+                        publishInvalidation = .all
+                    }
+                }
             case CLIENTEVENT_CMD_USERACCOUNT:
                 pendingUserAccounts.append(makeUserAccountProperties(from: message.useraccount))
             case CLIENTEVENT_CMD_BANNEDUSER:
@@ -701,6 +709,11 @@ extension TeamTalkConnectionController {
         inputAudioReady = false
         voiceTransmissionEnabled = false
         masterMuted = false
+        if recordingMuxedActive {
+            _ = TT_StopRecordingMuxedAudioFile(instance)
+            recordingMuxedActive = false
+        }
+        recordingFolder = nil
         teamTalkVirtualInputReady = false
         advancedMicrophoneTargetFormat = nil
         isAutoAwayActive = false
@@ -807,15 +820,19 @@ extension TeamTalkConnectionController {
                         if isSuppressingLoginHistoryLocked == false {
                             appendUserJoinedChannelHistoryLocked(message.user, currentUserID: currentUserID, instance: instance)
                         }
-                        if message.user.nUserID == currentUserID,
-                           !voiceTransmissionEnabled,
-                           preferencesStore.preferences.lastVoiceTransmissionEnabled,
-                           AVCaptureDevice.authorizationStatus(for: .audio) == .authorized {
-                            do {
-                                try ensureAdvancedMicrophoneInputReadyLocked(instance: instance)
-                                voiceTransmissionEnabled = true
-                                SoundPlayer.shared.play(.voxMeEnable)
-                            } catch {}
+                        if message.user.nUserID == currentUserID {
+                            if !voiceTransmissionEnabled,
+                               preferencesStore.preferences.lastVoiceTransmissionEnabled,
+                               AVCaptureDevice.authorizationStatus(for: .audio) == .authorized {
+                                do {
+                                    try ensureAdvancedMicrophoneInputReadyLocked(instance: instance)
+                                    voiceTransmissionEnabled = true
+                                    SoundPlayer.shared.play(.voxMeEnable)
+                                } catch {}
+                            }
+                            if recordingMuxedActive {
+                                restartMuxedRecordingForChannelChange()
+                            }
                         }
                     case CLIENTEVENT_CMD_USER_UPDATE:
                         appendSubscriptionHistoryIfNeededLocked(message.user)

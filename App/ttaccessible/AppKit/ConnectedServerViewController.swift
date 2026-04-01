@@ -523,7 +523,8 @@ final class ConnectedServerViewController: NSViewController {
             canSendBroadcast: session.canSendBroadcast,
             audioStatusText: update.audioStatusText,
             inputGainDB: session.inputGainDB,
-            outputGainDB: session.outputGainDB
+            outputGainDB: session.outputGainDB,
+            recordingActive: session.recordingActive
         )
 
         updateAudioControls()
@@ -555,6 +556,7 @@ final class ConnectedServerViewController: NSViewController {
                 }
             )
         )
+        menuState.setRecordingActive(session.recordingActive)
     }
 
     func updateChatInputState() {
@@ -696,7 +698,8 @@ final class ConnectedServerViewController: NSViewController {
             canSendBroadcast: session.canSendBroadcast,
             audioStatusText: session.audioStatusText,
             inputGainDB: normalized,
-            outputGainDB: session.outputGainDB
+            outputGainDB: session.outputGainDB,
+            recordingActive: session.recordingActive
         )
         updateAudioControls()
     }
@@ -728,7 +731,8 @@ final class ConnectedServerViewController: NSViewController {
             canSendBroadcast: session.canSendBroadcast,
             audioStatusText: session.audioStatusText,
             inputGainDB: session.inputGainDB,
-            outputGainDB: normalized
+            outputGainDB: normalized,
+            recordingActive: session.recordingActive
         )
         updateAudioControls()
     }
