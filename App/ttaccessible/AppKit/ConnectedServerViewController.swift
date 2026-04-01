@@ -550,6 +550,7 @@ final class ConnectedServerViewController: NSViewController {
             hasSingleSelectedUser: allSelectedUsers.count == 1,
             hasSingleSelectedOtherUser: singleOtherUser != nil,
             isSelectedUserMuted: currentMuted,
+            isSelectedUserChannelOperator: singleOtherUser?.isChannelOperator ?? false,
             states: Dictionary(
                 uniqueKeysWithValues: UserSubscriptionOption.allCases.map { option in
                     (option, selectedUsers.isEmpty == false && selectedUsers.allSatisfy { $0.isSubscriptionEnabled(option) })
@@ -871,6 +872,14 @@ final class ConnectedServerViewController: NSViewController {
         muteItem.target = self
         menu.addItem(muteItem)
 
+        let opItem = NSMenuItem(
+            title: L10n.text("connectedServer.menu.makeOperator"),
+            action: #selector(toggleChannelOperatorAction),
+            keyEquivalent: ""
+        )
+        opItem.target = self
+        menu.addItem(opItem)
+
         let kickItem = NSMenuItem(
             title: L10n.text("connectedServer.menu.kickUser"),
             action: #selector(kickUserAction),
@@ -938,6 +947,13 @@ final class ConnectedServerViewController: NSViewController {
         case #selector(toggleMuteUserAction):
             let muted = selectedUser?.isMuted == true
             menuItem.title = muted ? L10n.text("connectedServer.menu.unmuteUser") : L10n.text("connectedServer.menu.muteUser")
+            return isOther
+        case #selector(toggleChannelOperatorAction):
+            if let user = selectedUser, isOther {
+                menuItem.title = user.isChannelOperator
+                    ? L10n.text("connectedServer.menu.revokeOperator")
+                    : L10n.text("connectedServer.menu.makeOperator")
+            }
             return isOther
         case #selector(kickUserAction):
             return isOther && canModerate

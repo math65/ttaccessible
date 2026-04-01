@@ -566,6 +566,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         connectedServerViewController?.promptChangeStatus()
     }
 
+    func toggleChannelOperator() {
+        guard menuState.mode == .connectedServer else { return }
+        restoreMainWindow()
+        connectedServerViewController?.toggleChannelOperatorAction()
+    }
+
     func toggleMuteSelectedUser() {
         guard menuState.mode == .connectedServer else { return }
         restoreMainWindow()

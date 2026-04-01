@@ -27,6 +27,7 @@ final class SavedServersMenuState: ObservableObject {
     @Published private(set) var hasSingleSelectedUser = false
     @Published private(set) var hasSingleSelectedOtherUser = false
     @Published private(set) var isSelectedUserMuted = false
+    @Published private(set) var isSelectedUserChannelOperator = false
     @Published private(set) var isMasterMuted = false
     @Published private(set) var isRecordingActive = false
     @Published private(set) var selectedUserSubscriptionStates: [UserSubscriptionOption: Bool] = [:]
@@ -58,7 +59,7 @@ final class SavedServersMenuState: ObservableObject {
 
     func resetConnectedTransientState() {
         setCanSendBroadcast(false)
-        setSelectedUsersState(hasSelectedUsers: false, hasSingleSelectedUser: false, hasSingleSelectedOtherUser: false, isSelectedUserMuted: false, states: [:])
+        setSelectedUsersState(hasSelectedUsers: false, hasSingleSelectedUser: false, hasSingleSelectedOtherUser: false, isSelectedUserMuted: false, isSelectedUserChannelOperator: false, states: [:])
         setMasterMuted(false)
         setRecordingActive(false)
     }
@@ -79,7 +80,7 @@ final class SavedServersMenuState: ObservableObject {
         if isRecordingActive != value { isRecordingActive = value }
     }
 
-    func setSelectedUsersState(hasSelectedUsers: Bool, hasSingleSelectedUser: Bool, hasSingleSelectedOtherUser: Bool, isSelectedUserMuted: Bool, states: [UserSubscriptionOption: Bool]) {
+    func setSelectedUsersState(hasSelectedUsers: Bool, hasSingleSelectedUser: Bool, hasSingleSelectedOtherUser: Bool, isSelectedUserMuted: Bool, isSelectedUserChannelOperator: Bool, states: [UserSubscriptionOption: Bool]) {
         if self.hasSelectedUsers != hasSelectedUsers {
             self.hasSelectedUsers = hasSelectedUsers
         }
@@ -91,6 +92,9 @@ final class SavedServersMenuState: ObservableObject {
         }
         if self.isSelectedUserMuted != isSelectedUserMuted {
             self.isSelectedUserMuted = isSelectedUserMuted
+        }
+        if self.isSelectedUserChannelOperator != isSelectedUserChannelOperator {
+            self.isSelectedUserChannelOperator = isSelectedUserChannelOperator
         }
         if self.selectedUserSubscriptionStates != states {
             self.selectedUserSubscriptionStates = states

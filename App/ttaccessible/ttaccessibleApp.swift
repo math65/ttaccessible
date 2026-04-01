@@ -179,6 +179,14 @@ struct ttaccessibleApp: App {
                     .keyboardShortcut("u", modifiers: [.command])
                     .disabled(menuState.hasSingleSelectedUser == false)
 
+                    Button(menuState.isSelectedUserChannelOperator
+                           ? L10n.text("user.menu.revokeOperator")
+                           : L10n.text("user.menu.makeOperator")) {
+                        appDelegate.toggleChannelOperator()
+                    }
+                    .keyboardShortcut("o", modifiers: [.control, .command])
+                    .disabled(menuState.hasSingleSelectedOtherUser == false)
+
                     Divider()
 
                     Menu(L10n.text("user.menu.subscriptions")) {

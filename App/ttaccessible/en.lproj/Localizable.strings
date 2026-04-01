@@ -151,6 +151,16 @@
 "connectedServer.volume.ok" = "Apply";
 "connectedServer.volume.cancel" = "Cancel";
 "connectedServer.volume.sliderLabel" = "Volume percentage";
+"connectedServer.menu.makeOperator" = "Make channel operator";
+"connectedServer.menu.revokeOperator" = "Revoke channel operator";
+"user.menu.makeOperator" = "Make channel operator";
+"user.menu.revokeOperator" = "Revoke channel operator";
+"connectedServer.op.error" = "Failed to change operator status.";
+"connectedServer.op.announced.promoted" = "%@ is now channel operator";
+"connectedServer.op.announced.revoked" = "%@ is no longer channel operator";
+"connectedServer.op.passwordPrompt.title" = "Operator password";
+"connectedServer.op.passwordPrompt.message" = "Enter the channel operator password to change operator status.";
+"connectedServer.op.passwordPrompt.placeholder" = "Operator password";
 "connectedServer.volume.leftSpeaker" = "Left speaker";
 "connectedServer.volume.rightSpeaker" = "Right speaker";
 "connectedServer.mute.announced.muted" = "%@ muted";

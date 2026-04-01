@@ -336,6 +336,43 @@ extension TeamTalkConnectionController {
         }
     }
 
+    // MARK: - Channel operator
+
+    func channelOp(userID: Int32, channelID: Int32, makeOperator: Bool, completion: @escaping (Result<Void, Error>) -> Void) {
+        queue.async { [weak self] in
+            guard let self, let instance = self.instance else {
+                DispatchQueue.main.async { completion(.failure(TeamTalkConnectionError.sdkUnavailable)) }
+                return
+            }
+            let result = TT_DoChannelOp(instance, userID, channelID, makeOperator ? 1 : 0)
+            DispatchQueue.main.async {
+                completion(result > 0 ? .success(()) : .failure(TeamTalkConnectionError.internalError(L10n.text("connectedServer.op.error"))))
+            }
+        }
+    }
+
+    func channelOpEx(userID: Int32, channelID: Int32, password: String, makeOperator: Bool, completion: @escaping (Result<Void, Error>) -> Void) {
+        queue.async { [weak self] in
+            guard let self, let instance = self.instance else {
+                DispatchQueue.main.async { completion(.failure(TeamTalkConnectionError.sdkUnavailable)) }
+                return
+            }
+            let result = password.withCString { cPassword in
+                TT_DoChannelOpEx(instance, userID, channelID, cPassword, makeOperator ? 1 : 0)
+            }
+            DispatchQueue.main.async {
+                completion(result > 0 ? .success(()) : .failure(TeamTalkConnectionError.internalError(L10n.text("connectedServer.op.error"))))
+            }
+        }
+    }
+
+    func hasOperatorEnableRight() -> Bool {
+        guard let instance else { return false }
+        return queue.sync {
+            (TT_GetMyUserRights(instance) & UInt32(USERRIGHT_OPERATOR_ENABLE.rawValue)) != 0
+        }
+    }
+
     // MARK: - Server management
 
     func queryServerStats() {

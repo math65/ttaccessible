@@ -95,6 +95,48 @@ extension ConnectedServerViewController {
         )
     }
 
+    @objc func toggleChannelOperatorAction(_ sender: Any? = nil) {
+        guard case .user(let user)? = selectedNode, !user.isCurrentUser else { return }
+        let makeOp = !user.isChannelOperator
+        let displayName = user.displayName
+
+        let handleResult: (Result<Void, Error>) -> Void = { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .success:
+                let key = makeOp ? "connectedServer.op.announced.promoted" : "connectedServer.op.announced.revoked"
+                let announcement = L10n.format(key, displayName)
+                let element: Any = self.view.window ?? NSApp as Any
+                NSAccessibility.post(element: element, notification: .announcementRequested, userInfo: [
+                    NSAccessibility.NotificationUserInfoKey.announcement: announcement,
+                    NSAccessibility.NotificationUserInfoKey.priority: NSAccessibilityPriorityLevel.high.rawValue
+                ])
+            case .failure(let error):
+                self.presentActionError(error.localizedDescription)
+            }
+        }
+
+        if connectionController.hasOperatorEnableRight() || session.currentUser?.isAdministrator == true {
+            connectionController.channelOp(userID: user.id, channelID: user.channelID, makeOperator: makeOp, completion: handleResult)
+        } else {
+            guard let window = view.window else { return }
+            let alert = NSAlert()
+            alert.messageText = L10n.text("connectedServer.op.passwordPrompt.title")
+            alert.informativeText = L10n.text("connectedServer.op.passwordPrompt.message")
+            alert.addButton(withTitle: L10n.text("connectedServer.volume.ok"))
+            alert.addButton(withTitle: L10n.text("connectedServer.volume.cancel"))
+            let field = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: 280, height: 24))
+            field.placeholderString = L10n.text("connectedServer.op.passwordPrompt.placeholder")
+            alert.accessoryView = field
+            alert.window.initialFirstResponder = field
+            alert.beginSheetModal(for: window) { [weak self] response in
+                guard response == .alertFirstButtonReturn, let self else { return }
+                let password = field.stringValue
+                self.connectionController.channelOpEx(userID: user.id, channelID: user.channelID, password: password, makeOperator: makeOp, completion: handleResult)
+            }
+        }
+    }
+
     @objc func kickUserAction(_ sender: Any? = nil) {
         guard case .user(let user)? = selectedNode,
               !user.isCurrentUser,

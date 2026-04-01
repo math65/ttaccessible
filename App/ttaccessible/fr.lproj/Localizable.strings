@@ -151,6 +151,16 @@
 "connectedServer.volume.ok" = "Appliquer";
 "connectedServer.volume.cancel" = "Annuler";
 "connectedServer.volume.sliderLabel" = "Volume en pourcentage";
+"connectedServer.menu.makeOperator" = "Promouvoir opérateur de canal";
+"connectedServer.menu.revokeOperator" = "Révoquer opérateur de canal";
+"user.menu.makeOperator" = "Promouvoir opérateur de canal";
+"user.menu.revokeOperator" = "Révoquer opérateur de canal";
+"connectedServer.op.error" = "Impossible de modifier le statut d'opérateur.";
+"connectedServer.op.announced.promoted" = "%@ est maintenant opérateur de canal";
+"connectedServer.op.announced.revoked" = "%@ n'est plus opérateur de canal";
+"connectedServer.op.passwordPrompt.title" = "Mot de passe opérateur";
+"connectedServer.op.passwordPrompt.message" = "Entrez le mot de passe opérateur du canal pour modifier le statut.";
+"connectedServer.op.passwordPrompt.placeholder" = "Mot de passe opérateur";
 "connectedServer.volume.leftSpeaker" = "Haut-parleur gauche";
 "connectedServer.volume.rightSpeaker" = "Haut-parleur droit";
 "connectedServer.mute.announced.muted" = "%@ coupé";
