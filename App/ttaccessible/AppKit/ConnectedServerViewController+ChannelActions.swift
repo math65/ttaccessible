@@ -222,7 +222,8 @@ extension ConnectedServerViewController {
         alert.accessoryView = container
         alert.window.initialFirstResponder = nameField
 
-        alert.beginSheetModal(for: window) { response in
+        alert.beginSheetModal(for: window) { [weak self] response in
+            _ = self
             guard response == .alertFirstButtonReturn else { return }
             let maxUsers = Int32(maxUsersField.stringValue) ?? 200
             let result = ChannelProperties(

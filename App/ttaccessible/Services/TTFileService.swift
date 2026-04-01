@@ -127,7 +127,9 @@ final class TTFileService {
         defaultGender: TeamTalkGender? = nil
     ) -> Data? {
         let root = XMLElement(name: "teamtalk")
-        root.addAttribute(XMLNode.attribute(withName: "version", stringValue: supportedVersion) as! XMLNode)
+        if let versionAttr = XMLNode.attribute(withName: "version", stringValue: supportedVersion) as? XMLNode {
+            root.addAttribute(versionAttr)
+        }
 
         let host = XMLElement(name: "host")
         appendChild(named: "name", value: record.name, to: host)

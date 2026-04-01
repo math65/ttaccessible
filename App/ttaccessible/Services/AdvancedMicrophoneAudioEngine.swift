@@ -158,10 +158,10 @@ final class AdvancedMicrophoneAudioEngine {
         // Set the input device via the underlying Audio Unit.
         if let deviceID = Self.audioDeviceID(forUID: configuration.device.uid) {
             let defaultDeviceID = Self.systemDefaultInputDeviceID()
-            if deviceID != defaultDeviceID {
+            if deviceID != defaultDeviceID, let audioUnit = inputNode.audioUnit {
                 var devID = deviceID
                 let status = AudioUnitSetProperty(
-                    inputNode.audioUnit!,
+                    audioUnit,
                     kAudioOutputUnitProperty_CurrentDevice,
                     kAudioUnitScope_Global,
                     0,

@@ -495,7 +495,9 @@ extension PrivateMessagesViewController: NSTableViewDataSource {
 extension PrivateMessagesViewController: NSTableViewDelegate {
     func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {
         if tableView == messagesTableView,
-           let message = selectedConversation?.messages[row] {
+           let messages = selectedConversation?.messages,
+           row >= 0, row < messages.count {
+            let message = messages[row]
             let senderName = message.isOwnMessage ? L10n.text("chat.sender.you") : message.senderDisplayName
             let senderHeight = NSAttributedString(
                 string: "\(senderName), \(timeFormatter.string(from: message.receivedAt))",
@@ -551,7 +553,9 @@ extension PrivateMessagesViewController: NSTableViewDelegate {
         }
 
         if tableView == messagesTableView,
-           let message = selectedConversation?.messages[row] {
+           let messages = selectedConversation?.messages,
+           row >= 0, row < messages.count {
+            let message = messages[row]
             let identifier = NSUserInterfaceItemIdentifier("PrivateMessageCell")
             let view: ChannelChatTableCellView
             if let existing = tableView.makeView(withIdentifier: identifier, owner: self) as? ChannelChatTableCellView {

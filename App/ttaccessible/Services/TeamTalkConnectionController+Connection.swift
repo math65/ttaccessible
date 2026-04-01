@@ -694,6 +694,13 @@ extension TeamTalkConnectionController {
             TT_CloseTeamTalk(instance)
         }
 
+        if recordingMuxedActive, let inst = instance {
+            _ = TT_StopRecordingMuxedAudioFile(inst)
+        }
+        recordingMuxedActive = false
+        recordingSeparateActive = false
+        recordingFolder = nil
+
         instance = nil
         connectedRecord = nil
         channelChatHistory = []
@@ -714,12 +721,6 @@ extension TeamTalkConnectionController {
         inputAudioReady = false
         voiceTransmissionEnabled = false
         masterMuted = false
-        if recordingMuxedActive {
-            _ = TT_StopRecordingMuxedAudioFile(instance)
-            recordingMuxedActive = false
-        }
-        recordingSeparateActive = false
-        recordingFolder = nil
         teamTalkVirtualInputReady = false
         advancedMicrophoneTargetFormat = nil
         isAutoAwayActive = false

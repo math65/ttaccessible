@@ -20,7 +20,11 @@ extension ConnectedServerViewController {
             if index < channel.users.count {
                 return .user(channel.users[index])
             }
-            return .channel(channel.children[index - channel.users.count])
+            let childIndex = index - channel.users.count
+            guard childIndex >= 0, childIndex < channel.children.count else {
+                return .channel(channel)
+            }
+            return .channel(channel.children[childIndex])
         case .user:
             fatalError("A user node has no children")
         }

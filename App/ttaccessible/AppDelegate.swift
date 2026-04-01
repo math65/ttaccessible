@@ -44,6 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var userInfoUserID: Int32?
     private var lastObservedSessionHistory: [SessionHistoryEntry] = []
     private var recordingAccessedFolder: URL?
+    private var activeRecordingMode: Int = 0
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         connectionController.delegate = self
@@ -598,7 +599,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func stopAllRecording() {
-        let mode = preferencesStore.preferences.recordingMode
+        let mode = activeRecordingMode
         var pending = 0
         let announce = { [weak self] in
             pending -= 1
@@ -616,9 +617,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             connectionController.stopSeparateRecording { announce() }
         }
         if pending == 0 {
-            connectionController.stopMuxedRecording {
-                self.connectionController.stopSeparateRecording {
-                    self.announceWithVoiceOver(L10n.text("recording.announced.stopped"))
+            connectionController.stopMuxedRecording { [weak self] in
+                self?.connectionController.stopSeparateRecording { [weak self] in
+                    self?.releaseRecordingFolderAccess()
+                    self?.announceWithVoiceOver(L10n.text("recording.announced.stopped"))
                 }
             }
         }
@@ -649,6 +651,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         recordingAccessedFolder = folder
         let format = AudioFileFormat(rawValue: UInt32(preferencesStore.preferences.recordingAudioFileFormat))
         let mode = preferencesStore.preferences.recordingMode
+        activeRecordingMode = mode
 
         if mode & 1 != 0 {
             connectionController.startMuxedRecording(folder: folder, format: format) { [weak self] result in
@@ -674,8 +677,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func releaseRecordingFolderAccess() {
-        recordingAccessedFolder?.stopAccessingSecurityScopedResource()
+        guard let folder = recordingAccessedFolder else { return }
         recordingAccessedFolder = nil
+        folder.stopAccessingSecurityScopedResource()
     }
 
     func toggleMasterMute() {
@@ -1065,6 +1069,8 @@ extension AppDelegate: TeamTalkConnectionControllerDelegate {
     }
 
     func teamTalkConnectionController(_ controller: TeamTalkConnectionController, didDisconnectWithMessage message: String?) {
+        releaseRecordingFolderAccess()
+        activeRecordingMode = 0
         lastObservedSessionHistory = []
         let shouldShowAlert = message
         closeUserAccountsWindow()

@@ -431,6 +431,7 @@ final class ConnectedServerViewController: NSViewController {
         let previousSession = self.session
         if preserveSelection == false {
             selectedKey = nil
+            localMuteState.removeAll()
         }
 
         self.session = session
