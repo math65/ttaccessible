@@ -48,7 +48,7 @@ Microphone → AVAudioEngine (input gain) → Int16 PCM → [WebRTC AEC3] → TT
                                               TT_MUXED_USERID speaker reference
 ```
 
-**WebRTC AEC3 echo cancellation** (optional, toggle in Advanced Microphone Settings):
+**WebRTC AEC3 echo cancellation** (optional, toggle in Preferences > Audio):
 - Uses `webrtc-audio-processing` v2.0 (WebRTC M131) from freedesktop.org, compiled as a static library (`Vendor/WebRTC/libwebrtc-audio-processing.a`, 5.4 MB).
 - C++ API bridged to Swift via an Objective-C++ wrapper (`WebRTCEchoCanceller.mm` → `WebRTCEchoCanceller.h` → bridging header).
 - Reference signal (far-end/speakers) comes from `TT_EnableAudioBlockEvent(TT_MUXED_USERID)` → `CLIENTEVENT_USER_AUDIOBLOCK` → `feedReference()`.
@@ -70,6 +70,8 @@ Microphone → AVAudioEngine (input gain) → Int16 PCM → [WebRTC AEC3] → TT
 **Sample rate mismatch**: The hardware sample rate (from `inputNode.outputFormat`) may differ from `InputAudioDeviceInfo.nominalSampleRate` (from `kAudioDevicePropertyNominalSampleRate`). The capture engine overrides `targetFormat.sampleRate` to match the actual hardware rate. Any downstream consumer (e.g. `AdvancedMicrophonePreviewController`) must read the effective rate from the capture engine after start, not from the nominal device info.
 
 **Apple AEC/VPIO removed**: The `AppleVoiceChatAudioEngine` (Voice Processing IO for echo cancellation) was removed entirely — it didn't work well. All microphone capture now goes through `AdvancedMicrophoneAudioEngine` exclusively.
+
+**Audio device hot-plug**: `AudioDeviceChangeMonitor` listens to CoreAudio property changes (`kAudioHardwarePropertyDevices`, `kAudioHardwarePropertyDefaultInputDevice`, `kAudioHardwarePropertyDefaultOutputDevice`) and posts `audioDevicesDidChange` on the main thread. `AudioPreferencesStore` observes this notification to auto-refresh the device list when AirPods/headphones are connected or disconnected.
 
 ### Audio Latency Profile (measured)
 
@@ -126,7 +128,9 @@ The original Qt/C++ TeamTalk client is at `../ttoriginal/Client/qtTeamTalk/`. Ke
 
 The following features were explicitly removed by the user and should NOT be re-added:
 
-- **Custom DSP processing** — gate, expander, limiter were all removed from the audio engine. The old types (`DynamicProcessorMode`, `LimiterControlMode`, `LimiterPreset`, `Gate`, `Expander`) remain in `AdvancedInputAudioPreferences.swift` only for backward-compatible decoding of saved preferences.
+- **Custom DSP processing** — gate, expander, limiter were all removed from the audio engine and from `AdvancedInputAudioPreferences`. The model now only contains `preset` and `echoCancellationEnabled`. Old saved preferences decode without crashing (unknown keys are silently ignored by the Codable decoder).
+- **Separate Advanced Microphone Settings window** — `AdvancedMicrophoneSettingsView` and `AdvancedMicrophoneSettingsWindowController` were deleted. All microphone controls (AEC toggle, channel preset picker, audio preview) are now inline in `PreferencesAudioView`.
+- **"Advanced processing enabled" toggle** (`isEnabled`) — removed from the model and all UI. Microphone processing (channel preset, AEC) is always active.
 - **Audio Unit plugin chain** — was briefly implemented then removed. No AU instantiation, no effect chain.
 - **App audio capture** — ScreenCaptureKit / CATapDescription capture, ring buffer mixer, and all related UI were removed entirely (7 files deleted).
 - **Apple Voice Processing (VPIO)** — removed, didn't work well. Replaced by WebRTC AEC3.
@@ -139,4 +143,5 @@ The following features were explicitly removed by the user and should NOT be re-
 - **Recording** — record conversations to disk (`TT_SetUserRecordingState` not implemented)
 - **Channel Operator** — assign channel operator (`TT_DoChannelOp` not wired)
 - **Hear Myself** — subscribe to own voice via `TT_DoSubscribe(SUBSCRIBE_VOICE, myUserID)` (original uses Ctrl+Shift+4). The subscription mechanism exists but no dedicated action/shortcut.
+- **Custom sound packs** — users can't customize event sounds yet (requested by beta testers on AppleVis)
 - **Video/Desktop/Media streaming** — not implemented (low priority for accessibility)
