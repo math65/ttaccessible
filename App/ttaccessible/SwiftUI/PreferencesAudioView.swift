@@ -15,15 +15,6 @@ struct PreferencesAudioView: View {
     var body: some View {
         PreferencesPaneScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Toggle(
-                    L10n.text("preferences.general.microphoneEnabledByDefault"),
-                    isOn: Binding(
-                        get: { store.state.microphoneEnabledByDefault },
-                        set: { store.updateMicrophoneEnabledByDefault($0) }
-                    )
-                )
-                .toggleStyle(.switch)
-
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.text("preferences.audio.outputDevice"))
                     Picker("", selection: $selectedOutputID) {

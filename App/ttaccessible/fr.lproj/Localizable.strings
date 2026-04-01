@@ -284,7 +284,6 @@
 "preferences.connection.interceptMediaFile" = "Intercepter les fichiers médias";
 "preferences.general.subscribeBroadcastMessages" = "Recevoir les messages généraux";
 "preferences.general.soundNotifications" = "Activer les notifications sonores";
-"preferences.general.microphoneEnabledByDefault" = "Activer le micro automatiquement à l'entrée d'un canal";
 "connectedServer.reconnecting" = "Reconnexion en cours…";
 "connectedServer.reconnecting.attempt" = "Tentative de reconnexion au serveur…";
 "preferences.audio.title" = "Audio";

@@ -148,8 +148,8 @@ final class AppPreferencesStore: ObservableObject {
         SoundPlayer.shared.isEnabled = enabled
     }
 
-    func updateMicrophoneEnabledByDefault(_ enabled: Bool) {
-        mutate { $0.microphoneEnabledByDefault = enabled }
+    func updateLastVoiceTransmissionEnabled(_ enabled: Bool) {
+        mutate { $0.lastVoiceTransmissionEnabled = enabled }
     }
 
     func updateBackgroundAnnouncementMode(_ mode: BackgroundMessageAnnouncementMode, for type: BackgroundMessageAnnouncementType) {
@@ -313,7 +313,6 @@ final class ConnectionPreferencesStore: ObservableObject {
 @MainActor
 final class AudioPreferencesStore: ObservableObject {
     struct State: Equatable {
-        var microphoneEnabledByDefault: Bool
         var preferredInputDevice: AudioDevicePreference
         var preferredOutputDevice: AudioDevicePreference
         var catalog: AudioDeviceCatalog
@@ -362,7 +361,6 @@ final class AudioPreferencesStore: ObservableObject {
         self.lastAppliedInputPreference = rootStore.preferences.preferredInputDevice
         self.lastAppliedOutputPreference = rootStore.preferences.preferredOutputDevice
         self.state = State(
-            microphoneEnabledByDefault: rootStore.preferences.microphoneEnabledByDefault,
             preferredInputDevice: rootStore.preferences.preferredInputDevice,
             preferredOutputDevice: rootStore.preferences.preferredOutputDevice,
             catalog: .empty,
@@ -375,15 +373,12 @@ final class AudioPreferencesStore: ObservableObject {
         rootStore.$preferences
             .sink { [weak self] preferences in
                 guard let self else { return }
-                let microphoneEnabled = preferences.microphoneEnabledByDefault
                 let input = preferences.preferredInputDevice
                 let output = preferences.preferredOutputDevice
-                guard self.state.microphoneEnabledByDefault != microphoneEnabled
-                    || self.state.preferredInputDevice != input
+                guard self.state.preferredInputDevice != input
                     || self.state.preferredOutputDevice != output else {
                     return
                 }
-                self.state.microphoneEnabledByDefault = microphoneEnabled
                 self.state.preferredInputDevice = input
                 self.state.preferredOutputDevice = output
             }
@@ -446,10 +441,6 @@ final class AudioPreferencesStore: ObservableObject {
 
     func warmup() {
         loadCatalogIfNeeded(forceRefresh: false)
-    }
-
-    func updateMicrophoneEnabledByDefault(_ enabled: Bool) {
-        rootStore.updateMicrophoneEnabledByDefault(enabled)
     }
 
     func refreshDevices() {

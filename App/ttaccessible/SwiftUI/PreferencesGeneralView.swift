@@ -94,15 +94,6 @@ struct PreferencesGeneralView: View {
             )
             .toggleStyle(.switch)
 
-            Toggle(
-                L10n.text("preferences.general.microphoneEnabledByDefault"),
-                isOn: Binding(
-                    get: { store.preferences.microphoneEnabledByDefault },
-                    set: { store.updateMicrophoneEnabledByDefault($0) }
-                )
-            )
-            .toggleStyle(.switch)
-
             Spacer()
         }
         .padding(24)

@@ -614,11 +614,15 @@ extension TeamTalkConnectionController {
                         }
                         if message.user.nUserID == currentUserID,
                            !voiceTransmissionEnabled,
-                           preferencesStore.preferences.microphoneEnabledByDefault,
+                           preferencesStore.preferences.lastVoiceTransmissionEnabled,
                            AVCaptureDevice.authorizationStatus(for: .audio) == .authorized {
                             do {
                                 try ensureAdvancedMicrophoneInputReadyLocked(instance: instance)
                                 voiceTransmissionEnabled = true
+                                SoundPlayer.shared.play(.voxMeEnable)
+                                if let connectedRecord {
+                                    publishSessionLocked(instance: instance, record: connectedRecord)
+                                }
                             } catch {}
                         }
                         let joinedUsername = ttString(from: message.user.szUsername)
@@ -801,6 +805,16 @@ extension TeamTalkConnectionController {
                     case CLIENTEVENT_CMD_USER_JOINED:
                         if isSuppressingLoginHistoryLocked == false {
                             appendUserJoinedChannelHistoryLocked(message.user, currentUserID: currentUserID, instance: instance)
+                        }
+                        if message.user.nUserID == currentUserID,
+                           !voiceTransmissionEnabled,
+                           preferencesStore.preferences.lastVoiceTransmissionEnabled,
+                           AVCaptureDevice.authorizationStatus(for: .audio) == .authorized {
+                            do {
+                                try ensureAdvancedMicrophoneInputReadyLocked(instance: instance)
+                                voiceTransmissionEnabled = true
+                                SoundPlayer.shared.play(.voxMeEnable)
+                            } catch {}
                         }
                     case CLIENTEVENT_CMD_USER_UPDATE:
                         appendSubscriptionHistoryIfNeededLocked(message.user)

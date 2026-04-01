@@ -69,7 +69,7 @@ struct AppPreferences: Codable, Equatable {
         case interceptDesktop
         case interceptMediaFile
         case soundNotificationsEnabled
-        case microphoneEnabledByDefault
+        case lastVoiceTransmissionEnabled
         case privateMessagesBackgroundMode
         case channelMessagesBackgroundMode
         case broadcastMessagesBackgroundMode
@@ -100,7 +100,7 @@ struct AppPreferences: Codable, Equatable {
     var interceptDesktop: Bool
     var interceptMediaFile: Bool
     var soundNotificationsEnabled: Bool
-    var microphoneEnabledByDefault: Bool
+    var lastVoiceTransmissionEnabled: Bool
     var privateMessagesBackgroundMode: BackgroundMessageAnnouncementMode
     var channelMessagesBackgroundMode: BackgroundMessageAnnouncementMode
     var broadcastMessagesBackgroundMode: BackgroundMessageAnnouncementMode
@@ -144,7 +144,7 @@ struct AppPreferences: Codable, Equatable {
         interceptDesktop: Bool = false,
         interceptMediaFile: Bool = false,
         soundNotificationsEnabled: Bool = true,
-        microphoneEnabledByDefault: Bool = false,
+        lastVoiceTransmissionEnabled: Bool = false,
         privateMessagesBackgroundMode: BackgroundMessageAnnouncementMode = .systemNotification,
         channelMessagesBackgroundMode: BackgroundMessageAnnouncementMode = .systemNotification,
         broadcastMessagesBackgroundMode: BackgroundMessageAnnouncementMode = .systemNotification,
@@ -181,7 +181,7 @@ struct AppPreferences: Codable, Equatable {
         self.interceptDesktop = interceptDesktop
         self.interceptMediaFile = interceptMediaFile
         self.soundNotificationsEnabled = soundNotificationsEnabled
-        self.microphoneEnabledByDefault = microphoneEnabledByDefault
+        self.lastVoiceTransmissionEnabled = lastVoiceTransmissionEnabled
         self.privateMessagesBackgroundMode = privateMessagesBackgroundMode.normalizedForBackground
         self.channelMessagesBackgroundMode = channelMessagesBackgroundMode.normalizedForBackground
         self.broadcastMessagesBackgroundMode = broadcastMessagesBackgroundMode.normalizedForBackground
@@ -250,7 +250,7 @@ struct AppPreferences: Codable, Equatable {
         interceptDesktop = try container.decodeIfPresent(Bool.self, forKey: .interceptDesktop) ?? false
         interceptMediaFile = try container.decodeIfPresent(Bool.self, forKey: .interceptMediaFile) ?? false
         soundNotificationsEnabled = try container.decodeIfPresent(Bool.self, forKey: .soundNotificationsEnabled) ?? true
-        microphoneEnabledByDefault = try container.decodeIfPresent(Bool.self, forKey: .microphoneEnabledByDefault) ?? false
+        lastVoiceTransmissionEnabled = try container.decodeIfPresent(Bool.self, forKey: .lastVoiceTransmissionEnabled) ?? false
         privateMessagesBackgroundMode = (try container.decodeIfPresent(BackgroundMessageAnnouncementMode.self, forKey: .privateMessagesBackgroundMode) ?? .systemNotification).normalizedForBackground
         channelMessagesBackgroundMode = (try container.decodeIfPresent(BackgroundMessageAnnouncementMode.self, forKey: .channelMessagesBackgroundMode) ?? .systemNotification).normalizedForBackground
         broadcastMessagesBackgroundMode = (try container.decodeIfPresent(BackgroundMessageAnnouncementMode.self, forKey: .broadcastMessagesBackgroundMode) ?? .systemNotification).normalizedForBackground
@@ -290,7 +290,7 @@ struct AppPreferences: Codable, Equatable {
         try container.encode(interceptDesktop, forKey: .interceptDesktop)
         try container.encode(interceptMediaFile, forKey: .interceptMediaFile)
         try container.encode(soundNotificationsEnabled, forKey: .soundNotificationsEnabled)
-        try container.encode(microphoneEnabledByDefault, forKey: .microphoneEnabledByDefault)
+        try container.encode(lastVoiceTransmissionEnabled, forKey: .lastVoiceTransmissionEnabled)
         try container.encode(privateMessagesBackgroundMode, forKey: .privateMessagesBackgroundMode)
         try container.encode(channelMessagesBackgroundMode, forKey: .channelMessagesBackgroundMode)
         try container.encode(broadcastMessagesBackgroundMode, forKey: .broadcastMessagesBackgroundMode)

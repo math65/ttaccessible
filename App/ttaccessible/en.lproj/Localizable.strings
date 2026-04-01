@@ -284,7 +284,6 @@
 "preferences.connection.interceptMediaFile" = "Intercept media file streams";
 "preferences.general.subscribeBroadcastMessages" = "Receive broadcast messages";
 "preferences.general.soundNotifications" = "Enable sound notifications";
-"preferences.general.microphoneEnabledByDefault" = "Enable microphone automatically when joining a channel";
 "connectedServer.reconnecting" = "Reconnecting…";
 "connectedServer.reconnecting.attempt" = "Attempting to reconnect to the server…";
 "preferences.audio.title" = "Audio";

@@ -144,7 +144,9 @@ extension TeamTalkConnectionController {
                 self.voiceTransmissionEnabled = true
                 SoundPlayer.shared.play(.voxMeEnable)
                 self.publishSessionLocked(instance: instance, record: record)
+                let preferencesStore = self.preferencesStore
                 DispatchQueue.main.async {
+                    preferencesStore.updateLastVoiceTransmissionEnabled(true)
                     completion(.success(()))
                 }
             } catch {
@@ -175,7 +177,9 @@ extension TeamTalkConnectionController {
             SoundPlayer.shared.play(.voxMeDisable)
             self.publishSessionLocked(instance: instance, record: record)
 
+            let preferencesStore = self.preferencesStore
             DispatchQueue.main.async {
+                preferencesStore.updateLastVoiceTransmissionEnabled(false)
                 completion(.success(()))
             }
         }
