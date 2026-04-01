@@ -350,6 +350,11 @@
 "preferences.recording.folder.choose" = "Choose…";
 "preferences.recording.folder.clear" = "Clear";
 "preferences.recording.format.label" = "Audio format";
+"preferences.recording.mode.label" = "Recording mode";
+"preferences.recording.mode.muxed" = "Single file (all voices mixed)";
+"preferences.recording.mode.separate" = "Separate files (one per user)";
+"preferences.recording.mode.both" = "Both";
+"recording.announced.startedSeparate" = "Per-user recording started";
 "preferences.recording.help" = "Press Cmd+R while connected to start or stop recording. Files are saved to the chosen folder.";
 "privateMessages.window.title" = "Private Messages";
 "privateMessages.menu.open" = "Private Messages";

@@ -91,6 +91,7 @@ final class TeamTalkConnectionController {
     var voiceTransmissionEnabled = false
     var masterMuted = false
     var recordingMuxedActive = false
+    var recordingSeparateActive = false
     var recordingFolder: URL?
     var recordingFormat: AudioFileFormat = AFF_WAVE_FORMAT
     var teamTalkVirtualInputReady = false

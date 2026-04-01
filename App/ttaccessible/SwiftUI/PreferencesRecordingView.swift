@@ -39,6 +39,24 @@ struct PreferencesRecordingView: View {
 
                 Divider()
 
+                Text(L10n.text("preferences.recording.mode.label"))
+                    .font(.headline)
+
+                Picker(
+                    L10n.text("preferences.recording.mode.label"),
+                    selection: Binding(
+                        get: { store.state.recordingMode },
+                        set: { store.updateRecordingMode($0) }
+                    )
+                ) {
+                    ForEach(RecordingPreferencesStore.modeOptions) { option in
+                        Text(option.label).tag(option.id)
+                    }
+                }
+                .labelsHidden()
+
+                Divider()
+
                 Text(L10n.text("preferences.recording.format.label"))
                     .font(.headline)
 

@@ -278,7 +278,7 @@ extension TeamTalkConnectionController {
         } else {
             status = L10n.text("connectedServer.audio.status.unavailable")
         }
-        if recordingMuxedActive {
+        if recordingMuxedActive || recordingSeparateActive {
             status += " — " + L10n.text("connectedServer.audio.status.recording")
         }
         return status
@@ -568,6 +568,68 @@ extension TeamTalkConnectionController {
         let format = recordingFormat
         stopMuxedRecording { [weak self] in
             self?.startMuxedRecording(folder: folder, format: format) { _ in }
+        }
+    }
+
+    func startSeparateRecording(folder: URL, format: AudioFileFormat, completion: @escaping @MainActor (Result<Void, Error>) -> Void) {
+        queue.async { [weak self] in
+            guard let self, let instance = self.instance, let record = self.connectedRecord else {
+                DispatchQueue.main.async { completion(.failure(TeamTalkConnectionError.connectionFailed)) }
+                return
+            }
+            let folderPath = folder.path
+            var users = self.fetchServerUsersLocked(instance: instance)
+            var localUser = User()
+            localUser.nUserID = TT_LOCAL_USERID
+            users.append(localUser)
+            for user in users {
+                folderPath.withCString { cPath in
+                    _ = TT_SetUserMediaStorageDir(instance, user.nUserID, cPath, nil, format)
+                }
+            }
+            self.recordingSeparateActive = true
+            self.recordingFolder = folder
+            self.recordingFormat = format
+            self.publishSessionLocked(instance: instance, record: record)
+            DispatchQueue.main.async { completion(.success(())) }
+        }
+    }
+
+    func stopSeparateRecording(completion: (@MainActor () -> Void)? = nil) {
+        queue.async { [weak self] in
+            guard let self, let instance = self.instance else {
+                if let completion { DispatchQueue.main.async { completion() } }
+                return
+            }
+            if self.recordingSeparateActive {
+                var users = self.fetchServerUsersLocked(instance: instance)
+                var localUser = User()
+                localUser.nUserID = TT_LOCAL_USERID
+                users.append(localUser)
+                let emptyPath = ""
+                for user in users {
+                    emptyPath.withCString { cPath in
+                        _ = TT_SetUserMediaStorageDir(instance, user.nUserID, cPath, nil, self.recordingFormat)
+                    }
+                }
+                self.recordingSeparateActive = false
+                if let record = self.connectedRecord {
+                    self.publishSessionLocked(instance: instance, record: record)
+                }
+            }
+            if let completion { DispatchQueue.main.async { completion() } }
+        }
+    }
+
+    func setUserMediaStorageDirForNewUser(_ userID: Int32) {
+        guard recordingSeparateActive, let folder = recordingFolder else { return }
+        let folderPath = folder.path
+        let format = recordingFormat
+        queue.async { [weak self] in
+            guard let self, let instance = self.instance else { return }
+            folderPath.withCString { cPath in
+                _ = TT_SetUserMediaStorageDir(instance, userID, cPath, nil, format)
+            }
         }
     }
 

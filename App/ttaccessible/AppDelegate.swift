@@ -43,6 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var pendingTTFileURLs: [URL] = []
     private var userInfoUserID: Int32?
     private var lastObservedSessionHistory: [SessionHistoryEntry] = []
+    private var recordingAccessedFolder: URL?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         connectionController.delegate = self
@@ -580,9 +581,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func toggleRecording() {
         guard menuState.mode == .connectedServer else { return }
         if menuState.isRecordingActive {
-            connectionController.stopMuxedRecording {
-                self.announceWithVoiceOver(L10n.text("recording.announced.stopped"))
-            }
+            stopAllRecording()
             return
         }
         guard let folderURL = preferencesStore.resolveRecordingFolderURL() else {
@@ -590,6 +589,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         startRecordingToFolder(folderURL)
+    }
+
+    private func stopAllRecording() {
+        let mode = preferencesStore.preferences.recordingMode
+        var pending = 0
+        let announce = { [weak self] in
+            pending -= 1
+            if pending <= 0 {
+                self?.releaseRecordingFolderAccess()
+                self?.announceWithVoiceOver(L10n.text("recording.announced.stopped"))
+            }
+        }
+        if mode & 1 != 0 {
+            pending += 1
+            connectionController.stopMuxedRecording { announce() }
+        }
+        if mode & 2 != 0 {
+            pending += 1
+            connectionController.stopSeparateRecording { announce() }
+        }
+        if pending == 0 {
+            connectionController.stopMuxedRecording {
+                self.connectionController.stopSeparateRecording {
+                    self.announceWithVoiceOver(L10n.text("recording.announced.stopped"))
+                }
+            }
+        }
     }
 
     private func promptRecordingFolder() {
@@ -610,19 +636,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func startRecordingToFolder(_ folder: URL) {
         guard folder.startAccessingSecurityScopedResource() else {
-            announceWithVoiceOver(L10n.text("recording.announced.error"))
+            preferencesStore.updateRecordingFolderBookmark(nil)
+            promptRecordingFolder()
             return
         }
+        recordingAccessedFolder = folder
         let format = AudioFileFormat(rawValue: UInt32(preferencesStore.preferences.recordingAudioFileFormat))
-        connectionController.startMuxedRecording(folder: folder, format: format) { [weak self] result in
-            folder.stopAccessingSecurityScopedResource()
-            switch result {
-            case .success(let fileName):
-                self?.announceWithVoiceOver(L10n.format("recording.announced.started", fileName))
-            case .failure:
-                self?.announceWithVoiceOver(L10n.text("recording.announced.error"))
+        let mode = preferencesStore.preferences.recordingMode
+
+        if mode & 1 != 0 {
+            connectionController.startMuxedRecording(folder: folder, format: format) { [weak self] result in
+                switch result {
+                case .success(let fileName):
+                    self?.announceWithVoiceOver(L10n.format("recording.announced.started", fileName))
+                case .failure:
+                    self?.announceWithVoiceOver(L10n.text("recording.announced.error"))
+                    self?.releaseRecordingFolderAccess()
+                }
             }
         }
+        if mode & 2 != 0 {
+            connectionController.startSeparateRecording(folder: folder, format: format) { [weak self] result in
+                if case .failure = result {
+                    self?.announceWithVoiceOver(L10n.text("recording.announced.error"))
+                    self?.releaseRecordingFolderAccess()
+                } else if mode & 1 == 0 {
+                    self?.announceWithVoiceOver(L10n.text("recording.announced.startedSeparate"))
+                }
+            }
+        }
+    }
+
+    private func releaseRecordingFolderAccess() {
+        recordingAccessedFolder?.stopAccessingSecurityScopedResource()
+        recordingAccessedFolder = nil
     }
 
     func toggleMasterMute() {

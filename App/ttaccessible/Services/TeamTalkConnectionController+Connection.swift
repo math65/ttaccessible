@@ -606,6 +606,11 @@ extension TeamTalkConnectionController {
                                 userID: message.user.nUserID,
                                 preferences: preferencesStore.preferences
                             )
+                            if recordingSeparateActive, let folder = recordingFolder {
+                                folder.path.withCString { cPath in
+                                    _ = TT_SetUserMediaStorageDir(instance, message.user.nUserID, cPath, nil, recordingFormat)
+                                }
+                            }
                         }
                     case CLIENTEVENT_CMD_USER_LOGGEDOUT:
                         appendUserLoggedOutHistoryLocked(message.user, currentUserID: currentUserID)
@@ -713,6 +718,7 @@ extension TeamTalkConnectionController {
             _ = TT_StopRecordingMuxedAudioFile(instance)
             recordingMuxedActive = false
         }
+        recordingSeparateActive = false
         recordingFolder = nil
         teamTalkVirtualInputReady = false
         advancedMicrophoneTargetFormat = nil
@@ -813,6 +819,11 @@ extension TeamTalkConnectionController {
                                 userID: message.user.nUserID,
                                 preferences: preferencesStore.preferences
                             )
+                            if recordingSeparateActive, let folder = recordingFolder {
+                                folder.path.withCString { cPath in
+                                    _ = TT_SetUserMediaStorageDir(instance, message.user.nUserID, cPath, nil, recordingFormat)
+                                }
+                            }
                         }
                     case CLIENTEVENT_CMD_USER_LOGGEDOUT:
                         appendUserLoggedOutHistoryLocked(message.user, currentUserID: currentUserID)

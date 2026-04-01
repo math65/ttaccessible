@@ -177,6 +177,10 @@ final class AppPreferencesStore: ObservableObject {
         mutate { $0.recordingAudioFileFormat = format }
     }
 
+    func updateRecordingMode(_ mode: Int) {
+        mutate { $0.recordingMode = mode }
+    }
+
     func resolveRecordingFolderURL() -> URL? {
         guard let bookmark = preferences.recordingFolderBookmark else { return nil }
         var isStale = false
@@ -732,9 +736,21 @@ final class RecordingPreferencesStore: ObservableObject {
         FormatOption(id: 1, label: "OGG (Opus)"),
     ]
 
+    struct ModeOption: Identifiable, Hashable {
+        let id: Int
+        let label: String
+    }
+
+    static let modeOptions: [ModeOption] = [
+        ModeOption(id: 1, label: L10n.text("preferences.recording.mode.muxed")),
+        ModeOption(id: 2, label: L10n.text("preferences.recording.mode.separate")),
+        ModeOption(id: 3, label: L10n.text("preferences.recording.mode.both")),
+    ]
+
     struct State: Equatable {
         var folderBookmark: Data?
         var audioFileFormat: Int
+        var recordingMode: Int
         var folderDisplayPath: String?
     }
 
@@ -758,6 +774,10 @@ final class RecordingPreferencesStore: ObservableObject {
 
     func updateAudioFileFormat(_ format: Int) {
         rootStore.updateRecordingAudioFileFormat(format)
+    }
+
+    func updateRecordingMode(_ mode: Int) {
+        rootStore.updateRecordingMode(mode)
     }
 
     func chooseFolder(from window: NSWindow) {
@@ -784,6 +804,7 @@ final class RecordingPreferencesStore: ObservableObject {
         return State(
             folderBookmark: rootStore.preferences.recordingFolderBookmark,
             audioFileFormat: rootStore.preferences.recordingAudioFileFormat,
+            recordingMode: rootStore.preferences.recordingMode,
             folderDisplayPath: folderURL?.path
         )
     }
