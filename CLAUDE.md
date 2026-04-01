@@ -138,10 +138,45 @@ The following features were explicitly removed by the user and should NOT be re-
 - **Audio diagnostics logging** — `AudioDiagnosticsLogger` and all `logAudio`/`logDiagnostics` calls removed. Was causing unnecessary CPU usage (per-chunk stats computation).
 - **Performance loggers** — `AppPerformanceLogger` and `PreferencesPerformanceLogger` removed. They used `NSLog` on hot paths (10x/sec in the polling loop), costing more CPU than what they measured.
 
+### Recording
+
+Two recording modes, both managed by the SDK:
+- **Muxed** (`TT_StartRecordingMuxedAudioFile`) — all voices in a single file (WAV or OGG)
+- **Per-user** (`TT_SetUserMediaStorageDir`) — separate file per user, including local user (`TT_LOCAL_USERID = 0`)
+- Mode is a bitmask in preferences: 1=muxed, 2=separate, 3=both
+- Recording folder persisted via **security-scoped bookmarks** for sandbox access. Keep `startAccessingSecurityScopedResource()` active for the entire recording duration — do NOT release immediately after start.
+- Channel change during muxed recording: stop current file, start new one automatically.
+- New users logging in during separate recording get `TT_SetUserMediaStorageDir` called automatically.
+- `CLIENTEVENT_USER_RECORD_MEDIAFILE` handled for error/abort detection.
+
+### Sound Packs
+
+Three sound packs bundled: **Default** (root of `Sounds/`), **Majorly-G**, **Old** (in subfolders with prefixed filenames to avoid Xcode resource flattening conflicts). `SoundPlayer` loads from selected pack with fallback to Default for missing sounds. Per-event enable/disable via `disabledSoundEvents: Set<NotificationSound>` in preferences.
+
+### User Actions (Keyboard Shortcuts)
+
+| Shortcut | Action | SDK Call |
+|----------|--------|---------|
+| Cmd+Shift+M | Mute/unmute selected user | `TT_SetUserMute` + `TT_PumpMessage` |
+| Cmd+M | Mute/unmute master volume | `TT_SetSoundOutputMute` |
+| Cmd+U | User volume + stereo balance | `TT_SetUserVolume` + `TT_SetUserStereo` |
+| Cmd+R | Start/stop recording | `TT_StartRecordingMuxedAudioFile` / `TT_SetUserMediaStorageDir` |
+| Ctrl+Cmd+O | Channel operator toggle | `TT_DoChannelOp` / `TT_DoChannelOpEx` |
+| Cmd+Shift+H | Hear myself (loopback) | `TT_DoSubscribe(SUBSCRIBE_VOICE, myUserID)` |
+
+**Mute state tracking**: The outline view's `item(atRow:)` returns stale `ServerTreeNode` values after `reloadData(forRowIndexes:)` (audio runtime updates don't replace items). User mute state is tracked via `localMuteState: [Int32: Bool]` dictionary on `ConnectedServerViewController`, cleared on new session. `TT_PumpMessage(CLIENTEVENT_USER_STATECHANGE)` must be called after `TT_SetUserMute` (same pattern as Qt client).
+
+**Volume dialog**: Real-time via `VolumeSliderHandler` (NSObject target/action on slider). `setUserVoiceVolumeImmediate` applies to SDK without persisting to `UserVolumeStore`. Cancel reverts to original volume and stereo state.
+
+### Preferences Organization
+
+6 tabs: **General** (identity, auto-away, import toggle), **Connection** (auto-join, reconnect, subscriptions, intercepts), **Audio** (devices, AEC, preset, preview), **Sounds** (global toggle, pack selector, 26 per-event toggles), **Announcements** (background modes, TTS config, VoiceOver toggles), **Recording** (folder, mode, format).
+
+All section headings use `.accessibilityAddTraits(.isHeader)` for VoiceOver heading navigation.
+
 ### Missing Features (vs original Qt client)
 
-- **Recording** — record conversations to disk (`TT_SetUserRecordingState` not implemented)
-- **Channel Operator** — assign channel operator (`TT_DoChannelOp` not wired)
-- **Hear Myself** — subscribe to own voice via `TT_DoSubscribe(SUBSCRIBE_VOICE, myUserID)` (original uses Ctrl+Shift+4). The subscription mechanism exists but no dedicated action/shortcut.
-- **Custom sound packs** — users can't customize event sounds yet (requested by beta testers on AppleVis)
+- **Push-to-Talk** — configurable hotkey for PTT mode (not just toggle)
+- **VOX level** — configurable voice activation threshold slider
+- **Mic gain hotkeys** — increase/decrease gain via keyboard shortcuts
 - **Video/Desktop/Media streaming** — not implemented (low priority for accessibility)
