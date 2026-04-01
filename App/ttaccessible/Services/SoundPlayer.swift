@@ -6,7 +6,7 @@
 import AVFoundation
 import Foundation
 
-enum NotificationSound: String, CaseIterable {
+enum NotificationSound: String, CaseIterable, Codable {
     case newUser = "newuser"
     case removeUser = "removeuser"
     case userMessage = "user_msg"
@@ -33,6 +33,10 @@ enum NotificationSound: String, CaseIterable {
     case voxDisable = "vox_disable"
     case voxMeEnable = "vox_me_enable"
     case voxMeDisable = "vox_me_disable"
+
+    var localizationKey: String {
+        "sound.event.\(rawValue)"
+    }
 }
 
 final class SoundPlayer {
@@ -44,6 +48,7 @@ final class SoundPlayer {
     private var players: [NotificationSound: AVAudioPlayer] = [:]
     private let queue = DispatchQueue(label: "com.math65.ttaccessible.soundplayer")
     var isEnabled = true
+    var disabledSounds: Set<NotificationSound> = []
     private(set) var currentPack: String = defaultPack
 
     private init() {
@@ -64,7 +69,7 @@ final class SoundPlayer {
     }
 
     func play(_ sound: NotificationSound) {
-        guard isEnabled else { return }
+        guard isEnabled, !disabledSounds.contains(sound) else { return }
         queue.async { [weak self] in
             guard let player = self?.players[sound] else { return }
             if player.isPlaying {

@@ -234,6 +234,26 @@ struct PreferencesNotificationsView: View {
                     }
                 }
 
+                Divider()
+
+                Text(L10n.text("preferences.notifications.soundEvents.title"))
+                    .font(.headline)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(NotificationSound.allCases, id: \.self) { sound in
+                        Toggle(
+                            L10n.text(sound.localizationKey),
+                            isOn: Binding(
+                                get: { store.isSoundEventEnabled(sound) },
+                                set: { store.setSoundEventEnabled(sound, enabled: $0) }
+                            )
+                        )
+                        .toggleStyle(.switch)
+                    }
+                }
+
+                Divider()
+
                 VStack(alignment: .leading, spacing: 12) {
                     Text(L10n.text("preferences.notifications.backgroundAnnouncements.title"))
                         .font(.headline)
