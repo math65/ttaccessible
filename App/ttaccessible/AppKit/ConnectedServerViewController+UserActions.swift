@@ -120,8 +120,10 @@ extension ConnectedServerViewController {
         alert.window.initialFirstResponder = popup
 
         alert.beginSheetModal(for: window) { [weak self] response in
-            guard response == .alertFirstButtonReturn, let self else { return }
-            let target = channels[popup.indexOfSelectedItem]
+            let selectedIndex = popup.indexOfSelectedItem
+            guard response == .alertFirstButtonReturn, let self,
+                  selectedIndex >= 0, selectedIndex < channels.count else { return }
+            let target = channels[selectedIndex]
             for user in users {
                 self.connectionController.moveUser(userID: user.id, toChannelID: target.id) { [weak self] result in
                     if case .failure(let error) = result {

@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		94A4A5F73B941A8E00C01234 /* libTeamTalk5.dylib in Embed TeamTalk */ = {isa = PBXBuildFile; fileRef = 94A4A5F63B941A8E00C01234 /* libTeamTalk5.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		94A4A5F93B941A8E00C01234 /* libTeamTalk5.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 94A4A5F63B941A8E00C01234 /* libTeamTalk5.dylib */; };
+		94WEBRTC013B941A8E00C0AB /* libwebrtc-audio-processing.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 94WEBRTC003B941A8E00C0AB /* libwebrtc-audio-processing.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -28,6 +29,7 @@
 /* Begin PBXFileReference section */
 		943281C62F68C35A00682D6B /* ttaccessible.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ttaccessible.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		94A4A5F63B941A8E00C01234 /* libTeamTalk5.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libTeamTalk5.dylib; path = ../Vendor/TeamTalk/libTeamTalk5.dylib; sourceTree = SOURCE_ROOT; };
+		94WEBRTC003B941A8E00C0AB /* libwebrtc-audio-processing.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libwebrtc-audio-processing.a"; path = "../Vendor/WebRTC/libwebrtc-audio-processing.a"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -44,6 +46,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				94A4A5F93B941A8E00C01234 /* libTeamTalk5.dylib in Frameworks */,
+				94WEBRTC013B941A8E00C0AB /* libwebrtc-audio-processing.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -71,6 +74,7 @@
 			isa = PBXGroup;
 			children = (
 				94A4A5F63B941A8E00C01234 /* libTeamTalk5.dylib */,
+				94WEBRTC003B941A8E00C0AB /* libwebrtc-audio-processing.a */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -294,9 +298,18 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../Vendor/WebRTC/include",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/../Vendor/TeamTalk",
+					"$(SRCROOT)/../Vendor/WebRTC",
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lc++",
 				);
 				MARKETING_VERSION = "1.0.0-beta.2";
 				PRODUCT_BUNDLE_IDENTIFIER = com.math65.ttaccessible;
@@ -331,9 +344,18 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../Vendor/WebRTC/include",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/../Vendor/TeamTalk",
+					"$(SRCROOT)/../Vendor/WebRTC",
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lc++",
 				);
 				MARKETING_VERSION = "1.0.0-beta.2";
 				PRODUCT_BUNDLE_IDENTIFIER = com.math65.ttaccessible;

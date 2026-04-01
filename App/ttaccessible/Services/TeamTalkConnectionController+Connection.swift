@@ -125,7 +125,6 @@ extension TeamTalkConnectionController {
 
     func startReconnectTimerLocked() {
         cancelReconnectLocked()
-        logAudio("Automatic reconnection scheduled in 5 seconds.")
         let timer = DispatchSource.makeTimerSource(queue: queue)
         timer.schedule(deadline: .now() + .seconds(5), repeating: .seconds(5))
         timer.setEventHandler { [weak self] in
@@ -141,8 +140,6 @@ extension TeamTalkConnectionController {
             publishDisconnected(message: L10n.text("connectedServer.disconnect.connectionLost"))
             return
         }
-
-        logAudio("Attempting reconnection to \(record.host):\(record.tcpPort)")
 
         do {
             let instance = try createInstanceLocked()
@@ -182,9 +179,7 @@ extension TeamTalkConnectionController {
             lastChannelID = 0
             publishSessionLocked(instance: instance, record: record)
             startPollingLocked()
-            logAudio("Reconnection succeeded.")
         } catch {
-            logAudio("Reconnection failed: \(error.localizedDescription)")
             destroyLocked()
             // Le timer relancera une tentative dans 5 secondes
         }
@@ -288,7 +283,6 @@ extension TeamTalkConnectionController {
         password: String,
         options: TeamTalkConnectOptions
     ) throws {
-        logAudio("Connecting to server \(record.host):\(record.tcpPort)/\(record.udpPort) secure=\(record.encrypted)")
         let didStartConnection = record.host.withCString { hostPointer in
             TT_Connect(
                 instance,
@@ -315,7 +309,6 @@ extension TeamTalkConnectionController {
 
             switch message.nClientEvent {
             case CLIENTEVENT_CON_SUCCESS:
-                logAudio("Transport connection established. Starting TeamTalk login.")
                 let nickname = effectiveNickname(for: record, override: options.nicknameOverride)
                 loginCommandID = nickname.withCString { nicknamePointer in
                     record.username.withCString { usernamePointer in
@@ -332,25 +325,20 @@ extension TeamTalkConnectionController {
                 }
 
             case CLIENTEVENT_CMD_MYSELF_LOGGEDIN:
-                logAudio("TeamTalk login succeeded.")
                 return
 
             case CLIENTEVENT_CMD_ERROR:
                 if loginCommandID == -1 || message.nSource == loginCommandID {
-                    logAudio("TeamTalk error during login: \(clientErrorMessage(from: message) ?? "unknown")")
                     throw TeamTalkConnectionError.loginFailed(clientErrorMessage(from: message) ?? L10n.text("teamtalk.connection.error.loginFailed"))
                 }
 
             case CLIENTEVENT_CON_CRYPT_ERROR:
-                logAudio("Encryption error during connection.")
                 throw TeamTalkConnectionError.connectionFailed
 
             case CLIENTEVENT_CON_FAILED:
-                logAudio("Transport connection failed.")
                 throw TeamTalkConnectionError.connectionFailed
 
             case CLIENTEVENT_INTERNAL_ERROR:
-                logAudio("Internal TeamTalk error during connection: \(clientErrorMessage(from: message) ?? "unknown")")
                 throw TeamTalkConnectionError.internalError(clientErrorMessage(from: message) ?? L10n.text("teamtalk.connection.error.internal"))
 
             default:
@@ -429,7 +417,6 @@ extension TeamTalkConnectionController {
             return
         }
 
-        let drainStartedAt = performanceLogger.beginInterval("teamtalk.drainMessages")
         var waitMSec: INT32 = 0
         var publishInvalidation: SessionPublishInvalidation = []
         defer {
@@ -452,9 +439,13 @@ extension TeamTalkConnectionController {
                     }
                 }
             }
+            let now = CFAbsoluteTimeGetCurrent()
             if connectedRecord != nil,
-               updateAutoAwayIfNeededLocked(instance: instance) {
-                publishInvalidation = .all
+               now - lastAutoAwayCheckTime >= 5.0 {
+                lastAutoAwayCheckTime = now
+                if updateAutoAwayIfNeededLocked(instance: instance) {
+                    publishInvalidation = .all
+                }
             }
             if publishInvalidation.contains(.activeTransfers),
                publishInvalidation.intersection([.rootTree, .chat, .history, .privateConversations, .channelFiles, .audio, .identity, .permissions]).isEmpty {
@@ -462,7 +453,6 @@ extension TeamTalkConnectionController {
             } else if !publishInvalidation.isEmpty, let connectedRecord {
                 publishSessionLocked(instance: instance, record: connectedRecord, invalidation: publishInvalidation)
             }
-            performanceLogger.endInterval("teamtalk.drainMessages", drainStartedAt)
         }
 
         while true {
@@ -473,7 +463,6 @@ extension TeamTalkConnectionController {
 
             switch message.nClientEvent {
             case CLIENTEVENT_CON_LOST:
-                logAudio("Connection lost.")
                 SoundPlayer.shared.play(.serverLost)
                 appendConnectionLostHistoryLocked()
                 let record = connectedRecord
@@ -495,17 +484,24 @@ extension TeamTalkConnectionController {
                 }
                 return
             case CLIENTEVENT_CMD_MYSELF_LOGGEDOUT:
-                logAudio("Forced logout.")
                 appendConnectionLostHistoryLocked()
                 destroyLocked()
                 publishDisconnected(message: L10n.text("connectedServer.disconnect.connectionLost"))
                 return
             case CLIENTEVENT_AUDIOINPUT:
-                let queueMSec = message.audioinputprogress.uQueueMSec
-                let bucket = queueMSec / 50
-                if lastLoggedAudioInputQueueBucket != bucket || queueMSec == 0 {
-                    lastLoggedAudioInputQueueBucket = bucket
-                    logAudio("TeamTalk audio queue state: queueMSec=\(queueMSec) elapsedMSec=\(message.audioinputprogress.uElapsedMSec)")
+                break
+            case CLIENTEVENT_USER_AUDIOBLOCK:
+                // Feed muxed audio to echo canceller as far-end reference.
+                if let aec = advancedMicrophoneEngine.echoCanceller,
+                   message.nSource == TT_MUXED_USERID {
+                    if let block = TT_AcquireUserAudioBlock(instance, UInt32(STREAMTYPE_VOICE.rawValue), TT_MUXED_USERID) {
+                        let sampleCount = Int(block.pointee.nSamples) * Int(block.pointee.nChannels)
+                        if let rawAudio = block.pointee.lpRawAudio {
+                            let int16Ptr = rawAudio.assumingMemoryBound(to: Int16.self)
+                            aec.feedReference(int16Ptr, count: Int(block.pointee.nSamples), channels: Int(block.pointee.nChannels))
+                        }
+                        TT_ReleaseUserAudioBlock(instance, block)
+                    }
                 }
             case CLIENTEVENT_CMD_MYSELF_KICKED:
                 if connectedRecord != nil {
@@ -664,7 +660,6 @@ extension TeamTalkConnectionController {
     }
 
     func destroyLocked() {
-        logAudio("Tearing down TeamTalk session. voiceEnabled=\(voiceTransmissionEnabled) engineRunning=\(isAnyMicrophoneEngineRunning) inputReady=\(inputAudioReady) outputReady=\(outputAudioReady)")
         stopPollingLocked()
 
         if let instance {
@@ -674,7 +669,6 @@ extension TeamTalkConnectionController {
             if teamTalkVirtualInputReady {
                 _ = TT_CloseSoundInputDevice(instance)
                 teamTalkVirtualInputReady = false
-                logAudio("TeamTalk virtual input closed.")
             }
             if outputAudioReady {
                 _ = TT_CloseSoundOutputDevice(instance)
@@ -704,9 +698,6 @@ extension TeamTalkConnectionController {
         voiceTransmissionEnabled = false
         teamTalkVirtualInputReady = false
         advancedMicrophoneTargetFormat = nil
-        insertedAudioChunkCount = 0
-        failedAudioChunkInsertCount = 0
-        lastLoggedAudioInputQueueBucket = nil
         isAutoAwayActive = false
         autoAwayRestoreStatusMessage = ""
     }

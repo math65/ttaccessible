@@ -13,8 +13,7 @@ final class AdvancedMicrophonePreviewController {
     private let playbackEngine = AVAudioEngine()
     private let playerNode = AVAudioPlayerNode()
     private let lock = NSLock()
-    private let diagnosticsLogger = AudioDiagnosticsLogger.shared
-    private lazy var captureEngine = AdvancedMicrophoneAudioEngine(diagnosticsScope: "audio-preview-capture") { [weak self] chunk in
+    private lazy var captureEngine = AdvancedMicrophoneAudioEngine { [weak self] chunk in
         self?.enqueue(chunk: chunk)
     }
 
@@ -49,10 +48,6 @@ final class AdvancedMicrophonePreviewController {
         }
 
         self.playbackFormat = playbackFormat
-        diagnosticsLogger.log(
-            "audio-preview",
-            "Start. playbackRate=\(playbackFormat.sampleRate) playbackChannels=\(playbackFormat.channelCount) hwRate=\(actualSampleRate) targetChannels=\(configuration.targetFormat.channels)"
-        )
         playbackEngine.connect(playerNode, to: playbackEngine.mainMixerNode, format: playbackFormat)
         playbackEngine.prepare()
 
@@ -76,7 +71,6 @@ final class AdvancedMicrophonePreviewController {
         lock.unlock()
         playbackFormat = nil
         enqueuedChunkCount = 0
-        diagnosticsLogger.log("audio-preview", "Stop.")
     }
 
     private func enqueue(chunk: AdvancedMicrophoneAudioChunk) {
@@ -98,10 +92,6 @@ final class AdvancedMicrophonePreviewController {
         lock.unlock()
 
         guard shouldDrop == false else {
-            diagnosticsLogger.log(
-                "audio-preview",
-                "Drop chunk. scheduled=\(scheduledBufferCount) rate=\(chunk.sampleRate) channels=\(chunk.channels) samples=\(chunk.sampleCount)"
-            )
             return
         }
 
@@ -140,11 +130,5 @@ final class AdvancedMicrophonePreviewController {
             }
         }
 
-        if enqueuedChunkCount <= 12 || enqueuedChunkCount % 50 == 0 {
-            diagnosticsLogger.log(
-                "audio-preview",
-                "Chunk #\(enqueuedChunkCount) queued. scheduled=\(scheduledBufferCount) rate=\(chunk.sampleRate) channels=\(chunk.channels) samples=\(chunk.sampleCount)"
-            )
-        }
     }
 }

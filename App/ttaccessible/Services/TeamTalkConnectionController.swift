@@ -62,8 +62,7 @@ final class TeamTalkConnectionController {
     let preferencesStore: AppPreferencesStore
     let userVolumeStore = UserVolumeStore()
     let lastChannelStore = LastChannelStore()
-    let audioDiagnosticsLogger = AudioDiagnosticsLogger.shared
-    let performanceLogger = AppPerformanceLogger.shared
+
 
     @MainActor weak var delegate: TeamTalkConnectionControllerDelegate?
     @MainActor var sessionSnapshot: ConnectedServerSession?
@@ -92,14 +91,12 @@ final class TeamTalkConnectionController {
     var voiceTransmissionEnabled = false
     var teamTalkVirtualInputReady = false
     var advancedMicrophoneTargetFormat: AdvancedMicrophoneAudioTargetFormat?
-    var insertedAudioChunkCount = 0
-    var failedAudioChunkInsertCount = 0
-    var lastLoggedAudioInputQueueBucket: UInt32?
     var reconnectTimer: DispatchSourceTimer?
     var reconnectRecord: SavedServerRecord?
     var reconnectPassword: String?
     var reconnectOptions = TeamTalkConnectOptions()
     var lastChannelID: Int32 = 0
+    var lastAutoAwayCheckTime: CFAbsoluteTime = 0
     var isAutoAwayActive = false
     var autoAwayRestoreStatusMessage = ""
     var pendingUserAccounts: [UserAccountProperties] = []
@@ -109,7 +106,7 @@ final class TeamTalkConnectionController {
     var lastBuiltSessionSnapshot: ConnectedServerSession?
     var cachedSoundDevices: [SoundDevice] = []
     var cachedAudioDeviceCatalog: AudioDeviceCatalog?
-    lazy var advancedMicrophoneEngine = AdvancedMicrophoneAudioEngine(diagnosticsScope: "audio-teamtalk-capture") { [weak self] chunk in
+    lazy var advancedMicrophoneEngine = AdvancedMicrophoneAudioEngine { [weak self] chunk in
         self?.queue.async { [weak self] in
             self?.insertAdvancedMicrophoneAudioChunkLocked(chunk)
         }
@@ -118,10 +115,6 @@ final class TeamTalkConnectionController {
     init(preferencesStore: AppPreferencesStore) {
         self.preferencesStore = preferencesStore
         queue.setSpecific(key: queueKey, value: ())
-    }
-
-    func logAudio(_ message: String) {
-        audioDiagnosticsLogger.log("audio", message)
     }
 
     var isAnyMicrophoneEngineRunning: Bool {

@@ -115,7 +115,6 @@ struct AppPreferences: Codable, Equatable {
     var inputGainDB: Double
     var outputGainDB: Double
     var savedServersSort: SavedServersSortPreferences
-
     init(
         defaultNickname: String = "TTAccessible",
         defaultStatusMessage: String = "",

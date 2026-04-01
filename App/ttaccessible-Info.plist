@@ -62,5 +62,9 @@
 	<string>TTAccessible can optionally control VoiceOver to read incoming messages while the app is in the background.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>TTAccessible uses the microphone to talk in TeamTalk channels.</string>
+	<key>NSAudioCaptureUsageDescription</key>
+	<string>TTAccessible can capture audio from other applications to stream it to TeamTalk channels.</string>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>TTAccessible can capture audio from specific applications to stream it to TeamTalk channels.</string>
 </dict>
 </plist>

@@ -11,7 +11,6 @@ extension TeamTalkConnectionController {
 
     func publishActiveTransfersLocked(currentChannelID: Int32) {
         let transfers = Array(activeTransferProgress.values)
-        performanceLogger.increment("teamtalk.publishActiveTransfers")
         DispatchQueue.main.async { [weak self] in
             guard let self else {
                 return
@@ -40,7 +39,6 @@ extension TeamTalkConnectionController {
             inputAudioReady: inputAudioReady,
             outputAudioReady: outputAudioReady
         )
-        performanceLogger.increment("teamtalk.publishAudioRuntime")
         DispatchQueue.main.async { [weak self] in
             guard let self else {
                 return
@@ -54,10 +52,7 @@ extension TeamTalkConnectionController {
         record: SavedServerRecord,
         invalidation: SessionPublishInvalidation = .all
     ) {
-        performanceLogger.increment("teamtalk.publishSession")
-        let startedAt = performanceLogger.beginInterval("teamtalk.makeSessionSnapshot")
         let snapshot = makeSessionSnapshotLocked(instance: instance, record: record, invalidation: invalidation)
-        performanceLogger.endInterval("teamtalk.makeSessionSnapshot", startedAt)
         lastBuiltSessionSnapshot = snapshot
 
         DispatchQueue.main.async { [weak self] in
