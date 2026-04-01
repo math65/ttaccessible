@@ -100,8 +100,7 @@ final class AdvancedMicrophonePreviewController {
         let frameCount = Int(chunk.sampleCount)
         enqueuedChunkCount += 1
 
-        chunk.data.withUnsafeBytes { rawBuffer in
-            let source = rawBuffer.bindMemory(to: Int16.self)
+        chunk.samples.withUnsafeBufferPointer { source in
             guard let baseAddress = source.baseAddress,
                   let channelData = buffer.int16ChannelData else {
                 return

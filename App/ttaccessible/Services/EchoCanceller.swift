@@ -29,8 +29,13 @@ final class EchoCanceller {
 
     // Accumulation buffers for chunking arbitrary-sized input into 10ms frames.
     private var renderAccumulator: [Int16] = []
-    private var captureAccumulator: [Int16] = []
-    private var captureOutput: [Int16] = []
+
+    // Pre-allocated buffers for real-time thread (processCapture).
+    private var captureAccumulator: [Int16]
+    private var captureWriteIndex = 0
+    private var captureOutput: [Int16]
+    private var captureOutputCount = 0
+    private var frameBuffer: [Int16]
 
     init?(configuration: Configuration) {
         self.config = configuration
@@ -38,6 +43,10 @@ final class EchoCanceller {
             return nil
         }
         self.aecRef = ref
+        let frameSamples = configuration.frameSamplesPerChannel * configuration.channels
+        captureAccumulator = [Int16](repeating: 0, count: frameSamples * 4)
+        captureOutput = [Int16](repeating: 0, count: frameSamples * 4)
+        frameBuffer = [Int16](repeating: 0, count: frameSamples)
     }
 
     deinit {
@@ -76,27 +85,59 @@ final class EchoCanceller {
     func processCapture(_ samples: UnsafePointer<Int16>, count: Int) -> [Int16] {
         let frameSamples = config.frameSamplesPerChannel * config.channels
 
-        captureAccumulator.append(contentsOf: UnsafeBufferPointer(start: samples, count: count))
-        captureOutput.removeAll(keepingCapacity: true)
-
-        while captureAccumulator.count >= frameSamples {
-            // Process one 10ms frame in-place.
-            var frame = Array(captureAccumulator.prefix(frameSamples))
-            frame.withUnsafeMutableBufferPointer { buffer in
-                webrtc_aec_process_capture(aecRef, buffer.baseAddress!, Int32(config.frameSamplesPerChannel))
-            }
-            captureOutput.append(contentsOf: frame)
-            captureAccumulator.removeFirst(frameSamples)
+        // Grow accumulator if needed (rare, only on first calls or buffer size changes).
+        let neededCapacity = captureWriteIndex + count
+        if neededCapacity > captureAccumulator.count {
+            captureAccumulator.append(contentsOf: repeatElement(Int16(0), count: neededCapacity - captureAccumulator.count))
         }
 
-        return captureOutput
+        // Copy input into accumulator (no allocation — writes into pre-allocated space).
+        for i in 0..<count {
+            captureAccumulator[captureWriteIndex + i] = samples[i]
+        }
+        captureWriteIndex += count
+
+        captureOutputCount = 0
+
+        while captureWriteIndex >= frameSamples {
+            // Copy one frame into pre-allocated frameBuffer.
+            for i in 0..<frameSamples {
+                frameBuffer[i] = captureAccumulator[i]
+            }
+
+            // Process the frame in-place via WebRTC AEC3.
+            frameBuffer.withUnsafeMutableBufferPointer { buffer in
+                webrtc_aec_process_capture(aecRef, buffer.baseAddress!, Int32(config.frameSamplesPerChannel))
+            }
+
+            // Append processed frame to output (grow if needed, rare).
+            let neededOutput = captureOutputCount + frameSamples
+            if neededOutput > captureOutput.count {
+                captureOutput.append(contentsOf: repeatElement(Int16(0), count: neededOutput - captureOutput.count))
+            }
+            for i in 0..<frameSamples {
+                captureOutput[captureOutputCount + i] = frameBuffer[i]
+            }
+            captureOutputCount += frameSamples
+
+            // Shift remaining data forward (memmove-style).
+            let remaining = captureWriteIndex - frameSamples
+            if remaining > 0 {
+                captureAccumulator.withUnsafeMutableBufferPointer { buf in
+                    buf.baseAddress!.update(from: buf.baseAddress! + frameSamples, count: remaining)
+                }
+            }
+            captureWriteIndex = remaining
+        }
+
+        return Array(captureOutput.prefix(captureOutputCount))
     }
 
     // MARK: - Reset
 
     func reset() {
         renderAccumulator.removeAll(keepingCapacity: true)
-        captureAccumulator.removeAll(keepingCapacity: true)
-        captureOutput.removeAll(keepingCapacity: true)
+        captureWriteIndex = 0
+        captureOutputCount = 0
     }
 }

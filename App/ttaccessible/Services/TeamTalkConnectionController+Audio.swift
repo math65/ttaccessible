@@ -27,7 +27,12 @@ extension TeamTalkConnectionController {
 
     @MainActor
     func refreshAvailableAudioDevices() -> AudioDeviceCatalog {
-        queue.sync {
+        if DispatchQueue.getSpecific(key: queueKey) != nil {
+            cachedSoundDevices = []
+            cachedAudioDeviceCatalog = nil
+            return availableAudioDevicesLocked(forceRefresh: true)
+        }
+        return queue.sync {
             cachedSoundDevices = []
             cachedAudioDeviceCatalog = nil
             return availableAudioDevicesLocked(forceRefresh: true)
@@ -396,11 +401,8 @@ extension TeamTalkConnectionController {
             return
         }
 
-        chunk.data.withUnsafeBytes { rawBuffer in
-            guard let baseAddress = rawBuffer.baseAddress else {
-                return
-            }
-
+        chunk.samples.withUnsafeBufferPointer { buffer in
+            guard let baseAddress = buffer.baseAddress else { return }
             var audioBlock = AudioBlock()
             audioBlock.nStreamID = chunk.streamID
             audioBlock.nSampleRate = chunk.sampleRate

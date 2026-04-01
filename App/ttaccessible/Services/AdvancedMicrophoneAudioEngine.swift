@@ -37,7 +37,7 @@ struct AdvancedMicrophoneAudioChunk {
     let sampleRate: Int32
     let channels: Int32
     let sampleCount: Int32
-    let data: Data
+    let samples: [Int16]
 }
 
 enum AdvancedMicrophoneAudioEngineError: LocalizedError {
@@ -386,7 +386,7 @@ final class AdvancedMicrophoneAudioEngine {
         }
 
         // Apply WebRTC AEC3 on Int16 PCM data.
-        let payload: Data
+        let samples: [Int16]
         if let aec = echoCanceller {
             let processed = int16Buffer.withUnsafeBufferPointer { buf in
                 aec.processCapture(buf.baseAddress!, count: adaptedCount)
@@ -395,13 +395,9 @@ final class AdvancedMicrophoneAudioEngine {
                 // AEC hasn't accumulated a full 10ms frame yet; skip this chunk.
                 return
             }
-            payload = processed.withUnsafeBufferPointer { buf in
-                Data(bytes: buf.baseAddress!, count: processed.count * MemoryLayout<Int16>.size)
-            }
+            samples = processed
         } else {
-            payload = int16Buffer.withUnsafeBufferPointer { buf in
-                Data(bytes: buf.baseAddress!, count: adaptedCount * MemoryLayout<Int16>.size)
-            }
+            samples = Array(int16Buffer.prefix(adaptedCount))
         }
 
         let chunk = AdvancedMicrophoneAudioChunk(
@@ -409,7 +405,7 @@ final class AdvancedMicrophoneAudioEngine {
             sampleRate: Int32(configuration.targetFormat.sampleRate.rounded()),
             channels: Int32(targetChannels),
             sampleCount: Int32(adaptedCount / targetChannels),
-            data: payload
+            samples: samples
         )
 
         onAudioChunk(chunk)
