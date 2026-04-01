@@ -15,44 +15,6 @@ extension TeamTalkConnectionController {
         case output
     }
 
-    func describe(_ preset: InputChannelPreset) -> String {
-        switch preset {
-        case .auto:
-            return "auto"
-        case .mono(let channel):
-            return "mono:\(channel)"
-        case .stereoPair(let first, let second):
-            return "stereo:\(first)/\(second)"
-        case .monoMix(let first, let second):
-            return "monoMix:\(first)+\(second)"
-        }
-    }
-
-    func describeLimiter(_ preferences: AdvancedInputAudioPreferences) -> String {
-        guard preferences.limiterEnabled else {
-            return "off"
-        }
-
-        switch preferences.limiterMode {
-        case .preset:
-            return "preset:\(preferences.limiterPreset.rawValue)"
-        case .manual:
-            return "manual:\(preferences.effectiveLimiterThresholdDB)dB/\(Int(preferences.effectiveLimiterReleaseMilliseconds.rounded()))ms"
-        }
-    }
-
-    func describeDynamicProcessor(_ preferences: AdvancedInputAudioPreferences) -> String {
-        guard preferences.dynamicProcessorEnabled else {
-            return "off"
-        }
-        switch preferences.dynamicProcessorMode {
-        case .gate:
-            return "gate:\(Int(preferences.gate.thresholdDB.rounded()))dB/\(Int(preferences.gate.attackMilliseconds.rounded()))ms/\(Int(preferences.gate.holdMilliseconds.rounded()))ms/\(Int(preferences.gate.releaseMilliseconds.rounded()))ms"
-        case .expander:
-            return "expander:\(Int(preferences.expander.thresholdDB.rounded()))dB/\(preferences.expander.ratio):1/\(Int(preferences.expander.attackMilliseconds.rounded()))ms/\(Int(preferences.expander.releaseMilliseconds.rounded()))ms"
-        }
-    }
-
     @MainActor
     func availableAudioDevices() -> AudioDeviceCatalog {
         if DispatchQueue.getSpecific(key: queueKey) != nil {
@@ -69,6 +31,13 @@ extension TeamTalkConnectionController {
             cachedSoundDevices = []
             cachedAudioDeviceCatalog = nil
             return availableAudioDevicesLocked(forceRefresh: true)
+        }
+    }
+
+    func invalidateAudioDeviceCache() {
+        queue.async { [weak self] in
+            self?.cachedSoundDevices = []
+            self?.cachedAudioDeviceCatalog = nil
         }
     }
 
@@ -92,17 +61,12 @@ extension TeamTalkConnectionController {
             }
 
             do {
-                let advanced = self.currentAdvancedInputAudioPreferencesLocked(preferences: preferences)
-                self.logAudio(
-                    "Audio re-apply requested. input=\(preferences.preferredInputDevice.displayName ?? "system") output=\(preferences.preferredOutputDevice.displayName ?? "system") advanced=\(advanced.isEnabled) preset=\(self.describe(advanced.preset)) dynamic=\(self.describeDynamicProcessor(advanced)) limiter=\(self.describeLimiter(advanced))"
-                )
                 try self.reinitializeAudioDevicesLocked(instance: instance, preferences: preferences)
                 self.publishSessionLocked(instance: instance, record: record)
                 DispatchQueue.main.async {
                     completion(.success(()))
                 }
             } catch {
-                self.logAudio("Audio re-apply failed: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     completion(.failure(error))
                 }
@@ -122,7 +86,6 @@ extension TeamTalkConnectionController {
             }
 
             self.advancedMicrophoneEngine.updateInputGainDB(clamped)
-            self.logAudio("Input gain applied. value=\(Self.formatGainDB(clamped))")
         }
     }
 
@@ -138,7 +101,6 @@ extension TeamTalkConnectionController {
             }
 
             self.applyOutputGainLocked(instance: instance, gainDB: clamped)
-            self.logAudio("Output gain applied. value=\(Self.formatGainDB(clamped))")
         }
     }
 
@@ -178,17 +140,14 @@ extension TeamTalkConnectionController {
             }
 
             do {
-                self.logAudio("Microphone activation requested. channel=\(TT_GetMyChannelID(instance)) engineRunning=\(self.isAnyMicrophoneEngineRunning) inputReady=\(self.inputAudioReady) virtualReady=\(self.teamTalkVirtualInputReady)")
                 try self.ensureAdvancedMicrophoneInputReadyLocked(instance: instance)
                 self.voiceTransmissionEnabled = true
                 SoundPlayer.shared.play(.voxMeEnable)
-                self.logAudio("Microphone enabled. engineRunning=\(self.isAnyMicrophoneEngineRunning) virtualReady=\(self.teamTalkVirtualInputReady)")
                 self.publishSessionLocked(instance: instance, record: record)
                 DispatchQueue.main.async {
                     completion(.success(()))
                 }
             } catch {
-                self.logAudio("Microphone activation failed: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     completion(.failure(error))
                 }
@@ -214,7 +173,6 @@ extension TeamTalkConnectionController {
             self.inputAudioReady = false
             self.advancedMicrophoneTargetFormat = nil
             SoundPlayer.shared.play(.voxMeDisable)
-            self.logAudio("Microphone disabled.")
             self.publishSessionLocked(instance: instance, record: record)
 
             DispatchQueue.main.async {
@@ -244,54 +202,34 @@ extension TeamTalkConnectionController {
         let targetFormat = try currentAdvancedMicrophoneTargetFormatLocked(instance: instance)
 
         do {
+            let aecEnabled = effectivePreferences.echoCancellationEnabled
             let configuration = AdvancedMicrophoneAudioConfiguration(
                 device: deviceInfo,
                 preset: effectivePreferences.preset,
                 inputGainDB: preferencesStore.preferences.inputGainDB,
-
-                dynamicProcessorEnabled: effectivePreferences.dynamicProcessorEnabled,
-                dynamicProcessorMode: effectivePreferences.dynamicProcessorMode,
-                gateThresholdDB: effectivePreferences.gate.thresholdDB,
-                gateAttackMilliseconds: effectivePreferences.gate.attackMilliseconds,
-                gateHoldMilliseconds: effectivePreferences.gate.holdMilliseconds,
-                gateReleaseMilliseconds: effectivePreferences.gate.releaseMilliseconds,
-                expanderThresholdDB: effectivePreferences.expander.thresholdDB,
-                expanderRatio: effectivePreferences.expander.ratio,
-                expanderAttackMilliseconds: effectivePreferences.expander.attackMilliseconds,
-                expanderReleaseMilliseconds: effectivePreferences.expander.releaseMilliseconds,
-                limiterEnabled: effectivePreferences.limiterEnabled,
-                limiterMode: effectivePreferences.limiterMode,
-                limiterPreset: effectivePreferences.limiterPreset,
-                limiterThresholdDB: effectivePreferences.effectiveLimiterThresholdDB,
-                limiterReleaseMilliseconds: effectivePreferences.effectiveLimiterReleaseMilliseconds,
-                targetFormat: targetFormat
-            )
-            logAudio(
-                "Starting Apple capture. device=\(deviceInfo.name) channels=\(deviceInfo.inputChannels) sampleRate=\(deviceInfo.nominalSampleRate) preset=\(describe(effectivePreferences.preset)) dynamic=\(describeDynamicProcessor(effectivePreferences)) limiter=\(describeLimiter(effectivePreferences)) targetRate=\(targetFormat.sampleRate) targetChannels=\(targetFormat.channels) txInterval=\(targetFormat.txIntervalMSec)"
+                targetFormat: targetFormat,
+                echoCancellationEnabled: aecEnabled
             )
             try ensureTeamTalkVirtualInputReadyLocked(instance: instance)
             try ensureDirectOutputAudioReadyLocked(instance: instance)
             _ = try advancedMicrophoneEngine.start(configuration: configuration)
-            logAudio("Microphone capture started.")
             advancedMicrophoneTargetFormat = targetFormat
             inputAudioReady = true
-            insertedAudioChunkCount = 0
-            failedAudioChunkInsertCount = 0
-            lastLoggedAudioInputQueueBucket = nil
+
+            // Enable muxed audio block events for AEC reference signal.
+            if aecEnabled {
+                TT_EnableAudioBlockEvent(instance, TT_MUXED_USERID, UInt32(STREAMTYPE_VOICE.rawValue), 1)
+            }
         } catch {
             if teamTalkVirtualInputReady {
                 _ = TT_CloseSoundInputDevice(instance)
                 teamTalkVirtualInputReady = false
-                logAudio("TeamTalk virtual input closed after Apple capture start failure.")
             }
             inputAudioReady = false
             advancedMicrophoneTargetFormat = nil
             do {
                 try ensureDirectOutputAudioReadyLocked(instance: instance)
-            } catch {
-                logAudio("Failed to restore TeamTalk output after microphone error: \(error.localizedDescription)")
-            }
-            logAudio("Microphone start failed: \(error.localizedDescription)")
+            } catch { }
             throw error
         }
     }
@@ -300,7 +238,6 @@ extension TeamTalkConnectionController {
         instance: UnsafeMutableRawPointer,
         preferences: AppPreferences
     ) throws {
-        logAudio("Audio reinitialization. wasVoice=\(voiceTransmissionEnabled) wasInput=\(inputAudioReady) wasOutput=\(outputAudioReady)")
         let wasVoiceTransmissionEnabled = voiceTransmissionEnabled
         let wasInputAudioReady = inputAudioReady
         if wasVoiceTransmissionEnabled || wasInputAudioReady || isAnyMicrophoneEngineRunning {
@@ -400,23 +337,19 @@ extension TeamTalkConnectionController {
 
         let outputDeviceID = try selectedOutputDeviceIDLocked()
         guard TT_InitSoundOutputDevice(instance, outputDeviceID) != 0 else {
-            logAudio("TeamTalk output init failed. deviceID=\(outputDeviceID)")
             throw TeamTalkConnectionError.internalError(L10n.text("connectedServer.audio.error.outputStartFailed"))
         }
         outputAudioReady = true
         applyOutputGainLocked(instance: instance, gainDB: preferencesStore.preferences.outputGainDB)
-        logAudio("TeamTalk direct output initialized. deviceID=\(outputDeviceID)")
     }
 
     func stopAdvancedMicrophoneInputLocked(instance: UnsafeMutableRawPointer, reason: String) {
-        logAudio("Stopping microphone capture. reason=\(reason) virtualReady=\(teamTalkVirtualInputReady) inserted=\(insertedAudioChunkCount) failed=\(failedAudioChunkInsertCount)")
+        // Disable muxed audio block events (AEC reference).
+        TT_EnableAudioBlockEvent(instance, TT_MUXED_USERID, UInt32(STREAMTYPE_VOICE.rawValue), 0)
         advancedMicrophoneEngine.stop()
-        logAudio("Microphone engine stopped.")
-        let didEndRawInput = TT_InsertAudioBlock(instance, nil) != 0
-        logAudio("Microphone teardown: TT_InsertAudioBlock(nil)=\(didEndRawInput)")
+        _ = TT_InsertAudioBlock(instance, nil)
         inputAudioReady = false
         advancedMicrophoneTargetFormat = nil
-        logAudio("Microphone teardown: local state reset.")
     }
 
     func ensureTeamTalkVirtualInputReadyLocked(instance: UnsafeMutableRawPointer) throws {
@@ -425,24 +358,16 @@ extension TeamTalkConnectionController {
         }
 
         guard TT_InitSoundInputDevice(instance, TT_SOUNDDEVICE_ID_TEAMTALK_VIRTUAL) != 0 else {
-            logAudio("TeamTalk virtual input init failed.")
             throw TeamTalkConnectionError.internalError(L10n.text("connectedServer.audio.error.inputStartFailed"))
         }
 
         teamTalkVirtualInputReady = true
-        logAudio("TeamTalk virtual input initialized.")
     }
 
     func effectiveMicrophoneProcessingPreferencesLocked(
         for deviceInfo: InputAudioDeviceInfo
     ) -> AdvancedInputAudioPreferences {
-        var effectivePreferences = preferencesStore.advancedInputAudio(for: deviceInfo.uid)
-        if effectivePreferences.isEnabled == false {
-            effectivePreferences.preset = .auto
-            effectivePreferences.dynamicProcessorEnabled = false
-            effectivePreferences.limiterEnabled = false
-        }
-
+        let effectivePreferences = preferencesStore.advancedInputAudio(for: deviceInfo.uid)
         return InputAudioDeviceResolver.normalizedPreferences(
             effectivePreferences,
             for: deviceInfo
@@ -460,13 +385,9 @@ extension TeamTalkConnectionController {
         guard voiceTransmissionEnabled,
               let instance,
               TT_GetMyChannelID(instance) > 0 else {
-            logAudio(
-                "Chunk skipped before injection. voice=\(voiceTransmissionEnabled) inChannel=\(instance.map { TT_GetMyChannelID($0) > 0 } ?? false) stream=\(chunk.streamID) rate=\(chunk.sampleRate) channels=\(chunk.channels) samples=\(chunk.sampleCount)"
-            )
             return
         }
 
-        let stats = chunkLevelStats(chunk.data)
         chunk.data.withUnsafeBytes { rawBuffer in
             guard let baseAddress = rawBuffer.baseAddress else {
                 return
@@ -479,48 +400,8 @@ extension TeamTalkConnectionController {
             audioBlock.lpRawAudio = UnsafeMutableRawPointer(mutating: baseAddress)
             audioBlock.nSamples = chunk.sampleCount
             audioBlock.uSampleIndex = 0
-            if TT_InsertAudioBlock(instance, &audioBlock) != 0 {
-                insertedAudioChunkCount += 1
-                if insertedAudioChunkCount <= 12 || insertedAudioChunkCount % 50 == 0 {
-                    logAudio(
-                        "Audio block injected. count=\(insertedAudioChunkCount) stream=\(chunk.streamID) rate=\(chunk.sampleRate) channels=\(chunk.channels) samples=\(chunk.sampleCount) peak=\(formatDecibels(stats.peak)) rms=\(formatDecibels(stats.rms)) bytes=\(chunk.data.count)"
-                    )
-                }
-            } else {
-                failedAudioChunkInsertCount += 1
-                logAudio(
-                    "TT_InsertAudioBlock failed. failed=\(failedAudioChunkInsertCount) stream=\(chunk.streamID) rate=\(chunk.sampleRate) channels=\(chunk.channels) samples=\(chunk.sampleCount) peak=\(formatDecibels(stats.peak)) rms=\(formatDecibels(stats.rms)) bytes=\(chunk.data.count)"
-                )
-            }
+            _ = TT_InsertAudioBlock(instance, &audioBlock)
         }
-    }
-
-    func chunkLevelStats(_ data: Data) -> (peak: Float, rms: Float) {
-        data.withUnsafeBytes { rawBuffer in
-            let samples = rawBuffer.bindMemory(to: Int16.self)
-            guard let baseAddress = samples.baseAddress, samples.count > 0 else {
-                return (0, 0)
-            }
-
-            var peak: Float = 0
-            var sumSquares: Double = 0
-            let scale = Float(Int16.max)
-            for index in 0..<samples.count {
-                let normalized = Float(baseAddress[index]) / scale
-                let magnitude = abs(normalized)
-                peak = max(peak, magnitude)
-                sumSquares += Double(normalized * normalized)
-            }
-            let rms = Float((sumSquares / Double(samples.count)).squareRoot())
-            return (peak, rms)
-        }
-    }
-
-    func formatDecibels(_ value: Float) -> String {
-        guard value > 0 else {
-            return "-inf dBFS"
-        }
-        return String(format: "%.1f dBFS", 20 * log10(Double(value)))
     }
 
     func refreshAdvancedMicrophoneTargetIfNeededLocked(instance: UnsafeMutableRawPointer) {
@@ -536,14 +417,12 @@ extension TeamTalkConnectionController {
             return
         }
 
-        logAudio("Microphone target format changed. old=\(String(describing: advancedMicrophoneTargetFormat)) new=\(currentTargetFormat)")
         do {
             stopAdvancedMicrophoneInputLocked(instance: instance, reason: "refreshAdvancedMicrophoneTargetIfNeededLocked")
             try ensureAdvancedMicrophoneInputReadyLocked(instance: instance)
         } catch {
             stopAdvancedMicrophoneInputLocked(instance: instance, reason: "refreshAdvancedMicrophoneTargetIfNeededLocked rollback")
             voiceTransmissionEnabled = false
-            logAudio("Microphone target format refresh failed: \(error.localizedDescription)")
         }
     }
 
@@ -617,10 +496,7 @@ extension TeamTalkConnectionController {
 
     func applyOutputGainLocked(instance: UnsafeMutableRawPointer, gainDB: Double) {
         let volume = Self.teamTalkVolume(for: gainDB)
-        guard TT_SetSoundOutputVolume(instance, volume) != 0 else {
-            logAudio("Output gain application failed. value=\(Self.formatGainDB(gainDB)) volume=\(volume)")
-            return
-        }
+        _ = TT_SetSoundOutputVolume(instance, volume)
     }
 
     func selectedDeviceIDLocked(

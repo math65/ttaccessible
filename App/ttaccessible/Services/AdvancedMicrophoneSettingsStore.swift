@@ -14,7 +14,7 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
     @Published private(set) var presetOptions: [InputChannelPresetOption] = [
         InputChannelPresetOption(preset: .auto, title: InputAudioDeviceResolver.title(for: .auto))
     ]
-    @Published private(set) var summaryText: String
+    @Published private(set) var summaryText: String = ""
     @Published private(set) var feedbackMessage: String?
     @Published private(set) var lastErrorMessage: String?
     @Published private(set) var isPreviewRunning = false
@@ -28,8 +28,6 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
     init(preferencesStore: AppPreferencesStore, connectionController: TeamTalkConnectionController) {
         self.preferencesStore = preferencesStore
         self.connectionController = connectionController
-        let initialDeviceID = InputAudioDeviceResolver.currentInputDeviceID(for: preferencesStore.preferences.preferredInputDevice)
-        self.summaryText = InputAudioDeviceResolver.summary(for: preferencesStore.advancedInputAudio(for: initialDeviceID))
 
         preferencesStore.$preferences
             .sink { [weak self] _ in
@@ -53,113 +51,19 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
         refreshState(normalizeIfNeeded: true)
     }
 
-    func normalizeCurrentPreferencesIfNeeded() {
-        refreshState(normalizeIfNeeded: true)
-    }
-
     func handleInputDevicePreferenceChange() {
         refreshState(normalizeIfNeeded: true)
     }
 
-    func updateAdvancedEnabled(_ enabled: Bool) {
+    func updateEchoCancellationEnabled(_ enabled: Bool) {
         var preferences = advancedPreferences
-        preferences.isEnabled = enabled
+        preferences.echoCancellationEnabled = enabled
         apply(preferences)
     }
 
     func updatePreset(_ preset: InputChannelPreset) {
         var preferences = advancedPreferences
         preferences.preset = preset
-        apply(preferences)
-    }
-
-    func updateLimiterEnabled(_ enabled: Bool) {
-        var preferences = advancedPreferences
-        preferences.limiterEnabled = enabled
-        apply(preferences)
-    }
-
-    func updateDynamicProcessorEnabled(_ enabled: Bool) {
-        var preferences = advancedPreferences
-        preferences.dynamicProcessorEnabled = enabled
-        apply(preferences)
-    }
-
-    func updateDynamicProcessorMode(_ mode: DynamicProcessorMode) {
-        var preferences = advancedPreferences
-        preferences.dynamicProcessorMode = mode
-        apply(preferences)
-    }
-
-    func updateGateThresholdDB(_ value: Double) {
-        var preferences = advancedPreferences
-        preferences.gate.thresholdDB = AdvancedInputAudioPreferences.clampNoiseGateThresholdDB(value)
-        apply(preferences)
-    }
-
-    func updateGateAttackMilliseconds(_ value: Double) {
-        var preferences = advancedPreferences
-        preferences.gate.attackMilliseconds = AdvancedInputAudioPreferences.clampNoiseGateAttackMilliseconds(value)
-        apply(preferences)
-    }
-
-    func updateGateHoldMilliseconds(_ value: Double) {
-        var preferences = advancedPreferences
-        preferences.gate.holdMilliseconds = AdvancedInputAudioPreferences.clampNoiseGateHoldMilliseconds(value)
-        apply(preferences)
-    }
-
-    func updateGateReleaseMilliseconds(_ value: Double) {
-        var preferences = advancedPreferences
-        preferences.gate.releaseMilliseconds = AdvancedInputAudioPreferences.clampNoiseGateReleaseMilliseconds(value)
-        apply(preferences)
-    }
-
-    func updateExpanderThresholdDB(_ value: Double) {
-        var preferences = advancedPreferences
-        preferences.expander.thresholdDB = AdvancedInputAudioPreferences.clampNoiseGateThresholdDB(value)
-        apply(preferences)
-    }
-
-    func updateExpanderRatio(_ value: Double) {
-        var preferences = advancedPreferences
-        preferences.expander.ratio = AdvancedInputAudioPreferences.clampExpanderRatio(value)
-        apply(preferences)
-    }
-
-    func updateExpanderAttackMilliseconds(_ value: Double) {
-        var preferences = advancedPreferences
-        preferences.expander.attackMilliseconds = AdvancedInputAudioPreferences.clampNoiseGateAttackMilliseconds(value)
-        apply(preferences)
-    }
-
-    func updateExpanderReleaseMilliseconds(_ value: Double) {
-        var preferences = advancedPreferences
-        preferences.expander.releaseMilliseconds = AdvancedInputAudioPreferences.clampNoiseGateReleaseMilliseconds(value)
-        apply(preferences)
-    }
-
-    func updateLimiterMode(_ mode: LimiterControlMode) {
-        var preferences = advancedPreferences
-        preferences.limiterMode = mode
-        apply(preferences)
-    }
-
-    func updateLimiterPreset(_ preset: LimiterPreset) {
-        var preferences = advancedPreferences
-        preferences.limiterPreset = preset
-        apply(preferences)
-    }
-
-    func updateLimiterThresholdDB(_ value: Double) {
-        var preferences = advancedPreferences
-        preferences.limiterThresholdDB = AdvancedInputAudioPreferences.clampThresholdDB(value)
-        apply(preferences)
-    }
-
-    func updateLimiterReleaseMilliseconds(_ value: Double) {
-        var preferences = advancedPreferences
-        preferences.limiterReleaseMilliseconds = AdvancedInputAudioPreferences.clampReleaseMilliseconds(value)
         apply(preferences)
     }
 
@@ -261,43 +165,18 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
             for: deviceInfo
         ).preferences
 
-        let effectivePreferences: AdvancedInputAudioPreferences
-        if normalized.isEnabled {
-            effectivePreferences = normalized
-        } else {
-            var disabled = normalized
-            disabled.preset = .auto
-            disabled.dynamicProcessorEnabled = false
-            disabled.limiterEnabled = false
-            effectivePreferences = disabled
-        }
-
         let targetFormat = AdvancedMicrophoneAudioTargetFormat(
             sampleRate: deviceInfo.nominalSampleRate > 0 ? deviceInfo.nominalSampleRate : 48_000,
-            channels: previewChannelCount(for: effectivePreferences.preset, availableChannels: deviceInfo.inputChannels),
+            channels: previewChannelCount(for: normalized.preset, availableChannels: deviceInfo.inputChannels),
             txIntervalMSec: 40
         )
 
         let configuration = AdvancedMicrophoneAudioConfiguration(
             device: deviceInfo,
-            preset: effectivePreferences.preset,
+            preset: normalized.preset,
             inputGainDB: preferencesStore.preferences.inputGainDB,
-            dynamicProcessorEnabled: effectivePreferences.dynamicProcessorEnabled,
-            dynamicProcessorMode: effectivePreferences.dynamicProcessorMode,
-            gateThresholdDB: effectivePreferences.gate.thresholdDB,
-            gateAttackMilliseconds: effectivePreferences.gate.attackMilliseconds,
-            gateHoldMilliseconds: effectivePreferences.gate.holdMilliseconds,
-            gateReleaseMilliseconds: effectivePreferences.gate.releaseMilliseconds,
-            expanderThresholdDB: effectivePreferences.expander.thresholdDB,
-            expanderRatio: effectivePreferences.expander.ratio,
-            expanderAttackMilliseconds: effectivePreferences.expander.attackMilliseconds,
-            expanderReleaseMilliseconds: effectivePreferences.expander.releaseMilliseconds,
-            limiterEnabled: effectivePreferences.limiterEnabled,
-            limiterMode: effectivePreferences.limiterMode,
-            limiterPreset: effectivePreferences.limiterPreset,
-            limiterThresholdDB: effectivePreferences.limiterThresholdDB,
-            limiterReleaseMilliseconds: effectivePreferences.limiterReleaseMilliseconds,
-            targetFormat: targetFormat
+            targetFormat: targetFormat,
+            echoCancellationEnabled: false
         )
 
         try previewController.start(configuration: configuration)

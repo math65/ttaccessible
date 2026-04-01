@@ -17,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let voiceOverAppleScriptAnnouncementService = VoiceOverAppleScriptAnnouncementService()
     private let macOSTextToSpeechAnnouncementService = MacOSTextToSpeechAnnouncementService()
     private let menuState = SavedServersMenuState.shared
+    private let audioDeviceChangeMonitor = AudioDeviceChangeMonitor()
     private lazy var connectionController = TeamTalkConnectionController(preferencesStore: preferencesStore)
     private lazy var advancedMicrophoneSettingsStore = AdvancedMicrophoneSettingsStore(
         preferencesStore: preferencesStore,
@@ -28,7 +29,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statsWindowController: NSWindowController?
     private weak var statsViewController: StatsViewController?
     private var preferencesWindowController: PreferencesWindowController?
-    private var advancedMicrophoneSettingsWindowController: AdvancedMicrophoneSettingsWindowController?
     private var userAccountsWindowController: NSWindowController?
     private var bannedUsersWindowController: NSWindowController?
     private var userInfoWindowController: UserInfoWindowController?
@@ -45,9 +45,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastObservedSessionHistory: [SessionHistoryEntry] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        AudioDiagnosticsLogger.shared.startNewSession()
         connectionController.delegate = self
         UNUserNotificationCenter.current().delegate = self
+        audioDeviceChangeMonitor.startListening()
         requestNotificationPermission()
         showSavedServersWindow()
         DispatchQueue.main.async { [weak self] in
@@ -100,10 +100,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let message = L10n.format(type.nativeAnnouncementLocalizationKey, event.senderName, event.content)
         let mode = preferencesStore.preferences.backgroundAnnouncementMode(for: type)
-        AudioDiagnosticsLogger.shared.log(
-            "background-announcements",
-            "incoming kind=\(type.id) mode=\(mode.rawValue) active=\(NSApp.isActive) sender=\(event.senderName)"
-        )
         switch mode {
         case .nativeVoiceOver, .systemNotification:
             // Native VoiceOver announcements remain foreground-only.
@@ -602,10 +598,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             preferencesWindowController = PreferencesWindowController(
                 preferencesStore: preferencesStore,
                 connectionController: connectionController,
-                advancedMicrophoneSettingsStore: advancedMicrophoneSettingsStore,
-                onOpenAdvancedMicrophoneSettings: { [weak self] in
-                    self?.openAdvancedMicrophoneSettings()
-                }
+                advancedMicrophoneSettingsStore: advancedMicrophoneSettingsStore
             )
         }
         preferencesWindowController?.showPreferences()
@@ -616,22 +609,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             preferencesWindowController = PreferencesWindowController(
                 preferencesStore: preferencesStore,
                 connectionController: connectionController,
-                advancedMicrophoneSettingsStore: advancedMicrophoneSettingsStore,
-                onOpenAdvancedMicrophoneSettings: { [weak self] in
-                    self?.openAdvancedMicrophoneSettings()
-                }
+                advancedMicrophoneSettingsStore: advancedMicrophoneSettingsStore
             )
         }
         preferencesWindowController?.preloadPreferencesIfNeeded()
-    }
-
-    func openAdvancedMicrophoneSettings() {
-        if advancedMicrophoneSettingsWindowController == nil {
-            advancedMicrophoneSettingsWindowController = AdvancedMicrophoneSettingsWindowController(
-                settingsStore: advancedMicrophoneSettingsStore
-            )
-        }
-        advancedMicrophoneSettingsWindowController?.showAdvancedSettings()
     }
 
     func createChannel() {

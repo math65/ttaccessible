@@ -68,14 +68,12 @@ enum InputAudioDeviceResolver {
         _ preferences: AdvancedInputAudioPreferences,
         for device: InputAudioDeviceInfo?
     ) -> (preferences: AdvancedInputAudioPreferences, didFallbackToAuto: Bool) {
-        let sanitizedPreferences = preferences.normalized()
-
-        guard contains(sanitizedPreferences.preset, for: device) else {
-            var normalized = sanitizedPreferences
+        guard contains(preferences.preset, for: device) else {
+            var normalized = preferences
             normalized.preset = .auto
             return (normalized, true)
         }
-        return (sanitizedPreferences, false)
+        return (preferences, false)
     }
 
     nonisolated static func title(for preset: InputChannelPreset) -> String {
@@ -92,63 +90,11 @@ enum InputAudioDeviceResolver {
     }
 
     nonisolated static func summary(for preferences: AdvancedInputAudioPreferences) -> String {
-        guard preferences.isEnabled else {
-            return L10n.text("preferences.audio.advanced.summary.disabled")
-        }
-
         let presetTitle = title(for: preferences.preset)
-        let dynamicSummary: String
-        if preferences.dynamicProcessorEnabled {
-            switch preferences.dynamicProcessorMode {
-            case .gate:
-                dynamicSummary = L10n.format(
-                    "preferences.audio.advanced.summary.gateEnabled",
-                    formatThresholdDB(preferences.gate.thresholdDB)
-                )
-            case .expander:
-                dynamicSummary = L10n.format(
-                    "preferences.audio.advanced.summary.expanderEnabled",
-                    formatThresholdDB(preferences.expander.thresholdDB),
-                    formatRatio(preferences.expander.ratio)
-                )
-            }
-        } else {
-            dynamicSummary = L10n.text("preferences.audio.advanced.summary.dynamicDisabled")
-        }
-
-        guard preferences.limiterEnabled else {
-            return L10n.format("preferences.audio.advanced.summary.enabledWithoutLimiter", presetTitle, dynamicSummary)
-        }
-
-        let limiterSummary: String
-        switch preferences.limiterMode {
-        case .preset:
-            limiterSummary = L10n.text(preferences.limiterPreset.localizationKey)
-        case .manual:
-            limiterSummary = L10n.format(
-                "preferences.audio.advanced.summary.manualLimiter",
-                formatThresholdDB(preferences.effectiveLimiterThresholdDB),
-                Int(preferences.effectiveLimiterReleaseMilliseconds.rounded())
-            )
-        }
-
-        return L10n.format(
-            "preferences.audio.advanced.summary.enabledWithLimiter",
-            presetTitle,
-            dynamicSummary,
-            limiterSummary
-        )
-    }
-
-    nonisolated static func formatThresholdDB(_ value: Double) -> String {
-        if value.rounded() == value {
-            return String(format: "%.0f dB", value)
-        }
-        return String(format: "%.1f dB", value)
-    }
-
-    nonisolated static func formatRatio(_ value: Double) -> String {
-        String(format: "%.1f:1", value)
+        let aecStatus = preferences.echoCancellationEnabled
+            ? L10n.text("preferences.audio.advanced.summary.aecOn")
+            : L10n.text("preferences.audio.advanced.summary.aecOff")
+        return L10n.format("preferences.audio.advanced.summary.active", presetTitle, aecStatus)
     }
 
     nonisolated static func availableInputDevices() -> [InputAudioDeviceInfo] {

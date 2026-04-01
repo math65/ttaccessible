@@ -51,26 +51,21 @@ final class PreferencesWindowController: NSWindowController {
     private let preferencesStore: AppPreferencesStore
     private let connectionController: TeamTalkConnectionController
     private let advancedMicrophoneSettingsStore: AdvancedMicrophoneSettingsStore
-    private let onOpenAdvancedMicrophoneSettings: () -> Void
-    private let performanceLogger = PreferencesPerformanceLogger.shared
     private var hasWarmedUpDependencies = false
 
     init(
         preferencesStore: AppPreferencesStore,
         connectionController: TeamTalkConnectionController,
-        advancedMicrophoneSettingsStore: AdvancedMicrophoneSettingsStore,
-        onOpenAdvancedMicrophoneSettings: @escaping () -> Void
+        advancedMicrophoneSettingsStore: AdvancedMicrophoneSettingsStore
     ) {
         self.preferencesStore = preferencesStore
         self.connectionController = connectionController
         self.advancedMicrophoneSettingsStore = advancedMicrophoneSettingsStore
-        self.onOpenAdvancedMicrophoneSettings = onOpenAdvancedMicrophoneSettings
 
         let contentViewController = PreferencesContainerViewController(
             preferencesStore: preferencesStore,
             connectionController: connectionController,
-            advancedMicrophoneSettingsStore: advancedMicrophoneSettingsStore,
-            onOpenAdvancedMicrophoneSettings: onOpenAdvancedMicrophoneSettings
+            advancedMicrophoneSettingsStore: advancedMicrophoneSettingsStore
         )
 
         let window = NSWindow(
@@ -93,7 +88,6 @@ final class PreferencesWindowController: NSWindowController {
     }
 
     func showPreferences() {
-        let startedAt = performanceLogger.beginInterval("preferences.window.show")
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
@@ -102,18 +96,15 @@ final class PreferencesWindowController: NSWindowController {
             hasWarmedUpDependencies = true
             container.warmupExpensiveDependencies()
         }
-        performanceLogger.endInterval("preferences.window.show", startedAt)
     }
 
     func preloadPreferencesIfNeeded() {
-        let startedAt = performanceLogger.beginInterval("preferences.window.preload")
         _ = window?.contentViewController?.view
         if hasWarmedUpDependencies == false,
            let container = window?.contentViewController as? PreferencesContainerViewController {
             hasWarmedUpDependencies = true
             container.warmupExpensiveDependencies()
         }
-        performanceLogger.endInterval("preferences.window.preload", startedAt)
     }
 }
 
@@ -122,12 +113,10 @@ private final class PreferencesContainerViewController: NSViewController {
     private let preferencesStore: AppPreferencesStore
     private let connectionController: TeamTalkConnectionController
     private let advancedMicrophoneSettingsStore: AdvancedMicrophoneSettingsStore
-    private let onOpenAdvancedMicrophoneSettings: () -> Void
     private let connectionPreferencesStore: ConnectionPreferencesStore
     private let audioPreferencesStore: AudioPreferencesStore
     private let notificationsPreferencesStore: NotificationsPreferencesStore
     private let accessibilityPreferencesStore: AccessibilityPreferencesStore
-    private let performanceLogger = PreferencesPerformanceLogger.shared
     private let sidebarViewController = PreferencesSidebarViewController()
     private let contentHostViewController = PreferencesContentHostViewController()
     private let sidebarWidth: CGFloat = 200
@@ -137,13 +126,11 @@ private final class PreferencesContainerViewController: NSViewController {
     init(
         preferencesStore: AppPreferencesStore,
         connectionController: TeamTalkConnectionController,
-        advancedMicrophoneSettingsStore: AdvancedMicrophoneSettingsStore,
-        onOpenAdvancedMicrophoneSettings: @escaping () -> Void
+        advancedMicrophoneSettingsStore: AdvancedMicrophoneSettingsStore
     ) {
         self.preferencesStore = preferencesStore
         self.connectionController = connectionController
         self.advancedMicrophoneSettingsStore = advancedMicrophoneSettingsStore
-        self.onOpenAdvancedMicrophoneSettings = onOpenAdvancedMicrophoneSettings
         self.connectionPreferencesStore = preferencesStore.makeConnectionStore(
             onSubscriptionPreferencesChanged: { [weak connectionController] in
                 connectionController?.applyDefaultSubscriptionPreferences()
@@ -174,14 +161,11 @@ private final class PreferencesContainerViewController: NSViewController {
     }
 
     func warmupExpensiveDependencies() {
-        performanceLogger.mark("preferences.window.warmup begin")
         audioPreferencesStore.warmup()
         notificationsPreferencesStore.prepareIfNeeded()
-        performanceLogger.mark("preferences.window.warmup queued")
     }
 
     private func selectPane(_ pane: PreferencesWindowController.Pane, updateSidebarSelection: Bool = true) {
-        let startedAt = performanceLogger.beginInterval("preferences.pane.\(String(describing: pane)).show")
         if selectedPane == .audio, pane != .audio {
             audioPreferencesStore.suspendWhenHidden()
         }
@@ -205,7 +189,6 @@ private final class PreferencesContainerViewController: NSViewController {
         default:
             break
         }
-        performanceLogger.endInterval("preferences.pane.\(String(describing: pane)).show", startedAt)
     }
 
     private func makePaneViewController(for pane: PreferencesWindowController.Pane) -> NSViewController {
@@ -216,10 +199,7 @@ private final class PreferencesContainerViewController: NSViewController {
             )
         case .audio:
             return NSHostingController(
-                rootView: PreferencesAudioView(
-                    store: audioPreferencesStore,
-                    onOpenAdvancedMicrophoneSettings: onOpenAdvancedMicrophoneSettings
-                )
+                rootView: PreferencesAudioView(store: audioPreferencesStore)
             )
         case .notifications:
             return NSHostingController(rootView: PreferencesNotificationsView(store: notificationsPreferencesStore))

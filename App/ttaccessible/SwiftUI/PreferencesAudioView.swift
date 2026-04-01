@@ -1,7 +1,6 @@
 //
 //  PreferencesAudioView.swift
 //  ttaccessible
-//
 
 import SwiftUI
 
@@ -9,7 +8,6 @@ struct PreferencesAudioView: View {
     private let defaultDeviceTag = "__system_default__"
 
     @ObservedObject var store: AudioPreferencesStore
-    let onOpenAdvancedMicrophoneSettings: () -> Void
 
     @State private var selectedInputID = "__system_default__"
     @State private var selectedOutputID = "__system_default__"
@@ -56,22 +54,55 @@ struct PreferencesAudioView: View {
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 8) {
+                // Microphone settings (AEC, channel preset, preview).
+                VStack(alignment: .leading, spacing: 12) {
                     Text(L10n.text("preferences.audio.advanced.title"))
-                    Text(store.state.advancedSummaryText)
+                        .font(.headline)
+
+                    Toggle(
+                        L10n.text("preferences.audio.advanced.echoCancellation"),
+                        isOn: Binding(
+                            get: { store.advancedPreferences.echoCancellationEnabled },
+                            set: { store.updateEchoCancellationEnabled($0) }
+                        )
+                    )
+                    .toggleStyle(.switch)
+
+                    Text(L10n.text("preferences.audio.advanced.echoCancellation.help"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                        .accessibilityLabel(store.state.advancedSummaryText)
 
-                    if let feedbackMessage = store.state.advancedFeedbackMessage, feedbackMessage.isEmpty == false {
-                        Text(feedbackMessage)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(L10n.text("preferences.audio.advanced.preset.label"))
+                        Picker(
+                            "",
+                            selection: Binding(
+                                get: { store.advancedPreferences.preset },
+                                set: { store.updatePreset($0) }
+                            )
+                        ) {
+                            ForEach(store.presetOptions) { option in
+                                Text(option.title).tag(option.preset)
+                            }
+                        }
+                        .labelsHidden()
+                        .accessibilityLabel(L10n.text("preferences.audio.advanced.preset.label"))
                     }
 
-                    Button(L10n.text("preferences.audio.advanced.open")) {
-                        onOpenAdvancedMicrophoneSettings()
+                    Button(
+                        store.isPreviewRunning
+                        ? L10n.text("preferences.audio.advanced.preview.stop")
+                        : L10n.text("preferences.audio.advanced.preview.start")
+                    ) {
+                        store.togglePreview()
                     }
+                    .disabled(store.state.catalog.inputDevices.isEmpty && store.advancedDeviceInfo == nil)
+                }
+
+                if let feedbackMessage = store.state.advancedFeedbackMessage, feedbackMessage.isEmpty == false {
+                    Text(feedbackMessage)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
                 HStack {
@@ -119,6 +150,7 @@ struct PreferencesAudioView: View {
             syncSelectionFromStore()
         }
         .onDisappear {
+            store.stopPreview()
             store.suspendWhenHidden()
         }
     }

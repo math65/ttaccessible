@@ -18,7 +18,6 @@ final class AppPreferencesStore: ObservableObject {
     private let userDefaults: UserDefaults
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
-    private let performanceLogger = PreferencesPerformanceLogger.shared
     private var pendingPersistWorkItem: DispatchWorkItem?
 
     init(userDefaults: UserDefaults = .standard) {
@@ -205,15 +204,12 @@ final class AppPreferencesStore: ObservableObject {
     private func persist(_ preferences: AppPreferences) {
         pendingPersistWorkItem?.cancel()
         let snapshot = preferences
-        let startedAt = performanceLogger.beginInterval("preferences.persist")
         let workItem = DispatchWorkItem { [weak self] in
             guard let self else { return }
             guard let data = try? self.encoder.encode(snapshot) else {
-                self.performanceLogger.endInterval("preferences.persist", startedAt)
                 return
             }
             self.userDefaults.set(data, forKey: Keys.preferences)
-            self.performanceLogger.endInterval("preferences.persist", startedAt)
         }
         pendingPersistWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: workItem)
@@ -323,7 +319,6 @@ final class AudioPreferencesStore: ObservableObject {
         var catalog: AudioDeviceCatalog
         var isCatalogLoading: Bool
         var lastErrorMessage: String?
-        var advancedSummaryText: String
         var advancedFeedbackMessage: String?
         var advancedErrorMessage: String?
     }
@@ -333,13 +328,28 @@ final class AudioPreferencesStore: ObservableObject {
     private let rootStore: AppPreferencesStore
     private let connectionController: TeamTalkConnectionController
     private let advancedSettingsStore: AdvancedMicrophoneSettingsStore
-    private let performanceLogger = PreferencesPerformanceLogger.shared
     private var cancellables = Set<AnyCancellable>()
     private var hasPrepared = false
     private var isVisible = false
     private var applyWorkItem: DispatchWorkItem?
     private var lastAppliedInputPreference: AudioDevicePreference
     private var lastAppliedOutputPreference: AudioDevicePreference
+
+    var advancedPreferences: AdvancedInputAudioPreferences {
+        advancedSettingsStore.advancedPreferences
+    }
+
+    var presetOptions: [InputChannelPresetOption] {
+        advancedSettingsStore.presetOptions
+    }
+
+    var isPreviewRunning: Bool {
+        advancedSettingsStore.isPreviewRunning
+    }
+
+    var advancedDeviceInfo: InputAudioDeviceInfo? {
+        advancedSettingsStore.deviceInfo
+    }
 
     init(
         rootStore: AppPreferencesStore,
@@ -358,7 +368,6 @@ final class AudioPreferencesStore: ObservableObject {
             catalog: .empty,
             isCatalogLoading: false,
             lastErrorMessage: nil,
-            advancedSummaryText: advancedSettingsStore.summaryText,
             advancedFeedbackMessage: advancedSettingsStore.feedbackMessage,
             advancedErrorMessage: advancedSettingsStore.lastErrorMessage
         )
@@ -380,18 +389,30 @@ final class AudioPreferencesStore: ObservableObject {
             }
             .store(in: &cancellables)
 
-        Publishers.CombineLatest3(
-            advancedSettingsStore.$summaryText.removeDuplicates(),
+        Publishers.CombineLatest(
             advancedSettingsStore.$feedbackMessage.removeDuplicates(),
             advancedSettingsStore.$lastErrorMessage.removeDuplicates()
         )
-        .sink { [weak self] summaryText, feedbackMessage, lastErrorMessage in
+        .sink { [weak self] feedbackMessage, lastErrorMessage in
             guard let self else { return }
-            self.state.advancedSummaryText = summaryText
             self.state.advancedFeedbackMessage = feedbackMessage
             self.state.advancedErrorMessage = lastErrorMessage
         }
         .store(in: &cancellables)
+
+        // Forward objectWillChange from advancedSettingsStore so SwiftUI picks up
+        // changes to advancedPreferences, presetOptions, isPreviewRunning.
+        advancedSettingsStore.objectWillChange
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
+            }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: AudioDeviceChangeMonitor.audioDevicesDidChange)
+            .sink { [weak self] _ in
+                self?.handleAudioDeviceChange()
+            }
+            .store(in: &cancellables)
     }
 
     func prepareIfNeeded() {
@@ -412,6 +433,13 @@ final class AudioPreferencesStore: ObservableObject {
         advancedSettingsStore.refresh()
     }
 
+    private func handleAudioDeviceChange() {
+        // Invalidate the TeamTalk SDK device cache so the next query picks up changes.
+        connectionController.invalidateAudioDeviceCache()
+        loadCatalogIfNeeded(forceRefresh: true)
+        advancedSettingsStore.refresh()
+    }
+
     func suspendWhenHidden() {
         isVisible = false
     }
@@ -427,6 +455,22 @@ final class AudioPreferencesStore: ObservableObject {
     func refreshDevices() {
         loadCatalogIfNeeded(forceRefresh: true)
         advancedSettingsStore.refresh()
+    }
+
+    func updateEchoCancellationEnabled(_ enabled: Bool) {
+        advancedSettingsStore.updateEchoCancellationEnabled(enabled)
+    }
+
+    func updatePreset(_ preset: InputChannelPreset) {
+        advancedSettingsStore.updatePreset(preset)
+    }
+
+    func togglePreview() {
+        advancedSettingsStore.togglePreview()
+    }
+
+    func stopPreview() {
+        advancedSettingsStore.stopPreview()
     }
 
     func updateSelectedDevices(inputID: String, outputID: String) {
@@ -460,7 +504,6 @@ final class AudioPreferencesStore: ObservableObject {
         }
 
         state.isCatalogLoading = true
-        let startedAt = performanceLogger.beginInterval("preferences.audio.catalogLoad")
         Task { @MainActor [weak self, connectionController] in
             let catalog = forceRefresh
                 ? connectionController.refreshAvailableAudioDevices()
@@ -468,7 +511,6 @@ final class AudioPreferencesStore: ObservableObject {
             guard let self else { return }
             self.state.catalog = catalog
             self.state.isCatalogLoading = false
-            self.performanceLogger.endInterval("preferences.audio.catalogLoad", startedAt)
         }
     }
 
@@ -483,8 +525,6 @@ final class AudioPreferencesStore: ObservableObject {
             return
         }
 
-        let performanceLogger = performanceLogger
-        let startedAt = performanceLogger.beginInterval("preferences.audio.apply")
         let workItem = DispatchWorkItem { [weak self] in
             guard let self else { return }
             self.connectionController.applyAudioPreferences(self.rootStore.preferences) { result in
@@ -496,7 +536,6 @@ final class AudioPreferencesStore: ObservableObject {
                 case .failure(let error):
                     self.state.lastErrorMessage = error.localizedDescription
                 }
-                performanceLogger.endInterval("preferences.audio.apply", startedAt)
             }
         }
         applyWorkItem = workItem
