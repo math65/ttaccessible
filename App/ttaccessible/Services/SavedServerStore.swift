@@ -16,7 +16,6 @@ final class SavedServerStore {
     private let userDefaults: UserDefaults
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
-    private let performanceLogger = AppPerformanceLogger.shared
     private var cachedRecords: [SavedServerRecord]
     private var cachedSelectedID: UUID?
     private var pendingPersistWorkItem: DispatchWorkItem?
@@ -81,7 +80,6 @@ final class SavedServerStore {
     private func schedulePersist() {
         pendingPersistWorkItem?.cancel()
         let snapshot = cachedRecords
-        let startedAt = performanceLogger.beginInterval("savedServers.persist")
         let workItem = DispatchWorkItem { [weak self] in
             guard let self else { return }
             do {
@@ -90,7 +88,6 @@ final class SavedServerStore {
             } catch {
                 self.userDefaults.removeObject(forKey: Keys.records)
             }
-            self.performanceLogger.endInterval("savedServers.persist", startedAt)
         }
         pendingPersistWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: workItem)

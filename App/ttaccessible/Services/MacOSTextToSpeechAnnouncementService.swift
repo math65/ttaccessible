@@ -42,7 +42,6 @@ final class MacOSTextToSpeechAnnouncementService {
     ]
 
     private let synthesizer = AVSpeechSynthesizer()
-    private let logger = AudioDiagnosticsLogger.shared
 
     static var minimumSpeechRate: Double { Double(AVSpeechUtteranceMinimumSpeechRate) }
     static var maximumSpeechRate: Double { Double(AVSpeechUtteranceMaximumSpeechRate) }
@@ -88,26 +87,17 @@ final class MacOSTextToSpeechAnnouncementService {
             return
         }
 
-        logger.log("macos-tts", "announce requested text=\(message)")
         if synthesizer.isSpeaking {
-            logger.log("macos-tts", "stopping previous utterance before speaking new message")
             synthesizer.stopSpeaking(at: .immediate)
         }
 
         let utterance = AVSpeechUtterance(string: message)
         if let voiceIdentifier, voiceIdentifier.isEmpty == false {
             utterance.voice = AVSpeechSynthesisVoice(identifier: voiceIdentifier)
-            logger.log("macos-tts", "using configured voice identifier=\(voiceIdentifier)")
-        } else {
-            logger.log("macos-tts", "using system default voice")
         }
         utterance.rate = Float(min(max(speechRate, Self.minimumSpeechRate), Self.maximumSpeechRate))
         utterance.volume = Float(min(max(volume, 0), 1))
 
-        logger.log(
-            "macos-tts",
-            "speaking with rate=\(utterance.rate) volume=\(utterance.volume)"
-        )
         synthesizer.speak(utterance)
     }
 }
