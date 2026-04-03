@@ -73,6 +73,19 @@ final class ConnectedServerViewController: NSViewController {
         return formatter
     }()
 
+    let relativeTimeFormatter: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter
+    }()
+
+    func formattedTime(for date: Date) -> String {
+        if preferencesStore.preferences.useRelativeTimestamps {
+            return relativeTimeFormatter.localizedString(for: date, relativeTo: Date())
+        }
+        return timeFormatter.string(from: date)
+    }
+
     init(
         session: ConnectedServerSession,
         preferencesStore: AppPreferencesStore,
@@ -332,6 +345,10 @@ final class ConnectedServerViewController: NSViewController {
         chatTableView.delegate = self
         chatTableView.dataSource = self
         chatTableView.setAccessibilityLabel(L10n.text("connectedServer.chat.history.accessibilityLabel"))
+
+        let chatMenu = NSMenu()
+        chatMenu.addItem(NSMenuItem(title: L10n.text("chat.contextMenu.copyMessage"), action: #selector(copySelectedChatMessage), keyEquivalent: "c"))
+        chatTableView.menu = chatMenu
 
         chatScrollView.documentView = chatTableView
         chatScrollView.hasVerticalScroller = true

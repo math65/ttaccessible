@@ -101,6 +101,15 @@ struct PreferencesGeneralView: View {
                 Divider()
 
                 Toggle(
+                    L10n.text("preferences.general.relativeTimestamps"),
+                    isOn: Binding(
+                        get: { rootStore.preferences.useRelativeTimestamps },
+                        set: { rootStore.updateUseRelativeTimestamps($0) }
+                    )
+                )
+                .toggleStyle(.switch)
+
+                Toggle(
                     L10n.text("preferences.general.autoDetectImport"),
                     isOn: Binding(
                         get: { rootStore.preferences.prefersAutomaticTeamTalkConfigDetection },

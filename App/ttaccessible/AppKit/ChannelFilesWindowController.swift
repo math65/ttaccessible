@@ -5,7 +5,9 @@
 
 import AppKit
 
-final class ChannelFilesWindowController: NSWindowController {
+final class ChannelFilesWindowController: NSWindowController, NSWindowDelegate {
+    var onUserClose: (() -> Void)?
+
     init(contentViewController: NSViewController) {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 720, height: 480),
@@ -18,10 +20,15 @@ final class ChannelFilesWindowController: NSWindowController {
         window.center()
         window.contentViewController = contentViewController
         super.init(window: window)
+        window.delegate = self
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         nil
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        onUserClose?()
     }
 }

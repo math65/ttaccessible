@@ -63,6 +63,18 @@ final class AppPreferencesStore: ObservableObject {
         mutate { $0.prefersAutomaticTeamTalkConfigDetection = enabled }
     }
 
+    func updateUseRelativeTimestamps(_ enabled: Bool) {
+        mutate { $0.useRelativeTimestamps = enabled }
+    }
+
+    func updateLastRecordingWasActive(_ active: Bool) {
+        mutate { $0.lastRecordingWasActive = active }
+    }
+
+    func updateAutoRestartRecording(_ enabled: Bool) {
+        mutate { $0.autoRestartRecording = enabled }
+    }
+
     func updatePreferredInputDevice(_ preference: AudioDevicePreference) {
         mutate { $0.preferredInputDevice = preference }
     }
@@ -108,6 +120,20 @@ final class AppPreferencesStore: ObservableObject {
 
     func updateVoiceOverSessionHistoryEnabled(_ enabled: Bool) {
         mutate { $0.voiceOverAnnouncements.sessionHistoryEnabled = enabled }
+    }
+
+    func updateDisabledSessionHistoryKinds(_ kinds: Set<SessionHistoryEntry.Kind>) {
+        mutate { $0.voiceOverAnnouncements.disabledSessionHistoryKinds = kinds }
+    }
+
+    func updateSessionHistoryKindEnabled(_ kind: SessionHistoryEntry.Kind, _ enabled: Bool) {
+        mutate {
+            if enabled {
+                $0.voiceOverAnnouncements.disabledSessionHistoryKinds.remove(kind)
+            } else {
+                $0.voiceOverAnnouncements.disabledSessionHistoryKinds.insert(kind)
+            }
+        }
     }
 
     func updateInputGainDB(_ value: Double) {
@@ -716,6 +742,7 @@ final class AccessibilityPreferencesStore: ObservableObject {
         var privateMessagesEnabled: Bool
         var broadcastMessagesEnabled: Bool
         var sessionHistoryEnabled: Bool
+        var disabledSessionHistoryKinds: Set<SessionHistoryEntry.Kind>
     }
 
     @Published private(set) var state: State
@@ -752,12 +779,29 @@ final class AccessibilityPreferencesStore: ObservableObject {
         rootStore.updateVoiceOverSessionHistoryEnabled(enabled)
     }
 
+    func isSessionHistoryKindEnabled(_ kind: SessionHistoryEntry.Kind) -> Bool {
+        !state.disabledSessionHistoryKinds.contains(kind)
+    }
+
+    func updateSessionHistoryKindEnabled(_ kind: SessionHistoryEntry.Kind, _ enabled: Bool) {
+        rootStore.updateSessionHistoryKindEnabled(kind, enabled)
+    }
+
+    func enableAllSessionHistoryKinds() {
+        rootStore.updateDisabledSessionHistoryKinds([])
+    }
+
+    func disableAllSessionHistoryKinds() {
+        rootStore.updateDisabledSessionHistoryKinds(Set(SessionHistoryEntry.Kind.announceable))
+    }
+
     private static func makeState(from preferences: AppPreferences) -> State {
         State(
             channelMessagesEnabled: preferences.voiceOverAnnouncements.channelMessagesEnabled,
             privateMessagesEnabled: preferences.voiceOverAnnouncements.privateMessagesEnabled,
             broadcastMessagesEnabled: preferences.voiceOverAnnouncements.broadcastMessagesEnabled,
-            sessionHistoryEnabled: preferences.voiceOverAnnouncements.sessionHistoryEnabled
+            sessionHistoryEnabled: preferences.voiceOverAnnouncements.sessionHistoryEnabled,
+            disabledSessionHistoryKinds: preferences.voiceOverAnnouncements.disabledSessionHistoryKinds
         )
     }
 }
@@ -790,6 +834,7 @@ final class RecordingPreferencesStore: ObservableObject {
         var audioFileFormat: Int
         var recordingMode: Int
         var folderDisplayPath: String?
+        var autoRestartRecording: Bool
     }
 
     @Published private(set) var state: State
@@ -837,13 +882,18 @@ final class RecordingPreferencesStore: ObservableObject {
         rootStore.updateRecordingFolderBookmark(nil)
     }
 
+    func updateAutoRestartRecording(_ enabled: Bool) {
+        rootStore.updateAutoRestartRecording(enabled)
+    }
+
     private static func makeState(from rootStore: AppPreferencesStore) -> State {
         let folderURL = rootStore.resolveRecordingFolderURL()
         return State(
             folderBookmark: rootStore.preferences.recordingFolderBookmark,
             audioFileFormat: rootStore.preferences.recordingAudioFileFormat,
             recordingMode: rootStore.preferences.recordingMode,
-            folderDisplayPath: folderURL?.path
+            folderDisplayPath: folderURL?.path,
+            autoRestartRecording: rootStore.preferences.autoRestartRecording
         )
     }
 }

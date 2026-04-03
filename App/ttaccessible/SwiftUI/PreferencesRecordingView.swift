@@ -76,6 +76,17 @@ struct PreferencesRecordingView: View {
                 }
                 .labelsHidden()
 
+                Divider()
+
+                Toggle(
+                    L10n.text("preferences.recording.autoRestart"),
+                    isOn: Binding(
+                        get: { store.state.autoRestartRecording },
+                        set: { store.updateAutoRestartRecording($0) }
+                    )
+                )
+                .toggleStyle(.switch)
+
                 Text(L10n.text("preferences.recording.help"))
                     .font(.caption)
                     .foregroundStyle(.secondary)

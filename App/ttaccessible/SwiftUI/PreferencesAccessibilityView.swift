@@ -40,14 +40,36 @@ struct PreferencesAccessibilityView: View {
                 )
                 .toggleStyle(.switch)
 
-                Toggle(
-                    L10n.text("preferences.accessibility.historyAnnouncements"),
-                    isOn: Binding(
-                        get: { store.state.sessionHistoryEnabled },
-                        set: { store.updateVoiceOverSessionHistoryEnabled($0) }
-                    )
-                )
-                .toggleStyle(.switch)
+                DisclosureGroup(L10n.text("preferences.accessibility.historyAnnouncements")) {
+                    HStack(spacing: 12) {
+                        Button(L10n.text("preferences.historyEvents.enableAll")) {
+                            store.enableAllSessionHistoryKinds()
+                        }
+                        Button(L10n.text("preferences.historyEvents.disableAll")) {
+                            store.disableAllSessionHistoryKinds()
+                        }
+                    }
+                    .padding(.bottom, 4)
+
+                    ForEach(SessionHistoryEntry.Kind.announcementGroups) { group in
+                        Text(L10n.text(group.localizationKey))
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .accessibilityAddTraits(.isHeader)
+                            .padding(.top, 4)
+
+                        ForEach(group.kinds, id: \.self) { kind in
+                            Toggle(
+                                L10n.text(kind.localizationKey),
+                                isOn: Binding(
+                                    get: { store.isSessionHistoryKindEnabled(kind) },
+                                    set: { store.updateSessionHistoryKindEnabled(kind, $0) }
+                                )
+                            )
+                            .toggleStyle(.switch)
+                        }
+                    }
+                }
 
                 Text(L10n.text("preferences.accessibility.help"))
                     .font(.caption)

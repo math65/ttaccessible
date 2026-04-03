@@ -63,6 +63,18 @@ extension TeamTalkConnectionController {
             return nil
         }
         let chanType = channel.uChannelType
+        let codec: OpusCodecSettings?
+        if channel.audiocodec.nCodec == OPUS_CODEC {
+            let opus = channel.audiocodec.opus
+            codec = OpusCodecSettings(
+                channels: opus.nChannels,
+                sampleRate: opus.nSampleRate,
+                bitrate: opus.nBitRate,
+                application: opus.nApplication
+            )
+        } else {
+            codec = nil
+        }
         return ChannelInfo(
             id: channel.nChannelID,
             parentID: channel.nParentID,
@@ -73,7 +85,8 @@ extension TeamTalkConnectionController {
             isPermanent: (chanType & UInt32(CHANNEL_PERMANENT.rawValue)) != 0,
             isSoloTransmit: (chanType & UInt32(CHANNEL_SOLO_TRANSMIT.rawValue)) != 0,
             isNoVoiceActivation: (chanType & UInt32(CHANNEL_NO_VOICEACTIVATION.rawValue)) != 0,
-            isNoRecording: (chanType & UInt32(CHANNEL_NO_RECORDING.rawValue)) != 0
+            isNoRecording: (chanType & UInt32(CHANNEL_NO_RECORDING.rawValue)) != 0,
+            opusCodec: codec
         )
     }
 
@@ -105,10 +118,25 @@ extension TeamTalkConnectionController {
             if properties.isNoRecording { chanType |= UInt32(CHANNEL_NO_RECORDING.rawValue) }
             chan.uChannelType = chanType
 
-            // Copy audio codec from parent channel
-            var parentChan = Channel()
-            if TT_GetChannel(instance, parentID, &parentChan) != 0 {
-                chan.audiocodec = parentChan.audiocodec
+            // Apply audio codec: use provided settings or copy from parent
+            if let opus = properties.opusCodec {
+                chan.audiocodec.nCodec = OPUS_CODEC
+                chan.audiocodec.opus.nChannels = opus.channels
+                chan.audiocodec.opus.nSampleRate = opus.sampleRate
+                chan.audiocodec.opus.nBitRate = opus.bitrate
+                chan.audiocodec.opus.nApplication = opus.application
+                chan.audiocodec.opus.nComplexity = 10
+                chan.audiocodec.opus.bFEC = 1
+                chan.audiocodec.opus.bDTX = 0
+                chan.audiocodec.opus.bVBR = 1
+                chan.audiocodec.opus.bVBRConstraint = 0
+                chan.audiocodec.opus.nTxIntervalMSec = 40
+                chan.audiocodec.opus.nFrameSizeMSec = 40
+            } else {
+                var parentChan = Channel()
+                if TT_GetChannel(instance, parentID, &parentChan) != 0 {
+                    chan.audiocodec = parentChan.audiocodec
+                }
             }
 
             if joinAfterCreate {
@@ -180,6 +208,14 @@ extension TeamTalkConnectionController {
             if properties.isNoVoiceActivation { chanType |= UInt32(CHANNEL_NO_VOICEACTIVATION.rawValue) }
             if properties.isNoRecording { chanType |= UInt32(CHANNEL_NO_RECORDING.rawValue) }
             chan.uChannelType = chanType
+
+            if let opus = properties.opusCodec {
+                chan.audiocodec.nCodec = OPUS_CODEC
+                chan.audiocodec.opus.nChannels = opus.channels
+                chan.audiocodec.opus.nSampleRate = opus.sampleRate
+                chan.audiocodec.opus.nBitRate = opus.bitrate
+                chan.audiocodec.opus.nApplication = opus.application
+            }
 
             let commandID = withUnsafeMutablePointer(to: &chan) { TT_DoUpdateChannel(instance, $0) }
             guard commandID > 0 else {

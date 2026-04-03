@@ -173,7 +173,7 @@ extension TeamTalkConnectionController {
     func makeUserAccountProperties(from account: UserAccount) -> UserAccountProperties {
         var props = UserAccountProperties()
         props.username = ttString(from: account.szUsername)
-        props.password = ""  // SDK does not return plaintext passwords
+        props.password = ttString(from: account.szPassword)
         if (account.uUserType & UInt32(USERTYPE_ADMIN.rawValue)) != 0 {
             props.userType = .admin
         } else if account.uUserType == UInt32(USERTYPE_DEFAULT.rawValue) {

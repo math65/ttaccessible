@@ -37,6 +37,18 @@ final class PrivateMessagesViewController: NSViewController {
         formatter.dateStyle = .none
         return formatter
     }()
+    private let relativeTimeFormatter: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter
+    }()
+
+    private func formattedTime(for date: Date) -> String {
+        if preferencesStore.preferences.useRelativeTimestamps {
+            return relativeTimeFormatter.localizedString(for: date, relativeTo: Date())
+        }
+        return formattedTime(for: date)
+    }
 
     init(
         session: ConnectedServerSession,
@@ -162,6 +174,10 @@ final class PrivateMessagesViewController: NSViewController {
         messagesTableView.delegate = self
         messagesTableView.dataSource = self
         messagesTableView.setAccessibilityLabel(L10n.text("privateMessages.messages.accessibilityLabel"))
+
+        let pmMenu = NSMenu()
+        pmMenu.addItem(NSMenuItem(title: L10n.text("chat.contextMenu.copyMessage"), action: #selector(copySelectedPrivateMessage), keyEquivalent: "c"))
+        messagesTableView.menu = pmMenu
 
         messagesScrollView.documentView = messagesTableView
         messagesScrollView.hasVerticalScroller = true
@@ -448,6 +464,15 @@ final class PrivateMessagesViewController: NSViewController {
         markSelectedConversationAsRead()
     }
 
+    @objc func copySelectedPrivateMessage(_ sender: Any?) {
+        let row = messagesTableView.clickedRow >= 0 ? messagesTableView.clickedRow : messagesTableView.selectedRow
+        guard let conversation = selectedConversation,
+              row >= 0, conversation.messages.indices.contains(row) else { return }
+        let message = conversation.messages[row]
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(message.message, forType: .string)
+    }
+
     @objc
     private func sendCurrentMessage() {
         guard let conversation = selectedConversation else {
@@ -500,7 +525,7 @@ extension PrivateMessagesViewController: NSTableViewDelegate {
             let message = messages[row]
             let senderName = message.isOwnMessage ? L10n.text("chat.sender.you") : message.senderDisplayName
             let senderHeight = NSAttributedString(
-                string: "\(senderName), \(timeFormatter.string(from: message.receivedAt))",
+                string: "\(senderName), \(formattedTime(for: message.receivedAt))",
                 attributes: [.font: NSFont.preferredFont(forTextStyle: .subheadline)]
             ).boundingRect(
                 with: NSSize(width: max(tableView.bounds.width - 20, 100), height: .greatestFiniteMagnitude),
@@ -564,7 +589,7 @@ extension PrivateMessagesViewController: NSTableViewDelegate {
                 view = ChannelChatTableCellView(frame: .zero)
                 view.identifier = identifier
             }
-            view.configure(with: message, formattedTime: timeFormatter.string(from: message.receivedAt))
+            view.configure(with: message, formattedTime: formattedTime(for: message.receivedAt))
             return view
         }
 

@@ -46,6 +46,9 @@ struct AppPreferences: Codable, Equatable {
         case autoAwayTimeoutMinutes
         case autoAwayStatusMessage
         case prefersAutomaticTeamTalkConfigDetection
+        case useRelativeTimestamps
+        case lastRecordingWasActive
+        case autoRestartRecording
         case preferredInputDevice
         case preferredOutputDevice
         case advancedInputAudioProfiles
@@ -90,6 +93,9 @@ struct AppPreferences: Codable, Equatable {
     var autoAwayTimeoutMinutes: Int
     var autoAwayStatusMessage: String
     var prefersAutomaticTeamTalkConfigDetection: Bool
+    var useRelativeTimestamps: Bool
+    var lastRecordingWasActive: Bool
+    var autoRestartRecording: Bool
     var autoJoinRootChannel: Bool
     var autoReconnect: Bool
     var rejoinLastChannelOnReconnect: Bool
@@ -132,6 +138,9 @@ struct AppPreferences: Codable, Equatable {
         autoAwayTimeoutMinutes: Int = 3,
         autoAwayStatusMessage: String = "",
         prefersAutomaticTeamTalkConfigDetection: Bool = true,
+        useRelativeTimestamps: Bool = false,
+        lastRecordingWasActive: Bool = false,
+        autoRestartRecording: Bool = false,
         preferredInputDevice: AudioDevicePreference = .systemDefault,
         preferredOutputDevice: AudioDevicePreference = .systemDefault,
         advancedInputAudioProfiles: AdvancedInputAudioProfiles = AdvancedInputAudioProfiles(),
@@ -174,6 +183,9 @@ struct AppPreferences: Codable, Equatable {
         self.autoAwayTimeoutMinutes = Self.clampAutoAwayTimeoutMinutes(autoAwayTimeoutMinutes)
         self.autoAwayStatusMessage = autoAwayStatusMessage.trimmingCharacters(in: .whitespacesAndNewlines)
         self.prefersAutomaticTeamTalkConfigDetection = prefersAutomaticTeamTalkConfigDetection
+        self.useRelativeTimestamps = useRelativeTimestamps
+        self.lastRecordingWasActive = lastRecordingWasActive
+        self.autoRestartRecording = autoRestartRecording
         self.preferredInputDevice = preferredInputDevice
         self.preferredOutputDevice = preferredOutputDevice
         self.advancedInputAudioProfiles = advancedInputAudioProfiles
@@ -235,6 +247,9 @@ struct AppPreferences: Codable, Equatable {
         autoAwayTimeoutMinutes = Self.clampAutoAwayTimeoutMinutes(try container.decodeIfPresent(Int.self, forKey: .autoAwayTimeoutMinutes) ?? 3)
         autoAwayStatusMessage = try container.decodeIfPresent(String.self, forKey: .autoAwayStatusMessage)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         prefersAutomaticTeamTalkConfigDetection = try container.decodeIfPresent(Bool.self, forKey: .prefersAutomaticTeamTalkConfigDetection) ?? true
+        useRelativeTimestamps = try container.decodeIfPresent(Bool.self, forKey: .useRelativeTimestamps) ?? false
+        lastRecordingWasActive = try container.decodeIfPresent(Bool.self, forKey: .lastRecordingWasActive) ?? false
+        autoRestartRecording = try container.decodeIfPresent(Bool.self, forKey: .autoRestartRecording) ?? false
         preferredInputDevice = try container.decodeIfPresent(AudioDevicePreference.self, forKey: .preferredInputDevice) ?? .systemDefault
         preferredOutputDevice = try container.decodeIfPresent(AudioDevicePreference.self, forKey: .preferredOutputDevice) ?? .systemDefault
         if let profiles = try container.decodeIfPresent(AdvancedInputAudioProfiles.self, forKey: .advancedInputAudioProfiles) {
@@ -293,6 +308,9 @@ struct AppPreferences: Codable, Equatable {
         try container.encode(Self.clampAutoAwayTimeoutMinutes(autoAwayTimeoutMinutes), forKey: .autoAwayTimeoutMinutes)
         try container.encode(autoAwayStatusMessage.trimmingCharacters(in: .whitespacesAndNewlines), forKey: .autoAwayStatusMessage)
         try container.encode(prefersAutomaticTeamTalkConfigDetection, forKey: .prefersAutomaticTeamTalkConfigDetection)
+        try container.encode(useRelativeTimestamps, forKey: .useRelativeTimestamps)
+        try container.encode(lastRecordingWasActive, forKey: .lastRecordingWasActive)
+        try container.encode(autoRestartRecording, forKey: .autoRestartRecording)
         try container.encode(preferredInputDevice, forKey: .preferredInputDevice)
         try container.encode(preferredOutputDevice, forKey: .preferredOutputDevice)
         try container.encode(advancedInputAudioProfiles, forKey: .advancedInputAudioProfiles)

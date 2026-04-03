@@ -7,23 +7,36 @@
 
 import AppKit
 
+// MARK: - Chat Context Menu
+
+extension ConnectedServerViewController {
+    @objc func copySelectedChatMessage(_ sender: Any?) {
+        let row = chatTableView.clickedRow >= 0 ? chatTableView.clickedRow : chatTableView.selectedRow
+        guard row >= 0, session.channelChatHistory.indices.contains(row) else { return }
+        let message = session.channelChatHistory[row]
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(message.message, forType: .string)
+        announce(L10n.text("chat.contextMenu.copied"))
+    }
+}
+
 // MARK: - Table View Helper Methods
 
 extension ConnectedServerViewController {
     func chatAccessibilityText(for message: ChannelChatMessage) -> String {
-        let timestamp = timeFormatter.string(from: message.receivedAt)
+        let timestamp = formattedTime(for: message.receivedAt)
         let senderName = message.isOwnMessage ? L10n.text("chat.sender.you") : message.senderDisplayName
         return "\(senderName) : \(message.message), \(timestamp)"
     }
 
     func historyAccessibilityText(for entry: SessionHistoryEntry) -> String {
-        "\(entry.message), \(timeFormatter.string(from: entry.timestamp))"
+        "\(entry.message), \(formattedTime(for: entry.timestamp))"
     }
 
     func height(for message: ChannelChatMessage, width: CGFloat) -> CGFloat {
         let senderName = message.isOwnMessage ? L10n.text("chat.sender.you") : message.senderDisplayName
         let senderHeight = NSAttributedString(
-            string: "\(senderName), \(timeFormatter.string(from: message.receivedAt))",
+            string: "\(senderName), \(formattedTime(for: message.receivedAt))",
             attributes: [.font: NSFont.preferredFont(forTextStyle: .subheadline)]
         ).boundingRect(
             with: NSSize(width: max(width - 20, 100), height: .greatestFiniteMagnitude),
@@ -100,7 +113,7 @@ extension ConnectedServerViewController: NSTableViewDelegate {
             }
 
             let message = session.channelChatHistory[row]
-            view.configure(with: message, formattedTime: timeFormatter.string(from: message.receivedAt))
+            view.configure(with: message, formattedTime: formattedTime(for: message.receivedAt))
             return view
         }
 

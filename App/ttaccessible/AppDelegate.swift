@@ -45,6 +45,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastObservedSessionHistory: [SessionHistoryEntry] = []
     private var recordingAccessedFolder: URL?
     private var activeRecordingMode: Int = 0
+    private var lastObservedChannelID: Int32 = 0
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         connectionController.delegate = self
@@ -127,10 +128,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        let disabledKinds = preferencesStore.preferences.voiceOverAnnouncements.disabledSessionHistoryKinds
+
         guard let latestEntry = SessionHistoryAnnouncementHelper.latestAppendedEntry(
             previous: previousEntries,
             current: session.sessionHistory,
-            filter: SessionHistoryAnnouncementHelper.shouldAnnounceBackgroundHistoryEntry
+            filter: { entry in
+                SessionHistoryAnnouncementHelper.shouldAnnounceBackgroundHistoryEntry(entry, disabledKinds: disabledKinds)
+            }
         ) else {
             return
         }
@@ -293,7 +298,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         if privateMessagesWindowController == nil {
-            privateMessagesWindowController = PrivateMessagesWindowController(contentViewController: viewController)
+            let wc = PrivateMessagesWindowController(contentViewController: viewController)
+            wc.onUserClose = { [weak self] in
+                self?.connectionController.updatePrivateMessagesConsultation(isWindowVisible: false, selectedUserID: nil)
+                self?.privateMessagesWindowController = nil
+                self?.privateMessagesViewController = nil
+            }
+            privateMessagesWindowController = wc
         } else {
             privateMessagesWindowController?.window?.contentViewController = viewController
         }
@@ -355,7 +366,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         if channelFilesWindowController == nil {
-            channelFilesWindowController = ChannelFilesWindowController(contentViewController: viewController)
+            let wc = ChannelFilesWindowController(contentViewController: viewController)
+            wc.onUserClose = { [weak self] in
+                self?.channelFilesWindowController = nil
+                self?.channelFilesViewController = nil
+            }
+            channelFilesWindowController = wc
         } else {
             channelFilesWindowController?.window?.contentViewController = viewController
         }
@@ -599,6 +615,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func stopAllRecording() {
+        preferencesStore.updateLastRecordingWasActive(false)
         let mode = activeRecordingMode
         var pending = 0
         let announce = { [weak self] in
@@ -652,6 +669,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let format = AudioFileFormat(rawValue: UInt32(preferencesStore.preferences.recordingAudioFileFormat))
         let mode = preferencesStore.preferences.recordingMode
         activeRecordingMode = mode
+        preferencesStore.updateLastRecordingWasActive(true)
 
         if mode & 1 != 0 {
             connectionController.startMuxedRecording(folder: folder, format: format) { [weak self] result in
@@ -1049,6 +1067,19 @@ extension AppDelegate: TeamTalkConnectionControllerDelegate {
         menuState.setAdministrator(session.isAdministrator)
         menuState.setCanSendBroadcast(session.canSendBroadcast)
         showConnectedServerWindow(session: session)
+
+        // Auto-restart recording when joining a new channel
+        let previousChannelID = lastObservedChannelID
+        lastObservedChannelID = session.currentChannelID
+        if session.currentChannelID > 0,
+           session.currentChannelID != previousChannelID,
+           !session.recordingActive,
+           preferencesStore.preferences.autoRestartRecording,
+           preferencesStore.preferences.lastRecordingWasActive,
+           let folderURL = preferencesStore.resolveRecordingFolderURL() {
+            startRecordingToFolder(folderURL)
+        }
+
         if privateMessagesWindowController != nil {
             showPrivateMessagesWindow(session: session, select: nil, activate: false)
         }
@@ -1079,6 +1110,7 @@ extension AppDelegate: TeamTalkConnectionControllerDelegate {
     func teamTalkConnectionController(_ controller: TeamTalkConnectionController, didDisconnectWithMessage message: String?) {
         releaseRecordingFolderAccess()
         activeRecordingMode = 0
+        lastObservedChannelID = 0
         lastObservedSessionHistory = []
         let shouldShowAlert = message
         closeUserAccountsWindow()

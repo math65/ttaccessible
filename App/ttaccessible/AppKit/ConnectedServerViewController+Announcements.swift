@@ -72,18 +72,22 @@ extension ConnectedServerViewController {
     }
 
     func announceNewHistoryEntryIfNeeded(previousSession: ConnectedServerSession, newSession: ConnectedServerSession) {
-        guard preferencesStore.preferences.voiceOverAnnouncements.sessionHistoryEnabled else {
+        let announcements = preferencesStore.preferences.voiceOverAnnouncements
+        guard announcements.sessionHistoryEnabled else {
             lastAnnouncedHistoryEntryID = newSession.sessionHistory.last?.id
             return
         }
 
+        let disabledKinds = announcements.disabledSessionHistoryKinds
+
         guard let latestEntry = SessionHistoryAnnouncementHelper.latestAppendedEntry(
             previous: previousSession.sessionHistory,
             current: newSession.sessionHistory,
-            filter: { [preferencesStore] entry in
+            filter: { entry in
                 SessionHistoryAnnouncementHelper.shouldAnnounceForegroundHistoryEntry(
                     entry,
-                    broadcastMessagesEnabled: preferencesStore.preferences.voiceOverAnnouncements.broadcastMessagesEnabled
+                    broadcastMessagesEnabled: announcements.broadcastMessagesEnabled,
+                    disabledKinds: disabledKinds
                 )
             }
         ) else {

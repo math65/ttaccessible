@@ -175,6 +175,16 @@ struct TeamTalkConnectOptions {
 
 // MARK: - Channel properties (extracted from TeamTalkConnectionController nested types)
 
+struct OpusCodecSettings {
+    var channels: Int32       // 1 = mono, 2 = stereo
+    var sampleRate: Int32     // 8000, 12000, 16000, 24000, 48000
+    var bitrate: Int32        // in bps (UI displays kbps)
+    var application: Int32    // OPUS_APPLICATION_VOIP (2048) or OPUS_APPLICATION_AUDIO (2049)
+
+    static let supportedSampleRates: [Int32] = [8000, 12000, 16000, 24000, 48000]
+    static let defaultSettings = OpusCodecSettings(channels: 1, sampleRate: 48000, bitrate: 64000, application: 2048)
+}
+
 struct ChannelProperties {
     var name: String
     var topic: String
@@ -184,6 +194,7 @@ struct ChannelProperties {
     var isSoloTransmit: Bool
     var isNoVoiceActivation: Bool
     var isNoRecording: Bool
+    var opusCodec: OpusCodecSettings?
 }
 
 struct ChannelInfo {
@@ -197,4 +208,5 @@ struct ChannelInfo {
     let isSoloTransmit: Bool
     let isNoVoiceActivation: Bool
     let isNoRecording: Bool
+    let opusCodec: OpusCodecSettings?
 }

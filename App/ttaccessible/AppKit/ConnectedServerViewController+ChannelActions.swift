@@ -33,9 +33,11 @@ extension ConnectedServerViewController {
             return
         }
 
+        let parentCodec = connectionController.channelInfo(forChannelID: parentID)?.opusCodec
         let props = ChannelProperties(
             name: "", topic: "", password: "", maxUsers: 200,
-            isPermanent: false, isSoloTransmit: false, isNoVoiceActivation: false, isNoRecording: false
+            isPermanent: false, isSoloTransmit: false, isNoVoiceActivation: false, isNoRecording: false,
+            opusCodec: parentCodec ?? OpusCodecSettings.defaultSettings
         )
 
         presentChannelDialog(
@@ -70,7 +72,8 @@ extension ConnectedServerViewController {
             name: info.name, topic: info.topic, password: info.password,
             maxUsers: info.maxUsers, isPermanent: info.isPermanent,
             isSoloTransmit: info.isSoloTransmit, isNoVoiceActivation: info.isNoVoiceActivation,
-            isNoRecording: info.isNoRecording
+            isNoRecording: info.isNoRecording,
+            opusCodec: info.opusCodec
         )
 
         presentChannelDialog(
@@ -170,6 +173,49 @@ extension ConnectedServerViewController {
         noRecCheck.state = properties.isNoRecording ? .on : .off
         noRecCheck.setAccessibilityLabel(L10n.text("connectedServer.channel.form.noRecording"))
 
+        // Audio codec controls
+        let codecLabel = NSTextField(labelWithString: L10n.text("connectedServer.channel.form.codec.title"))
+        codecLabel.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
+
+        let channelsLabel = NSTextField(labelWithString: L10n.text("connectedServer.channel.form.codec.channels"))
+        let channelsPopUp = NSPopUpButton()
+        channelsPopUp.addItem(withTitle: L10n.text("connectedServer.channel.form.codec.channels.mono"))
+        channelsPopUp.lastItem?.tag = 1
+        channelsPopUp.addItem(withTitle: L10n.text("connectedServer.channel.form.codec.channels.stereo"))
+        channelsPopUp.lastItem?.tag = 2
+        channelsPopUp.setAccessibilityLabel(L10n.text("connectedServer.channel.form.codec.channels"))
+        if let codec = properties.opusCodec {
+            channelsPopUp.selectItem(withTag: Int(codec.channels))
+        }
+
+        let sampleRateLabel = NSTextField(labelWithString: L10n.text("connectedServer.channel.form.codec.sampleRate"))
+        let sampleRatePopUp = NSPopUpButton()
+        for rate in OpusCodecSettings.supportedSampleRates {
+            sampleRatePopUp.addItem(withTitle: "\(rate) Hz")
+            sampleRatePopUp.lastItem?.tag = Int(rate)
+        }
+        sampleRatePopUp.setAccessibilityLabel(L10n.text("connectedServer.channel.form.codec.sampleRate"))
+        if let codec = properties.opusCodec {
+            sampleRatePopUp.selectItem(withTag: Int(codec.sampleRate))
+        }
+
+        let bitrateLabel = NSTextField(labelWithString: L10n.text("connectedServer.channel.form.codec.bitrate"))
+        let bitrateField = NSTextField(frame: .zero)
+        bitrateField.stringValue = properties.opusCodec.map { String($0.bitrate / 1000) } ?? "64"
+        bitrateField.placeholderString = "64"
+        bitrateField.setAccessibilityLabel(L10n.text("connectedServer.channel.form.codec.bitrate"))
+
+        let applicationLabel = NSTextField(labelWithString: L10n.text("connectedServer.channel.form.codec.application"))
+        let applicationPopUp = NSPopUpButton()
+        applicationPopUp.addItem(withTitle: L10n.text("connectedServer.channel.form.codec.application.voip"))
+        applicationPopUp.lastItem?.tag = 2048 // OPUS_APPLICATION_VOIP
+        applicationPopUp.addItem(withTitle: L10n.text("connectedServer.channel.form.codec.application.music"))
+        applicationPopUp.lastItem?.tag = 2049 // OPUS_APPLICATION_AUDIO
+        applicationPopUp.setAccessibilityLabel(L10n.text("connectedServer.channel.form.codec.application"))
+        if let codec = properties.opusCodec {
+            applicationPopUp.selectItem(withTag: Int(codec.application))
+        }
+
         var joinCheck: NSButton?
         if isCreate {
             let check = NSButton(checkboxWithTitle: L10n.text("connectedServer.channel.form.joinAfterCreate"), target: nil, action: nil)
@@ -199,6 +245,32 @@ extension ConnectedServerViewController {
             stack.addArrangedSubview(check)
         }
 
+        // Codec section
+        let codecSeparator = NSBox()
+        codecSeparator.boxType = .separator
+        stack.addArrangedSubview(codecSeparator)
+        NSLayoutConstraint.activate([codecSeparator.widthAnchor.constraint(equalToConstant: 320)])
+
+        stack.addArrangedSubview(codecLabel)
+        for (lbl, control) in [(channelsLabel, channelsPopUp), (sampleRateLabel, sampleRatePopUp), (applicationLabel, applicationPopUp)] as [(NSTextField, NSPopUpButton)] {
+            let row = NSStackView(views: [lbl, control])
+            row.orientation = .horizontal
+            row.spacing = 8
+            lbl.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([lbl.widthAnchor.constraint(equalToConstant: 120)])
+            stack.addArrangedSubview(row)
+        }
+        let bitrateRow = NSStackView(views: [bitrateLabel, bitrateField])
+        bitrateRow.orientation = .horizontal
+        bitrateRow.spacing = 8
+        bitrateLabel.translatesAutoresizingMaskIntoConstraints = false
+        bitrateField.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            bitrateLabel.widthAnchor.constraint(equalToConstant: 120),
+            bitrateField.widthAnchor.constraint(equalToConstant: 80)
+        ])
+        stack.addArrangedSubview(bitrateRow)
+
         if let joinCheck {
             let joinSeparator = NSBox()
             joinSeparator.boxType = .separator
@@ -226,6 +298,13 @@ extension ConnectedServerViewController {
             _ = self
             guard response == .alertFirstButtonReturn else { return }
             let maxUsers = Int32(maxUsersField.stringValue) ?? 200
+            let bitrateKbps = Int32(bitrateField.stringValue) ?? 64
+            let codec = OpusCodecSettings(
+                channels: Int32(channelsPopUp.selectedItem?.tag ?? 1),
+                sampleRate: Int32(sampleRatePopUp.selectedItem?.tag ?? 48000),
+                bitrate: max(6000, min(510000, bitrateKbps * 1000)),
+                application: Int32(applicationPopUp.selectedItem?.tag ?? 2048)
+            )
             let result = ChannelProperties(
                 name: nameField.stringValue,
                 topic: topicField.stringValue,
@@ -234,7 +313,8 @@ extension ConnectedServerViewController {
                 isPermanent: permanentCheck.state == .on,
                 isSoloTransmit: soloCheck.state == .on,
                 isNoVoiceActivation: noVoxCheck.state == .on,
-                isNoRecording: noRecCheck.state == .on
+                isNoRecording: noRecCheck.state == .on,
+                opusCodec: codec
             )
             completion(result, joinCheck?.state == .on)
         }

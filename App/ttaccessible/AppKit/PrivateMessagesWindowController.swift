@@ -7,7 +7,9 @@
 
 import AppKit
 
-final class PrivateMessagesWindowController: NSWindowController {
+final class PrivateMessagesWindowController: NSWindowController, NSWindowDelegate {
+    var onUserClose: (() -> Void)?
+
     init(contentViewController: NSViewController) {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 860, height: 560),
@@ -20,10 +22,15 @@ final class PrivateMessagesWindowController: NSWindowController {
         window.center()
         window.contentViewController = contentViewController
         super.init(window: window)
+        window.delegate = self
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         nil
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        onUserClose?()
     }
 }

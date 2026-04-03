@@ -56,7 +56,7 @@ final class UserAccountFormViewController: NSViewController {
 
     // Essential fields
     private var usernameField: NSTextField!
-    private var passwordField: NSSecureTextField!
+    private var passwordField: NSTextField!
     private var typePopUp: NSPopUpButton!
     private var initChannelField: NSTextField!
     private var noteField: NSTextField!
@@ -101,7 +101,7 @@ final class UserAccountFormViewController: NSViewController {
         usernameField.placeholderString = L10n.text("accounts.form.username")
         usernameField.setAccessibilityLabel(L10n.text("accounts.form.username"))
 
-        passwordField = NSSecureTextField()
+        passwordField = NSTextField()
         passwordField.placeholderString = L10n.text("accounts.form.password")
         passwordField.setAccessibilityLabel(L10n.text("accounts.form.password"))
 
@@ -318,7 +318,7 @@ final class UserAccountFormViewController: NSViewController {
             usernameField.isEditable = true
         case .edit(let account):
             usernameField.stringValue = account.username
-            // password intentionally blank — empty means unchanged
+            passwordField.stringValue = account.password
             initChannelField.stringValue = account.initChannel
             noteField.stringValue = account.note
             switch account.userType {
