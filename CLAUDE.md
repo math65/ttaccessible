@@ -148,6 +148,7 @@ Two recording modes, both managed by the SDK:
 - Channel change during muxed recording: stop current file, start new one automatically.
 - New users logging in during separate recording get `TT_SetUserMediaStorageDir` called automatically.
 - `CLIENTEVENT_USER_RECORD_MEDIAFILE` handled for error/abort detection.
+- **Auto-restart on channel join** — `autoRestartRecording` preference (off by default). When enabled, if recording was active (`lastRecordingWasActive`), it auto-restarts when joining a new channel, reconnecting, or relaunching the app. Toggle in Preferences > Recording.
 
 ### Sound Packs
 
@@ -170,9 +171,29 @@ Three sound packs bundled: **Default** (root of `Sounds/`), **Majorly-G**, **Old
 
 ### Preferences Organization
 
-6 tabs: **General** (identity, auto-away, import toggle), **Connection** (auto-join, reconnect, subscriptions, intercepts), **Audio** (devices, AEC, preset, preview), **Sounds** (global toggle, pack selector, 26 per-event toggles), **Announcements** (background modes, TTS config, VoiceOver toggles), **Recording** (folder, mode, format).
+6 tabs: **General** (identity, auto-away, relative timestamps, import toggle), **Connection** (auto-join, reconnect, subscriptions, intercepts), **Audio** (devices, AEC, preset, preview), **Sounds** (global toggle, pack selector, 26 per-event toggles), **Announcements** (background modes, TTS config, per-event announcement toggles), **Recording** (folder, mode, format, auto-restart).
 
 All section headings use `.accessibilityAddTraits(.isHeader)` for VoiceOver heading navigation.
+
+### Per-Event Announcement Customization
+
+Event announcements (foreground VoiceOver + background TTS/notifications) can be individually toggled per event type. Stored as `disabledSessionHistoryKinds: Set<SessionHistoryEntry.Kind>` in `VoiceOverAnnouncementPreferences` (empty set = all enabled). Events are grouped into 7 sections in the UI: Connection, Own Channel, User Presence, Moderation, Status, Subscriptions, Files. Message types (private, channel, broadcast) have separate dedicated toggles. Codable migration handles the legacy `sessionHistoryEnabled: Bool` key.
+
+### Channel Audio Codec Configuration
+
+Channel create/edit dialog exposes Opus codec settings: audio channels (mono/stereo), sample rate, bitrate (kbps), and application mode (VoIP/Music). Stored as `OpusCodecSettings` in `ChannelProperties`. On create, defaults from parent channel or `OpusCodecSettings.defaultSettings`. On edit, non-exposed fields (complexity, FEC, DTX, VBR, frame size) are preserved from the existing channel via `TT_GetChannel`. Bitrate is stored in bps in the SDK, displayed in kbps in the UI.
+
+### Clickable Links in Chat
+
+Chat messages (channel and private) use `NSTextView` with `NSDataDetector` for automatic URL detection. Links are rendered with `.link` attributes and open in the default browser on click. `LinkTextView` subclass overrides `hitTest` and `mouseDown` to only capture clicks on links — plain text clicks pass through to the table view for row selection.
+
+### User Account Password Visibility
+
+Admin user accounts list shows a Password column. The SDK returns plaintext passwords via `TT_DoListUserAccounts()` — the app now reads `szPassword` instead of setting it to empty. The edit form uses `NSTextField` (not `NSSecureTextField`) matching the Qt client behavior.
+
+### Removed Features (beta 5)
+
+- **Manual refresh devices button** — removed from Preferences > Audio. `AudioDeviceChangeMonitor` handles device detection automatically via CoreAudio property listeners. The manual button was redundant and could cause audio input to stop working.
 
 ### Missing Features (vs original Qt client)
 
