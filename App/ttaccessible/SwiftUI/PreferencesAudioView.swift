@@ -97,18 +97,6 @@ struct PreferencesAudioView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                HStack {
-                    Button(L10n.text("preferences.audio.refresh")) {
-                        store.refreshDevices()
-                    }
-
-                    if store.state.isCatalogLoading {
-                        ProgressView()
-                            .controlSize(.small)
-                            .accessibilityLabel(L10n.text("preferences.audio.refresh"))
-                    }
-                }
-
                 if let lastErrorMessage = store.state.lastErrorMessage, lastErrorMessage.isEmpty == false {
                     Text(lastErrorMessage)
                         .font(.caption)
