@@ -7,10 +7,35 @@
 
 import AppKit
 
+/// NSTextView subclass that only consumes mouse clicks on links,
+/// letting the table view handle row selection for clicks on plain text.
+private final class LinkTextView: NSTextView {
+    override func mouseDown(with event: NSEvent) {
+        let point = convert(event.locationInWindow, from: nil)
+        let charIndex = characterIndexForInsertion(at: point)
+        if charIndex < textStorage?.length ?? 0,
+           textStorage?.attribute(.link, at: charIndex, effectiveRange: nil) != nil {
+            super.mouseDown(with: event)
+        } else {
+            nextResponder?.mouseDown(with: event)
+        }
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        let localPoint = convert(point, from: superview)
+        let charIndex = characterIndexForInsertion(at: localPoint)
+        if charIndex < textStorage?.length ?? 0,
+           textStorage?.attribute(.link, at: charIndex, effectiveRange: nil) != nil {
+            return super.hitTest(point)
+        }
+        return nil
+    }
+}
+
 final class ChannelChatTableCellView: NSTableCellView {
     private let senderLabel = NSTextField(labelWithString: "")
-    private let messageTextView: NSTextView = {
-        let textView = NSTextView()
+    private let messageTextView: LinkTextView = {
+        let textView = LinkTextView()
         textView.isEditable = false
         textView.isSelectable = true
         textView.drawsBackground = false
