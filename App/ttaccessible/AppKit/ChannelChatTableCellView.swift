@@ -11,10 +11,7 @@ import AppKit
 /// letting the table view handle row selection for clicks on plain text.
 private final class LinkTextView: NSTextView {
     override func mouseDown(with event: NSEvent) {
-        let point = convert(event.locationInWindow, from: nil)
-        let charIndex = characterIndexForInsertion(at: point)
-        if charIndex < textStorage?.length ?? 0,
-           textStorage?.attribute(.link, at: charIndex, effectiveRange: nil) != nil {
+        if linkIndex(for: event) != nil {
             super.mouseDown(with: event)
         } else {
             nextResponder?.mouseDown(with: event)
@@ -22,34 +19,36 @@ private final class LinkTextView: NSTextView {
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
+        guard let textStorage, textStorage.length > 0 else { return nil }
         let localPoint = convert(point, from: superview)
-        let charIndex = characterIndexForInsertion(at: localPoint)
-        if charIndex < textStorage?.length ?? 0,
-           textStorage?.attribute(.link, at: charIndex, effectiveRange: nil) != nil {
-            return super.hitTest(point)
+        guard let layoutManager, let textContainer = textContainer else { return nil }
+        let glyphRange = layoutManager.glyphRange(for: textContainer)
+        let boundingRect = layoutManager.boundingRect(forGlyphRange: glyphRange, in: textContainer)
+        guard boundingRect.contains(localPoint) else { return nil }
+        let charIndex = layoutManager.characterIndex(for: localPoint, in: textContainer, fractionOfDistanceBetweenInsertionPoints: nil)
+        guard charIndex < textStorage.length,
+              textStorage.attribute(.link, at: charIndex, effectiveRange: nil) != nil else {
+            return nil
         }
-        return nil
+        return super.hitTest(point)
+    }
+
+    private func linkIndex(for event: NSEvent) -> Int? {
+        guard let textStorage, textStorage.length > 0,
+              let layoutManager, let textContainer = textContainer else { return nil }
+        let point = convert(event.locationInWindow, from: nil)
+        let charIndex = layoutManager.characterIndex(for: point, in: textContainer, fractionOfDistanceBetweenInsertionPoints: nil)
+        guard charIndex < textStorage.length,
+              textStorage.attribute(.link, at: charIndex, effectiveRange: nil) != nil else {
+            return nil
+        }
+        return charIndex
     }
 }
 
 final class ChannelChatTableCellView: NSTableCellView {
     private let senderLabel = NSTextField(labelWithString: "")
-    private let messageTextView: LinkTextView = {
-        let textView = LinkTextView()
-        textView.isEditable = false
-        textView.isSelectable = true
-        textView.drawsBackground = false
-        textView.isAutomaticLinkDetectionEnabled = true
-        textView.textContainerInset = .zero
-        textView.textContainer?.lineFragmentPadding = 0
-        textView.font = .preferredFont(forTextStyle: .body)
-        textView.isVerticallyResizable = false
-        textView.isHorizontallyResizable = false
-        textView.textContainer?.widthTracksTextView = true
-        textView.setAccessibilityElement(false)
-        textView.setAccessibilityHidden(true)
-        return textView
-    }()
+    private let messageTextView = LinkTextView()
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -123,6 +122,18 @@ final class ChannelChatTableCellView: NSTableCellView {
         senderLabel.lineBreakMode = .byTruncatingTail
         senderLabel.setAccessibilityElement(false)
         senderLabel.setAccessibilityHidden(true)
+
+        messageTextView.isEditable = false
+        messageTextView.isSelectable = true
+        messageTextView.drawsBackground = false
+        messageTextView.textContainerInset = .zero
+        messageTextView.textContainer?.lineFragmentPadding = 0
+        messageTextView.font = .preferredFont(forTextStyle: .body)
+        messageTextView.isVerticallyResizable = false
+        messageTextView.isHorizontallyResizable = false
+        messageTextView.textContainer?.widthTracksTextView = true
+        messageTextView.setAccessibilityElement(false)
+        messageTextView.setAccessibilityHidden(true)
 
         messageTextView.translatesAutoresizingMaskIntoConstraints = false
         senderLabel.translatesAutoresizingMaskIntoConstraints = false

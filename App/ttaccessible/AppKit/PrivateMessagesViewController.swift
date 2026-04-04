@@ -40,14 +40,31 @@ final class PrivateMessagesViewController: NSViewController {
     private let relativeTimeFormatter: RelativeDateTimeFormatter = {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
+        formatter.dateTimeStyle = .named
         return formatter
     }()
+
+    private var relativeTimestampTimer: Timer?
+
+    private func startRelativeTimestampTimerIfNeeded() {
+        relativeTimestampTimer?.invalidate()
+        relativeTimestampTimer = nil
+        guard preferencesStore.preferences.useRelativeTimestamps else { return }
+        relativeTimestampTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            guard let self, self.preferencesStore.preferences.useRelativeTimestamps else {
+                self?.relativeTimestampTimer?.invalidate()
+                self?.relativeTimestampTimer = nil
+                return
+            }
+            self.messagesTableView.reloadData()
+        }
+    }
 
     private func formattedTime(for date: Date) -> String {
         if preferencesStore.preferences.useRelativeTimestamps {
             return relativeTimeFormatter.localizedString(for: date, relativeTo: Date())
         }
-        return formattedTime(for: date)
+        return timeFormatter.string(from: date)
     }
 
     init(
@@ -79,6 +96,7 @@ final class PrivateMessagesViewController: NSViewController {
         focusConversations()
         publishConsultationState()
         markSelectedConversationAsRead()
+        startRelativeTimestampTimerIfNeeded()
     }
 
     override func viewWillDisappear() {

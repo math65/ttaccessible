@@ -76,6 +76,7 @@ final class ConnectedServerViewController: NSViewController {
     let relativeTimeFormatter: RelativeDateTimeFormatter = {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
+        formatter.dateTimeStyle = .named
         return formatter
     }()
 
@@ -115,10 +116,12 @@ final class ConnectedServerViewController: NSViewController {
     override func viewDidAppear() {
         super.viewDidAppear()
         focusOutlineIfNeeded()
+        startRelativeTimestampTimerIfNeeded()
     }
 
     func update(session: ConnectedServerSession) {
         applySession(session, preserveSelection: true)
+        startRelativeTimestampTimerIfNeeded()
     }
 
     func showReconnecting() {
@@ -1192,6 +1195,22 @@ final class ConnectedServerViewController: NSViewController {
 
     var pendingAnnouncements = [String]()
     var announcementTimer: Timer?
+    var relativeTimestampTimer: Timer?
+
+    func startRelativeTimestampTimerIfNeeded() {
+        relativeTimestampTimer?.invalidate()
+        relativeTimestampTimer = nil
+        guard preferencesStore.preferences.useRelativeTimestamps else { return }
+        relativeTimestampTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            guard let self, self.preferencesStore.preferences.useRelativeTimestamps else {
+                self?.relativeTimestampTimer?.invalidate()
+                self?.relativeTimestampTimer = nil
+                return
+            }
+            self.chatTableView.reloadData()
+            self.historyTableView.reloadData()
+        }
+    }
 }
 
 // MARK: - NSOutlineViewDataSource (see ConnectedServerViewController+OutlineDataSource.swift)
