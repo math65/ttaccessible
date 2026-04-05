@@ -149,7 +149,7 @@
 "connectedServer.menu.privateMessage" = "Send Private Message";
 "connectedServer.menu.userVolume" = "Adjust Volume…";
 "connectedServer.volume.title" = "Volume of %@";
-"connectedServer.volume.info" = "0%% = silence · 100%% = default volume · 200%% = maximum volume";
+"connectedServer.volume.info" = "0%% = silence · 100%% = normal volume · 200%% = maximum volume";
 "connectedServer.volume.ok" = "Apply";
 "connectedServer.volume.cancel" = "Cancel";
 "connectedServer.volume.sliderLabel" = "Volume percentage";
@@ -186,7 +186,7 @@
 "connectedServer.channel.form.password" = "Password";
 "connectedServer.channel.form.maxUsers" = "Maximum users";
 "connectedServer.channel.form.permanent" = "Permanent channel";
-"connectedServer.channel.form.soloTransmit" = "Single-user transmission";
+"connectedServer.channel.form.soloTransmit" = "Solo transmit (one speaker at a time)";
 "connectedServer.channel.form.noVoiceActivation" = "Disable voice activation (push-to-talk only)";
 "connectedServer.channel.form.noRecording" = "No audio recording";
 "connectedServer.channel.form.codec.title" = "Audio Codec";

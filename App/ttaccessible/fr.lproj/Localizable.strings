@@ -169,7 +169,7 @@
 "connectedServer.volume.leftSpeaker" = "Haut-parleur gauche";
 "connectedServer.volume.rightSpeaker" = "Haut-parleur droit";
 "connectedServer.mute.announced.muted" = "%@ coupé";
-"connectedServer.mute.announced.unmuted" = "%@ rétabli";
+"connectedServer.mute.announced.unmuted" = "Son de %@ rétabli";
 "connectedServer.menu.createChannel" = "Créer un canal";
 "connectedServer.menu.editChannel" = "Modifier le canal";
 "connectedServer.menu.deleteChannel" = "Supprimer le canal";
@@ -187,7 +187,7 @@
 "connectedServer.channel.form.maxUsers" = "Nombre max d'utilisateurs";
 "connectedServer.channel.form.permanent" = "Canal permanent";
 "connectedServer.channel.form.soloTransmit" = "Transmission solo (un seul à la fois)";
-"connectedServer.channel.form.noVoiceActivation" = "Pas d'activation vocale (push-to-talk uniquement)";
+"connectedServer.channel.form.noVoiceActivation" = "Désactiver l'activation vocale (PTT uniquement)";
 "connectedServer.channel.form.noRecording" = "Pas d'enregistrement audio";
 "connectedServer.channel.form.codec.title" = "Codec audio";
 "connectedServer.channel.form.codec.channels" = "Canaux audio";
@@ -209,7 +209,7 @@
 "broadcast.menu.send" = "Diffuser un message";
 "broadcast.prompt.title" = "Diffuser un message";
 "broadcast.prompt.message" = "Message à diffuser :";
-"broadcast.prompt.placeholder" = "Saisissez un message broadcast";
+"broadcast.prompt.placeholder" = "Saisissez un message général";
 "broadcast.prompt.accessibilityLabel" = "Message général";
 "broadcast.error.emptyMessage" = "Le message général ne peut pas être vide.";
 "broadcast.error.sendFailed" = "Impossible d'envoyer le message général.";
@@ -336,7 +336,7 @@
 "preferences.audio.advanced.preset.mono" = "Entrée %d mono";
 "preferences.audio.advanced.preset.stereoPair" = "Entrées %d/%d stéréo";
 "preferences.audio.advanced.preset.monoMix" = "Somme mono %d+%d";
-"preferences.audio.advanced.feedback.fallbackAuto" = "Le preset choisi n'est plus compatible avec ce périphérique. Retour automatique sur Auto.";
+"preferences.audio.advanced.feedback.fallbackAuto" = "La configuration choisie n'est plus compatible avec ce périphérique. Retour automatique sur Auto.";
 "preferences.audio.advanced.error.deviceUnavailable" = "Impossible d'utiliser le périphérique d'entrée sélectionné.";
 "preferences.audio.advanced.error.queueCreationFailed" = "Impossible de démarrer la capture micro avancée.";
 "preferences.audio.advanced.error.queueStartFailed" = "La capture micro avancée n'a pas pu démarrer.";
@@ -348,7 +348,7 @@
 "preferences.accessibility.title" = "Accessibilité";
 "preferences.accessibility.channelAnnouncements" = "Annoncer les messages de canal";
 "preferences.accessibility.privateAnnouncements" = "Annoncer les messages privés";
-"preferences.accessibility.broadcastAnnouncements" = "Annoncer les messages broadcast";
+"preferences.accessibility.broadcastAnnouncements" = "Annoncer les messages généraux";
 "preferences.accessibility.historyAnnouncements" = "Annoncer l'historique système";
 "preferences.historyEvents.enableAll" = "Tout activer";
 "preferences.historyEvents.disableAll" = "Tout désactiver";
@@ -398,8 +398,8 @@
 "preferences.announcements.title" = "Annonces";
 "preferences.announcements.voiceover.title" = "Annonces d'événements";
 "preferences.notifications.soundEvents.title" = "Événements sonores";
-"sound.event.newuser" = "Utilisateur rejoint le canal";
-"sound.event.removeuser" = "Utilisateur quitte le canal";
+"sound.event.newuser" = "Un utilisateur a rejoint le canal";
+"sound.event.removeuser" = "Un utilisateur a quitté le canal";
 "sound.event.user_msg" = "Message privé reçu";
 "sound.event.user_msg_sent" = "Message privé envoyé";
 "sound.event.channel_msg" = "Message de canal reçu";
@@ -484,9 +484,9 @@
 "history.channelMessageReceived" = "Message de canal reçu de %@.";
 "history.broadcastSent" = "Message général envoyé par %@ : %@.";
 "history.broadcastReceived" = "Message général de %@ : %@.";
-"history.broadcastSubscriptionChanged" = "%@ a modifié les messages généraux pour %@.";
-"history.subscriptionChanged" = "%1$@ a mis %2$@ pour %3$@.";
-"history.interceptSubscriptionChanged" = "%1$@ a mis %2$@ pour %3$@.";
+"history.broadcastSubscriptionChanged" = "%@ a modifié l'abonnement aux messages généraux de %@.";
+"history.subscriptionChanged" = "%1$@ a modifié %2$@ pour %3$@.";
+"history.interceptSubscriptionChanged" = "%1$@ a modifié %2$@ pour %3$@.";
 "history.fileAdded" = "%@ a ajouté le fichier %@.";
 "history.fileRemoved" = "%@ a supprimé le fichier %@.";
 "history.transmissionBlocked" = "Transmission bloquée par l'opérateur du canal.";
