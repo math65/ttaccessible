@@ -115,8 +115,18 @@ final class ConnectedServerViewController: NSViewController {
 
     override func viewDidAppear() {
         super.viewDidAppear()
+        configureKeyViewLoop()
         focusOutlineIfNeeded()
         startRelativeTimestampTimerIfNeeded()
+    }
+
+    func configureKeyViewLoop() {
+        outlineView.nextKeyView = chatTableView
+        chatTableView.nextKeyView = messageField
+        messageField.nextKeyView = sendButton
+        sendButton.nextKeyView = historyTableView
+        historyTableView.nextKeyView = outlineView
+        view.window?.recalculateKeyViewLoop()
     }
 
     func update(session: ConnectedServerSession) {
@@ -1143,7 +1153,9 @@ final class ConnectedServerViewController: NSViewController {
             case .success:
                 self.messageField.stringValue = ""
                 self.updateChatInputState()
-                self.view.window?.makeFirstResponder(self.messageField)
+                if self.messageField.isEnabled {
+                    self.view.window?.makeFirstResponder(self.messageField)
+                }
                 self.announce(L10n.text("connectedServer.chat.sent"))
             case .failure(let error):
                 self.presentActionError(error.localizedDescription)
