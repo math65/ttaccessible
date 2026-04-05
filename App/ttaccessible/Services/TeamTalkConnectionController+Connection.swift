@@ -248,7 +248,13 @@ extension TeamTalkConnectionController {
         if TT_GetMyUserAccount(instance, &account) != 0 {
             let initChannel = ttString(from: account.szInitChannel)
             if initChannel.isEmpty == false {
-                return
+                let channelID = initChannel.withCString { pathPointer in
+                    TT_GetChannelIDFromPath(instance, pathPointer)
+                }
+                if channelID > 0 {
+                    _ = TT_DoJoinChannelByID(instance, channelID, "")
+                    return
+                }
             }
         }
 
