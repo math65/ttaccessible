@@ -10,6 +10,7 @@ import SwiftUI
 enum SavedServerEditorMode {
     case add
     case edit
+    case copyLink
 
     var title: String {
         switch self {
@@ -17,6 +18,8 @@ enum SavedServerEditorMode {
             return L10n.text("savedServer.editor.add.title")
         case .edit:
             return L10n.text("savedServer.editor.edit.title")
+        case .copyLink:
+            return L10n.text("connectedServer.serverLink.copy")
         }
     }
 }
@@ -138,7 +141,7 @@ struct SavedServerFormView: View {
                     onCancel()
                 }
 
-                Button(L10n.text("common.save")) {
+                Button(mode == .copyLink ? L10n.text("connectedServer.serverLink.copyButton") : L10n.text("common.save")) {
                     onSave(draft)
                 }
                 .disabled(draft.isValid == false)

@@ -793,12 +793,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard menuState.mode == .connectedServer,
               let session = connectionController.sessionSnapshot else { return }
         let record = session.savedServer
-        var channelPath: String?
+        var channelPath = ""
         if session.currentChannelID > 0,
            let channel = session.findChannelByID(session.currentChannelID) {
             channelPath = "/" + channel.pathComponents.joined(separator: "/")
         }
-        let link = record.generateLink(password: connectionController.reconnectPassword, channelPath: channelPath)
+
+        let draft = SavedServerDraft(
+            record: record,
+            password: connectionController.reconnectPassword ?? "",
+            initialChannelPassword: nil
+        )
+        var editableDraft = draft
+        editableDraft.initialChannelPath = channelPath
+
+        let editor = SavedServerEditorWindowController(
+            mode: .copyLink,
+            draft: editableDraft,
+            parentWindow: connectedServerViewController?.view.window
+        )
+        guard let result = editor.runModal() else { return }
+        guard let resultRecord = result.makeRecord(id: UUID()) else { return }
+
+        let link = resultRecord.generateLink(
+            password: result.password,
+            channelPath: result.sanitizedInitialChannelPath.isEmpty ? nil : result.sanitizedInitialChannelPath,
+            channelPassword: result.initialChannelPassword.isEmpty ? nil : result.initialChannelPassword
+        )
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(link, forType: .string)
         connectedServerViewController?.announce(L10n.text("connectedServer.serverLink.copied"))
@@ -937,47 +958,48 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let channel = param("channel")
         let chanPassword = param("chanpasswd")
 
-        let record = SavedServerRecord(
-            id: UUID(),
+        let draft = SavedServerDraft(
             name: host,
             host: host,
-            tcpPort: tcpPort,
-            udpPort: udpPort,
+            tcpPort: String(tcpPort),
+            udpPort: String(udpPort),
             encrypted: encrypted,
             nickname: preferencesStore.preferences.defaultNickname,
-            username: username
+            username: username,
+            password: password,
+            initialChannelPath: channel,
+            initialChannelPassword: chanPassword
         )
 
-        let proceed = {
-            let options = TeamTalkConnectOptions(
-                nicknameOverride: nil,
-                statusMessage: nil,
-                genderOverride: nil,
-                initialChannelPath: channel.isEmpty ? nil : channel,
-                initialChannelPassword: chanPassword,
-                preferJoinLastChannelFromServer: false
-            )
-            self.connectionController.connect(to: record, password: password, options: options) { [weak self] result in
-                if case .failure(let error) = result {
-                    self?.presentErrorAlert(
-                        title: L10n.text("ttFile.alert.connectionError.title"),
-                        message: error.localizedDescription
-                    )
-                }
-            }
-        }
+        let editor = SavedServerEditorWindowController(mode: .add, draft: draft, parentWindow: nil)
+        guard let result = editor.runModal(), let record = result.makeRecord(id: UUID()) else { return }
 
         if connectionController.sessionSnapshot != nil {
             let alert = NSAlert()
             alert.messageText = L10n.text("ttFile.alert.connected.title")
-            alert.informativeText = L10n.format("ttFile.alert.connected.message", host)
+            alert.informativeText = L10n.format("ttFile.alert.connected.message", record.host)
             alert.addButton(withTitle: L10n.text("ttFile.alert.connected.confirm"))
             alert.addButton(withTitle: L10n.text("ttFile.alert.connected.cancel"))
             guard alert.runModal() == .alertFirstButtonReturn else { return }
             connectionController.disconnect()
         }
 
-        proceed()
+        let options = TeamTalkConnectOptions(
+            nicknameOverride: nil,
+            statusMessage: nil,
+            genderOverride: nil,
+            initialChannelPath: result.sanitizedInitialChannelPath.isEmpty ? nil : result.sanitizedInitialChannelPath,
+            initialChannelPassword: result.initialChannelPassword,
+            preferJoinLastChannelFromServer: false
+        )
+        connectionController.connect(to: record, password: result.password, options: options) { [weak self] result in
+            if case .failure(let error) = result {
+                self?.presentErrorAlert(
+                    title: L10n.text("ttFile.alert.connectionError.title"),
+                    message: error.localizedDescription
+                )
+            }
+        }
     }
 
     private func enqueueTTFileURLs(_ urls: [URL], source: String) {
