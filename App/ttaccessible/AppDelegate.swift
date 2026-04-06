@@ -798,7 +798,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            let channel = session.findChannelByID(session.currentChannelID) {
             channelPath = "/" + channel.pathComponents.joined(separator: "/")
         }
-        let link = record.generateLink(channelPath: channelPath)
+        let link = record.generateLink(password: connectionController.reconnectPassword, channelPath: channelPath)
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(link, forType: .string)
         connectedServerViewController?.announce(L10n.text("connectedServer.serverLink.copied"))

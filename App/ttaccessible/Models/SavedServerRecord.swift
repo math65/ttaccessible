@@ -56,10 +56,13 @@ struct SavedServerRecord: Codable, Identifiable, Equatable {
         self.initialChannelPassword = initialChannelPassword
     }
 
-    func generateLink(channelPath: String? = nil, channelPassword: String? = nil) -> String {
+    func generateLink(password: String? = nil, channelPath: String? = nil, channelPassword: String? = nil) -> String {
         var url = "tt://\(host)?tcpport=\(tcpPort)&udpport=\(udpPort)&encrypted=\(encrypted)"
         if !username.isEmpty {
             url += "&username=\(username.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? username)"
+        }
+        if let pass = password, !pass.isEmpty {
+            url += "&password=\(pass.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? pass)"
         }
         if let channel = channelPath, !channel.isEmpty {
             url += "&channel=\(channel.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? channel)"
