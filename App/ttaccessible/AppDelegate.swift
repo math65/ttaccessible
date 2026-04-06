@@ -166,7 +166,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
-        enqueueTTFileURLs(urls, source: "openURLs")
+        let ttLinks = urls.filter { $0.scheme?.lowercased() == "tt" }
+        let ttFiles = urls.filter { $0.scheme?.lowercased() != "tt" }
+
+        if let link = ttLinks.first {
+            handleTTLink(link)
+        }
+        if ttFiles.isEmpty == false {
+            enqueueTTFileURLs(ttFiles, source: "openURLs")
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -909,6 +917,67 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return URL(fileURLWithPath: NSString(string: argument).expandingTildeInPath)
         }
         enqueueTTFileURLs(Array(urls), source: "launchArgs")
+    }
+
+    private func handleTTLink(_ url: URL) {
+        guard let host = url.host, host.isEmpty == false else { return }
+
+        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        let params = components?.queryItems ?? []
+
+        func param(_ name: String) -> String {
+            params.first(where: { $0.name == name })?.value ?? ""
+        }
+
+        let tcpPort = Int(param("tcpport")) ?? 10333
+        let udpPort = Int(param("udpport")) ?? tcpPort
+        let encrypted = param("encrypted") == "true" || param("encrypted") == "1"
+        let username = param("username")
+        let password = param("password")
+        let channel = param("channel")
+        let chanPassword = param("chanpasswd")
+
+        let record = SavedServerRecord(
+            id: UUID(),
+            name: host,
+            host: host,
+            tcpPort: tcpPort,
+            udpPort: udpPort,
+            encrypted: encrypted,
+            nickname: preferencesStore.preferences.defaultNickname,
+            username: username
+        )
+
+        let proceed = {
+            let options = TeamTalkConnectOptions(
+                nicknameOverride: nil,
+                statusMessage: nil,
+                genderOverride: nil,
+                initialChannelPath: channel.isEmpty ? nil : channel,
+                initialChannelPassword: chanPassword,
+                preferJoinLastChannelFromServer: false
+            )
+            self.connectionController.connect(to: record, password: password, options: options) { [weak self] result in
+                if case .failure(let error) = result {
+                    self?.presentErrorAlert(
+                        title: L10n.text("ttFile.alert.connectionError.title"),
+                        message: error.localizedDescription
+                    )
+                }
+            }
+        }
+
+        if connectionController.sessionSnapshot != nil {
+            let alert = NSAlert()
+            alert.messageText = L10n.text("ttFile.alert.connected.title")
+            alert.informativeText = L10n.format("ttFile.alert.connected.message", host)
+            alert.addButton(withTitle: L10n.text("ttFile.alert.connected.confirm"))
+            alert.addButton(withTitle: L10n.text("ttFile.alert.connected.cancel"))
+            guard alert.runModal() == .alertFirstButtonReturn else { return }
+            connectionController.disconnect()
+        }
+
+        proceed()
     }
 
     private func enqueueTTFileURLs(_ urls: [URL], source: String) {
