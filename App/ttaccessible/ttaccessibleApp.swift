@@ -151,6 +151,13 @@ struct ttaccessibleApp: App {
 
                     Divider()
 
+                    Button(L10n.text("connectedServer.serverLink.copy")) {
+                        appDelegate.copyServerLink()
+                    }
+                    .keyboardShortcut("l", modifiers: [.command, .shift])
+
+                    Divider()
+
                     Button(L10n.text("connectedServer.menu.disconnect")) {
                         appDelegate.disconnectServer()
                     }

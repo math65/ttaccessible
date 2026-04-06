@@ -142,6 +142,8 @@
 "teamTalk.gender.male" = "Homme";
 "teamTalk.gender.female" = "Femme";
 "teamTalk.gender.neutral" = "Neutre";
+"connectedServer.serverLink.copy" = "Copier le lien du serveur";
+"connectedServer.serverLink.copied" = "Lien du serveur copié dans le presse-papier.";
 "connectedServer.menu.disconnect" = "Se déconnecter";
 "connectedServer.menu.contextTitle" = "Canal";
 "connectedServer.menu.join" = "Rejoindre le canal";

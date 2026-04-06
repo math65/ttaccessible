@@ -781,6 +781,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         connectedServerViewController?.promptBroadcastMessage()
     }
 
+    func copyServerLink() {
+        guard menuState.mode == .connectedServer,
+              let session = connectionController.sessionSnapshot else { return }
+        let record = session.savedServer
+        var channelPath: String?
+        if session.currentChannelID > 0,
+           let channel = session.findChannelByID(session.currentChannelID) {
+            channelPath = "/" + channel.pathComponents.joined(separator: "/")
+        }
+        let link = record.generateLink(channelPath: channelPath)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(link, forType: .string)
+        connectedServerViewController?.announce(L10n.text("connectedServer.serverLink.copied"))
+    }
+
     func setSelectedUsersSubscription(_ option: UserSubscriptionOption, enabled: Bool) {
         guard menuState.mode == .connectedServer else { return }
         restoreMainWindow()

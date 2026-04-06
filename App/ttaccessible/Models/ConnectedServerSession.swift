@@ -77,7 +77,11 @@ extension ConnectedServerSession {
 
     var currentChannelName: String? {
         guard currentChannelID > 0 else { return nil }
-        return findChannel(id: currentChannelID, in: rootChannels)?.name
+        return findChannelByID(currentChannelID)?.name
+    }
+
+    func findChannelByID(_ id: Int32) -> ConnectedServerChannel? {
+        findChannel(id: id, in: rootChannels)
     }
 
     private func findChannel(id: Int32, in channels: [ConnectedServerChannel]) -> ConnectedServerChannel? {
