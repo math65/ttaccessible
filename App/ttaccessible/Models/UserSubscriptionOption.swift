@@ -147,7 +147,7 @@ enum UserSubscriptionOption: String, CaseIterable, Hashable {
     }
 
     var shortcutModifiers: EventModifiers {
-        isIntercept ? [.control, .command, .shift] : [.control, .command]
+        isIntercept ? [.control, .shift] : [.control]
     }
 
     func isLocallyEnabled(for user: User) -> Bool {

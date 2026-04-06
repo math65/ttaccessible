@@ -497,7 +497,7 @@ final class ConnectedServerViewController: NSViewController {
         if treeChanged || !preserveSelection {
             let existingSelection = preserveSelection ? currentSelectionKey() ?? selectedKey : nil
             outlineView.reloadData()
-            expandAllChannels()
+            expandCurrentChannelPath()
 
             if restoreSelection(existingSelection) == false {
                 selectDefaultRow()
@@ -1048,8 +1048,51 @@ final class ConnectedServerViewController: NSViewController {
         window.contentViewController?.presentAsSheet(vc)
     }
 
-    func expandAllChannels() {
-        outlineView.expandItem(nil, expandChildren: true)
+    func expandCurrentChannelPath() {
+        // Collapse everything first.
+        outlineView.collapseItem(nil, collapseChildren: true)
+
+        // Expand the path from root to the current channel.
+        guard session.currentChannelID > 0 else { return }
+
+        let path = channelPathToRoot(for: session.currentChannelID, in: session.rootChannels)
+        for channelID in path {
+            if let item = findOutlineItem(channelID: channelID) {
+                outlineView.expandItem(item)
+            }
+        }
+    }
+
+    /// Returns the chain of channel IDs from root down to (and including) the target channel.
+    private func channelPathToRoot(for targetID: Int32, in channels: [ConnectedServerChannel]) -> [Int32] {
+        for channel in channels {
+            if channel.id == targetID {
+                return [channel.id]
+            }
+            let subPath = channelPathToRoot(for: targetID, in: channel.children)
+            if !subPath.isEmpty {
+                return [channel.id] + subPath
+            }
+        }
+        return []
+    }
+
+    /// Finds the NSOutlineView item (ServerTreeNode) for a given channel ID.
+    private func findOutlineItem(channelID: Int32) -> ServerTreeNode? {
+        func search(parent: Any?) -> ServerTreeNode? {
+            let count = outlineView.numberOfChildren(ofItem: parent)
+            for i in 0..<count {
+                guard let item = outlineView.child(i, ofItem: parent) as? ServerTreeNode else { continue }
+                if case .channel(let ch) = item, ch.id == channelID {
+                    return item
+                }
+                if let found = search(parent: item) {
+                    return found
+                }
+            }
+            return nil
+        }
+        return search(parent: nil)
     }
 
     func focusOutlineIfNeeded() {
