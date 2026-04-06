@@ -10,23 +10,24 @@ import AppKit
 // MARK: - Tree Navigation Helpers
 
 extension ConnectedServerViewController {
-    func rootNode(at index: Int) -> ServerTreeNode {
-        .channel(session.rootChannels[index])
+    func rootNode(at index: Int) -> ServerTreeNode? {
+        guard index >= 0, index < session.rootChannels.count else { return nil }
+        return .channel(session.rootChannels[index])
     }
 
-    func childNode(at index: Int, for node: ServerTreeNode) -> ServerTreeNode {
+    func childNode(at index: Int, for node: ServerTreeNode) -> ServerTreeNode? {
         switch node {
         case .channel(let channel):
-            if index < channel.users.count {
+            if index >= 0, index < channel.users.count {
                 return .user(channel.users[index])
             }
             let childIndex = index - channel.users.count
             guard childIndex >= 0, childIndex < channel.children.count else {
-                return .channel(channel)
+                return nil
             }
             return .channel(channel.children[childIndex])
         case .user:
-            fatalError("A user node has no children")
+            return nil
         }
     }
 
@@ -61,10 +62,11 @@ extension ConnectedServerViewController: NSOutlineViewDataSource {
     }
 
     func outlineView(_ outlineView: NSOutlineView, child index: Int, ofItem item: Any?) -> Any {
-        if let node = item as? ServerTreeNode {
-            return childNode(at: index, for: node)
+        if let node = item as? ServerTreeNode,
+           let child = childNode(at: index, for: node) {
+            return child
         }
-        return rootNode(at: index)
+        return rootNode(at: index) as Any
     }
 
     func outlineView(_ outlineView: NSOutlineView, isItemExpandable item: Any) -> Bool {

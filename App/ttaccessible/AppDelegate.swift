@@ -658,7 +658,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.canCreateDirectories = true
         panel.prompt = L10n.text("recording.panel.choose")
         panel.message = L10n.text("recording.panel.message")
-        panel.beginSheetModal(for: NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first!) { [weak self] response in
+        guard let parentWindow = NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first else { return }
+        panel.beginSheetModal(for: parentWindow) { [weak self] response in
             guard response == .OK, let url = panel.url, let self else { return }
             if let bookmark = try? url.bookmarkData(options: .withSecurityScope) {
                 self.preferencesStore.updateRecordingFolderBookmark(bookmark)

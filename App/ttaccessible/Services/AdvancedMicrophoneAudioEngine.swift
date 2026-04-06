@@ -389,7 +389,8 @@ final class AdvancedMicrophoneAudioEngine {
         let samples: [Int16]
         if let aec = echoCanceller {
             let processed = int16Buffer.withUnsafeBufferPointer { buf in
-                aec.processCapture(buf.baseAddress!, count: adaptedCount)
+                guard let baseAddress = buf.baseAddress else { return [Int16]() }
+                return aec.processCapture(baseAddress, count: adaptedCount)
             }
             if processed.isEmpty {
                 // AEC hasn't accumulated a full 10ms frame yet; skip this chunk.
