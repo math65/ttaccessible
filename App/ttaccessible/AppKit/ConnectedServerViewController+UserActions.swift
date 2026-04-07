@@ -264,6 +264,15 @@ extension ConnectedServerViewController {
         let users = selectedUserNodes().filter { $0.isCurrentUser == false }
         let userIDs = users.map(\.id)
         guard userIDs.isEmpty == false else {
+            let element: Any = view.window ?? NSApp as Any
+            NSAccessibility.post(
+                element: element,
+                notification: .announcementRequested,
+                userInfo: [
+                    NSAccessibility.NotificationUserInfoKey.announcement: L10n.text("subscriptions.error.noSelectedUser"),
+                    NSAccessibility.NotificationUserInfoKey.priority: NSAccessibilityPriorityLevel.high.rawValue
+                ]
+            )
             return
         }
 
