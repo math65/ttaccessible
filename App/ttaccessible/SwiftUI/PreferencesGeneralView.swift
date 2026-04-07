@@ -142,10 +142,12 @@ struct PreferencesGeneralView: View {
 
     private func scheduleNicknameCommit(for value: String) {
         nicknameCommitTask?.cancel()
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return }
         nicknameCommitTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 300_000_000)
             guard Task.isCancelled == false else { return }
-            commitNickname(value)
+            store.updateDefaultNickname(trimmed)
         }
     }
 
