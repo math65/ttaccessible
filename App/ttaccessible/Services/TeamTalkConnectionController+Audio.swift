@@ -46,6 +46,43 @@ extension TeamTalkConnectionController {
         }
     }
 
+    func restartSoundSystem(completion: @escaping (Result<Void, Error>) -> Void) {
+        queue.async { [weak self] in
+            guard let self else {
+                DispatchQueue.main.async { completion(.success(())) }
+                return
+            }
+
+            let hadOutput = self.outputAudioReady
+            if hadOutput, let instance = self.instance {
+                _ = TT_CloseSoundOutputDevice(instance)
+                self.outputAudioReady = false
+            }
+
+            let ok = TT_RestartSoundSystem()
+            self.cachedSoundDevices = []
+            self.cachedAudioDeviceCatalog = nil
+
+            guard ok != 0 else {
+                DispatchQueue.main.async {
+                    completion(.failure(TeamTalkConnectionError.internalError(L10n.text("preferences.audio.refreshDevices.error"))))
+                }
+                return
+            }
+
+            if hadOutput, let instance = self.instance {
+                do {
+                    try self.ensureDirectOutputAudioReadyLocked(instance: instance)
+                } catch {
+                    DispatchQueue.main.async { completion(.failure(error)) }
+                    return
+                }
+            }
+
+            DispatchQueue.main.async { completion(.success(())) }
+        }
+    }
+
     func applyAudioPreferences(
         _ preferences: AppPreferences,
         completion: @escaping (Result<Void, Error>) -> Void

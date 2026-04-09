@@ -66,6 +66,7 @@ final class SavedServerEditorWindowController: NSWindowController {
         }
 
         showWindow(nil)
+        window.layoutIfNeeded()
         NSApp.activate(ignoringOtherApps: true)
         NSApp.runModal(for: window)
         return coordinator.result

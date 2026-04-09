@@ -45,6 +45,11 @@ struct PreferencesAudioView: View {
                     }
                 }
 
+                Button(L10n.text("preferences.audio.refreshDevices")) {
+                    store.restartSoundSystem()
+                }
+                .disabled(store.state.isCatalogLoading)
+
                 // Microphone settings (AEC, channel preset, preview).
                 VStack(alignment: .leading, spacing: 12) {
                     Text(L10n.text("preferences.audio.advanced.title"))

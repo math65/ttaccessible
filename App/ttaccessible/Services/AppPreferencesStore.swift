@@ -517,6 +517,24 @@ final class AudioPreferencesStore: ObservableObject {
         advancedSettingsStore.refresh()
     }
 
+    func restartSoundSystem() {
+        state.isCatalogLoading = true
+        connectionController.restartSoundSystem { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .success:
+                let catalog = self.connectionController.refreshAvailableAudioDevices()
+                self.state.catalog = catalog
+                self.state.isCatalogLoading = false
+                self.state.lastErrorMessage = nil
+                self.advancedSettingsStore.refresh()
+            case .failure(let error):
+                self.state.isCatalogLoading = false
+                self.state.lastErrorMessage = error.localizedDescription
+            }
+        }
+    }
+
     func updateEchoCancellationEnabled(_ enabled: Bool) {
         advancedSettingsStore.updateEchoCancellationEnabled(enabled)
     }

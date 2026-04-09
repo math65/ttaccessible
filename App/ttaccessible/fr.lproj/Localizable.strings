@@ -347,6 +347,8 @@
 
 "connectedServer.audio.error.playbackInterceptionUnavailable" = "Apple Voice Processing n'a pas pu être initialisé pour la lecture audio.";
 "preferences.audio.refresh" = "Actualiser les périphériques";
+"preferences.audio.refreshDevices" = "Actualiser les périphériques";
+"preferences.audio.refreshDevices.error" = "Impossible de redémarrer le système audio. Veuillez relancer l'application.";
 "preferences.audio.help" = "Les changements audio sont appliqués immédiatement si une session TeamTalk est déjà connectée.";
 "preferences.accessibility.title" = "Accessibilité";
 "preferences.accessibility.channelAnnouncements" = "Annoncer les messages de canal";
