@@ -336,7 +336,7 @@ final class AdvancedMicrophoneAudioEngine {
             return
         }
 
-        let selection = resolvedSelection(for: configuration.preset, availableChannels: availableChannels)
+        let selection = resolvedSelection(for: configuration.preset, availableChannels: availableChannels, physicalChannels: configuration.device.inputChannels)
 
         // Select channels.
         let selectedCount = frameCount * selection.outputChannels
@@ -554,10 +554,10 @@ final class AdvancedMicrophoneAudioEngine {
         }
     }
 
-    private func resolvedSelection(for preset: InputChannelPreset, availableChannels: Int) -> ResolvedSelection {
+    private func resolvedSelection(for preset: InputChannelPreset, availableChannels: Int, physicalChannels: Int) -> ResolvedSelection {
         switch preset {
         case .auto:
-            if availableChannels >= 2 { return .stereoPair(firstIndex: 0, secondIndex: 1) }
+            if physicalChannels >= 2 { return .stereoPair(firstIndex: 0, secondIndex: 1) }
             return .mono(channelIndex: 0)
         case .mono(let channel):
             let index = min(max(channel - 1, 0), max(availableChannels - 1, 0))
