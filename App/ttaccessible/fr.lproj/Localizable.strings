@@ -731,4 +731,9 @@
 "backgroundAnnouncement.privateMessage" = "Nouveau message privé de %@ : %@";
 "backgroundAnnouncement.channelMessage" = "Nouveau message de canal de %@ : %@";
 "backgroundAnnouncement.broadcastMessage" = "Message général de %@ : %@";
+"preferences.connection.skipKickConfirmation" = "Ne pas demander de confirmation lors de l'expulsion";
+"user.menu.kick" = "Expulser du canal";
+"user.menu.kickServer" = "Expulser du serveur";
+"user.menu.kickBan" = "Expulser et bannir";
+"user.menu.move" = "Déplacer vers un canal";
 

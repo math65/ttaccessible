@@ -120,6 +120,17 @@ private func audioDeviceChangeCallback(
     _ clientData: UnsafeMutableRawPointer?
 ) -> OSStatus {
     guard let clientData else { return noErr }
+    for i in 0..<Int(numberAddresses) {
+        let selector = addresses[i].mSelector
+        let name: String
+        switch selector {
+        case kAudioHardwarePropertyDevices: name = "kAudioHardwarePropertyDevices"
+        case kAudioHardwarePropertyDefaultInputDevice: name = "kAudioHardwarePropertyDefaultInputDevice"
+        case kAudioHardwarePropertyDefaultOutputDevice: name = "kAudioHardwarePropertyDefaultOutputDevice"
+        default: name = String(format: "0x%08X", selector)
+        }
+        AudioLogger.log("AudioDeviceChangeMonitor: property changed — %@", name)
+    }
     let monitor = Unmanaged<AudioDeviceChangeMonitor>.fromOpaque(clientData).takeUnretainedValue()
     monitor.handleDeviceChange()
     return noErr

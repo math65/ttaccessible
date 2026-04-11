@@ -170,6 +170,7 @@ struct ttaccessibleApp: App {
                     Button(L10n.text("user.menu.info")) {
                         appDelegate.openSelectedUserInfo()
                     }
+                    .keyboardShortcut("i", modifiers: [.command])
                     .disabled(menuState.hasSingleSelectedUser == false)
 
                     Button(menuState.isSelectedUserMuted
@@ -192,6 +193,31 @@ struct ttaccessibleApp: App {
                         appDelegate.toggleChannelOperator()
                     }
                     .keyboardShortcut("o", modifiers: [.control, .command])
+                    .disabled(menuState.hasSingleSelectedOtherUser == false)
+
+                    Divider()
+
+                    Button(L10n.text("user.menu.kick")) {
+                        appDelegate.kickSelectedUser()
+                    }
+                    .keyboardShortcut("k", modifiers: [.command])
+                    .disabled(menuState.hasSingleSelectedOtherUser == false)
+
+                    Button(L10n.text("user.menu.kickServer")) {
+                        appDelegate.kickSelectedUserFromServer()
+                    }
+                    .keyboardShortcut("k", modifiers: [.command, .shift])
+                    .disabled(menuState.hasSingleSelectedOtherUser == false || menuState.isAdministrator == false)
+
+                    Button(L10n.text("user.menu.kickBan")) {
+                        appDelegate.kickBanSelectedUser()
+                    }
+                    .disabled(menuState.hasSingleSelectedOtherUser == false || menuState.isAdministrator == false)
+
+                    Button(L10n.text("user.menu.move")) {
+                        appDelegate.moveSelectedUser()
+                    }
+                    .keyboardShortcut("x", modifiers: [.command, .option])
                     .disabled(menuState.hasSingleSelectedOtherUser == false)
 
                     Divider()

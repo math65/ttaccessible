@@ -2,7 +2,7 @@
 //  AppPreferencesStore.swift
 //  ttaccessible
 //
-//  Created by Codex on 17/03/2026.
+//  Created by Mathieu Martin on 17/03/2026.
 //
 
 import AppKit
@@ -214,6 +214,10 @@ final class AppPreferencesStore: ObservableObject {
         SoundPlayer.shared.loadPack(pack)
     }
 
+    func mutateSkipKickConfirmation(_ enabled: Bool) {
+        mutate { $0.skipKickConfirmation = enabled }
+    }
+
     func updateDisabledSoundEvents(_ disabled: Set<NotificationSound>) {
         mutate { $0.disabledSoundEvents = disabled }
         SoundPlayer.shared.disabledSounds = disabled
@@ -297,6 +301,7 @@ final class ConnectionPreferencesStore: ObservableObject {
         var autoReconnect: Bool
         var rejoinLastChannelOnReconnect: Bool
         var subscriptions: [UserSubscriptionOption: Bool]
+        var skipKickConfirmation: Bool
     }
 
     @Published private(set) var state: State
@@ -351,6 +356,10 @@ final class ConnectionPreferencesStore: ObservableObject {
         rootStore.updateRejoinLastChannelOnReconnect(enabled)
     }
 
+    func updateSkipKickConfirmation(_ enabled: Bool) {
+        rootStore.mutateSkipKickConfirmation(enabled)
+    }
+
     func isSubscriptionEnabledByDefault(_ option: UserSubscriptionOption) -> Bool {
         state.subscriptions[option] ?? false
     }
@@ -374,7 +383,8 @@ final class ConnectionPreferencesStore: ObservableObject {
                 uniqueKeysWithValues: UserSubscriptionOption.allCases.map { option in
                     (option, preferences.isSubscriptionEnabledByDefault(option))
                 }
-            )
+            ),
+            skipKickConfirmation: preferences.skipKickConfirmation
         )
     }
 }
@@ -473,6 +483,7 @@ final class AudioPreferencesStore: ObservableObject {
             .store(in: &cancellables)
 
         NotificationCenter.default.publisher(for: AudioDeviceChangeMonitor.audioDevicesDidChange)
+            .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
             .sink { [weak self] _ in
                 self?.handleAudioDeviceChange()
             }
@@ -498,8 +509,6 @@ final class AudioPreferencesStore: ObservableObject {
     }
 
     private func handleAudioDeviceChange() {
-        // Invalidate the TeamTalk SDK device cache so the next query picks up changes.
-        connectionController.invalidateAudioDeviceCache()
         loadCatalogIfNeeded(forceRefresh: true)
         advancedSettingsStore.refresh()
     }
@@ -862,12 +871,12 @@ final class RecordingPreferencesStore: ObservableObject {
 
     init(rootStore: AppPreferencesStore) {
         self.rootStore = rootStore
-        self.state = Self.makeState(from: rootStore)
+        self.state = Self.makeState(from: rootStore.preferences)
 
         rootStore.$preferences
-            .sink { [weak self] _ in
+            .sink { [weak self] newPreferences in
                 guard let self else { return }
-                let next = Self.makeState(from: rootStore)
+                let next = Self.makeState(from: newPreferences)
                 if self.state != next { self.state = next }
             }
             .store(in: &cancellables)
@@ -904,14 +913,18 @@ final class RecordingPreferencesStore: ObservableObject {
         rootStore.updateAutoRestartRecording(enabled)
     }
 
-    private static func makeState(from rootStore: AppPreferencesStore) -> State {
-        let folderURL = rootStore.resolveRecordingFolderURL()
+    private static func makeState(from preferences: AppPreferences) -> State {
+        var folderURL: URL?
+        if let bookmark = preferences.recordingFolderBookmark {
+            var isStale = false
+            folderURL = try? URL(resolvingBookmarkData: bookmark, options: .withSecurityScope, bookmarkDataIsStale: &isStale)
+        }
         return State(
-            folderBookmark: rootStore.preferences.recordingFolderBookmark,
-            audioFileFormat: rootStore.preferences.recordingAudioFileFormat,
-            recordingMode: rootStore.preferences.recordingMode,
+            folderBookmark: preferences.recordingFolderBookmark,
+            audioFileFormat: preferences.recordingAudioFileFormat,
+            recordingMode: preferences.recordingMode,
             folderDisplayPath: folderURL?.path,
-            autoRestartRecording: rootStore.preferences.autoRestartRecording
+            autoRestartRecording: preferences.autoRestartRecording
         )
     }
 }

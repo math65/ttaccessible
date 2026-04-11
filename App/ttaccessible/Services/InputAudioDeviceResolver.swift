@@ -2,7 +2,7 @@
 //  InputAudioDeviceResolver.swift
 //  ttaccessible
 //
-//  Created by Codex on 17/03/2026.
+//  Created by Mathieu Martin on 17/03/2026.
 //
 
 import AudioToolbox
@@ -115,9 +115,12 @@ enum InputAudioDeviceResolver {
             return []
         }
 
-        return deviceIDs.compactMap(makeDeviceInfo(for:)).sorted {
+        let result = deviceIDs.compactMap(makeDeviceInfo(for:)).sorted {
             $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
+        let names = result.map { "\($0.name) (\($0.inputChannels)ch, \(Int($0.nominalSampleRate))Hz)" }.joined(separator: ", ")
+        AudioLogger.log("InputAudioDeviceResolver: %d input devices — %@", result.count, names)
+        return result
     }
 
     nonisolated static func contains(_ preset: InputChannelPreset, for device: InputAudioDeviceInfo?) -> Bool {

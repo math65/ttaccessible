@@ -38,6 +38,15 @@ struct PreferencesConnectionView: View {
                 )
                 .toggleStyle(.switch)
 
+                Toggle(
+                    L10n.text("preferences.connection.skipKickConfirmation"),
+                    isOn: Binding(
+                        get: { store.state.skipKickConfirmation },
+                        set: { store.updateSkipKickConfirmation($0) }
+                    )
+                )
+                .toggleStyle(.switch)
+
                 Divider()
 
                 VStack(alignment: .leading, spacing: 8) {

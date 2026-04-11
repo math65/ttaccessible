@@ -340,7 +340,7 @@ final class ChannelFilesViewController: NSViewController {
     }
 
     private func updateTransferFooter() {
-        // Nettoyer les IDs annulés qui ont disparu de la session
+        // Clean up cancelled transfer IDs that are no longer in the session
         cancelledTransferIDs = cancelledTransferIDs.filter { id in
             session.activeTransfers.contains { $0.transferID == id }
         }

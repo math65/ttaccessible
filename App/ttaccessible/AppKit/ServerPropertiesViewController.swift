@@ -80,7 +80,7 @@ final class ServerPropertiesViewController: NSViewController {
         contentStack.spacing = 4
         contentStack.translatesAutoresizingMaskIntoConstraints = false
 
-        // Section Général
+        // General section
         contentStack.addArrangedSubview(sectionHeader(L10n.text("serverProperties.form.section.general")))
 
         let motdScrollView = NSScrollView()
@@ -105,7 +105,7 @@ final class ServerPropertiesViewController: NSViewController {
         autoSaveCheck.translatesAutoresizingMaskIntoConstraints = false
         contentStack.addArrangedSubview(autoSaveCheck)
 
-        // Section Limites de débit
+        // Bandwidth limits section
         contentStack.addArrangedSubview(sectionHeader(L10n.text("serverProperties.form.section.bandwidth")))
 
         let bwRows: [(String, NSView)] = [

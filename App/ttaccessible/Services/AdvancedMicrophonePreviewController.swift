@@ -2,7 +2,7 @@
 //  AdvancedMicrophonePreviewController.swift
 //  ttaccessible
 //
-//  Created by Codex on 18/03/2026.
+//  Created by Mathieu Martin on 18/03/2026.
 //
 
 import AVFAudio

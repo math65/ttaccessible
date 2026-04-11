@@ -2,7 +2,7 @@
 //  AdvancedMicrophoneAudioEngine.swift
 //  ttaccessible
 //
-//  Created by Codex on 17/03/2026.
+//  Created by Mathieu Martin on 17/03/2026.
 //
 
 import AudioToolbox
@@ -100,6 +100,21 @@ final class AdvancedMicrophoneAudioEngine {
     /// Mixer node used as the stable tap point.
     private var mixerNode: AVAudioMixerNode?
 
+    // Standalone AUHAL for non-default devices.
+    private var standaloneAUHAL: AudioUnit?
+    private var auhalChannelCount: Int = 0
+    private var auhalSampleRate: Double = 0
+    private var auhalBufferFrameCount: UInt32 = 0
+
+    // Pre-allocated render buffers for AUHAL callback.
+    private var auhalRenderBufferPtr: UnsafeMutablePointer<AudioBufferList>?
+    private var auhalRenderDataPtrs: [UnsafeMutablePointer<Float>] = []
+
+    // Accumulation buffer for AUHAL (to batch ~40ms worth of frames).
+    private var auhalAccumBuffer: [Float] = []
+    private var auhalAccumWriteIndex: Int = 0
+    private var auhalAccumTargetFrames: Int = 0
+
     // Pre-allocated buffers reused across audio callbacks to avoid heap allocations on the real-time thread.
     private var interleavedBuffer = [Float]()
     private var selectedBuffer = [Float]()
@@ -116,7 +131,7 @@ final class AdvancedMicrophoneAudioEngine {
 
     var isRunning: Bool {
         withStateLock {
-            engine != nil
+            engine != nil || standaloneAUHAL != nil
         }
     }
 
@@ -153,28 +168,25 @@ final class AdvancedMicrophoneAudioEngine {
             throw AdvancedMicrophoneAudioEngineError.deviceUnavailable
         }
 
-        let newEngine = AVAudioEngine()
-        let inputNode = newEngine.inputNode
-        // Set the input device via the underlying Audio Unit.
-        if let deviceID = Self.audioDeviceID(forUID: configuration.device.uid) {
-            let defaultDeviceID = Self.systemDefaultInputDeviceID()
-            if deviceID != defaultDeviceID, let audioUnit = inputNode.audioUnit {
-                var devID = deviceID
-                let status = AudioUnitSetProperty(
-                    audioUnit,
-                    kAudioOutputUnitProperty_CurrentDevice,
-                    kAudioUnitScope_Global,
-                    0,
-                    &devID,
-                    UInt32(MemoryLayout<AudioDeviceID>.size)
-                )
-                if status != noErr {
-                    throw AdvancedMicrophoneAudioEngineError.deviceUnavailable
-                }
-            }
-        } else {
+        guard let deviceID = Self.audioDeviceID(forUID: configuration.device.uid) else {
             throw AdvancedMicrophoneAudioEngineError.deviceUnavailable
         }
+
+        let defaultDeviceID = Self.systemDefaultInputDeviceID()
+        let isSystemDefault = (deviceID == defaultDeviceID)
+
+        if isSystemDefault {
+            return try startWithAVAudioEngine(configuration: configuration, deviceID: deviceID)
+        } else {
+            return try startWithStandaloneAUHAL(configuration: configuration, deviceID: deviceID)
+        }
+    }
+
+    // MARK: - AVAudioEngine Path (system default device)
+
+    private func startWithAVAudioEngine(configuration: AdvancedMicrophoneAudioConfiguration, deviceID: AudioDeviceID) throws -> Int32 {
+        let newEngine = AVAudioEngine()
+        let inputNode = newEngine.inputNode
 
         // Request all input channels from the device (multi-stream USB interfaces).
         let deviceInputChannels = UInt32(configuration.device.inputChannels)
@@ -219,8 +231,6 @@ final class AdvancedMicrophoneAudioEngine {
         )
 
         // Build the audio graph: inputNode → mixerNode → sinkNode
-        // The tap is installed on the mixer node to receive audio.
-
         let mixer = AVAudioMixerNode()
         newEngine.attach(mixer)
 
@@ -283,20 +293,362 @@ final class AdvancedMicrophoneAudioEngine {
         return streamID
     }
 
+    // MARK: - Standalone AUHAL Path (non-default devices)
+
+    private func startWithStandaloneAUHAL(configuration: AdvancedMicrophoneAudioConfiguration, deviceID: AudioDeviceID) throws -> Int32 {
+        // Create AUHAL AudioComponent.
+        var componentDesc = AudioComponentDescription(
+            componentType: kAudioUnitType_Output,
+            componentSubType: kAudioUnitSubType_HALOutput,
+            componentManufacturer: kAudioUnitManufacturer_Apple,
+            componentFlags: 0,
+            componentFlagsMask: 0
+        )
+        guard let component = AudioComponentFindNext(nil, &componentDesc) else {
+            throw AdvancedMicrophoneAudioEngineError.deviceUnavailable
+        }
+
+        var audioUnit: AudioUnit?
+        guard AudioComponentInstanceNew(component, &audioUnit) == noErr, let au = audioUnit else {
+            throw AdvancedMicrophoneAudioEngineError.deviceUnavailable
+        }
+
+        // Enable input IO on element 1.
+        var enableIO: UInt32 = 1
+        var status = AudioUnitSetProperty(
+            au,
+            kAudioOutputUnitProperty_EnableIO,
+            kAudioUnitScope_Input,
+            1,
+            &enableIO,
+            UInt32(MemoryLayout<UInt32>.size)
+        )
+        guard status == noErr else {
+            AudioComponentInstanceDispose(au)
+            throw AdvancedMicrophoneAudioEngineError.deviceUnavailable
+        }
+
+        // Disable output IO on element 0.
+        var disableIO: UInt32 = 0
+        status = AudioUnitSetProperty(
+            au,
+            kAudioOutputUnitProperty_EnableIO,
+            kAudioUnitScope_Output,
+            0,
+            &disableIO,
+            UInt32(MemoryLayout<UInt32>.size)
+        )
+        guard status == noErr else {
+            AudioComponentInstanceDispose(au)
+            throw AdvancedMicrophoneAudioEngineError.deviceUnavailable
+        }
+
+        // Set the device.
+        var devID = deviceID
+        status = AudioUnitSetProperty(
+            au,
+            kAudioOutputUnitProperty_CurrentDevice,
+            kAudioUnitScope_Global,
+            0,
+            &devID,
+            UInt32(MemoryLayout<AudioDeviceID>.size)
+        )
+        guard status == noErr else {
+            AudioComponentInstanceDispose(au)
+            throw AdvancedMicrophoneAudioEngineError.deviceUnavailable
+        }
+
+        // Read native format from input scope element 1.
+        var nativeASBD = AudioStreamBasicDescription()
+        var asbdSize = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
+        status = AudioUnitGetProperty(
+            au,
+            kAudioUnitProperty_StreamFormat,
+            kAudioUnitScope_Input,
+            1,
+            &nativeASBD,
+            &asbdSize
+        )
+        guard status == noErr else {
+            AudioComponentInstanceDispose(au)
+            throw AdvancedMicrophoneAudioEngineError.deviceUnavailable
+        }
+
+        let channelCount = max(Int(nativeASBD.mChannelsPerFrame), Int(configuration.device.inputChannels))
+        let sampleRate = nativeASBD.mSampleRate > 0 ? nativeASBD.mSampleRate : (configuration.targetFormat.sampleRate > 0 ? configuration.targetFormat.sampleRate : 48_000)
+
+        // Set Float32 non-interleaved output format on output scope element 1.
+        var outputASBD = AudioStreamBasicDescription(
+            mSampleRate: sampleRate,
+            mFormatID: kAudioFormatLinearPCM,
+            mFormatFlags: kAudioFormatFlagIsFloat | kAudioFormatFlagIsPacked | kAudioFormatFlagIsNonInterleaved,
+            mBytesPerPacket: UInt32(MemoryLayout<Float>.size),
+            mFramesPerPacket: 1,
+            mBytesPerFrame: UInt32(MemoryLayout<Float>.size),
+            mChannelsPerFrame: UInt32(channelCount),
+            mBitsPerChannel: UInt32(MemoryLayout<Float>.size * 8),
+            mReserved: 0
+        )
+        status = AudioUnitSetProperty(
+            au,
+            kAudioUnitProperty_StreamFormat,
+            kAudioUnitScope_Output,
+            1,
+            &outputASBD,
+            UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
+        )
+        guard status == noErr else {
+            AudioComponentInstanceDispose(au)
+            throw AdvancedMicrophoneAudioEngineError.deviceUnavailable
+        }
+
+        // Set max frames per slice.
+        var maxFrames: UInt32 = 4096
+        AudioUnitSetProperty(
+            au,
+            kAudioUnitProperty_MaximumFramesPerSlice,
+            kAudioUnitScope_Global,
+            0,
+            &maxFrames,
+            UInt32(MemoryLayout<UInt32>.size)
+        )
+
+        // Pre-allocate render buffers.
+        let renderBufferSize = Int(maxFrames)
+        let ablSize = MemoryLayout<AudioBufferList>.size + MemoryLayout<AudioBuffer>.size * (channelCount - 1)
+        let ablPtr = UnsafeMutablePointer<AudioBufferList>.allocate(capacity: 1)
+        let rawPtr = UnsafeMutableRawPointer(ablPtr)
+        memset(rawPtr, 0, ablSize)
+        ablPtr.pointee.mNumberBuffers = UInt32(channelCount)
+        var dataPtrs: [UnsafeMutablePointer<Float>] = []
+        let buffers = UnsafeMutableAudioBufferListPointer(ablPtr)
+        for i in 0..<channelCount {
+            let dataPtr = UnsafeMutablePointer<Float>.allocate(capacity: renderBufferSize)
+            dataPtr.initialize(repeating: 0, count: renderBufferSize)
+            dataPtrs.append(dataPtr)
+            buffers[i].mNumberChannels = 1
+            buffers[i].mDataByteSize = UInt32(renderBufferSize * MemoryLayout<Float>.size)
+            buffers[i].mData = UnsafeMutableRawPointer(dataPtr)
+        }
+
+        // Compute accumulation target (~40ms worth of frames).
+        let tapIntervalMSec = min(Int(configuration.targetFormat.txIntervalMSec), 40)
+        let accumTargetFrames = max(Int((sampleRate * Double(tapIntervalMSec)) / 1000.0), 256)
+        let accumBufferSize = accumTargetFrames * channelCount * 2
+
+        let effectiveTargetFormat = AdvancedMicrophoneAudioTargetFormat(
+            sampleRate: sampleRate,
+            channels: configuration.targetFormat.channels,
+            txIntervalMSec: configuration.targetFormat.txIntervalMSec
+        )
+
+        // Store state before setting callback.
+        let streamID = withStateLock {
+            let stored = AdvancedMicrophoneAudioConfiguration(
+                device: InputAudioDeviceInfo(
+                    uid: configuration.device.uid,
+                    name: configuration.device.name,
+                    inputChannels: channelCount,
+                    nominalSampleRate: sampleRate
+                ),
+                preset: configuration.preset,
+                inputGainDB: configuration.inputGainDB,
+                targetFormat: effectiveTargetFormat,
+                echoCancellationEnabled: configuration.echoCancellationEnabled
+            )
+            currentConfiguration = stored
+            standaloneAUHAL = au
+            auhalChannelCount = channelCount
+            auhalSampleRate = sampleRate
+            auhalBufferFrameCount = maxFrames
+            auhalRenderBufferPtr = ablPtr
+            auhalRenderDataPtrs = dataPtrs
+            auhalAccumBuffer = [Float](repeating: 0, count: accumBufferSize)
+            auhalAccumWriteIndex = 0
+            auhalAccumTargetFrames = accumTargetFrames
+            activeStreamID = nextStreamID
+            nextStreamID = nextStreamID == Int32.max ? 1 : nextStreamID + 1
+            return activeStreamID
+        }
+
+        // Create WebRTC AEC3 echo canceller if enabled.
+        if configuration.echoCancellationEnabled {
+            let aecConfig = EchoCanceller.Configuration(
+                sampleRate: Int(sampleRate),
+                channels: max(configuration.targetFormat.channels, 1)
+            )
+            echoCanceller = EchoCanceller(configuration: aecConfig)
+        } else {
+            echoCanceller = nil
+        }
+
+        // Set input callback.
+        var callbackStruct = AURenderCallbackStruct(
+            inputProc: auhalInputCallback,
+            inputProcRefCon: Unmanaged.passUnretained(self).toOpaque()
+        )
+        status = AudioUnitSetProperty(
+            au,
+            kAudioOutputUnitProperty_SetInputCallback,
+            kAudioUnitScope_Global,
+            0,
+            &callbackStruct,
+            UInt32(MemoryLayout<AURenderCallbackStruct>.size)
+        )
+        guard status == noErr else {
+            freeAUHALRenderBuffers()
+            AudioComponentInstanceDispose(au)
+            withStateLock {
+                standaloneAUHAL = nil
+                currentConfiguration = nil
+                activeStreamID = 0
+            }
+            throw AdvancedMicrophoneAudioEngineError.deviceUnavailable
+        }
+
+        // Initialize and start.
+        status = AudioUnitInitialize(au)
+        guard status == noErr else {
+            freeAUHALRenderBuffers()
+            AudioComponentInstanceDispose(au)
+            withStateLock {
+                standaloneAUHAL = nil
+                currentConfiguration = nil
+                activeStreamID = 0
+            }
+            throw AdvancedMicrophoneAudioEngineError.engineStartFailed
+        }
+
+        status = AudioOutputUnitStart(au)
+        guard status == noErr else {
+            AudioUnitUninitialize(au)
+            freeAUHALRenderBuffers()
+            AudioComponentInstanceDispose(au)
+            withStateLock {
+                standaloneAUHAL = nil
+                currentConfiguration = nil
+                activeStreamID = 0
+            }
+            throw AdvancedMicrophoneAudioEngineError.engineStartFailed
+        }
+
+        return streamID
+    }
+
     private func stopLocked() {
-        let stoppedEngine = clearState(for: nil)
         echoCanceller = nil
 
+        // Stop AVAudioEngine path.
+        let stoppedEngine = clearState(for: nil)
         if let stoppedEngine {
-            // Remove tap from mixer node.
             if let mixer = mixerNode {
                 mixer.removeTap(onBus: 0)
             }
             stoppedEngine.stop()
         }
+
+        // Stop standalone AUHAL path.
+        let stoppedAUHAL: AudioUnit? = withStateLock {
+            let au = standaloneAUHAL
+            standaloneAUHAL = nil
+            if au == nil {
+                currentConfiguration = nil
+                activeStreamID = 0
+            }
+            return au
+        }
+
+        if let au = stoppedAUHAL {
+            AudioOutputUnitStop(au)
+            AudioUnitUninitialize(au)
+            AudioComponentInstanceDispose(au)
+            freeAUHALRenderBuffers()
+            withStateLock {
+                currentConfiguration = nil
+                activeStreamID = 0
+            }
+        }
     }
 
-    // MARK: - Audio Processing
+    // MARK: - AUHAL Render Buffers
+
+    private func freeAUHALRenderBuffers() {
+        for ptr in auhalRenderDataPtrs {
+            ptr.deallocate()
+        }
+        auhalRenderDataPtrs.removeAll()
+        auhalRenderBufferPtr?.deallocate()
+        auhalRenderBufferPtr = nil
+    }
+
+    // MARK: - AUHAL Input Callback Processing
+
+    func handleAUHALInput(
+        _ audioUnit: AudioUnit,
+        _ ioActionFlags: UnsafeMutablePointer<AudioUnitRenderActionFlags>,
+        _ inTimeStamp: UnsafePointer<AudioTimeStamp>,
+        _ inBusNumber: UInt32,
+        _ inNumberFrames: UInt32
+    ) {
+        guard let ablPtr = auhalRenderBufferPtr else { return }
+        let channelCount = auhalChannelCount
+        guard channelCount > 0 else { return }
+
+        // Reset buffer sizes for this render call.
+        let buffers = UnsafeMutableAudioBufferListPointer(ablPtr)
+        for i in 0..<channelCount {
+            buffers[i].mDataByteSize = UInt32(Int(inNumberFrames) * MemoryLayout<Float>.size)
+        }
+
+        let renderStatus = AudioUnitRender(audioUnit, ioActionFlags, inTimeStamp, inBusNumber, inNumberFrames, ablPtr)
+        guard renderStatus == noErr else { return }
+
+        let frameCount = Int(inNumberFrames)
+
+        // Interleave into accumulation buffer.
+        let neededAccum = auhalAccumWriteIndex + frameCount * channelCount
+        if neededAccum > auhalAccumBuffer.count {
+            // Should not happen with proper pre-allocation; if it does, process what we have.
+            if auhalAccumWriteIndex > 0 {
+                processAccumulatedAUHALFrames(channelCount: channelCount)
+            }
+            auhalAccumWriteIndex = 0
+        }
+
+        // Write interleaved frames to accumulation buffer.
+        for frame in 0..<frameCount {
+            for ch in 0..<channelCount {
+                let srcPtr = auhalRenderDataPtrs[ch]
+                auhalAccumBuffer[auhalAccumWriteIndex] = srcPtr[frame]
+                auhalAccumWriteIndex += 1
+            }
+        }
+
+        // Check if we've accumulated enough frames.
+        let accumulatedFrames = auhalAccumWriteIndex / channelCount
+        if accumulatedFrames >= auhalAccumTargetFrames {
+            processAccumulatedAUHALFrames(channelCount: channelCount)
+            auhalAccumWriteIndex = 0
+        }
+    }
+
+    private func processAccumulatedAUHALFrames(channelCount: Int) {
+        let totalSamples = auhalAccumWriteIndex
+        guard totalSamples > 0, channelCount > 0 else { return }
+        let frameCount = totalSamples / channelCount
+
+        // Use the interleavedBuffer for processing.
+        if interleavedBuffer.count < totalSamples {
+            interleavedBuffer = [Float](repeating: 0, count: totalSamples)
+        }
+        for i in 0..<totalSamples {
+            interleavedBuffer[i] = auhalAccumBuffer[i]
+        }
+
+        processInterleavedAudio(interleavedData: &interleavedBuffer, frameCount: frameCount, availableChannels: channelCount)
+    }
+
+    // MARK: - AVAudioEngine Audio Processing
 
     private func handleAVAudioBuffer(_ buffer: AVAudioPCMBuffer, channelCount: Int) {
         let inputChannelCount = channelCount
@@ -307,20 +659,6 @@ final class AdvancedMicrophoneAudioEngine {
 
         let availableChannels = min(inputChannelCount, Int(buffer.format.channelCount))
         guard availableChannels > 0 else { return }
-
-        // Snapshot config — single lock acquisition.
-        guard let snapshot: StateSnapshot = withStateLock({
-            guard engine != nil,
-                  let configuration = currentConfiguration,
-                  activeStreamID > 0 else {
-                return nil
-            }
-            return StateSnapshot(configuration: configuration, streamID: activeStreamID)
-        }) else {
-            return
-        }
-
-        let configuration = snapshot.configuration
 
         // Interleave into pre-allocated buffer.
         let interleavedCount = frameCount * availableChannels
@@ -336,6 +674,26 @@ final class AdvancedMicrophoneAudioEngine {
             return
         }
 
+        processInterleavedAudio(interleavedData: &interleavedBuffer, frameCount: frameCount, availableChannels: availableChannels)
+    }
+
+    // MARK: - Shared Audio Processing
+
+    private func processInterleavedAudio(interleavedData: inout [Float], frameCount: Int, availableChannels: Int) {
+        // Snapshot config — single lock acquisition.
+        guard let snapshot: StateSnapshot = withStateLock({
+            guard engine != nil || standaloneAUHAL != nil,
+                  let configuration = currentConfiguration,
+                  activeStreamID > 0 else {
+                return nil
+            }
+            return StateSnapshot(configuration: configuration, streamID: activeStreamID)
+        }) else {
+            return
+        }
+
+        let configuration = snapshot.configuration
+
         let selection = resolvedSelection(for: configuration.preset, availableChannels: availableChannels, physicalChannels: configuration.device.inputChannels)
 
         // Select channels.
@@ -344,7 +702,7 @@ final class AdvancedMicrophoneAudioEngine {
             selectedBuffer = [Float](repeating: 0, count: selectedCount)
         }
         selectChannelsInPlace(
-            from: &interleavedBuffer,
+            from: &interleavedData,
             to: &selectedBuffer,
             frameCount: frameCount,
             sourceChannels: availableChannels,
@@ -422,9 +780,11 @@ final class AdvancedMicrophoneAudioEngine {
             }
 
             engine = nil
-            currentConfiguration = nil
+            if standaloneAUHAL == nil {
+                currentConfiguration = nil
+                activeStreamID = 0
+            }
             mixerNode = nil
-            activeStreamID = 0
             return currentEngine
         }
     }
@@ -626,5 +986,34 @@ final class AdvancedMicrophoneAudioEngine {
         if clamped >= 1 { return Int16.max }
         if clamped <= -1 { return Int16.min }
         return Int16((clamped * 32767).rounded())
+    }
+}
+
+// MARK: - AUHAL C Callback
+
+private func auhalInputCallback(
+    _ inRefCon: UnsafeMutableRawPointer,
+    _ ioActionFlags: UnsafeMutablePointer<AudioUnitRenderActionFlags>,
+    _ inTimeStamp: UnsafePointer<AudioTimeStamp>,
+    _ inBusNumber: UInt32,
+    _ inNumberFrames: UInt32,
+    _ ioData: UnsafeMutablePointer<AudioBufferList>?
+) -> OSStatus {
+    let engine = Unmanaged<AdvancedMicrophoneAudioEngine>.fromOpaque(inRefCon).takeUnretainedValue()
+    engine.handleAUHALInput(
+        // We need the AudioUnit to call AudioUnitRender. Get it from the engine.
+        engine.standaloneAUHALForCallback!,
+        ioActionFlags,
+        inTimeStamp,
+        inBusNumber,
+        inNumberFrames
+    )
+    return noErr
+}
+
+// Extension to expose AUHAL for callback (avoids lock in hot path).
+extension AdvancedMicrophoneAudioEngine {
+    var standaloneAUHALForCallback: AudioUnit? {
+        standaloneAUHAL
     }
 }

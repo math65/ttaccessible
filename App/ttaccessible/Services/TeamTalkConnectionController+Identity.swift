@@ -2,7 +2,7 @@
 //  TeamTalkConnectionController+Identity.swift
 //  ttaccessible
 //
-//  Created by Codex on 30/03/2026.
+//  Created by Mathieu Martin on 30/03/2026.
 //
 
 import Foundation
@@ -144,6 +144,7 @@ extension TeamTalkConnectionController {
 
     func clearAutoAwayStateLocked() {
         isAutoAwayActive = false
+        autoAwayActivationTime = nil
         autoAwayRestoreStatusMessage = ""
     }
 
@@ -203,7 +204,7 @@ extension TeamTalkConnectionController {
         let threshold = Double(timeoutMinutes * 60)
 
         if isAutoAwayActive {
-            guard idleSeconds < threshold else {
+            guard idleSeconds < 10 else {
                 return false
             }
             return deactivateAutoAwayLocked(instance: instance)
@@ -228,6 +229,7 @@ extension TeamTalkConnectionController {
         do {
             try waitForCommandCompletionLocked(instance: instance, commandID: commandID)
             isAutoAwayActive = true
+            autoAwayActivationTime = Date()
             appendAutoAwayActivatedHistoryLocked()
             return true
         } catch {

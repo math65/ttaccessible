@@ -2,7 +2,7 @@
 //  TeamTalkConnectionController.swift
 //  ttaccessible
 //
-//  Created by Codex on 17/03/2026.
+//  Created by Mathieu Martin on 17/03/2026.
 //
 
 import AVFoundation
@@ -102,8 +102,10 @@ final class TeamTalkConnectionController {
     var reconnectPassword: String?
     var reconnectOptions = TeamTalkConnectOptions()
     var lastChannelID: Int32 = 0
+    var isRestartingSoundSystem = false
     var lastAutoAwayCheckTime: CFAbsoluteTime = 0
     var isAutoAwayActive = false
+    var autoAwayActivationTime: Date?
     var autoAwayRestoreStatusMessage = ""
     var pendingUserAccounts: [UserAccountProperties] = []
     var listUserAccountsCmdID: Int32 = -1

@@ -2,7 +2,7 @@
 //  TeamTalkConnectionController+Audio.swift
 //  ttaccessible
 //
-//  Created by Codex on 30/03/2026.
+//  Created by Mathieu Martin on 30/03/2026.
 //
 
 import AVFoundation
@@ -53,6 +53,27 @@ extension TeamTalkConnectionController {
                 return
             }
 
+            guard !self.isRestartingSoundSystem else {
+                AudioLogger.log("restartSoundSystem: skipped (already restarting)")
+                DispatchQueue.main.async { completion(.success(())) }
+                return
+            }
+            self.isRestartingSoundSystem = true
+            defer { self.isRestartingSoundSystem = false }
+
+            AudioLogger.log("restartSoundSystem: begin")
+
+            let hadMic = self.isAnyMicrophoneEngineRunning || self.inputAudioReady
+            let hadVoice = self.voiceTransmissionEnabled
+            if hadMic, let instance = self.instance {
+                self.stopAdvancedMicrophoneInputLocked(instance: instance, reason: "restartSoundSystem")
+            }
+
+            if self.teamTalkVirtualInputReady, let instance = self.instance {
+                _ = TT_CloseSoundInputDevice(instance)
+                self.teamTalkVirtualInputReady = false
+            }
+
             let hadOutput = self.outputAudioReady
             if hadOutput, let instance = self.instance {
                 _ = TT_CloseSoundOutputDevice(instance)
@@ -62,6 +83,8 @@ extension TeamTalkConnectionController {
             let ok = TT_RestartSoundSystem()
             self.cachedSoundDevices = []
             self.cachedAudioDeviceCatalog = nil
+
+            AudioLogger.log("restartSoundSystem: TT_RestartSoundSystem returned %d", ok)
 
             guard ok != 0 else {
                 DispatchQueue.main.async {
@@ -74,11 +97,22 @@ extension TeamTalkConnectionController {
                 do {
                     try self.ensureDirectOutputAudioReadyLocked(instance: instance)
                 } catch {
+                    AudioLogger.log("restartSoundSystem: output re-open failed — %@", error.localizedDescription)
                     DispatchQueue.main.async { completion(.failure(error)) }
                     return
                 }
             }
 
+            if hadMic, let instance = self.instance {
+                do {
+                    try self.ensureAdvancedMicrophoneInputReadyLocked(instance: instance)
+                    if hadVoice { self.voiceTransmissionEnabled = true }
+                } catch {
+                    AudioLogger.log("restartSoundSystem: mic restart failed — %@", error.localizedDescription)
+                }
+            }
+
+            AudioLogger.log("restartSoundSystem: done")
             DispatchQueue.main.async { completion(.success(())) }
         }
     }
@@ -244,8 +278,12 @@ extension TeamTalkConnectionController {
             throw TeamTalkConnectionError.internalError(L10n.text("preferences.audio.advanced.error.deviceUnavailable"))
         }
 
+        AudioLogger.log("ensureAdvancedMicrophoneInputReady: device=%@ channels=%d rate=%.0f", deviceInfo.name, deviceInfo.inputChannels, deviceInfo.nominalSampleRate)
+
         let effectivePreferences = effectiveMicrophoneProcessingPreferencesLocked(for: deviceInfo)
         let targetFormat = try currentAdvancedMicrophoneTargetFormatLocked(instance: instance)
+
+        AudioLogger.log("ensureAdvancedMicrophoneInputReady: targetFormat rate=%.0f channels=%d txInterval=%d", targetFormat.sampleRate, targetFormat.channels, targetFormat.txIntervalMSec)
 
         do {
             let aecEnabled = effectivePreferences.echoCancellationEnabled
@@ -284,6 +322,7 @@ extension TeamTalkConnectionController {
         instance: UnsafeMutableRawPointer,
         preferences: AppPreferences
     ) throws {
+        AudioLogger.log("reinitializeAudioDevicesLocked: begin")
         let wasVoiceTransmissionEnabled = voiceTransmissionEnabled
         let wasInputAudioReady = inputAudioReady
         if wasVoiceTransmissionEnabled || wasInputAudioReady || isAnyMicrophoneEngineRunning {
@@ -292,6 +331,11 @@ extension TeamTalkConnectionController {
         voiceTransmissionEnabled = false
         inputAudioReady = false
         advancedMicrophoneTargetFormat = nil
+
+        if teamTalkVirtualInputReady {
+            _ = TT_CloseSoundInputDevice(instance)
+            teamTalkVirtualInputReady = false
+        }
 
         if outputAudioReady {
             _ = TT_CloseSoundOutputDevice(instance)
@@ -346,6 +390,7 @@ extension TeamTalkConnectionController {
         }
 
         cachedSoundDevices = Array(devices.prefix(Int(count)))
+        AudioLogger.log("loadSoundDevicesLocked: loaded %d devices", cachedSoundDevices.count)
         return cachedSoundDevices
     }
 
@@ -386,14 +431,18 @@ extension TeamTalkConnectionController {
         }
 
         let outputDeviceID = try selectedOutputDeviceIDLocked()
+        AudioLogger.log("ensureDirectOutputAudioReady: opening output device ID=%d", outputDeviceID)
         guard TT_InitSoundOutputDevice(instance, outputDeviceID) != 0 else {
+            AudioLogger.log("ensureDirectOutputAudioReady: FAILED to open output device")
             throw TeamTalkConnectionError.internalError(L10n.text("connectedServer.audio.error.outputStartFailed"))
         }
         outputAudioReady = true
         applyOutputGainLocked(instance: instance, gainDB: preferencesStore.preferences.outputGainDB)
+        AudioLogger.log("ensureDirectOutputAudioReady: output ready")
     }
 
     func stopAdvancedMicrophoneInputLocked(instance: UnsafeMutableRawPointer, reason: String) {
+        AudioLogger.log("stopAdvancedMicrophoneInput: reason=%@", reason)
         // Disable muxed audio block events (AEC reference).
         TT_EnableAudioBlockEvent(instance, TT_MUXED_USERID, UInt32(STREAMTYPE_VOICE.rawValue), 0)
         advancedMicrophoneEngine.stop()
@@ -407,11 +456,14 @@ extension TeamTalkConnectionController {
             return
         }
 
+        AudioLogger.log("ensureTeamTalkVirtualInputReady: opening virtual input device")
         guard TT_InitSoundInputDevice(instance, TT_SOUNDDEVICE_ID_TEAMTALK_VIRTUAL) != 0 else {
+            AudioLogger.log("ensureTeamTalkVirtualInputReady: FAILED")
             throw TeamTalkConnectionError.internalError(L10n.text("connectedServer.audio.error.inputStartFailed"))
         }
 
         teamTalkVirtualInputReady = true
+        AudioLogger.log("ensureTeamTalkVirtualInputReady: virtual input ready")
     }
 
     func effectiveMicrophoneProcessingPreferencesLocked(
@@ -768,6 +820,18 @@ extension TeamTalkConnectionController {
         let scaled = defaultVolume * linear
         let clamped = min(max(scaled.rounded(), minVolume), maxVolume)
         return INT32(clamped)
+    }
+
+    nonisolated static func userVolumeFromPercent(_ percent: Double) -> INT32 {
+        let raw = 82.832 * exp(0.0508 * percent) - 50
+        let clamped = min(max(raw.rounded(), Double(SOUND_VOLUME_MIN.rawValue)), Double(SOUND_VOLUME_MAX.rawValue))
+        return INT32(clamped)
+    }
+
+    nonisolated static func percentFromUserVolume(_ volume: INT32) -> Int {
+        let v = Double(volume)
+        let percent = log((v + 50) / 82.832) / 0.0508
+        return Int(min(max(percent.rounded(), 0), 100))
     }
 
     nonisolated static func formatGainDB(_ value: Double) -> String {

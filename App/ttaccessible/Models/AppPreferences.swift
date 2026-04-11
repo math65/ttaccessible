@@ -2,7 +2,7 @@
 //  AppPreferences.swift
 //  ttaccessible
 //
-//  Created by Codex on 17/03/2026.
+//  Created by Mathieu Martin on 17/03/2026.
 //
 
 import Foundation
@@ -85,6 +85,7 @@ struct AppPreferences: Codable, Equatable {
         case recordingMode
         case soundPack
         case disabledSoundEvents
+        case skipKickConfirmation
     }
 
     var defaultNickname: String
@@ -131,6 +132,7 @@ struct AppPreferences: Codable, Equatable {
     var recordingMode: Int
     var soundPack: String
     var disabledSoundEvents: Set<NotificationSound>
+    var skipKickConfirmation: Bool
     init(
         defaultNickname: String = "TTAccessible",
         defaultStatusMessage: String = "",
@@ -175,7 +177,8 @@ struct AppPreferences: Codable, Equatable {
         recordingAudioFileFormat: Int = 2,
         recordingMode: Int = 1,
         soundPack: String = "Default",
-        disabledSoundEvents: Set<NotificationSound> = []
+        disabledSoundEvents: Set<NotificationSound> = [],
+        skipKickConfirmation: Bool = false
     ) {
         self.defaultNickname = defaultNickname
         self.defaultStatusMessage = defaultStatusMessage
@@ -221,6 +224,7 @@ struct AppPreferences: Codable, Equatable {
         self.recordingMode = recordingMode
         self.soundPack = soundPack
         self.disabledSoundEvents = disabledSoundEvents
+        self.skipKickConfirmation = skipKickConfirmation
     }
 
     nonisolated static func clampGainDB(_ value: Double) -> Double {
@@ -298,6 +302,7 @@ struct AppPreferences: Codable, Equatable {
         recordingMode = try container.decodeIfPresent(Int.self, forKey: .recordingMode) ?? 1
         soundPack = try container.decodeIfPresent(String.self, forKey: .soundPack) ?? "Default"
         disabledSoundEvents = try container.decodeIfPresent(Set<NotificationSound>.self, forKey: .disabledSoundEvents) ?? []
+        skipKickConfirmation = try container.decodeIfPresent(Bool.self, forKey: .skipKickConfirmation) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -346,6 +351,7 @@ struct AppPreferences: Codable, Equatable {
         try container.encode(recordingMode, forKey: .recordingMode)
         try container.encode(soundPack, forKey: .soundPack)
         try container.encode(disabledSoundEvents, forKey: .disabledSoundEvents)
+        try container.encode(skipKickConfirmation, forKey: .skipKickConfirmation)
     }
 
     func isSubscriptionEnabledByDefault(_ option: UserSubscriptionOption) -> Bool {

@@ -2,7 +2,7 @@
 //  TeamTalkConnectionController+ChannelManagement.swift
 //  ttaccessible
 //
-//  Created by Codex on 30/03/2026.
+//  Created by Mathieu Martin on 30/03/2026.
 //
 
 import Foundation

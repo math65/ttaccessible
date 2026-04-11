@@ -2,7 +2,7 @@
 //  AppDelegate.swift
 //  ttaccessible
 //
-//  Created by Codex on 17/03/2026.
+//  Created by Mathieu Martin on 17/03/2026.
 //
 
 import AppKit
@@ -47,10 +47,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var activeRecordingMode: Int = 0
     private var lastObservedChannelID: Int32 = 0
 
+    private var deviceChangeObserver: Any?
+    private var globalDeviceChangeWorkItem: DispatchWorkItem?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
+        AudioLogger.clear()
+        AudioLogger.log("App launched")
         connectionController.delegate = self
         UNUserNotificationCenter.current().delegate = self
         audioDeviceChangeMonitor.startListening()
+
+        deviceChangeObserver = NotificationCenter.default.addObserver(
+            forName: AudioDeviceChangeMonitor.audioDevicesDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.globalDeviceChangeWorkItem?.cancel()
+            let workItem = DispatchWorkItem { [weak self] in
+                self?.connectionController.restartSoundSystem { _ in }
+            }
+            self?.globalDeviceChangeWorkItem = workItem
+            DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(500), execute: workItem)
+        }
         requestNotificationPermission()
         showSavedServersWindow()
         DispatchQueue.main.async { [weak self] in
@@ -595,6 +613,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard menuState.mode == .connectedServer else { return }
         restoreMainWindow()
         connectedServerViewController?.toggleChannelOperatorAction()
+    }
+
+    func kickSelectedUser() {
+        guard menuState.mode == .connectedServer else { return }
+        restoreMainWindow()
+        connectedServerViewController?.kickUserAction()
+    }
+
+    func kickSelectedUserFromServer() {
+        guard menuState.mode == .connectedServer else { return }
+        restoreMainWindow()
+        connectedServerViewController?.kickUserFromServerAction()
+    }
+
+    func kickBanSelectedUser() {
+        guard menuState.mode == .connectedServer else { return }
+        restoreMainWindow()
+        connectedServerViewController?.kickBanUserAction()
+    }
+
+    func moveSelectedUser() {
+        guard menuState.mode == .connectedServer else { return }
+        restoreMainWindow()
+        connectedServerViewController?.moveUserAction()
     }
 
     func toggleMuteSelectedUser() {
@@ -1298,7 +1340,7 @@ extension AppDelegate: TeamTalkConnectionControllerDelegate {
 }
 
 extension AppDelegate: UNUserNotificationCenterDelegate {
-    // Permet l'affichage des notifications même quand l'app est au premier plan
+    // Allow notifications to display even when the app is in the foreground
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         completionHandler([.banner, .sound])
     }

@@ -2,7 +2,7 @@
 //  ConnectedServerViewController.swift
 //  ttaccessible
 //
-//  Created by Codex on 17/03/2026.
+//  Created by Mathieu Martin on 17/03/2026.
 //
 
 import AppKit
@@ -1001,7 +1001,7 @@ final class ConnectedServerViewController: NSViewController {
         case #selector(kickBanUserAction):
             return isOther && session.isAdministrator
         case #selector(moveUserAction):
-            // L'utilisateur courant peut se déplacer lui-même ; sinon admin/op requis
+            // Current user can move themselves; otherwise admin/op required
             let selectedUsers = selectedUserNodes()
             guard !selectedUsers.isEmpty else { return false }
             let hasOthers = selectedUsers.contains { !$0.isCurrentUser }

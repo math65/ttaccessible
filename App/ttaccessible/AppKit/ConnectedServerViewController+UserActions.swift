@@ -10,10 +10,9 @@ extension ConnectedServerViewController {
         guard case .user(let user)? = selectedNode,
               let window = view.window else { return }
 
-        let volDefault = Double(SOUND_VOLUME_DEFAULT.rawValue)
         let storedVolume = connectionController.userVolumeStore.volume(forUsername: user.username)
         let effectiveVolume = storedVolume ?? user.volumeVoice
-        let currentPercent = Int(Double(effectiveVolume) / volDefault * 100)
+        let currentPercent = TeamTalkConnectionController.percentFromUserVolume(effectiveVolume)
         let originalVolume = effectiveVolume
 
         connectionController.getUserStereo(userID: user.id) { [weak self] currentLeft, currentRight in
@@ -28,7 +27,7 @@ extension ConnectedServerViewController {
             alert.addButton(withTitle: L10n.text("connectedServer.volume.cancel"))
 
             let handler = VolumeSliderHandler(userID: user.id, connectionController: self.connectionController)
-            let slider = NSSlider(value: Double(currentPercent), minValue: 0, maxValue: 200, target: handler, action: #selector(VolumeSliderHandler.sliderChanged(_:)))
+            let slider = NSSlider(value: Double(currentPercent), minValue: 0, maxValue: 100, target: handler, action: #selector(VolumeSliderHandler.sliderChanged(_:)))
             slider.numberOfTickMarks = 0
             slider.isContinuous = true
             slider.frame = NSRect(x: 0, y: 0, width: 280, height: 24)
@@ -56,9 +55,8 @@ extension ConnectedServerViewController {
             alert.beginSheetModal(for: window) { [weak self] response in
                 guard let self else { return }
                 if response == .alertFirstButtonReturn {
-                    let percent = Int(slider.doubleValue)
-                    let raw = Int32(Double(percent) / 100.0 * Double(SOUND_VOLUME_DEFAULT.rawValue))
-                    let clamped = max(Int32(SOUND_VOLUME_MIN.rawValue), min(Int32(SOUND_VOLUME_MAX.rawValue), raw))
+                    let percent = slider.doubleValue
+                    let clamped = TeamTalkConnectionController.userVolumeFromPercent(percent)
                     self.connectionController.setUserVoiceVolume(userID: user.id, username: user.username, volume: clamped)
                     self.connectionController.setUserStereo(
                         userID: user.id,
@@ -139,8 +137,18 @@ extension ConnectedServerViewController {
 
     @objc func kickUserAction(_ sender: Any? = nil) {
         guard case .user(let user)? = selectedNode,
-              !user.isCurrentUser,
-              let window = view.window else { return }
+              !user.isCurrentUser else { return }
+
+        if connectionController.preferencesStore.preferences.skipKickConfirmation {
+            connectionController.kickUser(userID: user.id, channelID: user.channelID) { [weak self] result in
+                if case .failure(let error) = result {
+                    self?.presentError(error)
+                }
+            }
+            return
+        }
+
+        guard let window = view.window else { return }
 
         let alert = NSAlert()
         alert.messageText = L10n.format("connectedServer.kick.title", user.displayName)
@@ -160,8 +168,18 @@ extension ConnectedServerViewController {
 
     @objc func kickUserFromServerAction(_ sender: Any? = nil) {
         guard case .user(let user)? = selectedNode,
-              !user.isCurrentUser,
-              let window = view.window else { return }
+              !user.isCurrentUser else { return }
+
+        if connectionController.preferencesStore.preferences.skipKickConfirmation {
+            connectionController.kickUser(userID: user.id, channelID: 0) { [weak self] result in
+                if case .failure(let error) = result {
+                    self?.presentError(error)
+                }
+            }
+            return
+        }
+
+        guard let window = view.window else { return }
 
         let alert = NSAlert()
         alert.messageText = L10n.format("connectedServer.kickServer.title", user.displayName)
@@ -214,7 +232,7 @@ extension ConnectedServerViewController {
         let users = selectedUserNodes()
         guard !users.isEmpty, let window = view.window else { return }
 
-        // Canaux disponibles : tous sauf le canal commun si tous les utilisateurs sont dans le même
+        // Available channels: all except the common channel if all users are in the same one
         let commonChannelID = users.count == 1 ? users[0].channelID : nil
         let allChannels = flatChannels(from: session.rootChannels)
         let channels = allChannels.filter { $0.id != commonChannelID }
@@ -295,9 +313,8 @@ private class VolumeSliderHandler: NSObject {
     }
 
     @objc func sliderChanged(_ sender: NSSlider) {
-        let percent = Int(sender.doubleValue)
-        let raw = Int32(Double(percent) / 100.0 * Double(SOUND_VOLUME_DEFAULT.rawValue))
-        let clamped = max(Int32(SOUND_VOLUME_MIN.rawValue), min(Int32(SOUND_VOLUME_MAX.rawValue), raw))
+        let percent = sender.doubleValue
+        let clamped = TeamTalkConnectionController.userVolumeFromPercent(percent)
         connectionController.setUserVoiceVolumeImmediate(userID: userID, volume: clamped)
     }
 }

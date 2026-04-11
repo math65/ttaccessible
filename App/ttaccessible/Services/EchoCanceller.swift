@@ -29,6 +29,7 @@ final class EchoCanceller {
 
     // Accumulation buffers for chunking arbitrary-sized input into 10ms frames.
     private var renderAccumulator: [Int16] = []
+    private let renderAccumulatorMaxSamples: Int
 
     // Pre-allocated buffers for real-time thread (processCapture).
     private var captureAccumulator: [Int16]
@@ -37,15 +38,19 @@ final class EchoCanceller {
     private var captureOutputCount = 0
     private var frameBuffer: [Int16]
 
+    // Resampling buffer for rate conversion.
+    private var resampleBuffer: [Int16] = []
+
     init?(configuration: Configuration) {
         self.config = configuration
         guard let ref = webrtc_aec_create(Int32(configuration.sampleRate), Int32(configuration.channels)) else {
             return nil
         }
         self.aecRef = ref
+        self.renderAccumulatorMaxSamples = configuration.sampleRate * configuration.channels * 2
         let frameSamples = configuration.frameSamplesPerChannel * configuration.channels
-        captureAccumulator = [Int16](repeating: 0, count: frameSamples * 4)
-        captureOutput = [Int16](repeating: 0, count: frameSamples * 4)
+        captureAccumulator = [Int16](repeating: 0, count: frameSamples * 8)
+        captureOutput = [Int16](repeating: 0, count: frameSamples * 8)
         frameBuffer = [Int16](repeating: 0, count: frameSamples)
     }
 
@@ -57,15 +62,48 @@ final class EchoCanceller {
 
     /// Feed decoded far-end audio (what is played through speakers).
     /// Accepts any number of interleaved Int16 samples; internally chunks into 10ms frames.
-    func feedReference(_ samples: UnsafePointer<Int16>, count: Int, channels: Int) {
+    /// If `sampleRate` differs from the configured rate, linear interpolation is used to resample.
+    func feedReference(_ samples: UnsafePointer<Int16>, count: Int, channels: Int, sampleRate: Int = 0) {
         let frameSamples = config.frameSamplesPerChannel * config.channels
-        let totalSamples = count * channels
 
         // If channel count matches, use directly; otherwise skip (rare mismatch case).
         guard channels == config.channels else { return }
 
-        // Append to accumulator.
-        renderAccumulator.append(contentsOf: UnsafeBufferPointer(start: samples, count: totalSamples))
+        let effectiveRate = sampleRate > 0 ? sampleRate : config.sampleRate
+
+        if effectiveRate != config.sampleRate {
+            // Resample using linear interpolation.
+            let totalInputSamples = count * channels
+            let ratio = Double(config.sampleRate) / Double(effectiveRate)
+            let outputFrames = Int(Double(count) * ratio)
+            let outputSamples = outputFrames * channels
+            if resampleBuffer.count < outputSamples {
+                resampleBuffer = [Int16](repeating: 0, count: outputSamples)
+            }
+            for frame in 0..<outputFrames {
+                let srcPos = Double(frame) / ratio
+                let srcIndex = Int(srcPos)
+                let frac = srcPos - Double(srcIndex)
+                for ch in 0..<channels {
+                    let idx0 = srcIndex * channels + ch
+                    let idx1 = min(idx0 + channels, totalInputSamples - 1)
+                    let s0 = Double(samples[idx0])
+                    let s1 = Double(samples[min(idx1, totalInputSamples - 1)])
+                    resampleBuffer[frame * channels + ch] = Int16(clamping: Int(s0 + frac * (s1 - s0)))
+                }
+            }
+            // Append resampled data to accumulator.
+            renderAccumulator.append(contentsOf: resampleBuffer.prefix(outputSamples))
+        } else {
+            let totalSamples = count * channels
+            // Append to accumulator.
+            renderAccumulator.append(contentsOf: UnsafeBufferPointer(start: samples, count: totalSamples))
+        }
+
+        // Cap renderAccumulator to max size to prevent unbounded growth.
+        if renderAccumulator.count > renderAccumulatorMaxSamples {
+            renderAccumulator.removeFirst(renderAccumulator.count - renderAccumulatorMaxSamples)
+        }
 
         // Process complete 10ms frames.
         while renderAccumulator.count >= frameSamples {
@@ -85,10 +123,10 @@ final class EchoCanceller {
     func processCapture(_ samples: UnsafePointer<Int16>, count: Int) -> [Int16] {
         let frameSamples = config.frameSamplesPerChannel * config.channels
 
-        // Grow accumulator if needed (rare, only on first calls or buffer size changes).
+        // Drop input if it would exceed pre-allocated capacity (avoid RT allocation).
         let neededCapacity = captureWriteIndex + count
         if neededCapacity > captureAccumulator.count {
-            captureAccumulator.append(contentsOf: repeatElement(Int16(0), count: neededCapacity - captureAccumulator.count))
+            return []
         }
 
         // Copy input into accumulator (no allocation — writes into pre-allocated space).
@@ -110,10 +148,10 @@ final class EchoCanceller {
                 webrtc_aec_process_capture(aecRef, buffer.baseAddress!, Int32(config.frameSamplesPerChannel))
             }
 
-            // Append processed frame to output (grow if needed, rare).
+            // Drop if output would exceed pre-allocated capacity.
             let neededOutput = captureOutputCount + frameSamples
             if neededOutput > captureOutput.count {
-                captureOutput.append(contentsOf: repeatElement(Int16(0), count: neededOutput - captureOutput.count))
+                break
             }
             for i in 0..<frameSamples {
                 captureOutput[captureOutputCount + i] = frameBuffer[i]

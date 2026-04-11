@@ -2,7 +2,7 @@
 //  TeamTalkConnectionController+Connection.swift
 //  ttaccessible
 //
-//  Created by Codex on 30/03/2026.
+//  Created by Mathieu Martin on 30/03/2026.
 //
 
 import AVFoundation
@@ -152,7 +152,7 @@ extension TeamTalkConnectionController {
                 )
             }
 
-            // Succès — restaurer l'état
+            // Success — restore state
             cancelReconnectLocked()
             self.applyDefaultSubscriptionPreferencesLocked(instance: instance, preferences: self.preferencesStore.preferences)
             try ensureOutputAudioReadyLocked(instance: instance)
@@ -243,7 +243,7 @@ extension TeamTalkConnectionController {
             return
         }
 
-        // Priorité 1 : szInitChannel du compte utilisateur côté serveur
+        // Priority 1: szInitChannel from the user account on the server
         var account = UserAccount()
         if TT_GetMyUserAccount(instance, &account) != 0 {
             let initChannel = ttString(from: account.szInitChannel)
@@ -258,7 +258,7 @@ extension TeamTalkConnectionController {
             }
         }
 
-        // Priorité 2 : canal initial configuré sur le serveur enregistré
+        // Priority 2: initial channel configured on the saved server
         let configuredChannelPath = connectedRecord?.initialChannelPath.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if configuredChannelPath.isEmpty == false {
             let channelID = configuredChannelPath.withCString { pathPointer in
@@ -274,7 +274,7 @@ extension TeamTalkConnectionController {
             }
         }
 
-        // Priorité 3 : rejoindre le canal racine si la préférence est activée
+        // Priority 3: join root channel if the preference is enabled
         guard preferencesStore.preferences.autoJoinRootChannel else { return }
         let rootChannelID = TT_GetRootChannelID(instance)
         guard rootChannelID > 0 else { return }
@@ -504,7 +504,7 @@ extension TeamTalkConnectionController {
                         let sampleCount = Int(block.pointee.nSamples) * Int(block.pointee.nChannels)
                         if let rawAudio = block.pointee.lpRawAudio {
                             let int16Ptr = rawAudio.assumingMemoryBound(to: Int16.self)
-                            aec.feedReference(int16Ptr, count: Int(block.pointee.nSamples), channels: Int(block.pointee.nChannels))
+                            aec.feedReference(int16Ptr, count: Int(block.pointee.nSamples), channels: Int(block.pointee.nChannels), sampleRate: Int(block.pointee.nSampleRate))
                         }
                         TT_ReleaseUserAudioBlock(instance, block)
                     }
