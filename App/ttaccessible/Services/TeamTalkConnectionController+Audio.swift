@@ -316,16 +316,8 @@ extension TeamTalkConnectionController {
             }
 
             // Enable muxed audio block events for AEC reference signal.
-            // Use the Ex variant to have the SDK resample the reference to the capture sample rate,
-            // avoiding manual linear interpolation in EchoCanceller.feedReference().
             if aecEnabled {
-                let captureSampleRate = advancedMicrophoneEngine.effectiveSampleRate ?? Double(targetFormat.sampleRate)
-                var audioFormat = AudioFormat(
-                    nAudioFmt: AFF_WAVE_FORMAT,
-                    nSampleRate: Int32(captureSampleRate),
-                    nChannels: Int32(max(targetFormat.channels, 1))
-                )
-                TT_EnableAudioBlockEventEx(instance, TT_MUXED_USERID, UInt32(STREAMTYPE_VOICE.rawValue), &audioFormat, 1)
+                TT_EnableAudioBlockEvent(instance, TT_MUXED_USERID, UInt32(STREAMTYPE_VOICE.rawValue), 1)
             }
         } catch {
             if teamTalkVirtualInputReady {
@@ -468,7 +460,7 @@ extension TeamTalkConnectionController {
     func stopAdvancedMicrophoneInputLocked(instance: UnsafeMutableRawPointer, reason: String) {
         AudioLogger.log("stopAdvancedMicrophoneInput: reason=%@", reason)
         // Disable muxed audio block events (AEC reference).
-        TT_EnableAudioBlockEventEx(instance, TT_MUXED_USERID, UInt32(STREAMTYPE_VOICE.rawValue), nil, 0)
+        TT_EnableAudioBlockEvent(instance, TT_MUXED_USERID, UInt32(STREAMTYPE_VOICE.rawValue), 0)
         advancedMicrophoneEngine.stop()
         _ = TT_InsertAudioBlock(instance, nil)
         inputAudioReady = false

@@ -41,6 +41,11 @@ final class EchoCanceller {
     // Resampling buffer for rate conversion.
     private var resampleBuffer: [Int16] = []
 
+    // Diagnostics (non-RT safe counters, only written from their respective threads).
+    private var referenceFramesFed: Int = 0
+    private var captureFramesProcessed: Int = 0
+    private var lastDiagnosticTime: CFAbsoluteTime = 0
+
     init?(configuration: Configuration) {
         self.config = configuration
         guard let ref = webrtc_aec_create(Int32(configuration.sampleRate), Int32(configuration.channels)) else {
@@ -110,8 +115,23 @@ final class EchoCanceller {
             renderAccumulator.withUnsafeBufferPointer { buffer in
                 webrtc_aec_feed_render(aecRef, buffer.baseAddress!, Int32(config.frameSamplesPerChannel))
             }
+            referenceFramesFed += 1
             renderAccumulator.removeFirst(frameSamples)
         }
+
+        logDiagnosticsIfNeeded(refRate: effectiveRate, refChannels: channels)
+    }
+
+    private func logDiagnosticsIfNeeded(refRate: Int, refChannels: Int) {
+        let now = CFAbsoluteTimeGetCurrent()
+        guard now - lastDiagnosticTime >= 5.0 else { return }
+        lastDiagnosticTime = now
+        AudioLogger.log(
+            "AEC diag: config=%dHz/%dch, ref=%dHz/%dch, refFrames=%d, capFrames=%d",
+            config.sampleRate, config.channels,
+            refRate, refChannels,
+            referenceFramesFed, captureFramesProcessed
+        )
     }
 
     // MARK: - Capture Processing (called from real-time audio thread)
@@ -147,6 +167,8 @@ final class EchoCanceller {
             frameBuffer.withUnsafeMutableBufferPointer { buffer in
                 webrtc_aec_process_capture(aecRef, buffer.baseAddress!, Int32(config.frameSamplesPerChannel))
             }
+
+            captureFramesProcessed += 1
 
             // Drop if output would exceed pre-allocated capacity.
             let neededOutput = captureOutputCount + frameSamples
