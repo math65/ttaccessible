@@ -152,6 +152,8 @@ struct ConnectedServerSession: Equatable {
     let inputAudioReady: Bool
     let voiceTransmissionEnabled: Bool
     let canSendBroadcast: Bool
+    let isNicknameLocked: Bool
+    let isStatusLocked: Bool
     let audioStatusText: String
     let inputGainDB: Double
     let outputGainDB: Double

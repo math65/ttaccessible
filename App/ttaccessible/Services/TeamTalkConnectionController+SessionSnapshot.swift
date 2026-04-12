@@ -262,6 +262,10 @@ extension TeamTalkConnectionController {
             && (myAccount.uUserType & UInt32(USERTYPE_ADMIN.rawValue)) != 0
         let canSendBroadcast = hasMyAccount
             && (myAccount.uUserRights & UInt32(USERRIGHT_TEXTMESSAGE_BROADCAST.rawValue)) != 0
+        let isNicknameLocked = hasMyAccount
+            && (myAccount.uUserRights & UInt32(USERRIGHT_LOCKED_NICKNAME.rawValue)) != 0
+        let isStatusLocked = hasMyAccount
+            && (myAccount.uUserRights & UInt32(USERRIGHT_LOCKED_STATUS.rawValue)) != 0
 
         return ConnectedServerSession(
             savedServer: record,
@@ -293,6 +297,8 @@ extension TeamTalkConnectionController {
             inputAudioReady: inputAudioReady,
             voiceTransmissionEnabled: voiceTransmissionEnabled,
             canSendBroadcast: canSendBroadcast,
+            isNicknameLocked: isNicknameLocked,
+            isStatusLocked: isStatusLocked,
             audioStatusText: makeAudioStatusText(),
             inputGainDB: preferences.inputGainDB,
             outputGainDB: preferences.outputGainDB,

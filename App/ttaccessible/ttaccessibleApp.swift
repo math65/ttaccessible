@@ -68,11 +68,13 @@ struct ttaccessibleApp: App {
                         appDelegate.changeNickname()
                     }
                     .keyboardShortcut(KeyEquivalent(Character(UnicodeScalar(NSF5FunctionKey)!)), modifiers: [])
+                    .disabled(menuState.isNicknameLocked)
 
                     Button(L10n.text("connectedServer.identity.status.menu")) {
                         appDelegate.changeStatus()
                     }
                     .keyboardShortcut(KeyEquivalent(Character(UnicodeScalar(NSF6FunctionKey)!)), modifiers: [])
+                    .disabled(menuState.isStatusLocked)
 
                     Divider()
 
@@ -115,8 +117,6 @@ struct ttaccessibleApp: App {
 
                     Divider()
 
-                    Divider()
-
                     Button(L10n.text("accounts.menu.open")) {
                         appDelegate.openUserAccounts()
                     }
@@ -133,6 +133,11 @@ struct ttaccessibleApp: App {
                         appDelegate.openServerProperties()
                     }
                     .keyboardShortcut("p", modifiers: [.command, .shift])
+                    .disabled(menuState.mode != .connectedServer || menuState.isAdministrator == false)
+
+                    Button(L10n.text("serverConfig.menu.save")) {
+                        appDelegate.saveServerConfig()
+                    }
                     .disabled(menuState.mode != .connectedServer || menuState.isAdministrator == false)
 
                     Button(L10n.text("stats.menu.open")) {

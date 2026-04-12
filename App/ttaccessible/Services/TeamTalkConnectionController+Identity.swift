@@ -258,6 +258,7 @@ extension TeamTalkConnectionController {
             appendAutoAwayDeactivatedHistoryLocked()
             return true
         } catch {
+            clearAutoAwayStateLocked()
             return false
         }
     }

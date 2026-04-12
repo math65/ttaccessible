@@ -96,6 +96,9 @@ extension TeamTalkConnectionController {
             if hadOutput, let instance = self.instance {
                 do {
                     try self.ensureDirectOutputAudioReadyLocked(instance: instance)
+                    if self.masterMuted {
+                        _ = TT_SetSoundOutputMute(instance, 1)
+                    }
                 } catch {
                     AudioLogger.log("restartSoundSystem: output re-open failed — %@", error.localizedDescription)
                     DispatchQueue.main.async { completion(.failure(error)) }
@@ -109,6 +112,11 @@ extension TeamTalkConnectionController {
                     if hadVoice { self.voiceTransmissionEnabled = true }
                 } catch {
                     AudioLogger.log("restartSoundSystem: mic restart failed — %@", error.localizedDescription)
+                    self.voiceTransmissionEnabled = false
+                    SoundPlayer.shared.play(.voxMeDisable)
+                    if let connectedRecord = self.connectedRecord {
+                        self.publishSessionLocked(instance: instance, record: connectedRecord)
+                    }
                 }
             }
 
@@ -300,9 +308,24 @@ extension TeamTalkConnectionController {
             advancedMicrophoneTargetFormat = targetFormat
             inputAudioReady = true
 
+            // Monitor sample rate changes on the active input device.
+            let activeDeviceUID = deviceInfo.uid
+            DispatchQueue.main.async { [weak self] in
+                let deviceID = InputAudioDeviceResolver.audioDeviceID(forUID: activeDeviceUID)
+                self?.audioDeviceChangeMonitor?.monitorSampleRate(forDeviceID: deviceID)
+            }
+
             // Enable muxed audio block events for AEC reference signal.
+            // Use the Ex variant to have the SDK resample the reference to the capture sample rate,
+            // avoiding manual linear interpolation in EchoCanceller.feedReference().
             if aecEnabled {
-                TT_EnableAudioBlockEvent(instance, TT_MUXED_USERID, UInt32(STREAMTYPE_VOICE.rawValue), 1)
+                let captureSampleRate = advancedMicrophoneEngine.effectiveSampleRate ?? Double(targetFormat.sampleRate)
+                var audioFormat = AudioFormat(
+                    nAudioFmt: AFF_WAVE_FORMAT,
+                    nSampleRate: Int32(captureSampleRate),
+                    nChannels: Int32(max(targetFormat.channels, 1))
+                )
+                TT_EnableAudioBlockEventEx(instance, TT_MUXED_USERID, UInt32(STREAMTYPE_VOICE.rawValue), &audioFormat, 1)
             }
         } catch {
             if teamTalkVirtualInputReady {
@@ -400,6 +423,7 @@ extension TeamTalkConnectionController {
         }
 
         let activeDevices = loadSoundDevicesLocked(forceRefresh: forceRefresh)
+            .filter { ttString(from: $0.szDeviceName).hasPrefix("CADefaultDeviceAggregate") == false }
         let inputDevices = activeDevices
             .filter { $0.nMaxInputChannels > 0 && $0.nDeviceID != TT_SOUNDDEVICE_ID_TEAMTALK_VIRTUAL }
             .map(makeAudioDeviceOption(from:))
@@ -444,7 +468,7 @@ extension TeamTalkConnectionController {
     func stopAdvancedMicrophoneInputLocked(instance: UnsafeMutableRawPointer, reason: String) {
         AudioLogger.log("stopAdvancedMicrophoneInput: reason=%@", reason)
         // Disable muxed audio block events (AEC reference).
-        TT_EnableAudioBlockEvent(instance, TT_MUXED_USERID, UInt32(STREAMTYPE_VOICE.rawValue), 0)
+        TT_EnableAudioBlockEventEx(instance, TT_MUXED_USERID, UInt32(STREAMTYPE_VOICE.rawValue), nil, 0)
         advancedMicrophoneEngine.stop()
         _ = TT_InsertAudioBlock(instance, nil)
         inputAudioReady = false
@@ -499,7 +523,9 @@ extension TeamTalkConnectionController {
             audioBlock.lpRawAudio = UnsafeMutableRawPointer(mutating: baseAddress)
             audioBlock.nSamples = chunk.sampleCount
             audioBlock.uSampleIndex = 0
-            _ = TT_InsertAudioBlock(instance, &audioBlock)
+            if TT_InsertAudioBlock(instance, &audioBlock) == 0 {
+                AudioLogger.log("TT_InsertAudioBlock: queue full, audio block dropped")
+            }
         }
     }
 
@@ -522,6 +548,10 @@ extension TeamTalkConnectionController {
         } catch {
             stopAdvancedMicrophoneInputLocked(instance: instance, reason: "refreshAdvancedMicrophoneTargetIfNeededLocked rollback")
             voiceTransmissionEnabled = false
+            SoundPlayer.shared.play(.voxMeDisable)
+            if let connectedRecord {
+                publishSessionLocked(instance: instance, record: connectedRecord)
+            }
         }
     }
 
@@ -598,6 +628,18 @@ extension TeamTalkConnectionController {
         _ = TT_SetSoundOutputVolume(instance, volume)
     }
 
+    // MARK: - Jitter Control
+
+    func applyJitterControlLocked(instance: UnsafeMutableRawPointer, userID: Int32) {
+        let enabled = preferencesStore.preferences.adaptiveJitterBuffer
+        var config = JitterConfig()
+        config.nFixedDelayMSec = 0
+        config.bUseAdativeDejitter = enabled ? 1 : 0
+        config.nMaxAdaptiveDelayMSec = enabled ? 1000 : 0
+        config.nActiveAdaptiveDelayMSec = 0
+        _ = TT_SetUserJitterControl(instance, userID, StreamType(STREAMTYPE_VOICE.rawValue), &config)
+    }
+
     // MARK: - Hear Myself
 
     func toggleHearMyself(completion: @escaping @MainActor (Bool) -> Void) {
@@ -635,14 +677,25 @@ extension TeamTalkConnectionController {
                 DispatchQueue.main.async { completion(.failure(TeamTalkConnectionError.internalError(L10n.text("connectedServer.audio.error.notInChannel")))) }
                 return
             }
+            // Check CHANNEL_NO_RECORDING flag (unless user has USERRIGHT_RECORD_VOICE).
+            if (channel.uChannelType & UInt32(CHANNEL_NO_RECORDING.rawValue)) != 0 {
+                var account = UserAccount()
+                let hasRecordRight = TT_GetMyUserAccount(instance, &account) != 0
+                    && (account.uUserRights & UInt32(USERRIGHT_RECORD_VOICE.rawValue)) != 0
+                if !hasRecordRight {
+                    DispatchQueue.main.async { completion(.failure(TeamTalkConnectionError.internalError(L10n.text("recording.error.channelNoRecording")))) }
+                    return
+                }
+            }
             var audioCodec = channel.audiocodec
             let ext = Self.fileExtension(for: format)
             let timestamp = Self.recordingTimestamp()
             let fileName = "\(timestamp) Conference\(ext)"
             let filePath = folder.appendingPathComponent(fileName).path
 
+            let streamTypes = StreamTypes(UInt32(STREAMTYPE_VOICE.rawValue) | UInt32(STREAMTYPE_MEDIAFILE_AUDIO.rawValue))
             let ok = filePath.withCString { cPath in
-                TT_StartRecordingMuxedAudioFile(instance, &audioCodec, cPath, format)
+                TT_StartRecordingMuxedStreams(instance, streamTypes, &audioCodec, cPath, format)
             }
             guard ok != 0 else {
                 DispatchQueue.main.async { completion(.failure(TeamTalkConnectionError.internalError(L10n.text("recording.error.startFailed")))) }
@@ -694,7 +747,7 @@ extension TeamTalkConnectionController {
             users.append(localUser)
             for user in users {
                 folderPath.withCString { cPath in
-                    _ = TT_SetUserMediaStorageDir(instance, user.nUserID, cPath, nil, format)
+                    _ = TT_SetUserMediaStorageDirEx(instance, user.nUserID, cPath, nil, format, 1000)
                 }
             }
             self.recordingSeparateActive = true

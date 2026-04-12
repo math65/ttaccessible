@@ -58,10 +58,16 @@ extension ConnectedServerViewController {
                     let percent = slider.doubleValue
                     let clamped = TeamTalkConnectionController.userVolumeFromPercent(percent)
                     self.connectionController.setUserVoiceVolume(userID: user.id, username: user.username, volume: clamped)
+                    let newLeft = leftCheck.state == .on
+                    let newRight = rightCheck.state == .on
                     self.connectionController.setUserStereo(
                         userID: user.id,
-                        leftSpeaker: leftCheck.state == .on,
-                        rightSpeaker: rightCheck.state == .on
+                        leftSpeaker: newLeft,
+                        rightSpeaker: newRight
+                    )
+                    self.connectionController.userVolumeStore.setStereoBalance(
+                        UserVolumeStore.StereoBalance(left: newLeft, right: newRight),
+                        forUsername: user.username
                     )
                 } else {
                     self.connectionController.setUserVoiceVolumeImmediate(userID: user.id, volume: originalVolume)

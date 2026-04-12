@@ -64,6 +64,8 @@ final class TeamTalkConnectionController {
     let lastChannelStore = LastChannelStore()
 
 
+    var audioDeviceChangeMonitor: AudioDeviceChangeMonitor?
+
     @MainActor weak var delegate: TeamTalkConnectionControllerDelegate?
     @MainActor var sessionSnapshot: ConnectedServerSession?
     @MainActor var isConnected = false

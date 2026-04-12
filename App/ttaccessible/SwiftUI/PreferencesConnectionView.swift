@@ -47,6 +47,15 @@ struct PreferencesConnectionView: View {
                 )
                 .toggleStyle(.switch)
 
+                Toggle(
+                    L10n.text("preferences.connection.adaptiveJitterBuffer"),
+                    isOn: Binding(
+                        get: { store.state.adaptiveJitterBuffer },
+                        set: { store.updateAdaptiveJitterBuffer($0) }
+                    )
+                )
+                .toggleStyle(.switch)
+
                 Divider()
 
                 VStack(alignment: .leading, spacing: 8) {

@@ -501,7 +501,6 @@ extension TeamTalkConnectionController {
                 if let aec = advancedMicrophoneEngine.echoCanceller,
                    message.nSource == TT_MUXED_USERID {
                     if let block = TT_AcquireUserAudioBlock(instance, UInt32(STREAMTYPE_VOICE.rawValue), TT_MUXED_USERID) {
-                        let sampleCount = Int(block.pointee.nSamples) * Int(block.pointee.nChannels)
                         if let rawAudio = block.pointee.lpRawAudio {
                             let int16Ptr = rawAudio.assumingMemoryBound(to: Int16.self)
                             aec.feedReference(int16Ptr, count: Int(block.pointee.nSamples), channels: Int(block.pointee.nChannels), sampleRate: Int(block.pointee.nSampleRate))
@@ -533,6 +532,10 @@ extension TeamTalkConnectionController {
                         appendFileHistoryLocked(message.remotefile, isAdded: false, instance: instance, record: connectedRecord!)
                     }
                     publishInvalidation.formUnion([.channelFiles, .history])
+                }
+            case CLIENTEVENT_CMD_SERVER_UPDATE:
+                if connectedRecord != nil {
+                    publishInvalidation = .all
                 }
             case CLIENTEVENT_CMD_SERVERSTATISTICS:
                 let stats = message.serverstatistics
@@ -588,6 +591,34 @@ extension TeamTalkConnectionController {
                     appendTransmissionBlockedHistoryLocked()
                     publishInvalidation.insert(.history)
                 }
+            case CLIENTEVENT_INTERNAL_ERROR:
+                if connectedRecord != nil {
+                    let errorNo = message.clienterrormsg.nErrorNo
+                    let errorMsg = clientErrorMessage(from: message) ?? L10n.text("teamtalk.connection.error.internal")
+                    AudioLogger.log("INTERNAL_ERROR in session: code=%d msg=%@", errorNo, errorMsg)
+
+                    if errorNo == INTERR_SNDOUTPUT_FAILURE.rawValue {
+                        // Sound output device failed (e.g. unplugged). Reopen it.
+                        AudioLogger.log("INTERNAL_ERROR: output device failure, reopening")
+                        if outputAudioReady {
+                            _ = TT_CloseSoundOutputDevice(instance)
+                            outputAudioReady = false
+                        }
+                        do {
+                            try ensureDirectOutputAudioReadyLocked(instance: instance)
+                            if masterMuted {
+                                _ = TT_SetSoundOutputMute(instance, 1)
+                            }
+                        } catch {
+                            AudioLogger.log("INTERNAL_ERROR: failed to reopen output — %@", error.localizedDescription)
+                        }
+                    } else if errorNo == INTERR_TTMESSAGE_QUEUE_OVERFLOW.rawValue {
+                        AudioLogger.log("INTERNAL_ERROR: message queue overflow — events may have been lost")
+                    }
+
+                    appendHistoryLocked(kind: .connectionLost, message: errorMsg)
+                    publishInvalidation.insert(.history)
+                }
             case CLIENTEVENT_CMD_CHANNEL_NEW,
                  CLIENTEVENT_CMD_CHANNEL_UPDATE,
                  CLIENTEVENT_CMD_CHANNEL_REMOVE,
@@ -614,7 +645,7 @@ extension TeamTalkConnectionController {
                             )
                             if recordingSeparateActive, let folder = recordingFolder {
                                 folder.path.withCString { cPath in
-                                    _ = TT_SetUserMediaStorageDir(instance, message.user.nUserID, cPath, nil, recordingFormat)
+                                    _ = TT_SetUserMediaStorageDirEx(instance, message.user.nUserID, cPath, nil, recordingFormat, 1000)
                                 }
                             }
                         }
@@ -648,6 +679,10 @@ extension TeamTalkConnectionController {
                         if let storedVolume = userVolumeStore.volume(forUsername: joinedUsername) {
                             _ = TT_SetUserVolume(instance, message.user.nUserID, STREAMTYPE_VOICE, storedVolume)
                         }
+                        if let storedBalance = userVolumeStore.stereoBalance(forUsername: joinedUsername) {
+                            _ = TT_SetUserStereo(instance, message.user.nUserID, STREAMTYPE_VOICE, storedBalance.left ? 1 : 0, storedBalance.right ? 1 : 0)
+                        }
+                        applyJitterControlLocked(instance: instance, userID: message.user.nUserID)
                     case CLIENTEVENT_CMD_USER_LEFT:
                         if isSuppressingJoinHistoryLocked == false {
                             appendUserLeftChannelHistoryLocked(message.user, currentUserID: currentUserID, instance: instance)
@@ -689,6 +724,9 @@ extension TeamTalkConnectionController {
             if isAnyMicrophoneEngineRunning || inputAudioReady {
                 stopAdvancedMicrophoneInputLocked(instance: instance, reason: "destroyLocked")
             }
+            if recordingMuxedActive {
+                _ = TT_StopRecordingMuxedAudioFile(instance)
+            }
             if teamTalkVirtualInputReady {
                 _ = TT_CloseSoundInputDevice(instance)
                 teamTalkVirtualInputReady = false
@@ -700,9 +738,6 @@ extension TeamTalkConnectionController {
             TT_CloseTeamTalk(instance)
         }
 
-        if recordingMuxedActive, let inst = instance {
-            _ = TT_StopRecordingMuxedAudioFile(inst)
-        }
         recordingMuxedActive = false
         recordingSeparateActive = false
         recordingFolder = nil
@@ -742,7 +777,15 @@ extension TeamTalkConnectionController {
         }
 
         let value = ttString(from: message.clienterrormsg.szErrorMsg)
-        return value.isEmpty ? nil : value
+        if !value.isEmpty { return value }
+
+        // Fall back to SDK error description.
+        let errorNo = message.clienterrormsg.nErrorNo
+        guard errorNo != 0 else { return nil }
+        var buf = [TTCHAR](repeating: 0, count: Int(TT_STRLEN))
+        TT_GetErrorMessage(errorNo, &buf)
+        let sdkMessage = String(cString: buf)
+        return sdkMessage.isEmpty ? nil : sdkMessage
     }
 
     // MARK: - Command completion
@@ -829,7 +872,7 @@ extension TeamTalkConnectionController {
                             )
                             if recordingSeparateActive, let folder = recordingFolder {
                                 folder.path.withCString { cPath in
-                                    _ = TT_SetUserMediaStorageDir(instance, message.user.nUserID, cPath, nil, recordingFormat)
+                                    _ = TT_SetUserMediaStorageDirEx(instance, message.user.nUserID, cPath, nil, recordingFormat, 1000)
                                 }
                             }
                         }
@@ -853,6 +896,14 @@ extension TeamTalkConnectionController {
                                 restartMuxedRecordingForChannelChange()
                             }
                         }
+                        let joinedUsername = ttString(from: message.user.szUsername)
+                        if let storedVolume = userVolumeStore.volume(forUsername: joinedUsername) {
+                            _ = TT_SetUserVolume(instance, message.user.nUserID, STREAMTYPE_VOICE, storedVolume)
+                        }
+                        if let storedBalance = userVolumeStore.stereoBalance(forUsername: joinedUsername) {
+                            _ = TT_SetUserStereo(instance, message.user.nUserID, STREAMTYPE_VOICE, storedBalance.left ? 1 : 0, storedBalance.right ? 1 : 0)
+                        }
+                        applyJitterControlLocked(instance: instance, userID: message.user.nUserID)
                     case CLIENTEVENT_CMD_USER_UPDATE:
                         appendSubscriptionHistoryIfNeededLocked(message.user)
                     case CLIENTEVENT_CMD_USER_LEFT:
@@ -866,7 +917,9 @@ extension TeamTalkConnectionController {
                 }
             case CLIENTEVENT_CMD_USER_TEXTMSG:
                 if let connectedRecord {
-                    handleTextMessageEventLocked(message.textmessage, instance: instance, record: connectedRecord)
+                    if handleTextMessageEventLocked(message.textmessage, instance: instance, record: connectedRecord) {
+                        publishSessionLocked(instance: instance, record: connectedRecord)
+                    }
                 }
             case CLIENTEVENT_INTERNAL_ERROR:
                 throw TeamTalkConnectionError.internalError(

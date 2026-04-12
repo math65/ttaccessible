@@ -87,9 +87,14 @@ final class UserAccountsViewController: NSViewController {
         noteCol.title = L10n.text("accounts.column.note")
         noteCol.minWidth = 100
 
+        let lastLoginCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("lastLogin"))
+        lastLoginCol.title = L10n.text("accounts.column.lastLogin")
+        lastLoginCol.width = 160
+
         tableView.addTableColumn(usernameCol)
         tableView.addTableColumn(passwordCol)
         tableView.addTableColumn(typeCol)
+        tableView.addTableColumn(lastLoginCol)
         tableView.addTableColumn(noteCol)
     }
 
@@ -257,6 +262,8 @@ extension UserAccountsViewController: NSTableViewDelegate {
             cell.textField?.stringValue = typeDisplayName(account.userType)
         case "note":
             cell.textField?.stringValue = account.note
+        case "lastLogin":
+            cell.textField?.stringValue = account.lastLoginTime
         default:
             break
         }

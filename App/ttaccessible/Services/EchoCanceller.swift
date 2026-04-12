@@ -158,11 +158,11 @@ final class EchoCanceller {
             }
             captureOutputCount += frameSamples
 
-            // Shift remaining data forward (memmove-style).
+            // Shift remaining data forward.
             let remaining = captureWriteIndex - frameSamples
             if remaining > 0 {
                 captureAccumulator.withUnsafeMutableBufferPointer { buf in
-                    buf.baseAddress!.update(from: buf.baseAddress! + frameSamples, count: remaining)
+                    _ = memmove(buf.baseAddress!, buf.baseAddress! + frameSamples, remaining * MemoryLayout<Int16>.stride)
                 }
             }
             captureWriteIndex = remaining

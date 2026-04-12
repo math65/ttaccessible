@@ -435,6 +435,7 @@
 "recording.announced.stopped" = "Enregistrement arrêté";
 "recording.announced.error" = "Échec de l'enregistrement";
 "recording.error.startFailed" = "Impossible de démarrer l'enregistrement.";
+"recording.error.channelNoRecording" = "L'enregistrement n'est pas autorisé dans ce canal.";
 "recording.panel.choose" = "Choisir";
 "recording.panel.message" = "Choisissez un dossier pour les fichiers audio enregistrés";
 "connectedServer.audio.status.recording" = "Enregistrement";
@@ -589,6 +590,7 @@
 "userInfo.field.ipAddress" = "Adresse IP";
 "userInfo.field.client" = "Client";
 "userInfo.field.version" = "Version";
+"userInfo.field.packetLoss" = "Perte de paquets voix";
 "userInfo.value.userType.admin" = "Administrateur";
 "userInfo.value.userType.default" = "Par défaut";
 
@@ -637,6 +639,7 @@
 "accounts.column.password" = "Mot de passe";
 "accounts.column.type" = "Type";
 "accounts.column.note" = "Note";
+"accounts.column.lastLogin" = "Dernière connexion";
 "accounts.type.default" = "Défaut";
 "accounts.type.admin" = "Administrateur";
 "accounts.type.disabled" = "Désactivé";
@@ -699,10 +702,13 @@
 "stats.totalRX" = "Total reçu";
 "stats.voiceTX" = "Voix émise";
 "stats.voiceRX" = "Voix reçue";
+"stats.pingUDP" = "Ping (UDP)";
+"stats.pingTCP" = "Ping (TCP)";
 
 
 // Server properties
 "serverProperties.menu.open" = "Propriétés du serveur…";
+"serverConfig.menu.save" = "Enregistrer la configuration du serveur";
 "serverProperties.form.title" = "Propriétés du serveur";
 "serverProperties.form.section.general" = "Général";
 "serverProperties.form.section.bandwidth" = "Limites de débit";
@@ -732,6 +738,7 @@
 "backgroundAnnouncement.channelMessage" = "Nouveau message de canal de %@ : %@";
 "backgroundAnnouncement.broadcastMessage" = "Message général de %@ : %@";
 "preferences.connection.skipKickConfirmation" = "Ne pas demander de confirmation lors de l'expulsion";
+"preferences.connection.adaptiveJitterBuffer" = "Buffer de gigue adaptatif (améliore l'audio sur les connexions instables)";
 "user.menu.kick" = "Expulser du canal";
 "user.menu.kickServer" = "Expulser du serveur";
 "user.menu.kickBan" = "Expulser et bannir";

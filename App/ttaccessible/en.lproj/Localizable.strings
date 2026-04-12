@@ -435,6 +435,7 @@
 "recording.announced.stopped" = "Recording stopped";
 "recording.announced.error" = "Recording failed";
 "recording.error.startFailed" = "Failed to start recording.";
+"recording.error.channelNoRecording" = "Recording is not allowed in this channel.";
 "recording.panel.choose" = "Choose";
 "recording.panel.message" = "Choose a folder for recording audio files";
 "connectedServer.audio.status.recording" = "Recording";
@@ -589,6 +590,7 @@
 "userInfo.field.ipAddress" = "IP address";
 "userInfo.field.client" = "Client";
 "userInfo.field.version" = "Version";
+"userInfo.field.packetLoss" = "Voice packet loss";
 "userInfo.value.userType.admin" = "Administrator";
 "userInfo.value.userType.default" = "Default";
 
@@ -636,6 +638,7 @@
 "accounts.column.password" = "Password";
 "accounts.column.type" = "Type";
 "accounts.column.note" = "Note";
+"accounts.column.lastLogin" = "Last Login";
 "accounts.type.default" = "Default";
 "accounts.type.admin" = "Administrator";
 "accounts.type.disabled" = "Disabled";
@@ -698,10 +701,13 @@
 "stats.totalRX" = "Total received";
 "stats.voiceTX" = "Voice sent";
 "stats.voiceRX" = "Voice received";
+"stats.pingUDP" = "Ping (UDP)";
+"stats.pingTCP" = "Ping (TCP)";
 
 
 // Server properties
 "serverProperties.menu.open" = "Server Properties…";
+"serverConfig.menu.save" = "Save Server Configuration";
 "serverProperties.form.title" = "Server Properties";
 "serverProperties.form.section.general" = "General";
 "serverProperties.form.section.bandwidth" = "Bandwidth Limits";
@@ -732,6 +738,7 @@
 "backgroundAnnouncement.channelMessage" = "New channel message from %@: %@";
 "backgroundAnnouncement.broadcastMessage" = "Broadcast from %@: %@";
 "preferences.connection.skipKickConfirmation" = "Skip confirmation when kicking users";
+"preferences.connection.adaptiveJitterBuffer" = "Adaptive jitter buffer (improves audio on unstable connections)";
 "user.menu.kick" = "Kick from Channel";
 "user.menu.kickServer" = "Kick from Server";
 "user.menu.kickBan" = "Kick and Ban";

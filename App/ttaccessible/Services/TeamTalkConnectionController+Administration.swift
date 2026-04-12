@@ -187,6 +187,7 @@ extension TeamTalkConnectionController {
         props.audioBpsLimit = account.nAudioCodecBpsLimit
         props.commandsLimit = account.abusePrevent.nCommandsLimit
         props.commandsIntervalMSec = account.abusePrevent.nCommandsIntervalMSec
+        props.lastLoginTime = ttString(from: account.szLastLoginTime)
         return props
     }
 
@@ -375,6 +376,30 @@ extension TeamTalkConnectionController {
 
     // MARK: - Server management
 
+    func getUserStatistics(userID: Int32) -> UserStatistics? {
+        var result: UserStatistics?
+        queue.sync { [weak self] in
+            guard let self, let instance = self.instance else { return }
+            var stats = UserStatistics()
+            if TT_GetUserStatistics(instance, userID, &stats) != 0 {
+                result = stats
+            }
+        }
+        return result
+    }
+
+    func getClientStatistics() -> ClientStatistics? {
+        var result: ClientStatistics?
+        queue.sync { [weak self] in
+            guard let self, let instance = self.instance else { return }
+            var stats = ClientStatistics()
+            if TT_GetClientStatistics(instance, &stats) != 0 {
+                result = stats
+            }
+        }
+        return result
+    }
+
     func queryServerStats() {
         queue.async { [weak self] in
             guard let self, let instance = self.instance else { return }
@@ -441,6 +466,26 @@ extension TeamTalkConnectionController {
                 return
             }
 
+            do {
+                try self.waitForCommandCompletionLocked(instance: instance, commandID: commandID)
+                DispatchQueue.main.async { completion(.success(())) }
+            } catch {
+                DispatchQueue.main.async { completion(.failure(error)) }
+            }
+        }
+    }
+
+    func saveServerConfig(completion: @escaping (Result<Void, Error>) -> Void) {
+        queue.async { [weak self] in
+            guard let self, let instance = self.instance else {
+                DispatchQueue.main.async { completion(.failure(TeamTalkConnectionError.connectionFailed)) }
+                return
+            }
+            let commandID = TT_DoSaveConfig(instance)
+            guard commandID > 0 else {
+                DispatchQueue.main.async { completion(.failure(TeamTalkConnectionError.connectionFailed)) }
+                return
+            }
             do {
                 try self.waitForCommandCompletionLocked(instance: instance, commandID: commandID)
                 DispatchQueue.main.async { completion(.success(())) }
@@ -567,12 +612,24 @@ extension TeamTalkConnectionController {
         userID: Int32,
         preferences: AppPreferences
     ) {
+        // Combine all subscription flags into two bitmasks (subscribe/unsubscribe)
+        // to minimize server commands instead of sending one per option.
+        var subscribeMask: UInt32 = 0
+        var unsubscribeMask: UInt32 = 0
         for option in UserSubscriptionOption.allCases {
             let enabled = preferences.isSubscriptionEnabledByDefault(option)
-            let commandID = setSubscriptionLocked(instance: instance, userID: userID, option: option, enabled: enabled)
-            if commandID > 0 {
-                updateObservedSubscriptionStateLocked(option, enabled: enabled, userID: userID)
+            if enabled {
+                subscribeMask |= option.subscriptionMask
+            } else {
+                unsubscribeMask |= option.subscriptionMask
             }
+            updateObservedSubscriptionStateLocked(option, enabled: enabled, userID: userID)
+        }
+        if unsubscribeMask != 0 {
+            _ = TT_DoUnsubscribe(instance, userID, Subscriptions(unsubscribeMask))
+        }
+        if subscribeMask != 0 {
+            _ = TT_DoSubscribe(instance, userID, Subscriptions(subscribeMask))
         }
     }
 

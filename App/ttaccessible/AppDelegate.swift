@@ -52,8 +52,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AudioLogger.clear()
-        AudioLogger.log("App launched")
+        let sdkVersion = String(cString: TT_GetVersion())
+        AudioLogger.log("App launched — TeamTalk SDK %@", sdkVersion)
         connectionController.delegate = self
+        connectionController.audioDeviceChangeMonitor = audioDeviceChangeMonitor
         UNUserNotificationCenter.current().delegate = self
         audioDeviceChangeMonitor.startListening()
 
@@ -428,6 +430,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             vc.onRefreshNeeded = { [weak self] in
                 self?.connectionController.queryServerStats()
             }
+            vc.clientStatisticsProvider = { [weak self] in
+                self?.connectionController.getClientStatistics()
+            }
             let window = NSWindow(
                 contentRect: NSRect(x: 0, y: 0, width: 400, height: 260),
                 styleMask: [.titled, .closable, .resizable],
@@ -781,6 +786,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             viewController = existing
         } else {
             viewController = UserInfoViewController()
+            viewController.userStatisticsProvider = { [weak self] userID in
+                self?.connectionController.getUserStatistics(userID: userID)
+            }
             userInfoViewController = viewController
         }
 
@@ -914,6 +922,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard menuState.mode == .connectedServer, menuState.isAdministrator else { return }
         restoreMainWindow()
         connectedServerViewController?.promptServerProperties()
+    }
+
+    func saveServerConfig() {
+        guard menuState.mode == .connectedServer, menuState.isAdministrator else { return }
+        connectionController.saveServerConfig { result in
+            switch result {
+            case .success:
+                SoundPlayer.shared.play(.fileTxComplete)
+            case .failure:
+                break
+            }
+        }
     }
 
     func openUserAccounts() {
@@ -1215,6 +1235,8 @@ extension AppDelegate: TeamTalkConnectionControllerDelegate {
         lastObservedSessionHistory = session.sessionHistory
         menuState.setAdministrator(session.isAdministrator)
         menuState.setCanSendBroadcast(session.canSendBroadcast)
+        menuState.setNicknameLocked(session.isNicknameLocked)
+        menuState.setStatusLocked(session.isStatusLocked)
         showConnectedServerWindow(session: session)
 
         // Auto-restart recording when joining a new channel

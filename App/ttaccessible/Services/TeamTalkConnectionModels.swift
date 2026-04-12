@@ -81,6 +81,7 @@ struct UserAccountProperties {
     var audioBpsLimit: Int32
     var commandsLimit: Int32
     var commandsIntervalMSec: Int32
+    var lastLoginTime: String
 
     static let defaultUserRights: UInt32 = {
         let bits: [UInt32] = [
@@ -106,6 +107,7 @@ struct UserAccountProperties {
         audioBpsLimit = 0
         commandsLimit = 0
         commandsIntervalMSec = 0
+        lastLoginTime = ""
     }
 }
 

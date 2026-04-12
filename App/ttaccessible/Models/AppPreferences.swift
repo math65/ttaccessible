@@ -86,6 +86,7 @@ struct AppPreferences: Codable, Equatable {
         case soundPack
         case disabledSoundEvents
         case skipKickConfirmation
+        case adaptiveJitterBuffer
     }
 
     var defaultNickname: String
@@ -133,6 +134,7 @@ struct AppPreferences: Codable, Equatable {
     var soundPack: String
     var disabledSoundEvents: Set<NotificationSound>
     var skipKickConfirmation: Bool
+    var adaptiveJitterBuffer: Bool
     init(
         defaultNickname: String = "TTAccessible",
         defaultStatusMessage: String = "",
@@ -178,7 +180,8 @@ struct AppPreferences: Codable, Equatable {
         recordingMode: Int = 1,
         soundPack: String = "Default",
         disabledSoundEvents: Set<NotificationSound> = [],
-        skipKickConfirmation: Bool = false
+        skipKickConfirmation: Bool = false,
+        adaptiveJitterBuffer: Bool = false
     ) {
         self.defaultNickname = defaultNickname
         self.defaultStatusMessage = defaultStatusMessage
@@ -220,11 +223,12 @@ struct AppPreferences: Codable, Equatable {
         self.macOSTTSSpeechRate = Self.clampMacOSTTSSpeechRate(macOSTTSSpeechRate)
         self.macOSTTSVolume = Self.clampMacOSTTSVolume(macOSTTSVolume)
         self.recordingFolderBookmark = recordingFolderBookmark
-        self.recordingAudioFileFormat = recordingAudioFileFormat
-        self.recordingMode = recordingMode
+        self.recordingAudioFileFormat = Self.clampRecordingAudioFileFormat(recordingAudioFileFormat)
+        self.recordingMode = Self.clampRecordingMode(recordingMode)
         self.soundPack = soundPack
         self.disabledSoundEvents = disabledSoundEvents
         self.skipKickConfirmation = skipKickConfirmation
+        self.adaptiveJitterBuffer = adaptiveJitterBuffer
     }
 
     nonisolated static func clampGainDB(_ value: Double) -> Double {
@@ -241,6 +245,16 @@ struct AppPreferences: Codable, Equatable {
 
     nonisolated static func clampMacOSTTSVolume(_ value: Double) -> Double {
         min(max(value, 0), 1)
+    }
+
+    /// Recording audio file format: 1=WAV, 2=OGG.
+    nonisolated static func clampRecordingAudioFileFormat(_ value: Int) -> Int {
+        (value == 1 || value == 2) ? value : 2
+    }
+
+    /// Recording mode bitmask: 1=muxed, 2=separate, 3=both.
+    nonisolated static func clampRecordingMode(_ value: Int) -> Int {
+        (1...3).contains(value) ? value : 1
     }
 
     init(from decoder: Decoder) throws {
@@ -298,11 +312,12 @@ struct AppPreferences: Codable, Equatable {
         macOSTTSSpeechRate = Self.clampMacOSTTSSpeechRate(try container.decodeIfPresent(Double.self, forKey: .macOSTTSSpeechRate) ?? 0.5)
         macOSTTSVolume = Self.clampMacOSTTSVolume(try container.decodeIfPresent(Double.self, forKey: .macOSTTSVolume) ?? 1.0)
         recordingFolderBookmark = try container.decodeIfPresent(Data.self, forKey: .recordingFolderBookmark)
-        recordingAudioFileFormat = try container.decodeIfPresent(Int.self, forKey: .recordingAudioFileFormat) ?? 2
-        recordingMode = try container.decodeIfPresent(Int.self, forKey: .recordingMode) ?? 1
+        recordingAudioFileFormat = Self.clampRecordingAudioFileFormat(try container.decodeIfPresent(Int.self, forKey: .recordingAudioFileFormat) ?? 2)
+        recordingMode = Self.clampRecordingMode(try container.decodeIfPresent(Int.self, forKey: .recordingMode) ?? 1)
         soundPack = try container.decodeIfPresent(String.self, forKey: .soundPack) ?? "Default"
         disabledSoundEvents = try container.decodeIfPresent(Set<NotificationSound>.self, forKey: .disabledSoundEvents) ?? []
         skipKickConfirmation = try container.decodeIfPresent(Bool.self, forKey: .skipKickConfirmation) ?? false
+        adaptiveJitterBuffer = try container.decodeIfPresent(Bool.self, forKey: .adaptiveJitterBuffer) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -347,11 +362,12 @@ struct AppPreferences: Codable, Equatable {
         try container.encode(Self.clampMacOSTTSSpeechRate(macOSTTSSpeechRate), forKey: .macOSTTSSpeechRate)
         try container.encode(Self.clampMacOSTTSVolume(macOSTTSVolume), forKey: .macOSTTSVolume)
         try container.encodeIfPresent(recordingFolderBookmark, forKey: .recordingFolderBookmark)
-        try container.encode(recordingAudioFileFormat, forKey: .recordingAudioFileFormat)
-        try container.encode(recordingMode, forKey: .recordingMode)
+        try container.encode(Self.clampRecordingAudioFileFormat(recordingAudioFileFormat), forKey: .recordingAudioFileFormat)
+        try container.encode(Self.clampRecordingMode(recordingMode), forKey: .recordingMode)
         try container.encode(soundPack, forKey: .soundPack)
         try container.encode(disabledSoundEvents, forKey: .disabledSoundEvents)
         try container.encode(skipKickConfirmation, forKey: .skipKickConfirmation)
+        try container.encode(adaptiveJitterBuffer, forKey: .adaptiveJitterBuffer)
     }
 
     func isSubscriptionEnabledByDefault(_ option: UserSubscriptionOption) -> Bool {

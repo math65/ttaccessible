@@ -52,17 +52,22 @@ final class SoundPlayer {
     private(set) var currentPack: String = defaultPack
 
     private init() {
-        loadPack(SoundPlayer.defaultPack)
+        // Don't load sounds here — AppPreferencesStore will call loadPack() with the user's preferred pack.
     }
 
     func loadPack(_ packName: String) {
-        currentPack = packName
-        players.removeAll()
-        for sound in NotificationSound.allCases {
-            if let url = soundURL(for: sound, pack: packName) {
+        let resolvedURLs = NotificationSound.allCases.compactMap { sound -> (NotificationSound, URL)? in
+            guard let url = soundURL(for: sound, pack: packName) else { return nil }
+            return (sound, url)
+        }
+        queue.async { [weak self] in
+            guard let self else { return }
+            self.currentPack = packName
+            self.players.removeAll()
+            for (sound, url) in resolvedURLs {
                 if let player = try? AVAudioPlayer(contentsOf: url) {
                     player.prepareToPlay()
-                    players[sound] = player
+                    self.players[sound] = player
                 }
             }
         }

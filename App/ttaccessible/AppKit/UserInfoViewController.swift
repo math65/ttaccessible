@@ -16,8 +16,18 @@ final class UserInfoViewController: NSViewController {
         configureUI()
     }
 
+    var userStatisticsProvider: ((Int32) -> UserStatistics?)?
+
     func update(user: ConnectedServerUser?) {
         titleLabel.stringValue = user?.displayName ?? L10n.text("userInfo.window.title")
+
+        let stats = user.flatMap { userStatisticsProvider?($0.id) }
+        let packetLoss: String? = stats.map { s in
+            let total = s.nVoicePacketsRecv + s.nVoicePacketsLost
+            if total == 0 { return "0%" }
+            let percent = Double(s.nVoicePacketsLost) / Double(total) * 100
+            return String(format: "%.1f%% (%d / %d)", percent, s.nVoicePacketsLost, total)
+        }
 
         let values: [(String, String?)] = [
             ("id", user.map { String($0.id) }),
@@ -30,7 +40,8 @@ final class UserInfoViewController: NSViewController {
             ("channelOperator", user.map { $0.isChannelOperator ? L10n.text("common.yes") : L10n.text("common.no") }),
             ("ipAddress", user?.ipAddress.isEmpty == false ? user?.ipAddress : nil),
             ("client", user?.clientName.isEmpty == false ? user?.clientName : nil),
-            ("version", user?.clientVersion.isEmpty == false ? user?.clientVersion : nil)
+            ("version", user?.clientVersion.isEmpty == false ? user?.clientVersion : nil),
+            ("packetLoss", packetLoss)
         ]
 
         var hasVisibleValues = false
@@ -101,7 +112,8 @@ final class UserInfoViewController: NSViewController {
             ("channelOperator", "userInfo.field.channelOperator"),
             ("ipAddress", "userInfo.field.ipAddress"),
             ("client", "userInfo.field.client"),
-            ("version", "userInfo.field.version")
+            ("version", "userInfo.field.version"),
+            ("packetLoss", "userInfo.field.packetLoss")
         ]
 
         for (key, titleKey) in rows {

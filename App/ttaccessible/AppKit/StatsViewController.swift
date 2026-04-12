@@ -30,8 +30,11 @@ final class StatsViewController: NSViewController {
         refreshTimer = nil
     }
 
+    var clientStatisticsProvider: (() -> ClientStatistics?)?
+
     func update(stats: ServerStatistics) {
-        let rows = buildRows(from: stats)
+        let clientStats = clientStatisticsProvider?()
+        let rows = buildRows(from: stats, clientStats: clientStats)
         for (i, row) in rows.enumerated() {
             guard i < grid.numberOfRows else { break }
             (grid.cell(atColumnIndex: 1, rowIndex: i).contentView as? NSTextField)?.stringValue = row.value
@@ -45,8 +48,8 @@ final class StatsViewController: NSViewController {
         let value: String
     }
 
-    private func buildRows(from stats: ServerStatistics) -> [Row] {
-        [
+    private func buildRows(from stats: ServerStatistics, clientStats: ClientStatistics? = nil) -> [Row] {
+        var rows = [
             Row(label: L10n.text("stats.uptime"),        value: formatUptime(stats.nUptimeMSec)),
             Row(label: L10n.text("stats.usersServed"),   value: "\(stats.nUsersServed)"),
             Row(label: L10n.text("stats.usersPeak"),     value: "\(stats.nUsersPeak)"),
@@ -55,6 +58,11 @@ final class StatsViewController: NSViewController {
             Row(label: L10n.text("stats.voiceTX"),       value: formatBytes(stats.nVoiceBytesTX)),
             Row(label: L10n.text("stats.voiceRX"),       value: formatBytes(stats.nVoiceBytesRX)),
         ]
+        if let cs = clientStats {
+            rows.append(Row(label: L10n.text("stats.pingUDP"), value: "\(cs.nUdpPingTimeMs) ms"))
+            rows.append(Row(label: L10n.text("stats.pingTCP"), value: "\(cs.nTcpPingTimeMs) ms"))
+        }
+        return rows
     }
 
     private func configureUI() {

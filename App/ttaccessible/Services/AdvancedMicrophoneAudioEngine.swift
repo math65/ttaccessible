@@ -107,7 +107,7 @@ final class AdvancedMicrophoneAudioEngine {
     private var auhalBufferFrameCount: UInt32 = 0
 
     // Pre-allocated render buffers for AUHAL callback.
-    private var auhalRenderBufferPtr: UnsafeMutablePointer<AudioBufferList>?
+    private var auhalRenderBufferPtr: UnsafeMutableRawPointer?
     private var auhalRenderDataPtrs: [UnsafeMutablePointer<Float>] = []
 
     // Accumulation buffer for AUHAL (to batch ~40ms worth of frames).
@@ -415,10 +415,10 @@ final class AdvancedMicrophoneAudioEngine {
 
         // Pre-allocate render buffers.
         let renderBufferSize = Int(maxFrames)
-        let ablSize = MemoryLayout<AudioBufferList>.size + MemoryLayout<AudioBuffer>.size * (channelCount - 1)
-        let ablPtr = UnsafeMutablePointer<AudioBufferList>.allocate(capacity: 1)
-        let rawPtr = UnsafeMutableRawPointer(ablPtr)
-        memset(rawPtr, 0, ablSize)
+        let ablSize = MemoryLayout<AudioBufferList>.size + max(0, channelCount - 1) * MemoryLayout<AudioBuffer>.size
+        let ablRawPtr = UnsafeMutableRawPointer.allocate(byteCount: ablSize, alignment: MemoryLayout<AudioBufferList>.alignment)
+        ablRawPtr.initializeMemory(as: UInt8.self, repeating: 0, count: ablSize)
+        let ablPtr = ablRawPtr.assumingMemoryBound(to: AudioBufferList.self)
         ablPtr.pointee.mNumberBuffers = UInt32(channelCount)
         var dataPtrs: [UnsafeMutablePointer<Float>] = []
         let buffers = UnsafeMutableAudioBufferListPointer(ablPtr)
@@ -434,7 +434,7 @@ final class AdvancedMicrophoneAudioEngine {
         // Compute accumulation target (~40ms worth of frames).
         let tapIntervalMSec = min(Int(configuration.targetFormat.txIntervalMSec), 40)
         let accumTargetFrames = max(Int((sampleRate * Double(tapIntervalMSec)) / 1000.0), 256)
-        let accumBufferSize = accumTargetFrames * channelCount * 2
+        let accumBufferSize = (accumTargetFrames + Int(maxFrames)) * channelCount
 
         let effectiveTargetFormat = AdvancedMicrophoneAudioTargetFormat(
             sampleRate: sampleRate,
@@ -461,7 +461,7 @@ final class AdvancedMicrophoneAudioEngine {
             auhalChannelCount = channelCount
             auhalSampleRate = sampleRate
             auhalBufferFrameCount = maxFrames
-            auhalRenderBufferPtr = ablPtr
+            auhalRenderBufferPtr = ablRawPtr
             auhalRenderDataPtrs = dataPtrs
             auhalAccumBuffer = [Float](repeating: 0, count: accumBufferSize)
             auhalAccumWriteIndex = 0
@@ -539,9 +539,11 @@ final class AdvancedMicrophoneAudioEngine {
         echoCanceller = nil
 
         // Stop AVAudioEngine path.
+        // Capture mixerNode before clearState (which sets it to nil).
+        let mixer = withStateLock { mixerNode }
         let stoppedEngine = clearState(for: nil)
         if let stoppedEngine {
-            if let mixer = mixerNode {
+            if let mixer {
                 mixer.removeTap(onBus: 0)
             }
             stoppedEngine.stop()
@@ -590,9 +592,11 @@ final class AdvancedMicrophoneAudioEngine {
         _ inBusNumber: UInt32,
         _ inNumberFrames: UInt32
     ) {
-        guard let ablPtr = auhalRenderBufferPtr else { return }
+        guard let rawPtr = auhalRenderBufferPtr else { return }
         let channelCount = auhalChannelCount
         guard channelCount > 0 else { return }
+
+        let ablPtr = rawPtr.assumingMemoryBound(to: AudioBufferList.self)
 
         // Reset buffer sizes for this render call.
         let buffers = UnsafeMutableAudioBufferListPointer(ablPtr)
@@ -763,7 +767,7 @@ final class AdvancedMicrophoneAudioEngine {
             streamID: snapshot.streamID,
             sampleRate: Int32(configuration.targetFormat.sampleRate.rounded()),
             channels: Int32(targetChannels),
-            sampleCount: Int32(adaptedCount / targetChannels),
+            sampleCount: Int32(samples.count / targetChannels),
             samples: samples
         )
 
@@ -1000,9 +1004,9 @@ private func auhalInputCallback(
     _ ioData: UnsafeMutablePointer<AudioBufferList>?
 ) -> OSStatus {
     let engine = Unmanaged<AdvancedMicrophoneAudioEngine>.fromOpaque(inRefCon).takeUnretainedValue()
+    guard let au = engine.standaloneAUHALForCallback else { return noErr }
     engine.handleAUHALInput(
-        // We need the AudioUnit to call AudioUnitRender. Get it from the engine.
-        engine.standaloneAUHALForCallback!,
+        au,
         ioActionFlags,
         inTimeStamp,
         inBusNumber,

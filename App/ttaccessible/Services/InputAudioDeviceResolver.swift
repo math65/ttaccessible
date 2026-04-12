@@ -123,6 +123,29 @@ enum InputAudioDeviceResolver {
         return result
     }
 
+    nonisolated static func audioDeviceID(forUID uid: String) -> AudioDeviceID? {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyTranslateUIDToDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var cfUID: CFString = uid as CFString
+        var deviceID = AudioDeviceID()
+        var dataSize = UInt32(MemoryLayout<AudioDeviceID>.size)
+        let status = withUnsafeMutablePointer(to: &cfUID) { uidPointer in
+            AudioObjectGetPropertyData(
+                AudioObjectID(kAudioObjectSystemObject),
+                &address,
+                UInt32(MemoryLayout<CFString>.size),
+                uidPointer,
+                &dataSize,
+                &deviceID
+            )
+        }
+        guard status == noErr, deviceID != kAudioObjectUnknown else { return nil }
+        return deviceID
+    }
+
     nonisolated static func contains(_ preset: InputChannelPreset, for device: InputAudioDeviceInfo?) -> Bool {
         guard let device, device.inputChannels > 0 else {
             switch preset {

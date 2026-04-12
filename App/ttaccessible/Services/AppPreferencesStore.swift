@@ -218,6 +218,10 @@ final class AppPreferencesStore: ObservableObject {
         mutate { $0.skipKickConfirmation = enabled }
     }
 
+    func mutateAdaptiveJitterBuffer(_ enabled: Bool) {
+        mutate { $0.adaptiveJitterBuffer = enabled }
+    }
+
     func updateDisabledSoundEvents(_ disabled: Set<NotificationSound>) {
         mutate { $0.disabledSoundEvents = disabled }
         SoundPlayer.shared.disabledSounds = disabled
@@ -302,6 +306,7 @@ final class ConnectionPreferencesStore: ObservableObject {
         var rejoinLastChannelOnReconnect: Bool
         var subscriptions: [UserSubscriptionOption: Bool]
         var skipKickConfirmation: Bool
+        var adaptiveJitterBuffer: Bool
     }
 
     @Published private(set) var state: State
@@ -360,6 +365,10 @@ final class ConnectionPreferencesStore: ObservableObject {
         rootStore.mutateSkipKickConfirmation(enabled)
     }
 
+    func updateAdaptiveJitterBuffer(_ enabled: Bool) {
+        rootStore.mutateAdaptiveJitterBuffer(enabled)
+    }
+
     func isSubscriptionEnabledByDefault(_ option: UserSubscriptionOption) -> Bool {
         state.subscriptions[option] ?? false
     }
@@ -384,7 +393,8 @@ final class ConnectionPreferencesStore: ObservableObject {
                     (option, preferences.isSubscriptionEnabledByDefault(option))
                 }
             ),
-            skipKickConfirmation: preferences.skipKickConfirmation
+            skipKickConfirmation: preferences.skipKickConfirmation,
+            adaptiveJitterBuffer: preferences.adaptiveJitterBuffer
         )
     }
 }
@@ -492,6 +502,13 @@ final class AudioPreferencesStore: ObservableObject {
 
     func prepareIfNeeded() {
         isVisible = true
+        if catalogStale {
+            catalogStale = false
+            loadCatalogIfNeeded(forceRefresh: true)
+            advancedSettingsStore.refresh()
+            hasPrepared = true
+            return
+        }
         guard hasPrepared == false else {
             return
         }
@@ -508,9 +525,24 @@ final class AudioPreferencesStore: ObservableObject {
         advancedSettingsStore.refresh()
     }
 
+    private var catalogStale = false
+    private var deviceChangeRefreshWorkItem: DispatchWorkItem?
+
     private func handleAudioDeviceChange() {
-        loadCatalogIfNeeded(forceRefresh: true)
-        advancedSettingsStore.refresh()
+        guard isVisible else {
+            catalogStale = true
+            return
+        }
+        // AppDelegate's debounced observer calls TT_RestartSoundSystem() at 500ms.
+        // We schedule our UI refresh at 1s to ensure the restart has completed
+        // and TT_GetSoundDevices() returns fresh data.
+        deviceChangeRefreshWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.loadCatalogIfNeeded(forceRefresh: true)
+            self?.advancedSettingsStore.refresh()
+        }
+        deviceChangeRefreshWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(1000), execute: workItem)
     }
 
     func suspendWhenHidden() {
