@@ -21,3 +21,7 @@ BuildArtifacts/
 *.swp
 *.swo
 *~
+
+# Internal files
+CLAUDE.md
+build.sh
