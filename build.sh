@@ -36,3 +36,32 @@ ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$ZIP_PATH"
 echo ""
 echo "✓ /Applications/$APP_NAME.app"
 echo "✓ $ZIP_PATH"
+
+# GitHub release (optional — pass --release to create one)
+if [[ "$1" == "--release" ]]; then
+    if ! command -v gh &> /dev/null; then
+        echo "⚠ gh CLI not found — skipping GitHub release"
+        exit 0
+    fi
+
+    TAG="v${VERSION}"
+    TITLE="${APP_NAME} ${VERSION}"
+
+    echo ""
+    echo "==> Création de la release GitHub $TAG..."
+
+    # Check if tag already exists
+    if gh release view "$TAG" &> /dev/null; then
+        echo "⚠ Release $TAG existe déjà. Mise à jour de l'asset..."
+        gh release upload "$TAG" "$ZIP_PATH" --clobber
+    else
+        gh release create "$TAG" "$ZIP_PATH" \
+            --title "$TITLE" \
+            --notes "Release $VERSION. See [README](https://github.com/math65/ttaccessible#readme) for installation instructions." \
+            --draft
+        echo "✓ Release draft créée : https://github.com/math65/ttaccessible/releases/tag/$TAG"
+        echo "  → Édite les notes de release sur GitHub puis publie-la."
+    fi
+
+    echo "✓ Asset uploadé : $ZIP_NAME"
+fi
