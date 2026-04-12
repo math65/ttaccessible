@@ -91,8 +91,6 @@ Native **macOS AppKit app** with SwiftUI preference panes. The audio pipeline us
 
 Echo cancellation uses WebRTC AEC3 (from `webrtc-audio-processing` v2.0, WebRTC M131) with the actual speaker output captured via Core Audio taps as the reference signal — not just the decoded TeamTalk audio. This allows cancellation of VoiceOver, system sounds, and all other audio.
 
-See [CLAUDE.md](CLAUDE.md) for detailed architecture documentation.
-
 ## Development
 
 This project is developed with the help of [Claude](https://claude.ai/code) (Anthropic's AI coding assistant). Claude helps with SDK integration, audio engine development, bug detection, and code review. All design decisions, testing, and direction are human-driven.
