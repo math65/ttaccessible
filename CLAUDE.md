@@ -29,37 +29,59 @@ The user speaks French. Respond in French when communicating. Code, comments, an
 
 The app wraps the TeamTalk 5 C library (`Vendor/TeamTalk/libTeamTalk5.dylib`) via a bridging header. The SDK instance is a raw `UnsafeMutableRawPointer` managed by `TeamTalkConnectionController`. All SDK calls (`TT_*` functions) must happen on the serial dispatch queue `com.math65.ttaccessible.teamtalk`.
 
-**Critical**: The app does NOT use `TT_InitSoundInputDevice` / `TT_EnableVoiceTransmission` for microphone capture because the SDK's direct audio path causes audio saturation/crackling. Instead, it uses a custom `AVAudioEngine` pipeline (`AdvancedMicrophoneAudioEngine`) that captures audio, applies input gain, converts to Int16 PCM, and injects chunks via `TT_InsertAudioBlock` into the TeamTalk virtual sound device (`TT_SOUNDDEVICE_ID_TEAMTALK_VIRTUAL`).
+**Critical**: The app does NOT use `TT_InitSoundInputDevice` / `TT_EnableVoiceTransmission` for microphone capture because the SDK's direct audio path causes audio saturation/crackling. Instead, it uses a dual-path capture engine (`AdvancedMicrophoneAudioEngine`) that captures audio, applies input gain, converts to Int16 PCM, and injects chunks via `TT_InsertAudioBlock` into the TeamTalk virtual sound device (`TT_SOUNDDEVICE_ID_TEAMTALK_VIRTUAL`).
 
 ### Core Components
 
 - **`TeamTalkConnectionController`** — Central orchestrator split across 9 extension files (`+Connection`, `+Audio`, `+Messaging`, `+ChannelManagement`, `+Administration`, `+SessionSnapshot`, `+SessionHistory`, `+Identity`). Manages SDK lifecycle, event polling, session state.
-- **`AppDelegate`** — Implements `TeamTalkConnectionControllerDelegate`. Owns the connection controller and window lifecycle.
+- **`AppDelegate`** — Implements `TeamTalkConnectionControllerDelegate`. Owns the connection controller and window lifecycle. Handles global audio device change events.
 - **`ConnectedServerViewController`** — Main UI (AppKit) with channel tree, chat, history. Split across 7 extension files (`+ChannelActions`, `+UserActions`, `+Announcements`, `+OutlineDataSource`, `+OutlineDelegate`, `+TableViewDataDelegate`).
 - **`AppPreferencesStore`** — `ObservableObject` wrapping `AppPreferences` (Codable struct in UserDefaults with 150ms debounced persistence). Mutate via `mutate { $0.property = value }`.
-- **`AdvancedMicrophoneAudioEngine`** — AVAudioEngine-based capture. No DSP processing — just input gain, channel selection, and format conversion. Delivers `AdvancedMicrophoneAudioChunk` via callback. Graph: `inputNode → mixerNode → sinkNode` with tap on mixer.
+- **`AdvancedMicrophoneAudioEngine`** — Dual-path audio capture engine. Uses AVAudioEngine for the system default input device, and a standalone AUHAL AudioUnit for non-default devices (virtual devices, loopback, etc.). Delivers `AdvancedMicrophoneAudioChunk` via callback.
 
 ### Audio Pipeline
 
 The audio pipeline with optional echo cancellation:
 ```
-Microphone → AVAudioEngine (input gain) → Int16 PCM → [WebRTC AEC3] → TT_InsertAudioBlock → TeamTalk SDK
-                                                            ↑
-                                              TT_MUXED_USERID speaker reference
+Microphone → [AVAudioEngine OR standalone AUHAL] → Float32 PCM → interleave → gain → Int16 PCM → [WebRTC AEC3] → TT_InsertAudioBlock → TeamTalk SDK
+                                                                                                        ↑
+                                                                                          TT_MUXED_USERID speaker reference (resampled to capture rate)
 ```
+
+**Dual capture paths** (since beta 9):
+- **System default device** → AVAudioEngine path: `inputNode → mixerNode → sinkNode` with tap on mixer. AVAudioEngine cannot reliably switch to non-default devices (it creates a `CADefaultDeviceAggregate` locked to the default device's format).
+- **Non-default devices** → Standalone AUHAL path: `AudioComponentInstanceNew(kAudioUnitSubType_HALOutput)` → enable input IO on element 1 → disable output IO on element 0 → set device → set Float32 non-interleaved output format → input callback → `AudioUnitRender`. This gives full control over device selection, sample rate, and channel count without the aggregate device interference.
+
+**AUHAL frame accumulation**: The AUHAL callback delivers small chunks (e.g. 1024 frames at 44100 Hz = ~23ms). These are accumulated in a pre-allocated buffer until ~40ms worth of frames are collected, then processed as a single batch. This ensures clean resampling in the TeamTalk SDK (1764 frames at 44100 Hz → 1920 frames at 48000 Hz = exact integer conversion). Without accumulation, fractional frame counts cause audible crackling.
+
+**AUHAL buffer allocation**: The `AudioBufferList` for the AUHAL render callback must be allocated with `UnsafeMutableRawPointer.allocate(byteCount:)` using the exact size for N channels: `MemoryLayout<AudioBufferList>.size + max(0, N-1) * MemoryLayout<AudioBuffer>.size`. Do NOT use `UnsafeMutablePointer<AudioBufferList>.allocate(capacity: 1)` — this only allocates space for 1 AudioBuffer, and writing to additional buffers corrupts the heap.
 
 **WebRTC AEC3 echo cancellation** (optional, toggle in Preferences > Audio):
 - Uses `webrtc-audio-processing` v2.0 (WebRTC M131) from freedesktop.org, compiled as a static library (`Vendor/WebRTC/libwebrtc-audio-processing.a`, 5.4 MB).
 - C++ API bridged to Swift via an Objective-C++ wrapper (`WebRTCEchoCanceller.mm` → `WebRTCEchoCanceller.h` → bridging header).
 - Reference signal (far-end/speakers) comes from `TT_EnableAudioBlockEvent(TT_MUXED_USERID)` → `CLIENTEVENT_USER_AUDIOBLOCK` → `feedReference()`.
+- **Reference signal resampling**: The reference arrives at the channel codec rate (e.g. 48000 Hz for Opus) but the AEC operates at the hardware capture rate (e.g. 44100 Hz). `feedReference()` resamples via linear interpolation when rates differ.
 - Capture signal (near-end/mic) processed via `processCapture()` in 10ms Int16 PCM frames.
 - AEC3 handles delay estimation, double-talk detection, and echo suppression internally.
+- `renderAccumulator` is capped to ~2 seconds to prevent unbounded growth from network bursts.
+- `processCapture` never allocates on the real-time thread — drops input if pre-allocated buffers are exceeded.
+
+**Current AEC limitation**: The reference signal only contains TeamTalk audio from other users. VoiceOver and system sounds are NOT in the reference, so AEC cannot suppress them. Suppressing VoiceOver would require capturing the actual speaker output (e.g. via `kAudioDevicePropertyTapDescription` on macOS 14+) — not yet implemented.
 
 **No custom DSP, no Audio Unit plugins** — gate/expander/limiter and AU chain were removed intentionally. The user preferred a clean passthrough (AEC excepted).
 
 **No app audio capture** — the ScreenCaptureKit/CATapDescription app audio capture feature was removed entirely.
 
+### Audio Device Hot-Plug
+
+- `AudioDeviceChangeMonitor` listens to CoreAudio property changes (`kAudioHardwarePropertyDevices`, `kAudioHardwarePropertyDefaultInputDevice`, `kAudioHardwarePropertyDefaultOutputDevice`) and posts `audioDevicesDidChange` on the main thread.
+- **AppDelegate** observes this notification (with 500ms debounce) and calls `restartSoundSystem()` which: stops the mic engine, closes the virtual input, calls `TT_RestartSoundSystem()` (forces PortAudio to re-enumerate), re-opens the output device, and restarts the mic engine if it was active. Without `TT_RestartSoundSystem()`, `TT_GetSoundDevices()` returns stale entries.
+- **AudioPreferencesStore** also observes the notification (with 500ms debounce) to refresh the UI device list.
+- `restartSoundSystem()` has an `isRestartingSoundSystem` guard to prevent re-entrant calls from both handlers.
+
 ### Audio Pipeline Gotchas
+
+**AVAudioEngine cannot select non-default devices**: Calling `AudioUnitSetProperty(kAudioOutputUnitProperty_CurrentDevice)` on AVAudioEngine's inputNode AUHAL is silently ignored. The engine always creates a `CADefaultDeviceAggregate` locked to the system default device's format. This is why the standalone AUHAL path exists for non-default devices.
 
 **System default device**: Calling `AudioUnitSetProperty(kAudioOutputUnitProperty_CurrentDevice)` on the already-active system default device corrupts AVAudioEngine's internal state — the tap silently receives no buffers. Always skip this call when the target device matches the system default.
 
@@ -67,15 +89,23 @@ Microphone → AVAudioEngine (input gain) → Int16 PCM → [WebRTC AEC3] → TT
 
 **Multi-channel USB devices**: Multi-stream USB interfaces (e.g. Komplete Audio 6 MK2) only expose the first stream's channels by default via `inputNode.outputFormat(forBus: 0)`. The AUHAL audio unit must be configured to aggregate all streams by setting `kAudioUnitProperty_StreamFormat` on output scope element 1 with the full channel count from `InputAudioDeviceResolver`.
 
-**Sample rate mismatch**: The hardware sample rate (from `inputNode.outputFormat`) may differ from `InputAudioDeviceInfo.nominalSampleRate` (from `kAudioDevicePropertyNominalSampleRate`). The capture engine overrides `targetFormat.sampleRate` to match the actual hardware rate. Any downstream consumer (e.g. `AdvancedMicrophonePreviewController`) must read the effective rate from the capture engine after start, not from the nominal device info.
+**Sample rate mismatch**: The hardware sample rate (from `inputNode.outputFormat` or AUHAL's `kAudioUnitScope_Input` element 1) may differ from `InputAudioDeviceInfo.nominalSampleRate` (from `kAudioDevicePropertyNominalSampleRate`). The capture engine overrides `targetFormat.sampleRate` to match the actual hardware rate. Any downstream consumer (e.g. `AdvancedMicrophonePreviewController`) must read the effective rate from the capture engine after start, not from the nominal device info.
 
 **Apple AEC/VPIO removed**: The `AppleVoiceChatAudioEngine` (Voice Processing IO for echo cancellation) was removed entirely — it didn't work well. All microphone capture now goes through `AdvancedMicrophoneAudioEngine` exclusively.
 
-**Audio device hot-plug**: `AudioDeviceChangeMonitor` listens to CoreAudio property changes (`kAudioHardwarePropertyDevices`, `kAudioHardwarePropertyDefaultInputDevice`, `kAudioHardwarePropertyDefaultOutputDevice`) and posts `audioDevicesDidChange` on the main thread. `AudioPreferencesStore` observes this notification to auto-refresh the device list when AirPods/headphones are connected or disconnected.
-
 ### Audio Latency Profile (measured)
 
-The app-side audio pipeline adds **< 0.3 ms** from gain application to `TT_InsertAudioBlock`. The dominant capture latency is the tap buffer size (~40-50 ms at 48000 Hz), capped by `min(txIntervalMSec, 40)`. The SDK internal queue adds 0-80 ms before encoding. Any perceived latency beyond that comes from the Opus codec, network, or server-side processing — not from the app pipeline.
+The app-side audio pipeline adds **< 0.3 ms** from gain application to `TT_InsertAudioBlock`. The dominant capture latency is the tap/accumulation buffer size (~40 ms), capped by `min(txIntervalMSec, 40)`. The AUHAL path accumulates ~40ms of frames before processing. The SDK internal queue adds 0-80 ms before encoding. Any perceived latency beyond that comes from the Opus codec, network, or server-side processing — not from the app pipeline.
+
+### User Volume Curve
+
+User volume uses the same **exponential curve** as the Qt TeamTalk client:
+- Percent → SDK volume: `82.832 * exp(0.0508 * percent) - 50`
+- SDK volume → percent: `log((volume + 50) / 82.832) / 0.0508`
+- 0% = silence, ~50% = SOUND_VOLUME_DEFAULT (1000), 100% = ~11466 (amplification)
+- Slider range: 0–100 (matching Qt client)
+- Functions: `TeamTalkConnectionController.userVolumeFromPercent()` / `percentFromUserVolume()`
+- User volumes are persisted per-username in `UserVolumeStore` (UserDefaults) and restored on user join.
 
 ### CPU Performance
 
@@ -85,12 +115,22 @@ The audio pipeline in Release mode uses **< 0.2% CPU**. Debug builds are ~75x sl
 
 **Profiling**: Use `sample <PID> <seconds> -file /tmp/output.txt` to capture CPU profiles.
 
+### Auto-Away and VoiceOver
+
+Auto-away activates when `HIDIdleTime >= threshold` (configurable, default 3 minutes). Deactivation only triggers when `HIDIdleTime < 10 seconds`, meaning real physical input (keyboard/mouse/trackpad) just happened. This fixed threshold prevents false deactivation caused by VoiceOver announcements or braille display updates briefly resetting `HIDIdleTime` when auto-away activates.
+
 ### Threading Model
 
 - `TeamTalkConnectionController` uses a serial `DispatchQueue` for all SDK operations. Public methods dispatch to this queue internally.
 - `@MainActor` is used for delegate callbacks and UI-facing properties.
-- Audio callbacks from `AVAudioEngine` run on the real-time audio thread — no heap allocations, no locks beyond the state snapshot pattern.
-- Audio chunks are dispatched from the real-time thread to the TeamTalk queue via a single `queue.async` hop. This is the only thread transition in the capture path.
+- **AVAudioEngine tap callback** runs on AVAudioEngine's internal thread — no heap allocations, no locks beyond the state snapshot pattern.
+- **AUHAL input callback** runs on CoreAudio's real-time IO thread — all buffers pre-allocated, single `stateLock` acquisition for state snapshot, accumulation into pre-allocated buffer, zero heap allocation.
+- Audio chunks are dispatched from the capture thread to the TeamTalk queue via a single `queue.async` hop. This is the only thread transition in the capture path.
+- `EchoCanceller.feedReference()` runs on the TeamTalk queue; `processCapture()` runs on the capture thread. They use separate buffers (renderAccumulator vs captureAccumulator). WebRTC APM handles its own internal synchronization.
+
+### AudioLogger
+
+`AudioLogger` writes diagnostic logs to `~/Library/Logs/TTAccessible/audio.log` (sandboxed path). Thread-safe: captures `Date()` on calling thread, formats timestamp and writes to file on a serial dispatch queue. No `DateFormatter` used (not thread-safe) — uses `Calendar.dateComponents` instead. Log file is cleared on each app launch. Useful for debugging audio device issues, hot-plug, and engine start/stop.
 
 ### Extension File Convention
 
@@ -122,7 +162,7 @@ The app is sandboxed. File I/O goes to `~/Library/Containers/com.math65.ttaccess
 
 ### Original TeamTalk Reference
 
-The original Qt/C++ TeamTalk client is at `../ttoriginal/Client/qtTeamTalk/`. Key reference files: `mainwindow.cpp` (features), `utilsound.cpp` (audio init). The original uses `TT_InitSoundInputDevice` + `TT_EnableVoiceTransmission` (direct SDK path) — we cannot use this due to audio saturation.
+The original Qt/C++ TeamTalk client is at `../ttoriginal/Client/qtTeamTalk/`. Key reference files: `mainwindow.cpp` (features), `utilsound.cpp` (audio init, volume curve). The original uses `TT_InitSoundInputDevice` + `TT_EnableVoiceTransmission` (direct SDK path) — we cannot use this due to audio saturation.
 
 ### Removed Features
 
@@ -135,7 +175,7 @@ The following features were explicitly removed by the user and should NOT be re-
 - **App audio capture** — ScreenCaptureKit / CATapDescription capture, ring buffer mixer, and all related UI were removed entirely (7 files deleted).
 - **Apple Voice Processing (VPIO)** — removed, didn't work well. Replaced by WebRTC AEC3.
 - **Custom NLMS echo canceller** — homemade NLMS adaptive filter was replaced by WebRTC AEC3 (much better quality, no CPU issues in Debug builds).
-- **Audio diagnostics logging** — `AudioDiagnosticsLogger` and all `logAudio`/`logDiagnostics` calls removed. Was causing unnecessary CPU usage (per-chunk stats computation).
+- **Audio diagnostics logging** — `AudioDiagnosticsLogger` and all `logAudio`/`logDiagnostics` calls removed. Was causing unnecessary CPU usage (per-chunk stats computation). Replaced by `AudioLogger` for file-based diagnostics (lightweight, no per-chunk computation).
 - **Performance loggers** — `AppPerformanceLogger` and `PreferencesPerformanceLogger` removed. They used `NSLog` on hot paths (10x/sec in the polling loop), costing more CPU than what they measured.
 
 ### Recording
@@ -150,6 +190,10 @@ Two recording modes, both managed by the SDK:
 - `CLIENTEVENT_USER_RECORD_MEDIAFILE` handled for error/abort detection.
 - **Auto-restart on channel join** — `autoRestartRecording` preference (off by default). When enabled, if recording was active (`lastRecordingWasActive`), it auto-restarts when joining a new channel, reconnecting, or relaunching the app. Toggle in Preferences > Recording.
 
+### @Published willSet Gotcha
+
+`@Published` emits via `willSet` — the property still holds the OLD value when subscribers receive the notification. Preference stores that subscribe to `rootStore.$preferences` must use the **closure parameter** (the new value), not re-read `rootStore.preferences` (stale). This was the cause of the recording preferences Picker/Toggle not updating in real-time. See `RecordingPreferencesStore.init()` for the correct pattern.
+
 ### Sound Packs
 
 Three sound packs bundled: **Default** (root of `Sounds/`), **Majorly-G**, **Old** (in subfolders with prefixed filenames to avoid Xcode resource flattening conflicts). `SoundPlayer` loads from selected pack with fallback to Default for missing sounds. Per-event enable/disable via `disabledSoundEvents: Set<NotificationSound>` in preferences.
@@ -161,17 +205,23 @@ Three sound packs bundled: **Default** (root of `Sounds/`), **Majorly-G**, **Old
 | Cmd+Shift+M | Mute/unmute selected user | `TT_SetUserMute` + `TT_PumpMessage` |
 | Cmd+M | Mute/unmute master volume | `TT_SetSoundOutputMute` |
 | Cmd+U | User volume + stereo balance | `TT_SetUserVolume` + `TT_SetUserStereo` |
+| Cmd+I | User info | Shows user info window |
+| Cmd+K | Kick from channel | `TT_DoKickUser(channelID)` |
+| Cmd+Shift+K | Kick from server (admin) | `TT_DoKickUser(0)` |
+| Cmd+Option+X | Move user to channel | `TT_DoMoveUser` |
 | Cmd+R | Start/stop recording | `TT_StartRecordingMuxedAudioFile` / `TT_SetUserMediaStorageDir` |
 | Ctrl+Cmd+O | Channel operator toggle | `TT_DoChannelOp` / `TT_DoChannelOpEx` |
 | Cmd+Shift+H | Hear myself (loopback) | `TT_DoSubscribe(SUBSCRIBE_VOICE, myUserID)` |
 
+**Skip kick confirmation**: `skipKickConfirmation` preference (off by default, Preferences > Connection). When enabled, Cmd+K and Cmd+Shift+K execute immediately without a confirmation dialog. Kick & Ban always shows confirmation regardless.
+
 **Mute state tracking**: The outline view's `item(atRow:)` returns stale `ServerTreeNode` values after `reloadData(forRowIndexes:)` (audio runtime updates don't replace items). User mute state is tracked via `localMuteState: [Int32: Bool]` dictionary on `ConnectedServerViewController`, cleared on new session. `TT_PumpMessage(CLIENTEVENT_USER_STATECHANGE)` must be called after `TT_SetUserMute` (same pattern as Qt client).
 
-**Volume dialog**: Real-time via `VolumeSliderHandler` (NSObject target/action on slider). `setUserVoiceVolumeImmediate` applies to SDK without persisting to `UserVolumeStore`. Cancel reverts to original volume and stereo state.
+**Volume dialog**: Real-time via `VolumeSliderHandler` (NSObject target/action on slider). Uses exponential volume curve (see User Volume Curve section). `setUserVoiceVolumeImmediate` applies to SDK without persisting to `UserVolumeStore`. Cancel reverts to original volume and stereo state.
 
 ### Preferences Organization
 
-6 tabs: **General** (identity, auto-away, relative timestamps, import toggle), **Connection** (auto-join, reconnect, subscriptions, intercepts), **Audio** (devices, AEC, preset, preview), **Sounds** (global toggle, pack selector, 26 per-event toggles), **Announcements** (background modes, TTS config, per-event announcement toggles), **Recording** (folder, mode, format, auto-restart).
+6 tabs: **General** (identity, auto-away, relative timestamps, import toggle), **Connection** (auto-join, reconnect, skip kick confirmation, subscriptions, intercepts), **Audio** (devices, AEC, preset, preview), **Sounds** (global toggle, pack selector, 26 per-event toggles), **Announcements** (background modes, TTS config, per-event announcement toggles), **Recording** (folder, mode, format, auto-restart).
 
 All section headings use `.accessibilityAddTraits(.isHeader)` for VoiceOver heading navigation.
 
@@ -191,13 +241,10 @@ Chat messages (channel and private) use `NSTextView` with `NSDataDetector` for a
 
 Admin user accounts list shows a Password column. The SDK returns plaintext passwords via `TT_DoListUserAccounts()` — the app now reads `szPassword` instead of setting it to empty. The edit form uses `NSTextField` (not `NSSecureTextField`) matching the Qt client behavior.
 
-### Removed Features (beta 5)
-
-- **Manual refresh devices button** — removed from Preferences > Audio. `AudioDeviceChangeMonitor` handles device detection automatically via CoreAudio property listeners. The manual button was redundant and could cause audio input to stop working.
-
 ### Missing Features (vs original Qt client)
 
 - **Push-to-Talk** — configurable hotkey for PTT mode (not just toggle)
 - **VOX level** — configurable voice activation threshold slider
 - **Mic gain hotkeys** — increase/decrease gain via keyboard shortcuts
 - **Video/Desktop/Media streaming** — not implemented (low priority for accessibility)
+- **Custom sound packs** — loading user-provided sound packs from disk (only 3 built-in packs currently)
