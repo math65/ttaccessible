@@ -497,8 +497,9 @@ extension TeamTalkConnectionController {
             case CLIENTEVENT_AUDIOINPUT:
                 break
             case CLIENTEVENT_USER_AUDIOBLOCK:
-                // Feed muxed audio to echo canceller as far-end reference.
-                if let aec = advancedMicrophoneEngine.echoCanceller,
+                // Feed muxed audio to echo canceller as far-end reference (fallback when speaker tap is unavailable).
+                if speakerTapCaptureStorage == nil,
+                   let aec = advancedMicrophoneEngine.echoCanceller,
                    message.nSource == TT_MUXED_USERID {
                     if let block = TT_AcquireUserAudioBlock(instance, UInt32(STREAMTYPE_VOICE.rawValue), TT_MUXED_USERID) {
                         if let rawAudio = block.pointee.lpRawAudio {

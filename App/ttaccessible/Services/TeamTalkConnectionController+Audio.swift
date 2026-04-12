@@ -58,6 +58,11 @@ extension TeamTalkConnectionController {
                 DispatchQueue.main.async { completion(.success(())) }
                 return
             }
+            if Date() < self.suppressDeviceChangeUntil {
+                AudioLogger.log("restartSoundSystem: skipped (suppressed for speaker tap)")
+                DispatchQueue.main.async { completion(.success(())) }
+                return
+            }
             self.isRestartingSoundSystem = true
             defer { self.isRestartingSoundSystem = false }
 
@@ -315,9 +320,15 @@ extension TeamTalkConnectionController {
                 self?.audioDeviceChangeMonitor?.monitorSampleRate(forDeviceID: deviceID)
             }
 
-            // Enable muxed audio block events for AEC reference signal.
+            // Enable AEC reference signal.
             if aecEnabled {
-                TT_EnableAudioBlockEvent(instance, TT_MUXED_USERID, UInt32(STREAMTYPE_VOICE.rawValue), 1)
+                if #available(macOS 14.2, *), startSpeakerTapForAEC() {
+                    AudioLogger.log("AEC: using speaker tap for reference signal")
+                } else {
+                    // Fallback: use SDK muxed audio (only TeamTalk audio, not VoiceOver/system).
+                    TT_EnableAudioBlockEvent(instance, TT_MUXED_USERID, UInt32(STREAMTYPE_VOICE.rawValue), 1)
+                    AudioLogger.log("AEC: using SDK muxed audio for reference signal (fallback)")
+                }
             }
         } catch {
             if teamTalkVirtualInputReady {
@@ -459,12 +470,34 @@ extension TeamTalkConnectionController {
 
     func stopAdvancedMicrophoneInputLocked(instance: UnsafeMutableRawPointer, reason: String) {
         AudioLogger.log("stopAdvancedMicrophoneInput: reason=%@", reason)
-        // Disable muxed audio block events (AEC reference).
+        // Stop AEC reference source.
+        if #available(macOS 14.2, *) {
+            (speakerTapCaptureStorage as? SpeakerTapCapture)?.stop()
+        }
+        speakerTapCaptureStorage = nil
         TT_EnableAudioBlockEvent(instance, TT_MUXED_USERID, UInt32(STREAMTYPE_VOICE.rawValue), 0)
         advancedMicrophoneEngine.stop()
         _ = TT_InsertAudioBlock(instance, nil)
         inputAudioReady = false
         advancedMicrophoneTargetFormat = nil
+    }
+
+    @available(macOS 14.2, *)
+    private func startSpeakerTapForAEC() -> Bool {
+        let tap = SpeakerTapCapture { [weak self] samples, frameCount, channels, sampleRate in
+            guard let aec = self?.advancedMicrophoneEngine.echoCanceller else { return }
+            aec.feedReference(samples, count: frameCount, channels: channels, sampleRate: sampleRate)
+        }
+        // Suppress device change notifications briefly — creating the aggregate device
+        // triggers kAudioHardwarePropertyDevices which would restart the sound system.
+        suppressDeviceChangeUntil = Date().addingTimeInterval(2.0)
+        guard tap.start() else {
+            AudioLogger.log("AEC: speaker tap failed to start")
+            suppressDeviceChangeUntil = .distantPast
+            return false
+        }
+        speakerTapCaptureStorage = tap
+        return true
     }
 
     func ensureTeamTalkVirtualInputReadyLocked(instance: UnsafeMutableRawPointer) throws {

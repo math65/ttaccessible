@@ -105,6 +105,7 @@ final class TeamTalkConnectionController {
     var reconnectOptions = TeamTalkConnectOptions()
     var lastChannelID: Int32 = 0
     var isRestartingSoundSystem = false
+    var suppressDeviceChangeUntil = Date.distantPast
     var lastAutoAwayCheckTime: CFAbsoluteTime = 0
     var isAutoAwayActive = false
     var autoAwayActivationTime: Date?
@@ -121,6 +122,8 @@ final class TeamTalkConnectionController {
             self?.insertAdvancedMicrophoneAudioChunkLocked(chunk)
         }
     }
+    /// Speaker tap for AEC reference (macOS 14.2+). Typed as Any to avoid availability annotation on stored property.
+    var speakerTapCaptureStorage: Any?
 
     init(preferencesStore: AppPreferencesStore) {
         self.preferencesStore = preferencesStore
