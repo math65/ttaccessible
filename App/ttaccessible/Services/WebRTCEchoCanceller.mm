@@ -32,10 +32,19 @@ WebRTCAECRef webrtc_aec_create(int sample_rate, int channels) {
     }
 
     webrtc::AudioProcessing::Config config;
+
+    // Echo cancellation (AEC3).
     config.echo_canceller.enabled = true;
     config.echo_canceller.mobile_mode = false;
+
+    // Noise suppression — helps AEC by removing background noise.
+    config.noise_suppression.enabled = true;
+    config.noise_suppression.level = webrtc::AudioProcessing::Config::NoiseSuppression::kModerate;
+
+    // Multi-channel support.
     config.pipeline.multi_channel_render = (channels > 1);
     config.pipeline.multi_channel_capture = (channels > 1);
+
     aec->apm->ApplyConfig(config);
 
     return aec;
@@ -60,6 +69,7 @@ int webrtc_aec_feed_render(WebRTCAECRef aec, const int16_t* data, int sample_cou
 
 int webrtc_aec_process_capture(WebRTCAECRef aec, int16_t* data, int sample_count) {
     if (!aec || !aec->apm || !data) return -1;
+    aec->apm->set_stream_delay_ms(0);
     return aec->apm->ProcessStream(
         data,
         aec->stream_config,
