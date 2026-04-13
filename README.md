@@ -32,6 +32,23 @@ The official TeamTalk Qt client on Mac has significant accessibility issues — 
 
 ## Building
 
+### Prerequisites
+
+- Xcode (with command line tools)
+- [p7zip](https://formulae.brew.sh/formula/p7zip) — `brew install p7zip`
+
+### Setup
+
+The TeamTalk SDK binary is not included in the repository. Download it before building:
+
+```bash
+./scripts/download-sdk.sh
+```
+
+This downloads `libTeamTalk5.dylib` and `TeamTalk.h` from the [official TeamTalk SDK](https://www.bearware.dk/?page_id=419) and places them in `Vendor/TeamTalk/`.
+
+### Build
+
 ```bash
 # Debug build
 xcodebuild -project App/ttaccessible.xcodeproj -scheme ttaccessible -configuration Debug build
@@ -39,8 +56,6 @@ xcodebuild -project App/ttaccessible.xcodeproj -scheme ttaccessible -configurati
 # Release build
 xcodebuild -project App/ttaccessible.xcodeproj -scheme ttaccessible -configuration Release build
 ```
-
-No external dependencies to install — the TeamTalk SDK (`libTeamTalk5.dylib`) and WebRTC audio processing library (`libwebrtc-audio-processing.a`) are vendored in the `Vendor/` directory.
 
 ## Installation
 

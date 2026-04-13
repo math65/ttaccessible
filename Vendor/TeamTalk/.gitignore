@@ -6,4 +6,5 @@
 *.lib
 *.pdb
 *.so
-!libTeamTalk5.dylib
+TeamTalk.h
+TeamTalkSrv.h
