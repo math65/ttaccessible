@@ -44,6 +44,12 @@ final class SavedServerStore {
         schedulePersist()
     }
 
+    func flushPendingChanges() {
+        pendingPersistWorkItem?.cancel()
+        pendingPersistWorkItem = nil
+        persist(records: cachedRecords)
+    }
+
     func add(_ record: SavedServerRecord) {
         var records = load()
         records.append(record)
@@ -82,14 +88,18 @@ final class SavedServerStore {
         let snapshot = cachedRecords
         let workItem = DispatchWorkItem { [weak self] in
             guard let self else { return }
-            do {
-                let data = try self.encoder.encode(snapshot)
-                self.userDefaults.set(data, forKey: Keys.records)
-            } catch {
-                self.userDefaults.removeObject(forKey: Keys.records)
-            }
+            self.persist(records: snapshot)
         }
         pendingPersistWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: workItem)
+    }
+
+    private func persist(records: [SavedServerRecord]) {
+        do {
+            let data = try encoder.encode(records)
+            userDefaults.set(data, forKey: Keys.records)
+        } catch {
+            userDefaults.removeObject(forKey: Keys.records)
+        }
     }
 }

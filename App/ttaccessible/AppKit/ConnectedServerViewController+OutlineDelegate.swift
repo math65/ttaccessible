@@ -167,6 +167,13 @@ extension ConnectedServerViewController: NSOutlineViewDelegate {
                 actions.append(NSAccessibilityCustomAction(name: muteTitle) { [weak self] in
                     self?.toggleMuteUserAction(); return true
                 })
+                let isMediaFileMuted = localMediaFileMuteState[user.id] ?? user.isMediaFileMuted
+                let mediaFileMuteTitle = isMediaFileMuted
+                    ? L10n.text("connectedServer.menu.unmuteMediaFile")
+                    : L10n.text("connectedServer.menu.muteMediaFile")
+                actions.append(NSAccessibilityCustomAction(name: mediaFileMuteTitle) { [weak self] in
+                    self?.toggleMuteUserMediaFileAction(); return true
+                })
                 let me = session.currentUser
                 if me?.isAdministrator == true || me?.isChannelOperator == true {
                     actions.append(NSAccessibilityCustomAction(name: L10n.text("connectedServer.menu.kickUser")) { [weak self] in

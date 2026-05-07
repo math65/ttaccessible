@@ -20,12 +20,14 @@ struct ConnectedServerUser: Equatable, Identifiable {
     let isChannelOperator: Bool
     let isTalking: Bool
     let isMuted: Bool
+    let isMediaFileMuted: Bool
     let isAway: Bool
     let isQuestion: Bool
     let ipAddress: String
     let clientName: String
     let clientVersion: String
     let volumeVoice: Int32
+    let volumeMediaFile: Int32
     let subscriptionStates: [UserSubscriptionOption: Bool]
     let channelPathComponents: [String]
 
@@ -164,6 +166,7 @@ struct ConnectedUserAudioState: Equatable {
     let userID: Int32
     let isTalking: Bool
     let isMuted: Bool
+    let isMediaFileMuted: Bool
 }
 
 struct ConnectedServerAudioRuntimeUpdate: Equatable {

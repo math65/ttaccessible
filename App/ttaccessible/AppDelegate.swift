@@ -7,9 +7,51 @@
 
 import AppKit
 import UserNotifications
+import UniformTypeIdentifiers
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private struct PendingUnsavedServerConfiguration {
+        var record: SavedServerRecord
+        var password: String
+        var initialChannelPassword: String
+    }
+
+    private struct ParsedTTLink {
+        var host: String
+        var tcpPort: Int
+        var udpPort: Int
+        var encrypted: Bool
+        var username: String
+        var password: String
+        var channel: String
+        var channelPassword: String
+    }
+
+    private enum TeamTalkImportSource {
+        case configurationFile
+        case ttFile
+        case ttLink
+    }
+
+    private enum ServerExportDestination {
+        case ttFile
+        case ttLink
+    }
+
+    private struct ServerExportChannelContext {
+        var name: String
+        var path: String
+        var password: String
+    }
+
+    private struct ServerExportContext {
+        var record: SavedServerRecord
+        var password: String
+        var channelPassword: String
+        var currentChannel: ServerExportChannelContext?
+    }
+
     private let store = SavedServerStore()
     private let passwordStore = ServerPasswordStore()
     private let preferencesStore = AppPreferencesStore()
@@ -46,6 +88,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var recordingAccessedFolder: URL?
     private var activeRecordingMode: Int = 0
     private var lastObservedChannelID: Int32 = 0
+    private var pendingUnsavedServerConfiguration: PendingUnsavedServerConfiguration?
 
     private var deviceChangeObserver: Any?
     private var globalDeviceChangeWorkItem: DispatchWorkItem?
@@ -183,6 +226,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         connectionController.disconnectSynchronously()
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard confirmSavePendingUnsavedServerIfNeeded() else {
+            return .terminateCancel
+        }
+
+        connectionController.disconnectSynchronously()
+        return .terminateNow
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
@@ -494,7 +546,138 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         showSavedServersWindow()
-        savedServersViewController?.importTeamTalkServers(nil)
+
+        switch promptTeamTalkImportSource() {
+        case .configurationFile:
+            savedServersViewController?.importTeamTalkConfiguration(nil)
+        case .ttFile:
+            savedServersViewController?.importTTFile(nil)
+        case .ttLink:
+            importPastedTTLink()
+        case nil:
+            return
+        }
+    }
+
+    private func promptTeamTalkImportSource() -> TeamTalkImportSource? {
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = L10n.text("teamTalkImport.source.title")
+        alert.informativeText = L10n.text("teamTalkImport.source.message")
+        alert.addButton(withTitle: L10n.text("teamTalkImport.source.configurationFile"))
+        alert.addButton(withTitle: L10n.text("teamTalkImport.source.ttFile"))
+        alert.addButton(withTitle: L10n.text("teamTalkImport.source.link"))
+        alert.addButton(withTitle: L10n.text("common.cancel"))
+
+        switch alert.runModal() {
+        case .alertFirstButtonReturn:
+            return .configurationFile
+        case .alertSecondButtonReturn:
+            return .ttFile
+        case .alertThirdButtonReturn:
+            return .ttLink
+        default:
+            return nil
+        }
+    }
+
+    private func importPastedTTLink() {
+        guard let rawLink = promptForTTLinkText() else {
+            return
+        }
+
+        guard let parsedLink = parseTTLink(rawLink) else {
+            presentErrorAlert(
+                title: L10n.text("savedServers.alert.error.title"),
+                message: L10n.text("teamTalkImport.link.invalid")
+            )
+            return
+        }
+
+        let draft = savedServerDraft(from: parsedLink)
+        let editor = SavedServerEditorWindowController(
+            mode: .add,
+            draft: draft,
+            parentWindow: savedServersWindowController?.window
+        )
+
+        guard let result = editor.runModal(),
+              let record = result.makeRecord(id: UUID()) else {
+            return
+        }
+
+        let existingRecord = store.load().first { $0.matchesEndpoint(of: record) }
+        if let existingRecord,
+           confirmImportReplacingExistingServer(
+                existingRecord: existingRecord,
+                importedRecord: record,
+                sourceName: L10n.text("teamTalkImport.link.sourceName")
+           ) == false {
+            return
+        }
+
+        let savedRecord = existingRecord.map { record.withID($0.id) } ?? record
+
+        do {
+            try passwordStore.setPassword(result.password, for: savedRecord.id)
+            try passwordStore.setChannelPassword(result.initialChannelPassword, for: savedRecord.id)
+            if existingRecord == nil {
+                store.add(savedRecord)
+            } else {
+                store.update(savedRecord)
+            }
+            store.setSelectedServer(id: savedRecord.id)
+            store.flushPendingChanges()
+            savedServersViewController?.refreshSavedServers(selecting: savedRecord.id)
+        } catch {
+            presentErrorAlert(
+                title: L10n.text("savedServers.alert.error.title"),
+                message: error.localizedDescription
+            )
+        }
+    }
+
+    private func confirmImportReplacingExistingServer(
+        existingRecord: SavedServerRecord,
+        importedRecord: SavedServerRecord,
+        sourceName: String
+    ) -> Bool {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = L10n.text("teamTalkImport.duplicate.title")
+        alert.informativeText = L10n.format(
+            "teamTalkImport.duplicate.message",
+            existingRecord.name,
+            existingRecord.host,
+            existingRecord.tcpPort,
+            importedRecord.name,
+            sourceName
+        )
+        alert.addButton(withTitle: L10n.text("teamTalkImport.duplicate.replace"))
+        alert.addButton(withTitle: L10n.text("teamTalkImport.duplicate.cancel"))
+        return alert.runModal() == .alertFirstButtonReturn
+    }
+
+    private func promptForTTLinkText() -> String? {
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = L10n.text("teamTalkImport.link.title")
+        alert.informativeText = L10n.text("teamTalkImport.link.message")
+        alert.addButton(withTitle: L10n.text("teamTalkImport.link.import"))
+        alert.addButton(withTitle: L10n.text("common.cancel"))
+
+        let pasteboardValue = NSPasteboard.general.string(forType: .string) ?? ""
+        let suggestedValue = parseTTLink(pasteboardValue) == nil ? "" : pasteboardValue
+        let textField = NSTextField(string: suggestedValue)
+        textField.placeholderString = L10n.text("teamTalkImport.link.placeholder")
+        textField.frame = NSRect(x: 0, y: 0, width: 420, height: 24)
+        alert.accessoryView = textField
+
+        guard alert.runModal() == .alertFirstButtonReturn else {
+            return nil
+        }
+
+        return textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     func connectSelectedSavedServer() {
@@ -507,12 +690,211 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func exportSelectedSavedServerTTFile() {
+        exportServer()
+    }
+
+    func exportServer() {
+        switch menuState.mode {
+        case .savedServers:
+            guard menuState.hasSelection else {
+                return
+            }
+            showSavedServersWindow()
+            guard let context = selectedSavedServerExportContext() else {
+                return
+            }
+            promptAndExportServer(context)
+        case .connectedServer:
+            guard let context = connectedServerExportContext() else {
+                return
+            }
+            restoreMainWindow()
+            promptAndExportServer(context)
+        }
+    }
+
+    private func selectedSavedServerExportContext() -> ServerExportContext? {
         guard menuState.mode == .savedServers, menuState.hasSelection else {
+            return nil
+        }
+
+        guard let selectedID = store.selectedServerID(),
+              let record = store.load().first(where: { $0.id == selectedID }) else {
+            return nil
+        }
+
+        do {
+            return ServerExportContext(
+                record: record,
+                password: try passwordStore.password(for: record.id) ?? "",
+                channelPassword: try passwordStore.channelPassword(for: record.id) ?? record.initialChannelPassword,
+                currentChannel: nil
+            )
+        } catch {
+            presentErrorAlert(title: L10n.text("savedServers.alert.error.title"), message: error.localizedDescription)
+            return nil
+        }
+    }
+
+    private func connectedServerExportContext() -> ServerExportContext? {
+        guard menuState.mode == .connectedServer,
+              let session = connectionController.sessionSnapshot else {
+            return nil
+        }
+
+        let record = session.savedServer
+        let channelContext: ServerExportChannelContext?
+        if session.currentChannelID > 0,
+           let channel = session.findChannelByID(session.currentChannelID) {
+            channelContext = ServerExportChannelContext(
+                name: channel.name,
+                path: "/" + channel.pathComponents.joined(separator: "/"),
+                password: connectionController.passwordForChannel(session.currentChannelID)
+            )
+        } else {
+            channelContext = nil
+        }
+
+        return ServerExportContext(
+            record: record,
+            password: connectionController.reconnectPassword ?? "",
+            channelPassword: record.initialChannelPassword,
+            currentChannel: channelContext
+        )
+    }
+
+    private func promptAndExportServer(_ context: ServerExportContext) {
+        guard let (destination, includeCurrentChannel) = promptServerExportDestination(context) else {
             return
         }
 
-        showSavedServersWindow()
-        savedServersViewController?.exportSelectedTTFile(nil)
+        let channelPath: String?
+        let channelPassword: String
+        if includeCurrentChannel, let currentChannel = context.currentChannel {
+            channelPath = currentChannel.path
+            channelPassword = currentChannel.password
+        } else {
+            let savedPath = context.record.initialChannelPath.trimmingCharacters(in: .whitespacesAndNewlines)
+            channelPath = savedPath.isEmpty ? nil : savedPath
+            channelPassword = context.channelPassword
+        }
+
+        switch destination {
+        case .ttFile:
+            exportTTFile(
+                record: context.record,
+                password: context.password,
+                channelPath: channelPath,
+                channelPassword: channelPassword
+            )
+        case .ttLink:
+            copyTTLink(
+                record: context.record,
+                password: context.password,
+                channelPath: channelPath,
+                channelPassword: channelPassword
+            )
+        }
+    }
+
+    private func promptServerExportDestination(_ context: ServerExportContext) -> (ServerExportDestination, Bool)? {
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = L10n.text("serverExport.title")
+        alert.informativeText = L10n.format("serverExport.message", context.record.name)
+        alert.addButton(withTitle: L10n.text("serverExport.ttFile"))
+        alert.addButton(withTitle: L10n.text("serverExport.link"))
+        alert.addButton(withTitle: L10n.text("common.cancel"))
+
+        let includeCurrentChannelButton: NSButton?
+        if let currentChannel = context.currentChannel {
+            let checkbox = NSButton(
+                checkboxWithTitle: L10n.format("serverExport.includeCurrentChannel", currentChannel.name),
+                target: nil,
+                action: nil
+            )
+            checkbox.state = .on
+            checkbox.frame = NSRect(x: 0, y: 0, width: 420, height: 24)
+            alert.accessoryView = checkbox
+            includeCurrentChannelButton = checkbox
+        } else {
+            includeCurrentChannelButton = nil
+        }
+
+        switch alert.runModal() {
+        case .alertFirstButtonReturn:
+            return (.ttFile, includeCurrentChannelButton?.state == .on)
+        case .alertSecondButtonReturn:
+            return (.ttLink, includeCurrentChannelButton?.state == .on)
+        default:
+            return nil
+        }
+    }
+
+    private func exportTTFile(
+        record: SavedServerRecord,
+        password: String,
+        channelPath: String?,
+        channelPassword: String
+    ) {
+        guard let data = ttFileService.generateFileContents(
+            record: record,
+            password: password,
+            defaultJoinChannelPath: channelPath,
+            defaultJoinPassword: channelPassword,
+            defaultStatusMessage: preferencesStore.preferences.defaultStatusMessage,
+            defaultGender: preferencesStore.preferences.defaultGender
+        ) else {
+            presentErrorAlert(
+                title: L10n.text("savedServers.alert.error.title"),
+                message: L10n.text("ttFile.export.error.unreadable")
+            )
+            return
+        }
+
+        let panel = NSSavePanel()
+        panel.title = L10n.text("ttFile.export.panel.title")
+        panel.nameFieldStringValue = sanitizedTTFileName(for: record.name)
+        panel.allowedContentTypes = [.init(filenameExtension: "tt") ?? .data]
+        panel.canCreateDirectories = true
+
+        guard panel.runModal() == .OK, let url = panel.url else {
+            return
+        }
+
+        do {
+            try data.write(to: url, options: .atomic)
+        } catch {
+            presentErrorAlert(title: L10n.text("savedServers.alert.error.title"), message: error.localizedDescription)
+        }
+    }
+
+    private func copyTTLink(
+        record: SavedServerRecord,
+        password: String,
+        channelPath: String?,
+        channelPassword: String
+    ) {
+        let link = record.generateLink(
+            password: password,
+            channelPath: channelPath,
+            channelPassword: channelPassword.isEmpty ? nil : channelPassword
+        )
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(link, forType: .string)
+
+        let message = L10n.text("connectedServer.serverLink.copied")
+        if menuState.mode == .connectedServer {
+            connectedServerViewController?.announce(message)
+        } else {
+            announceWithVoiceOver(message)
+        }
+    }
+
+    private func sanitizedTTFileName(for value: String) -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let baseName = trimmed.isEmpty ? "server" : trimmed
+        return baseName.replacingOccurrences(of: "/", with: "-") + ".tt"
     }
 
     func focusPrimaryArea() {
@@ -648,6 +1030,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard menuState.mode == .connectedServer else { return }
         restoreMainWindow()
         connectedServerViewController?.toggleMuteUserAction()
+    }
+
+    func toggleMuteSelectedUserMediaFile() {
+        guard menuState.mode == .connectedServer else { return }
+        restoreMainWindow()
+        connectedServerViewController?.toggleMuteUserMediaFileAction()
     }
 
     func adjustSelectedUserVolume() {
@@ -899,6 +1287,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        guard confirmSavePendingUnsavedServerIfNeeded() else {
+            return
+        }
+
         connectionController.disconnect()
     }
 
@@ -1004,38 +1396,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handleTTLink(_ url: URL) {
-        guard let host = url.host, host.isEmpty == false else { return }
-
-        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-        let params = components?.queryItems ?? []
-
-        func param(_ name: String) -> String {
-            params.first(where: { $0.name == name })?.value ?? ""
+        guard let parsedLink = parseTTLink(url) else {
+            return
         }
 
-        let tcpPort = Int(param("tcpport")) ?? 10333
-        let udpPort = Int(param("udpport")) ?? tcpPort
-        let encrypted = param("encrypted") == "true" || param("encrypted") == "1"
-        let username = param("username")
-        let password = param("password")
-        let channel = param("channel")
-        let chanPassword = param("chanpasswd")
-
-        let draft = SavedServerDraft(
-            name: host,
-            host: host,
-            tcpPort: String(tcpPort),
-            udpPort: String(udpPort),
-            encrypted: encrypted,
-            nickname: preferencesStore.preferences.defaultNickname,
-            username: username,
-            password: password,
-            initialChannelPath: channel,
-            initialChannelPassword: chanPassword
-        )
-
-        let editor = SavedServerEditorWindowController(mode: .add, draft: draft, parentWindow: nil)
-        guard let result = editor.runModal(), let record = result.makeRecord(id: UUID()) else { return }
+        let record = savedServerRecord(from: parsedLink, id: UUID())
 
         if connectionController.sessionSnapshot != nil {
             let alert = NSAlert()
@@ -1044,24 +1409,135 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             alert.addButton(withTitle: L10n.text("ttFile.alert.connected.confirm"))
             alert.addButton(withTitle: L10n.text("ttFile.alert.connected.cancel"))
             guard alert.runModal() == .alertFirstButtonReturn else { return }
-            connectionController.disconnect()
+            guard confirmSavePendingUnsavedServerIfNeeded() else { return }
+            connectionController.disconnectSynchronously()
         }
 
         let options = TeamTalkConnectOptions(
             nicknameOverride: nil,
             statusMessage: nil,
             genderOverride: nil,
-            initialChannelPath: result.sanitizedInitialChannelPath.isEmpty ? nil : result.sanitizedInitialChannelPath,
-            initialChannelPassword: result.initialChannelPassword,
+            initialChannelPath: parsedLink.channel.isEmpty ? nil : parsedLink.channel,
+            initialChannelPassword: parsedLink.channelPassword,
             preferJoinLastChannelFromServer: false
         )
-        connectionController.connect(to: record, password: result.password, options: options) { [weak self] result in
-            if case .failure(let error) = result {
-                self?.presentErrorAlert(
+        connectionController.connect(to: record, password: parsedLink.password, options: options) { [weak self] result in
+            guard let self else {
+                return
+            }
+
+            switch result {
+            case .success:
+                self.pendingUnsavedServerConfiguration = PendingUnsavedServerConfiguration(
+                    record: record,
+                    password: parsedLink.password,
+                    initialChannelPassword: parsedLink.channelPassword
+                )
+            case .failure(let error):
+                self.presentErrorAlert(
                     title: L10n.text("ttFile.alert.connectionError.title"),
                     message: error.localizedDescription
                 )
             }
+        }
+    }
+
+    private func parseTTLink(_ rawValue: String) -> ParsedTTLink? {
+        let normalizedValue = normalizedTTLinkString(rawValue)
+        guard let url = URL(string: normalizedValue) else {
+            return nil
+        }
+        return parseTTLink(url)
+    }
+
+    private func normalizedTTLinkString(_ rawValue: String) -> String {
+        let wrapperCharacters = CharacterSet.whitespacesAndNewlines
+            .union(CharacterSet(charactersIn: "<>\"'"))
+        var value = rawValue.trimmingCharacters(in: wrapperCharacters)
+        if let schemeRange = value.range(of: "tt://", options: [.caseInsensitive]) {
+            value = String(value[schemeRange.lowerBound...])
+        }
+        if let endIndex = value.firstIndex(where: { $0.isWhitespace }) {
+            value = String(value[..<endIndex])
+        }
+        return value.trimmingCharacters(in: wrapperCharacters)
+    }
+
+    private func parseTTLink(_ url: URL) -> ParsedTTLink? {
+        guard url.scheme?.lowercased() == "tt",
+              let host = url.host?.trimmingCharacters(in: .whitespacesAndNewlines),
+              host.isEmpty == false else {
+            return nil
+        }
+
+        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        let params = components?.queryItems ?? []
+
+        func param(_ name: String) -> String {
+            params.first(where: { item in
+                item.name.caseInsensitiveCompare(name) == .orderedSame
+            })?.value ?? ""
+        }
+
+        let tcpPort = parsedPort(param("tcpport")) ?? 10333
+        let udpPort = parsedPort(param("udpport")) ?? tcpPort
+        let channelPassword = param("chanpasswd").isEmpty ? param("chanpassword") : param("chanpasswd")
+
+        return ParsedTTLink(
+            host: host,
+            tcpPort: tcpPort,
+            udpPort: udpPort,
+            encrypted: truthyQueryValue(param("encrypted")),
+            username: param("username"),
+            password: param("password"),
+            channel: param("channel"),
+            channelPassword: channelPassword
+        )
+    }
+
+    private func savedServerDraft(from link: ParsedTTLink) -> SavedServerDraft {
+        SavedServerDraft(
+            name: link.host,
+            host: link.host,
+            tcpPort: String(link.tcpPort),
+            udpPort: String(link.udpPort),
+            encrypted: link.encrypted,
+            nickname: preferencesStore.preferences.defaultNickname,
+            username: link.username,
+            password: link.password,
+            initialChannelPath: link.channel,
+            initialChannelPassword: link.channelPassword
+        )
+    }
+
+    private func savedServerRecord(from link: ParsedTTLink, id: UUID) -> SavedServerRecord {
+        SavedServerRecord(
+            id: id,
+            name: link.host,
+            host: link.host,
+            tcpPort: link.tcpPort,
+            udpPort: link.udpPort,
+            encrypted: link.encrypted,
+            nickname: preferencesStore.preferences.defaultNickname,
+            username: link.username,
+            initialChannelPath: link.channel,
+            initialChannelPassword: link.channelPassword
+        )
+    }
+
+    private func parsedPort(_ value: String) -> Int? {
+        guard let port = Int(value), (1...65535).contains(port) else {
+            return nil
+        }
+        return port
+    }
+
+    private func truthyQueryValue(_ value: String) -> Bool {
+        switch value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "1", "true", "yes", "on":
+            return true
+        default:
+            return false
         }
     }
 
@@ -1110,6 +1586,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 guard confirmOpenTTFileWhileConnected(payload: payload) else {
                     return
                 }
+                guard confirmSavePendingUnsavedServerIfNeeded() else {
+                    return
+                }
                 connectionController.disconnectSynchronously()
                 proceed()
                 return
@@ -1139,8 +1618,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             encrypted: payload.encrypted,
             nickname: nickname,
             username: payload.auth.username,
-            initialChannelPath: "",
-            initialChannelPassword: ""
+            initialChannelPath: payload.join?.channelPath ?? "",
+            initialChannelPassword: payload.join?.password ?? ""
         )
 
         if let clientSetup = payload.clientSetup, clientSetup.hasAnySettings {
@@ -1163,7 +1642,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
             switch result {
             case .success:
-                break
+                self.pendingUnsavedServerConfiguration = PendingUnsavedServerConfiguration(
+                    record: record,
+                    password: payload.auth.password,
+                    initialChannelPassword: payload.join?.password ?? ""
+                )
             case .failure(let error):
                 self.presentErrorAlert(
                     title: L10n.text("ttFile.alert.connectionError.title"),
@@ -1215,6 +1698,81 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.addButton(withTitle: L10n.text("ttFile.alert.clientSetup.confirm"))
         alert.addButton(withTitle: L10n.text("ttFile.alert.clientSetup.cancel"))
         return alert.runModal() == .alertFirstButtonReturn
+    }
+
+    private func confirmSavePendingUnsavedServerIfNeeded() -> Bool {
+        guard let configuration = pendingUnsavedServerConfiguration else {
+            return true
+        }
+
+        guard let session = connectionController.sessionSnapshot,
+              session.savedServer.id == configuration.record.id else {
+            pendingUnsavedServerConfiguration = nil
+            return true
+        }
+
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = L10n.text("ttFile.savePrompt.title")
+        alert.informativeText = L10n.format("ttFile.savePrompt.message", configuration.record.name)
+        alert.addButton(withTitle: L10n.text("ttFile.savePrompt.save"))
+        alert.addButton(withTitle: L10n.text("ttFile.savePrompt.dontSave"))
+        alert.addButton(withTitle: L10n.text("common.cancel"))
+
+        switch alert.runModal() {
+        case .alertFirstButtonReturn:
+            return promptForServerNameAndSave(configuration)
+        case .alertSecondButtonReturn:
+            pendingUnsavedServerConfiguration = nil
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func promptForServerNameAndSave(_ configuration: PendingUnsavedServerConfiguration) -> Bool {
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = L10n.text("ttFile.saveName.title")
+        alert.informativeText = L10n.text("ttFile.saveName.message")
+        alert.addButton(withTitle: L10n.text("ttFile.saveName.save"))
+        alert.addButton(withTitle: L10n.text("common.cancel"))
+
+        let textField = NSTextField(string: configuration.record.name)
+        textField.placeholderString = L10n.text("ttFile.saveName.placeholder")
+        textField.frame = NSRect(x: 0, y: 0, width: 280, height: 24)
+        alert.accessoryView = textField
+
+        guard alert.runModal() == .alertFirstButtonReturn else {
+            return false
+        }
+
+        let name = textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard name.isEmpty == false else {
+            presentErrorAlert(
+                title: L10n.text("savedServers.alert.error.title"),
+                message: L10n.text("ttFile.saveName.emptyName")
+            )
+            return false
+        }
+
+        do {
+            var record = configuration.record
+            record.name = name
+            try passwordStore.setPassword(configuration.password, for: record.id)
+            try passwordStore.setChannelPassword(configuration.initialChannelPassword, for: record.id)
+            store.add(record)
+            store.setSelectedServer(id: record.id)
+            store.flushPendingChanges()
+            pendingUnsavedServerConfiguration = nil
+            return true
+        } catch {
+            presentErrorAlert(
+                title: L10n.text("savedServers.alert.error.title"),
+                message: error.localizedDescription
+            )
+            return false
+        }
     }
 
     private func presentErrorAlert(title: String, message: String) {

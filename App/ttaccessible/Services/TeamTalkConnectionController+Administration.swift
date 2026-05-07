@@ -11,34 +11,67 @@ extension TeamTalkConnectionController {
 
     // MARK: - File transfers
 
-    func sendFile(toChannelID channelID: Int32, localPath: String, completion: @escaping (Result<Void, Error>) -> Void) {
+    func sendFile(toChannelID channelID: Int32, localURL: URL, completion: @escaping (Result<Void, Error>) -> Void) {
         queue.async { [weak self] in
             guard let self, let instance = self.instance else {
                 DispatchQueue.main.async { completion(.failure(TeamTalkConnectionError.connectionFailed)) }
                 return
             }
-            let result = localPath.withCString { TT_DoSendFile(instance, channelID, $0) }
-            DispatchQueue.main.async {
-                if result > 0 {
-                    completion(.success(()))
-                } else {
+            let didAccess = localURL.startAccessingSecurityScopedResource()
+            do {
+                try self.validateUploadQuotaLocked(instance: instance, channelID: channelID, localURL: localURL)
+            } catch {
+                if didAccess {
+                    localURL.stopAccessingSecurityScopedResource()
+                }
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            let result = localURL.path.withCString { TT_DoSendFile(instance, channelID, $0) }
+            if result > 0 {
+                if didAccess {
+                    self.securityScopedFileTransferURLs[result] = localURL
+                }
+                self.pendingFileTransferCommands[result] = PendingFileTransferCommand(
+                    kind: .upload,
+                    localPath: localURL.standardizedFileURL.path,
+                    completion: completion
+                )
+            } else if didAccess {
+                localURL.stopAccessingSecurityScopedResource()
+            }
+            if result <= 0 {
+                DispatchQueue.main.async {
                     completion(.failure(TeamTalkConnectionError.internalError(L10n.text("files.error.uploadFailed"))))
                 }
             }
         }
     }
 
-    func receiveFile(fromChannelID channelID: Int32, fileID: Int32, toLocalPath: String, completion: @escaping (Result<Void, Error>) -> Void) {
+    func receiveFile(fromChannelID channelID: Int32, fileID: Int32, toLocalURL: URL, completion: @escaping (Result<Void, Error>) -> Void) {
         queue.async { [weak self] in
             guard let self, let instance = self.instance else {
                 DispatchQueue.main.async { completion(.failure(TeamTalkConnectionError.connectionFailed)) }
                 return
             }
-            let result = toLocalPath.withCString { TT_DoRecvFile(instance, channelID, fileID, $0) }
-            DispatchQueue.main.async {
-                if result > 0 {
-                    completion(.success(()))
-                } else {
+            let didAccess = toLocalURL.startAccessingSecurityScopedResource()
+            let result = toLocalURL.path.withCString { TT_DoRecvFile(instance, channelID, fileID, $0) }
+            if result > 0 {
+                if didAccess {
+                    self.securityScopedFileTransferURLs[result] = toLocalURL
+                }
+                self.pendingFileTransferCommands[result] = PendingFileTransferCommand(
+                    kind: .download,
+                    localPath: toLocalURL.standardizedFileURL.path,
+                    completion: completion
+                )
+            } else if didAccess {
+                toLocalURL.stopAccessingSecurityScopedResource()
+            }
+            if result <= 0 {
+                DispatchQueue.main.async {
                     completion(.failure(TeamTalkConnectionError.internalError(L10n.text("files.error.downloadFailed"))))
                 }
             }
@@ -49,7 +82,153 @@ extension TeamTalkConnectionController {
         queue.async { [weak self] in
             guard let self, let instance = self.instance else { return }
             TT_CancelFileTransfer(instance, transferID)
+            self.releaseSecurityScopedTransferURLLocked(transferID: transferID)
+            if let commandID = self.fileTransferCommandIDsByTransferID.removeValue(forKey: transferID) {
+                self.pendingFileTransferCommands.removeValue(forKey: commandID)
+                self.releaseSecurityScopedTransferURLLocked(transferID: commandID)
+            }
         }
+    }
+
+    private func releaseSecurityScopedTransferURLLocked(transferID: Int32) {
+        guard let url = securityScopedFileTransferURLs.removeValue(forKey: transferID) else { return }
+        url.stopAccessingSecurityScopedResource()
+    }
+
+    private func validateUploadQuotaLocked(
+        instance: UnsafeMutableRawPointer,
+        channelID: Int32,
+        localURL: URL
+    ) throws {
+        var channel = Channel()
+        guard TT_GetChannel(instance, channelID, &channel) != 0, channel.nDiskQuota > 0 else {
+            return
+        }
+
+        let values = try? localURL.resourceValues(forKeys: [.fileSizeKey])
+        guard let size = values?.fileSize, size > 0 else {
+            return
+        }
+
+        let fileSize = Int64(size)
+        let usedStorage = channelFileStorageUsedLocked(instance: instance, channelID: channelID)
+        guard usedStorage + fileSize <= channel.nDiskQuota else {
+            throw TeamTalkConnectionError.internalError(L10n.text("files.error.uploadQuotaExceeded"))
+        }
+    }
+
+    private func channelFileStorageUsedLocked(instance: UnsafeMutableRawPointer, channelID: Int32) -> Int64 {
+        var fileCount: INT32 = 0
+        guard TT_GetChannelFiles(instance, channelID, nil, &fileCount) != 0, fileCount > 0 else {
+            return 0
+        }
+
+        var files = Array(repeating: RemoteFile(), count: Int(fileCount))
+        guard TT_GetChannelFiles(instance, channelID, &files, &fileCount) != 0 else {
+            return 0
+        }
+
+        return files.prefix(Int(fileCount)).reduce(Int64(0)) { partial, file in
+            partial + file.nFileSize
+        }
+    }
+
+    private func standardFilePath(_ path: String) -> String {
+        URL(fileURLWithPath: path).standardizedFileURL.path
+    }
+
+    private func commandIDMatchingFileTransferLocked(_ transfer: FileTransfer) -> Int32? {
+        let localPath = ttString(from: transfer.szLocalFilePath)
+        guard localPath.isEmpty == false else {
+            return nil
+        }
+
+        let standardizedPath = standardFilePath(localPath)
+        return pendingFileTransferCommands.first { entry in
+            guard let commandPath = entry.value.localPath else {
+                return false
+            }
+            return standardFilePath(commandPath) == standardizedPath
+        }?.key
+    }
+
+    private func adoptSecurityScopedURLForFileTransferLocked(_ transfer: FileTransfer) {
+        guard securityScopedFileTransferURLs[transfer.nTransferID] == nil else {
+            return
+        }
+
+        let localPath = ttString(from: transfer.szLocalFilePath)
+        guard localPath.isEmpty == false else {
+            return
+        }
+
+        let standardizedPath = standardFilePath(localPath)
+        guard let match = securityScopedFileTransferURLs.first(where: { entry in
+            entry.key != transfer.nTransferID && entry.value.standardizedFileURL.path == standardizedPath
+        }) else {
+            return
+        }
+
+        let url = securityScopedFileTransferURLs.removeValue(forKey: match.key) ?? match.value
+        securityScopedFileTransferURLs[transfer.nTransferID] = url
+    }
+
+    private func completePendingFileTransferCommandLocked(commandID: Int32, result: Result<Void, Error>) {
+        guard let command = pendingFileTransferCommands.removeValue(forKey: commandID) else {
+            return
+        }
+
+        releaseSecurityScopedTransferURLLocked(transferID: commandID)
+        DispatchQueue.main.async {
+            command.completion(result)
+        }
+    }
+
+    private func fallbackFileTransferError(for kind: FileTransferCommandKind) -> String {
+        switch kind {
+        case .upload:
+            return L10n.text("files.error.uploadFailed")
+        case .download:
+            return L10n.text("files.error.downloadFailed")
+        case .delete:
+            return L10n.text("files.error.deleteFailed")
+        }
+    }
+
+    @discardableResult
+    func handleFileTransferCommandSuccessLocked(commandID: Int32) -> SessionPublishInvalidation {
+        guard let command = pendingFileTransferCommands[commandID] else {
+            return []
+        }
+
+        switch command.kind {
+        case .upload, .download:
+            return []
+        case .delete:
+            completePendingFileTransferCommandLocked(commandID: commandID, result: .success(()))
+            return [.channelFiles]
+        }
+    }
+
+    @discardableResult
+    func handleFileTransferCommandErrorLocked(_ message: TTMessage) -> SessionPublishInvalidation {
+        guard let command = pendingFileTransferCommands[message.nSource] else {
+            return []
+        }
+
+        let messageText = fileTransferCommandErrorMessage(from: message, kind: command.kind)
+        completePendingFileTransferCommandLocked(
+            commandID: message.nSource,
+            result: .failure(TeamTalkConnectionError.internalError(messageText))
+        )
+        return command.kind == .delete ? [.channelFiles] : []
+    }
+
+    private func fileTransferCommandErrorMessage(from message: TTMessage, kind: FileTransferCommandKind) -> String {
+        if message.clienterrormsg.nErrorNo == CMDERR_MAX_DISKUSAGE_EXCEEDED.rawValue {
+            return L10n.text("files.error.uploadQuotaExceeded")
+        }
+        return clientErrorMessage(from: message) ?? fallbackFileTransferError(for: kind)
     }
 
     func deleteChannelFile(channelID: Int32, fileID: Int32, completion: @escaping (Result<Void, Error>) -> Void) {
@@ -59,10 +238,14 @@ extension TeamTalkConnectionController {
                 return
             }
             let result = TT_DoDeleteFile(instance, channelID, fileID)
-            DispatchQueue.main.async {
-                if result > 0 {
-                    completion(.success(()))
-                } else {
+            if result > 0 {
+                self.pendingFileTransferCommands[result] = PendingFileTransferCommand(
+                    kind: .delete,
+                    localPath: nil,
+                    completion: completion
+                )
+            } else {
+                DispatchQueue.main.async {
                     completion(.failure(TeamTalkConnectionError.internalError(L10n.text("files.error.deleteFailed"))))
                 }
             }
@@ -93,6 +276,7 @@ extension TeamTalkConnectionController {
             if cmdID > 0 {
                 do {
                     try self.waitForCommandCompletionLocked(instance: instance, commandID: cmdID)
+                    self.upsertCachedUserAccountLocked(account)
                     DispatchQueue.main.async { completion(.success(())) }
                 } catch {
                     DispatchQueue.main.async { completion(.failure(error)) }
@@ -119,6 +303,8 @@ extension TeamTalkConnectionController {
                 let createCmdID = TT_DoNewUserAccount(instance, &sdkAccount)
                 if createCmdID > 0 {
                     try self.waitForCommandCompletionLocked(instance: instance, commandID: createCmdID)
+                    self.removeCachedUserAccountLocked(username: originalUsername, shouldPublish: false)
+                    self.upsertCachedUserAccountLocked(account)
                     DispatchQueue.main.async { completion(.success(())) }
                 } else {
                     DispatchQueue.main.async { completion(.failure(TeamTalkConnectionError.internalError("updateUserAccount create failed"))) }
@@ -139,6 +325,7 @@ extension TeamTalkConnectionController {
             if cmdID > 0 {
                 do {
                     try self.waitForCommandCompletionLocked(instance: instance, commandID: cmdID)
+                    self.removeCachedUserAccountLocked(username: username)
                     DispatchQueue.main.async { completion(.success(())) }
                 } catch {
                     DispatchQueue.main.async { completion(.failure(error)) }
@@ -189,6 +376,38 @@ extension TeamTalkConnectionController {
         props.commandsIntervalMSec = account.abusePrevent.nCommandsIntervalMSec
         props.lastLoginTime = ttString(from: account.szLastLoginTime)
         return props
+    }
+
+    private func upsertCachedUserAccountLocked(_ account: UserAccountProperties) {
+        removeCachedUserAccountLocked(username: account.username, shouldPublish: false)
+        cachedUserAccounts.append(account)
+        publishCachedUserAccountsLocked()
+        publishSessionAfterAccountChangeLocked(username: account.username)
+    }
+
+    private func removeCachedUserAccountLocked(username: String, shouldPublish: Bool = true) {
+        cachedUserAccounts.removeAll {
+            $0.username.localizedCaseInsensitiveCompare(username) == .orderedSame
+        }
+        if shouldPublish {
+            publishCachedUserAccountsLocked()
+        }
+        publishSessionAfterAccountChangeLocked(username: username)
+    }
+
+    private func publishCachedUserAccountsLocked() {
+        let accounts = cachedUserAccounts
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.delegate?.teamTalkConnectionController(self, didReceiveUserAccounts: accounts)
+        }
+    }
+
+    private func publishSessionAfterAccountChangeLocked(username: String) {
+        guard let instance, let connectedRecord, let currentUser = currentUserLocked(instance: instance) else { return }
+        let currentUsername = ttString(from: currentUser.szUsername)
+        guard currentUsername.localizedCaseInsensitiveCompare(username) == .orderedSame else { return }
+        publishSessionLocked(instance: instance, record: connectedRecord, invalidation: [.identity, .permissions])
     }
 
     // MARK: - Ban management
@@ -266,9 +485,17 @@ extension TeamTalkConnectionController {
         )
     }
 
-    func handleFileTransferEventLocked(_ transfer: FileTransfer) {
+    @discardableResult
+    func handleFileTransferEventLocked(_ transfer: FileTransfer) -> SessionPublishInvalidation {
+        var invalidation: SessionPublishInvalidation = []
+
         switch transfer.nStatus {
         case FILETRANSFER_ACTIVE:
+            let commandID = commandIDMatchingFileTransferLocked(transfer)
+            if let commandID {
+                fileTransferCommandIDsByTransferID[transfer.nTransferID] = commandID
+            }
+            adoptSecurityScopedURLForFileTransferLocked(transfer)
             activeTransferProgress[transfer.nTransferID] = FileTransferProgress(
                 transferID: transfer.nTransferID,
                 fileName: ttString(from: transfer.szRemoteFileName),
@@ -276,8 +503,15 @@ extension TeamTalkConnectionController {
                 total: transfer.nFileSize,
                 isDownload: transfer.bInbound != 0
             )
+            invalidation.insert(.activeTransfers)
         case FILETRANSFER_FINISHED:
             activeTransferProgress.removeValue(forKey: transfer.nTransferID)
+            releaseSecurityScopedTransferURLLocked(transferID: transfer.nTransferID)
+            let commandID = fileTransferCommandIDsByTransferID.removeValue(forKey: transfer.nTransferID)
+                ?? commandIDMatchingFileTransferLocked(transfer)
+            if let commandID {
+                completePendingFileTransferCommandLocked(commandID: commandID, result: .success(()))
+            }
             SoundPlayer.shared.play(.fileTxComplete)
             let fileName = ttString(from: transfer.szRemoteFileName)
             let isDownload = transfer.bInbound != 0
@@ -285,17 +519,35 @@ extension TeamTalkConnectionController {
                 guard let self else { return }
                 self.delegate?.teamTalkConnectionController(self, didFinishFileTransfer: fileName, isDownload: isDownload, success: true)
             }
+            invalidation.insert(.activeTransfers)
+            if isDownload == false {
+                invalidation.insert(.channelFiles)
+            }
         case FILETRANSFER_ERROR:
             activeTransferProgress.removeValue(forKey: transfer.nTransferID)
+            releaseSecurityScopedTransferURLLocked(transferID: transfer.nTransferID)
+            let commandID = fileTransferCommandIDsByTransferID.removeValue(forKey: transfer.nTransferID)
+                ?? commandIDMatchingFileTransferLocked(transfer)
+            if let commandID {
+                let command = pendingFileTransferCommands[commandID]
+                let fallback = command.map { fallbackFileTransferError(for: $0.kind) } ?? L10n.text("teamtalk.connection.error.internal")
+                completePendingFileTransferCommandLocked(
+                    commandID: commandID,
+                    result: .failure(TeamTalkConnectionError.internalError(fallback))
+                )
+            }
             let fileName = ttString(from: transfer.szRemoteFileName)
             let isDownload = transfer.bInbound != 0
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
                 self.delegate?.teamTalkConnectionController(self, didFinishFileTransfer: fileName, isDownload: isDownload, success: false)
             }
+            invalidation.insert(.activeTransfers)
         default:
             break
         }
+
+        return invalidation
     }
 
     // MARK: - User moderation
@@ -317,6 +569,17 @@ extension TeamTalkConnectionController {
         queue.async { [weak self] in
             guard let self, let instance = self.instance else { return }
             _ = TT_SetUserMute(instance, userID, STREAMTYPE_VOICE, mute ? 1 : 0)
+            _ = TT_PumpMessage(instance, CLIENTEVENT_USER_STATECHANGE, userID)
+            if let completion {
+                DispatchQueue.main.async { completion(mute) }
+            }
+        }
+    }
+
+    func muteUserMediaFile(userID: Int32, mute: Bool, completion: (@MainActor (Bool) -> Void)? = nil) {
+        queue.async { [weak self] in
+            guard let self, let instance = self.instance else { return }
+            _ = TT_SetUserMute(instance, userID, STREAMTYPE_MEDIAFILE_AUDIO, mute ? 1 : 0)
             _ = TT_PumpMessage(instance, CLIENTEVENT_USER_STATECHANGE, userID)
             if let completion {
                 DispatchQueue.main.async { completion(mute) }
@@ -505,6 +768,14 @@ extension TeamTalkConnectionController {
         }
     }
 
+    func setUserMediaFileVolume(userID: Int32, username: String, volume: Int32) {
+        userVolumeStore.setMediaFileVolume(volume, forUsername: username)
+        queue.async { [weak self] in
+            guard let self, let instance = self.instance else { return }
+            _ = TT_SetUserVolume(instance, userID, STREAMTYPE_MEDIAFILE_AUDIO, volume)
+        }
+    }
+
     func setUserStereo(userID: Int32, leftSpeaker: Bool, rightSpeaker: Bool) {
         queue.async { [weak self] in
             guard let self, let instance = self.instance else { return }
@@ -533,6 +804,13 @@ extension TeamTalkConnectionController {
         queue.async { [weak self] in
             guard let self, let instance = self.instance else { return }
             _ = TT_SetUserVolume(instance, userID, STREAMTYPE_VOICE, volume)
+        }
+    }
+
+    func setUserMediaFileVolumeImmediate(userID: Int32, volume: Int32) {
+        queue.async { [weak self] in
+            guard let self, let instance = self.instance else { return }
+            _ = TT_SetUserVolume(instance, userID, STREAMTYPE_MEDIAFILE_AUDIO, volume)
         }
     }
 
