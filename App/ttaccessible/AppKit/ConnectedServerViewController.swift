@@ -61,6 +61,7 @@ final class ConnectedServerViewController: NSViewController {
 
     var session: ConnectedServerSession
     var localMuteState: [Int32: Bool] = [:]
+    var localMediaFileMuteState: [Int32: Bool] = [:]
     var selectedKey: SelectionKey?
     var needsInitialFocus = true
     var lastAnnouncedChannelID: Int32 = 0
@@ -462,6 +463,7 @@ final class ConnectedServerViewController: NSViewController {
         if preserveSelection == false {
             selectedKey = nil
             localMuteState.removeAll()
+            localMediaFileMuteState.removeAll()
         }
 
         self.session = session
@@ -578,11 +580,16 @@ final class ConnectedServerViewController: NSViewController {
             guard let userID = singleOtherUser?.id else { return false }
             return localMuteState[userID] ?? singleOtherUser?.isMuted ?? false
         }()
+        let currentMediaFileMuted: Bool = {
+            guard let userID = singleOtherUser?.id else { return false }
+            return localMediaFileMuteState[userID] ?? singleOtherUser?.isMediaFileMuted ?? false
+        }()
         menuState.setSelectedUsersState(
             hasSelectedUsers: selectedUsers.isEmpty == false,
             hasSingleSelectedUser: allSelectedUsers.count == 1,
             hasSingleSelectedOtherUser: singleOtherUser != nil,
             isSelectedUserMuted: currentMuted,
+            isSelectedUserMediaFileMuted: currentMediaFileMuted,
             isSelectedUserChannelOperator: singleOtherUser?.isChannelOperator ?? false,
             states: Dictionary(
                 uniqueKeysWithValues: UserSubscriptionOption.allCases.map { option in
@@ -643,7 +650,9 @@ final class ConnectedServerViewController: NSViewController {
                 guard let update = updates[user.id] else {
                     return user
                 }
-                guard user.isTalking != update.isTalking || user.isMuted != update.isMuted else {
+                guard user.isTalking != update.isTalking
+                    || user.isMuted != update.isMuted
+                    || user.isMediaFileMuted != update.isMediaFileMuted else {
                     return user
                 }
                 changedUserIDs.insert(user.id)
@@ -660,12 +669,14 @@ final class ConnectedServerViewController: NSViewController {
                     isChannelOperator: user.isChannelOperator,
                     isTalking: update.isTalking,
                     isMuted: update.isMuted,
+                    isMediaFileMuted: update.isMediaFileMuted,
                     isAway: user.isAway,
                     isQuestion: user.isQuestion,
                     ipAddress: user.ipAddress,
                     clientName: user.clientName,
                     clientVersion: user.clientVersion,
                     volumeVoice: user.volumeVoice,
+                    volumeMediaFile: user.volumeMediaFile,
                     subscriptionStates: user.subscriptionStates,
                     channelPathComponents: user.channelPathComponents
                 )
@@ -909,6 +920,14 @@ final class ConnectedServerViewController: NSViewController {
         muteItem.target = self
         menu.addItem(muteItem)
 
+        let mediaFileMuteItem = NSMenuItem(
+            title: L10n.text("connectedServer.menu.muteMediaFile"),
+            action: #selector(toggleMuteUserMediaFileAction),
+            keyEquivalent: ""
+        )
+        mediaFileMuteItem.target = self
+        menu.addItem(mediaFileMuteItem)
+
         let opItem = NSMenuItem(
             title: L10n.text("connectedServer.menu.makeOperator"),
             action: #selector(toggleChannelOperatorAction),
@@ -990,8 +1009,12 @@ final class ConnectedServerViewController: NSViewController {
         }()
         switch menuItem.action {
         case #selector(toggleMuteUserAction):
-            let muted = selectedUser?.isMuted == true
+            let muted = selectedUser.map { localMuteState[$0.id] ?? $0.isMuted } == true
             menuItem.title = muted ? L10n.text("connectedServer.menu.unmuteUser") : L10n.text("connectedServer.menu.muteUser")
+            return isOther
+        case #selector(toggleMuteUserMediaFileAction):
+            let muted = selectedUser.map { localMediaFileMuteState[$0.id] ?? $0.isMediaFileMuted } == true
+            menuItem.title = muted ? L10n.text("connectedServer.menu.unmuteMediaFile") : L10n.text("connectedServer.menu.muteMediaFile")
             return isOther
         case #selector(toggleChannelOperatorAction):
             if let user = selectedUser, isOther {

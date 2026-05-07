@@ -232,7 +232,7 @@ struct AppPreferences: Codable, Equatable {
     }
 
     nonisolated static func clampGainDB(_ value: Double) -> Double {
-        min(max(value.rounded(), -24), 24)
+        min(max(value, -24), 24)
     }
 
     nonisolated static func clampAutoAwayTimeoutMinutes(_ value: Int) -> Int {

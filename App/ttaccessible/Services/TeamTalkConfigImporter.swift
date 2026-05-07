@@ -11,6 +11,17 @@ struct TeamTalkImportResult {
     let sourceURL: URL
     let importedCount: Int
     let skippedCount: Int
+    let importedServerNames: [String]
+}
+
+struct TeamTalkImportConflict {
+    let existingRecord: SavedServerRecord
+    let importedRecord: SavedServerRecord
+}
+
+enum TeamTalkImportDuplicatePolicy {
+    case skipEndpointMatches
+    case updateEndpointMatches
 }
 
 final class TeamTalkConfigImporter {
@@ -44,13 +55,16 @@ final class TeamTalkConfigImporter {
 
     private let fileManager: FileManager
     private let accessStore: TeamTalkConfigAccessStore
+    private let ttFileService: TTFileService
 
     init(
         fileManager: FileManager = .default,
-        accessStore: TeamTalkConfigAccessStore = TeamTalkConfigAccessStore()
+        accessStore: TeamTalkConfigAccessStore = TeamTalkConfigAccessStore(),
+        ttFileService: TTFileService = TTFileService()
     ) {
         self.fileManager = fileManager
         self.accessStore = accessStore
+        self.ttFileService = ttFileService
     }
 
     func defaultConfigURL() -> URL? {
@@ -84,7 +98,8 @@ final class TeamTalkConfigImporter {
     func importServers(
         from url: URL,
         into store: SavedServerStore,
-        passwordStore: ServerPasswordStore
+        passwordStore: ServerPasswordStore,
+        duplicatePolicy: TeamTalkImportDuplicatePolicy = .skipEndpointMatches
     ) throws -> TeamTalkImportResult {
         let importedServers = try loadServers(from: url)
         guard importedServers.isEmpty == false else {
@@ -94,6 +109,8 @@ final class TeamTalkConfigImporter {
         var existingRecords = store.load()
         var importedCount = 0
         var skippedCount = 0
+        var importedServerNames: [String] = []
+        let shouldUpdateEndpointDuplicates = duplicatePolicy == .updateEndpointMatches
 
         for importedServer in importedServers {
             if let existingIndex = existingRecords.firstIndex(where: { $0.matchesImportIdentity(of: importedServer.record) }) {
@@ -102,11 +119,22 @@ final class TeamTalkConfigImporter {
                 try passwordStore.setPassword(importedServer.password, for: existingID)
                 try passwordStore.setChannelPassword(importedServer.channelPassword, for: existingID)
                 importedCount += 1
+                importedServerNames.append(importedServer.record.name)
                 continue
             }
 
-            if existingRecords.contains(where: { $0.matchesEndpoint(of: importedServer.record) }) {
-                skippedCount += 1
+            if let existingIndex = existingRecords.firstIndex(where: { $0.matchesEndpoint(of: importedServer.record) }) {
+                guard shouldUpdateEndpointDuplicates else {
+                    skippedCount += 1
+                    continue
+                }
+
+                let existingID = existingRecords[existingIndex].id
+                existingRecords[existingIndex] = importedServer.record.withID(existingID)
+                try passwordStore.setPassword(importedServer.password, for: existingID)
+                try passwordStore.setChannelPassword(importedServer.channelPassword, for: existingID)
+                importedCount += 1
+                importedServerNames.append(importedServer.record.name)
                 continue
             }
 
@@ -115,10 +143,40 @@ final class TeamTalkConfigImporter {
             try passwordStore.setPassword(importedServer.password, for: newRecord.id)
             try passwordStore.setChannelPassword(importedServer.channelPassword, for: newRecord.id)
             importedCount += 1
+            importedServerNames.append(newRecord.name)
         }
 
         store.saveAll(existingRecords)
-        return TeamTalkImportResult(sourceURL: url, importedCount: importedCount, skippedCount: skippedCount)
+        return TeamTalkImportResult(
+            sourceURL: url,
+            importedCount: importedCount,
+            skippedCount: skippedCount,
+            importedServerNames: importedServerNames
+        )
+    }
+
+    func firstExistingServerConflict(from url: URL, in store: SavedServerStore) throws -> TeamTalkImportConflict? {
+        try existingServerConflicts(from: url, in: store).first
+    }
+
+    func existingServerConflicts(from url: URL, in store: SavedServerStore) throws -> [TeamTalkImportConflict] {
+        let importedServers = try loadServers(from: url)
+        let existingRecords = store.load()
+        var conflicts: [TeamTalkImportConflict] = []
+        for importedServer in importedServers {
+            if let existingRecord = existingRecords.first(where: { existingRecord in
+                existingRecord.matchesImportIdentity(of: importedServer.record)
+                    || existingRecord.matchesEndpoint(of: importedServer.record)
+            }) {
+                conflicts.append(
+                    TeamTalkImportConflict(
+                        existingRecord: existingRecord,
+                        importedRecord: importedServer.record
+                    )
+                )
+            }
+        }
+        return conflicts
     }
 
     private func candidateSources() -> [CandidateSource] {
@@ -155,9 +213,34 @@ final class TeamTalkConfigImporter {
             return try parseINI(at: url)
         case "plist":
             return try parsePlist(at: url)
+        case "tt":
+            return [importedServer(from: try ttFileService.load(from: url))]
         default:
             throw ImportError.unsupportedFileType
         }
+    }
+
+    private func importedServer(from payload: TTFilePayload) -> ImportedServer {
+        let nickname = payload.auth.nickname.isEmpty
+            ? payload.clientSetup?.nickname ?? ""
+            : payload.auth.nickname
+        let record = SavedServerRecord(
+            id: UUID(),
+            name: payload.name,
+            host: payload.host,
+            tcpPort: payload.tcpPort,
+            udpPort: payload.udpPort,
+            encrypted: payload.encrypted,
+            nickname: nickname,
+            username: payload.auth.username,
+            initialChannelPath: payload.join?.channelPath ?? "",
+            initialChannelPassword: payload.join?.password ?? ""
+        )
+        return ImportedServer(
+            record: record,
+            password: payload.auth.password,
+            channelPassword: payload.join?.password ?? ""
+        )
     }
 
     private func parseINI(at url: URL) throws -> [ImportedServer] {
@@ -293,7 +376,7 @@ final class TeamTalkConfigImporter {
     }
 }
 
-private extension SavedServerRecord {
+extension SavedServerRecord {
     func withID(_ id: UUID) -> SavedServerRecord {
         SavedServerRecord(
             id: id,

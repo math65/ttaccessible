@@ -231,6 +231,10 @@ final class SavedServersViewController: NSViewController {
         updateActionState()
     }
 
+    func refreshSavedServers(selecting id: UUID?) {
+        reloadRecords(selecting: id)
+    }
+
     private func syncSortControlsFromPreferences() {
         let sort = preferencesStore.preferences.savedServersSort
         if let item = sortFieldPopUp.itemArray.first(where: {
@@ -396,27 +400,112 @@ final class SavedServersViewController: NSViewController {
 
     @objc
     func importTeamTalkServers(_ sender: Any? = nil) {
+        importTeamTalkConfiguration(sender)
+    }
+
+    @objc
+    func importTeamTalkConfiguration(_ sender: Any? = nil) {
         let sourceURL: URL?
         if preferencesStore.preferences.prefersAutomaticTeamTalkConfigDetection {
-            sourceURL = configImporter.defaultConfigURL() ?? promptForImportFile()
+            sourceURL = configImporter.defaultConfigURL() ?? promptForConfigurationImportFile()
         } else {
-            sourceURL = promptForImportFile()
+            sourceURL = promptForConfigurationImportFile()
         }
         guard let sourceURL else {
             return
         }
 
         do {
+            let conflicts = try configImporter.existingServerConflicts(from: sourceURL, in: store)
+            if conflicts.isEmpty == false,
+               confirmImportWithExistingServers(conflictCount: conflicts.count, sourceName: sourceURL.lastPathComponent) == false {
+                return
+            }
+        } catch {
+            presentErrorAlert(message: error.localizedDescription)
+            return
+        }
+
+        importServers(from: sourceURL, rememberAccess: true)
+    }
+
+    @objc
+    func importTTFile(_ sender: Any? = nil) {
+        guard let sourceURL = promptForTTImportFile() else {
+            return
+        }
+
+        do {
+            if let conflict = try configImporter.firstExistingServerConflict(from: sourceURL, in: store),
+               confirmImportReplacingExistingServer(conflict, sourceName: sourceURL.lastPathComponent) == false {
+                return
+            }
+        } catch {
+            presentErrorAlert(message: error.localizedDescription)
+            return
+        }
+
+        importServers(
+            from: sourceURL,
+            rememberAccess: false,
+            duplicatePolicy: .updateEndpointMatches
+        )
+    }
+
+    private func importServers(
+        from sourceURL: URL,
+        rememberAccess: Bool,
+        duplicatePolicy: TeamTalkImportDuplicatePolicy = .skipEndpointMatches
+    ) {
+        do {
             let result = try configImporter.importServers(
                 from: sourceURL,
                 into: store,
-                passwordStore: passwordStore
+                passwordStore: passwordStore,
+                duplicatePolicy: duplicatePolicy
             )
+            if rememberAccess {
+                configImporter.rememberAccess(to: sourceURL)
+            }
             reloadRecords(selecting: store.selectedServerID())
             presentImportSummary(result)
         } catch {
             presentErrorAlert(message: error.localizedDescription)
         }
+    }
+
+    private func confirmImportReplacingExistingServer(
+        _ conflict: TeamTalkImportConflict,
+        sourceName: String
+    ) -> Bool {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = L10n.text("teamTalkImport.duplicate.title")
+        alert.informativeText = L10n.format(
+            "teamTalkImport.duplicate.message",
+            conflict.existingRecord.name,
+            conflict.existingRecord.host,
+            conflict.existingRecord.tcpPort,
+            conflict.importedRecord.name,
+            sourceName
+        )
+        alert.addButton(withTitle: L10n.text("teamTalkImport.duplicate.replace"))
+        alert.addButton(withTitle: L10n.text("teamTalkImport.duplicate.cancel"))
+        return alert.runModal() == .alertFirstButtonReturn
+    }
+
+    private func confirmImportWithExistingServers(conflictCount: Int, sourceName: String) -> Bool {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = L10n.text("teamTalkImport.duplicates.title")
+        alert.informativeText = L10n.format(
+            "teamTalkImport.duplicates.message",
+            conflictCount,
+            sourceName
+        )
+        alert.addButton(withTitle: L10n.text("teamTalkImport.duplicates.continue"))
+        alert.addButton(withTitle: L10n.text("teamTalkImport.duplicate.cancel"))
+        return alert.runModal() == .alertFirstButtonReturn
     }
 
     @objc
@@ -582,24 +671,34 @@ final class SavedServersViewController: NSViewController {
         let alert = NSAlert()
         alert.alertStyle = .informational
         alert.messageText = L10n.text("teamTalkImport.alert.success.title")
-        alert.informativeText = L10n.format(
-            "teamTalkImport.alert.success.message",
-            result.importedCount,
-            result.skippedCount,
-            result.sourceURL.lastPathComponent
-        )
+        if result.sourceURL.pathExtension.caseInsensitiveCompare("tt") == .orderedSame,
+           result.importedCount == 1,
+           result.skippedCount == 0,
+           let serverName = result.importedServerNames.first {
+            alert.informativeText = L10n.format("teamTalkImport.alert.singleSuccess.message", serverName)
+        } else {
+            alert.informativeText = L10n.format(
+                "teamTalkImport.alert.success.message",
+                result.importedCount,
+                result.skippedCount,
+                result.sourceURL.lastPathComponent
+            )
+        }
         alert.runModal()
     }
 
-    private func promptForImportFile() -> URL? {
+    private func promptForConfigurationImportFile() -> URL? {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
         panel.allowsMultipleSelection = false
-        panel.title = L10n.text("teamTalkImport.openPanel.title")
-        panel.message = L10n.text("teamTalkImport.openPanel.message")
+        panel.title = L10n.text("teamTalkImport.configurationOpenPanel.title")
+        panel.message = L10n.text("teamTalkImport.configurationOpenPanel.message")
         panel.prompt = L10n.text("teamTalkImport.openPanel.prompt")
-        panel.allowedContentTypes = [.init(filenameExtension: "ini") ?? .data, .propertyList]
+        panel.allowedContentTypes = [
+            .init(filenameExtension: "ini") ?? .data,
+            .propertyList
+        ]
         panel.directoryURL = configImporter.defaultConfigDirectoryURL()
         panel.nameFieldStringValue = configImporter.defaultConfigURL()?.lastPathComponent ?? "TeamTalk5.ini"
 
@@ -607,7 +706,24 @@ final class SavedServersViewController: NSViewController {
             return nil
         }
 
-        configImporter.rememberAccess(to: url)
+        return url
+    }
+
+    private func promptForTTImportFile() -> URL? {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = false
+        panel.title = L10n.text("teamTalkImport.ttOpenPanel.title")
+        panel.message = L10n.text("teamTalkImport.ttOpenPanel.message")
+        panel.prompt = L10n.text("teamTalkImport.openPanel.prompt")
+        panel.allowedContentTypes = [.init(filenameExtension: "tt") ?? .data]
+        panel.nameFieldStringValue = "server.tt"
+
+        guard panel.runModal() == .OK, let url = panel.url else {
+            return nil
+        }
+
         return url
     }
 }

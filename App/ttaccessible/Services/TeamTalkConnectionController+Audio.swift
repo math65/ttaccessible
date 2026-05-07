@@ -901,14 +901,33 @@ extension TeamTalkConnectionController {
     }
 
     nonisolated static func userVolumeFromPercent(_ percent: Double) -> INT32 {
-        let raw = 82.832 * exp(0.0508 * percent) - 50
+        let clampedPercent = min(max(percent.rounded(), 0), 100)
+        let minVolume = Double(SOUND_VOLUME_MIN.rawValue)
+        let defaultVolume = Double(SOUND_VOLUME_DEFAULT.rawValue)
+        let maxVolume = Double(SOUND_VOLUME_MAX.rawValue)
+        let raw: Double
+        if clampedPercent <= 50 {
+            raw = minVolume + (defaultVolume - minVolume) * (clampedPercent / 50)
+        } else {
+            raw = defaultVolume + (maxVolume - defaultVolume) * ((clampedPercent - 50) / 50)
+        }
         let clamped = min(max(raw.rounded(), Double(SOUND_VOLUME_MIN.rawValue)), Double(SOUND_VOLUME_MAX.rawValue))
         return INT32(clamped)
     }
 
     nonisolated static func percentFromUserVolume(_ volume: INT32) -> Int {
-        let v = Double(volume)
-        let percent = log((v + 50) / 82.832) / 0.0508
+        let v = min(max(Double(volume), Double(SOUND_VOLUME_MIN.rawValue)), Double(SOUND_VOLUME_MAX.rawValue))
+        let minVolume = Double(SOUND_VOLUME_MIN.rawValue)
+        let defaultVolume = Double(SOUND_VOLUME_DEFAULT.rawValue)
+        let maxVolume = Double(SOUND_VOLUME_MAX.rawValue)
+        let percent: Double
+        if v <= defaultVolume {
+            let span = max(defaultVolume - minVolume, 1)
+            percent = (v - minVolume) / span * 50
+        } else {
+            let span = max(maxVolume - defaultVolume, 1)
+            percent = 50 + ((v - defaultVolume) / span * 50)
+        }
         return Int(min(max(percent.rounded(), 0), 100))
     }
 

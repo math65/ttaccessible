@@ -30,6 +30,18 @@ protocol TeamTalkConnectionControllerDelegate: AnyObject {
 }
 
 final class TeamTalkConnectionController {
+    enum FileTransferCommandKind {
+        case upload
+        case download
+        case delete
+    }
+
+    struct PendingFileTransferCommand {
+        let kind: FileTransferCommandKind
+        let localPath: String?
+        let completion: (Result<Void, Error>) -> Void
+    }
+
     struct SessionPublishInvalidation: OptionSet {
         let rawValue: Int
 
@@ -111,9 +123,13 @@ final class TeamTalkConnectionController {
     var autoAwayActivationTime: Date?
     var autoAwayRestoreStatusMessage = ""
     var pendingUserAccounts: [UserAccountProperties] = []
+    var cachedUserAccounts: [UserAccountProperties] = []
     var listUserAccountsCmdID: Int32 = -1
     var pendingBannedUsers: [BannedUserProperties] = []
     var listBansCmdID: Int32 = -1
+    var pendingFileTransferCommands: [Int32: PendingFileTransferCommand] = [:]
+    var fileTransferCommandIDsByTransferID: [Int32: Int32] = [:]
+    var securityScopedFileTransferURLs: [Int32: URL] = [:]
     var lastBuiltSessionSnapshot: ConnectedServerSession?
     var cachedSoundDevices: [SoundDevice] = []
     var cachedAudioDeviceCatalog: AudioDeviceCatalog?
@@ -128,6 +144,20 @@ final class TeamTalkConnectionController {
     init(preferencesStore: AppPreferencesStore) {
         self.preferencesStore = preferencesStore
         queue.setSpecific(key: queueKey, value: ())
+    }
+
+    func passwordForChannel(_ channelID: Int32) -> String {
+        guard channelID > 0 else {
+            return ""
+        }
+
+        if DispatchQueue.getSpecific(key: queueKey) != nil {
+            return channelPasswords[channelID] ?? ""
+        }
+
+        return queue.sync {
+            channelPasswords[channelID] ?? ""
+        }
     }
 
     var isAnyMicrophoneEngineRunning: Bool {

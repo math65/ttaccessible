@@ -28,9 +28,15 @@ extension TeamTalkConnectionController {
                         ? voiceTransmissionEnabled
                         : (user.uUserState & UInt32(USERSTATE_VOICE.rawValue)) != 0
                     let isMuted = (user.uUserState & UInt32(USERSTATE_MUTE_VOICE.rawValue)) != 0
+                    let isMediaFileMuted = (user.uUserState & UInt32(USERSTATE_MUTE_MEDIAFILE.rawValue)) != 0
                     return (
                         user.nUserID,
-                        ConnectedUserAudioState(userID: user.nUserID, isTalking: isTalking, isMuted: isMuted)
+                        ConnectedUserAudioState(
+                            userID: user.nUserID,
+                            isTalking: isTalking,
+                            isMuted: isMuted,
+                            isMediaFileMuted: isMediaFileMuted
+                        )
                     )
                 }
             ),
@@ -188,12 +194,14 @@ extension TeamTalkConnectionController {
                                     ? voiceTransmissionEnabled
                                     : (user.uUserState & UInt32(USERSTATE_VOICE.rawValue)) != 0,
                                 isMuted: (user.uUserState & UInt32(USERSTATE_MUTE_VOICE.rawValue)) != 0,
+                                isMediaFileMuted: (user.uUserState & UInt32(USERSTATE_MUTE_MEDIAFILE.rawValue)) != 0,
                                 isAway: (user.nStatusMode & 0xFF) == 0x01,
                                 isQuestion: (user.nStatusMode & 0xFF) == 0x02,
                                 ipAddress: ttString(from: user.szIPAddress),
                                 clientName: ttString(from: user.szClientName),
                                 clientVersion: clientVersion(for: user),
                                 volumeVoice: user.nVolumeVoice,
+                                volumeMediaFile: user.nVolumeMediaFile,
                                 subscriptionStates: Dictionary(
                                     uniqueKeysWithValues: UserSubscriptionOption.allCases.map { option in
                                         (option, option.isLocallyEnabled(for: user))

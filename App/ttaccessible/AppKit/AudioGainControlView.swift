@@ -10,7 +10,7 @@ import AppKit
 final class AudioGainControlView: NSView {
     let titleLabel = NSTextField(labelWithString: "")
     let valueLabel = NSTextField(labelWithString: "")
-    let slider = NSSlider(value: 0, minValue: -24, maxValue: 24, target: nil, action: nil)
+    let slider = NSSlider(value: 50, minValue: 0, maxValue: 100, target: nil, action: nil)
     var valueDB: Double = 0
     var onChange: ((Double) -> Void)?
 
@@ -44,6 +44,8 @@ final class AudioGainControlView: NSView {
         setAccessibilityElement(true)
         setAccessibilityRole(.slider)
         setAccessibilityLabel(accessibilityLabel)
+        setAccessibilityMinValue(0)
+        setAccessibilityMaxValue(100)
         setAccessibilityCustomActions([
             NSAccessibilityCustomAction(
                 name: L10n.text("connectedServer.audio.gain.resetAccessibilityAction"),
@@ -58,7 +60,7 @@ final class AudioGainControlView: NSView {
             stack.trailingAnchor.constraint(equalTo: trailingAnchor),
             stack.bottomAnchor.constraint(equalTo: bottomAnchor),
             titleLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 110),
-            valueLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 52)
+            valueLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 44)
         ])
 
         setValue(0)
@@ -68,11 +70,12 @@ final class AudioGainControlView: NSView {
     required init?(coder: NSCoder) { nil }
 
     func setValue(_ value: Double) {
-        valueDB = min(max(value.rounded(), -24), 24)
-        slider.doubleValue = valueDB
-        let text = Self.format(valueDB)
+        valueDB = AppPreferences.clampGainDB(value)
+        slider.doubleValue = Self.percent(forGainDB: valueDB)
+        let text = Self.format(percent: slider.doubleValue)
         valueLabel.stringValue = text
-        setAccessibilityValue(text)
+        setAccessibilityValue(slider.doubleValue)
+        setAccessibilityValueDescription(text)
     }
 
     override var acceptsFirstResponder: Bool {
@@ -125,14 +128,14 @@ final class AudioGainControlView: NSView {
 
     @objc
     func handleSliderChanged(_ sender: NSSlider) {
-        let rounded = sender.doubleValue.rounded()
-        setValue(rounded)
-        onChange?(rounded)
+        let gainDB = Self.gainDB(forPercent: sender.doubleValue)
+        setValue(gainDB)
+        onChange?(valueDB)
     }
 
     func adjust(by delta: Double) {
-        let updated = min(max((valueDB + delta).rounded(), -24), 24)
-        setAndNotify(updated)
+        let updated = min(max((slider.doubleValue + delta).rounded(), 0), 100)
+        setAndNotify(Self.gainDB(forPercent: updated))
     }
 
     func setAndNotify(_ value: Double) {
@@ -143,10 +146,16 @@ final class AudioGainControlView: NSView {
         onChange?(valueDB)
     }
 
-    static func format(_ value: Double) -> String {
-        if value > 0 {
-            return String(format: "+%.0f dB", value)
-        }
-        return String(format: "%.0f dB", value)
+    static func percent(forGainDB value: Double) -> Double {
+        ((AppPreferences.clampGainDB(value) + 24) / 48 * 100).rounded()
+    }
+
+    static func gainDB(forPercent value: Double) -> Double {
+        let clamped = min(max(value.rounded(), 0), 100)
+        return AppPreferences.clampGainDB((clamped / 100 * 48) - 24)
+    }
+
+    static func format(percent value: Double) -> String {
+        String(format: "%.0f%%", min(max(value.rounded(), 0), 100))
     }
 }
