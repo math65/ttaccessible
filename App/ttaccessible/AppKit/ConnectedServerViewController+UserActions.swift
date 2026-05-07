@@ -8,12 +8,16 @@ import AppKit
 extension ConnectedServerViewController {
     @objc func adjustUserVolume(_ sender: Any? = nil) {
         guard case .user(let user)? = selectedNode,
-              let window = view.window else { return }
+              view.window != nil else { return }
 
-        let storedVolume = connectionController.userVolumeStore.volume(forUsername: user.username)
-        let effectiveVolume = storedVolume ?? user.volumeVoice
-        let currentPercent = TeamTalkConnectionController.percentFromUserVolume(effectiveVolume)
-        let originalVolume = effectiveVolume
+        let storedVoiceVolume = connectionController.userVolumeStore.volume(forUsername: user.username)
+        let storedMediaFileVolume = connectionController.userVolumeStore.mediaFileVolume(forUsername: user.username)
+        let effectiveVoiceVolume = storedVoiceVolume ?? user.volumeVoice
+        let effectiveMediaFileVolume = storedMediaFileVolume ?? user.volumeMediaFile
+        let currentVoicePercent = TeamTalkConnectionController.percentFromUserVolume(effectiveVoiceVolume)
+        let currentMediaFilePercent = TeamTalkConnectionController.percentFromUserVolume(effectiveMediaFileVolume)
+        let originalVoiceVolume = effectiveVoiceVolume
+        let originalMediaFileVolume = effectiveMediaFileVolume
 
         connectionController.getUserStereo(userID: user.id) { [weak self] currentLeft, currentRight in
             guard let self, let window = self.view.window else { return }
@@ -26,12 +30,23 @@ extension ConnectedServerViewController {
             alert.addButton(withTitle: L10n.text("connectedServer.volume.ok"))
             alert.addButton(withTitle: L10n.text("connectedServer.volume.cancel"))
 
-            let handler = VolumeSliderHandler(userID: user.id, connectionController: self.connectionController)
-            let slider = NSSlider(value: Double(currentPercent), minValue: 0, maxValue: 100, target: handler, action: #selector(VolumeSliderHandler.sliderChanged(_:)))
-            slider.numberOfTickMarks = 0
-            slider.isContinuous = true
-            slider.frame = NSRect(x: 0, y: 0, width: 280, height: 24)
-            slider.setAccessibilityLabel(L10n.text("connectedServer.volume.sliderLabel"))
+            let voiceHandler = VolumeSliderHandler(userID: user.id, stream: .voice, connectionController: self.connectionController)
+            let voiceSlider = makeVolumeSlider(
+                value: Double(currentVoicePercent),
+                accessibilityLabel: L10n.text("connectedServer.volume.voiceSliderLabel"),
+                handler: voiceHandler
+            )
+            let voiceValueLabel = makeVolumeValueLabel(value: voiceSlider.doubleValue)
+            voiceHandler.valueLabel = voiceValueLabel
+
+            let mediaFileHandler = VolumeSliderHandler(userID: user.id, stream: .mediaFile, connectionController: self.connectionController)
+            let mediaFileSlider = makeVolumeSlider(
+                value: Double(currentMediaFilePercent),
+                accessibilityLabel: L10n.text("connectedServer.volume.mediaFileSliderLabel"),
+                handler: mediaFileHandler
+            )
+            let mediaFileValueLabel = makeVolumeValueLabel(value: mediaFileSlider.doubleValue)
+            mediaFileHandler.valueLabel = mediaFileValueLabel
 
             let leftCheck = NSButton(checkboxWithTitle: L10n.text("connectedServer.volume.leftSpeaker"), target: nil, action: nil)
             leftCheck.state = currentLeft ? .on : .off
@@ -41,23 +56,35 @@ extension ConnectedServerViewController {
             rightCheck.state = currentRight ? .on : .off
             rightCheck.setAccessibilityLabel(L10n.text("connectedServer.volume.rightSpeaker"))
 
-            let container = NSStackView(views: [slider, leftCheck, rightCheck])
+            let voiceRow = makeVolumeSliderRow(
+                title: L10n.text("connectedServer.volume.voice"),
+                slider: voiceSlider,
+                valueLabel: voiceValueLabel
+            )
+            let mediaFileRow = makeVolumeSliderRow(
+                title: L10n.text("connectedServer.volume.mediaFile"),
+                slider: mediaFileSlider,
+                valueLabel: mediaFileValueLabel
+            )
+
+            let container = NSStackView(views: [voiceRow, mediaFileRow, leftCheck, rightCheck])
             container.orientation = .vertical
             container.alignment = .leading
             container.spacing = 8
-            container.frame = NSRect(x: 0, y: 0, width: 280, height: 80)
+            container.frame = NSRect(x: 0, y: 0, width: 360, height: 124)
 
             alert.accessoryView = container
-            alert.window.initialFirstResponder = slider
+            alert.window.initialFirstResponder = voiceSlider
 
-            objc_setAssociatedObject(alert, &VolumeSliderHandler.associatedKey, handler, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            objc_setAssociatedObject(alert, &VolumeSliderHandler.associatedKey, [voiceHandler, mediaFileHandler] as NSArray, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
 
             alert.beginSheetModal(for: window) { [weak self] response in
                 guard let self else { return }
                 if response == .alertFirstButtonReturn {
-                    let percent = slider.doubleValue
-                    let clamped = TeamTalkConnectionController.userVolumeFromPercent(percent)
-                    self.connectionController.setUserVoiceVolume(userID: user.id, username: user.username, volume: clamped)
+                    let voiceVolume = TeamTalkConnectionController.userVolumeFromPercent(voiceSlider.doubleValue)
+                    let mediaFileVolume = TeamTalkConnectionController.userVolumeFromPercent(mediaFileSlider.doubleValue)
+                    self.connectionController.setUserVoiceVolume(userID: user.id, username: user.username, volume: voiceVolume)
+                    self.connectionController.setUserMediaFileVolume(userID: user.id, username: user.username, volume: mediaFileVolume)
                     let newLeft = leftCheck.state == .on
                     let newRight = rightCheck.state == .on
                     self.connectionController.setUserStereo(
@@ -70,11 +97,51 @@ extension ConnectedServerViewController {
                         forUsername: user.username
                     )
                 } else {
-                    self.connectionController.setUserVoiceVolumeImmediate(userID: user.id, volume: originalVolume)
+                    self.connectionController.setUserVoiceVolumeImmediate(userID: user.id, volume: originalVoiceVolume)
+                    self.connectionController.setUserMediaFileVolumeImmediate(userID: user.id, volume: originalMediaFileVolume)
                     self.connectionController.setUserStereo(userID: user.id, leftSpeaker: originalLeft, rightSpeaker: originalRight)
                 }
             }
         }
+    }
+
+    private func makeVolumeSlider(
+        value: Double,
+        accessibilityLabel: String,
+        handler: VolumeSliderHandler
+    ) -> NSSlider {
+        let slider = NSSlider(value: value, minValue: 0, maxValue: 100, target: handler, action: #selector(VolumeSliderHandler.sliderChanged(_:)))
+        slider.translatesAutoresizingMaskIntoConstraints = false
+        slider.numberOfTickMarks = 0
+        slider.altIncrementValue = 1
+        slider.isContinuous = true
+        slider.setAccessibilityLabel(accessibilityLabel)
+        slider.setAccessibilityValueDescription(VolumeSliderHandler.formatPercent(slider.doubleValue))
+        slider.widthAnchor.constraint(equalToConstant: 220).isActive = true
+        slider.heightAnchor.constraint(greaterThanOrEqualToConstant: 24).isActive = true
+        return slider
+    }
+
+    private func makeVolumeValueLabel(value: Double) -> NSTextField {
+        let valueLabel = NSTextField(labelWithString: VolumeSliderHandler.formatPercent(value))
+        valueLabel.font = .monospacedDigitSystemFont(ofSize: NSFont.preferredFont(forTextStyle: .body).pointSize, weight: .regular)
+        valueLabel.alignment = .right
+        valueLabel.setContentHuggingPriority(.required, for: .horizontal)
+        valueLabel.setAccessibilityElement(false)
+        valueLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 44).isActive = true
+        return valueLabel
+    }
+
+    private func makeVolumeSliderRow(title: String, slider: NSSlider, valueLabel: NSTextField) -> NSStackView {
+        let titleLabel = NSTextField(labelWithString: title)
+        titleLabel.setContentHuggingPriority(.required, for: .horizontal)
+        titleLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 86).isActive = true
+
+        let row = NSStackView(views: [titleLabel, slider, valueLabel])
+        row.orientation = .horizontal
+        row.alignment = .centerY
+        row.spacing = 8
+        return row
     }
 
     @objc func toggleMuteUserAction(_ sender: Any? = nil) {
@@ -97,6 +164,32 @@ extension ConnectedServerViewController {
                 NSAccessibility.NotificationUserInfoKey.priority: NSAccessibilityPriorityLevel.high.rawValue
             ]
         )
+        updateMenuState()
+        reloadVisibleUserRows(for: [userID])
+    }
+
+    @objc func toggleMuteUserMediaFileAction(_ sender: Any? = nil) {
+        guard case .user(let outlineUser)? = selectedNode, !outlineUser.isCurrentUser else { return }
+        let userID = outlineUser.id
+        let displayName = outlineUser.displayName
+        let currentlyMuted = localMediaFileMuteState[userID] ?? outlineUser.isMediaFileMuted
+        let newMuted = !currentlyMuted
+        localMediaFileMuteState[userID] = newMuted
+        connectionController.muteUserMediaFile(userID: userID, mute: newMuted)
+        let announcement = newMuted
+            ? L10n.format("connectedServer.mediaFileMute.announced.muted", displayName)
+            : L10n.format("connectedServer.mediaFileMute.announced.unmuted", displayName)
+        let element: Any = view.window ?? NSApp as Any
+        NSAccessibility.post(
+            element: element,
+            notification: .announcementRequested,
+            userInfo: [
+                NSAccessibility.NotificationUserInfoKey.announcement: announcement,
+                NSAccessibility.NotificationUserInfoKey.priority: NSAccessibilityPriorityLevel.high.rawValue
+            ]
+        )
+        updateMenuState()
+        reloadVisibleUserRows(for: [userID])
     }
 
     @objc func toggleChannelOperatorAction(_ sender: Any? = nil) {
@@ -309,18 +402,39 @@ extension ConnectedServerViewController {
 }
 
 private class VolumeSliderHandler: NSObject {
+    enum Stream {
+        case voice
+        case mediaFile
+    }
+
     static var associatedKey: UInt8 = 0
     let userID: Int32
+    let stream: Stream
     let connectionController: TeamTalkConnectionController
+    weak var valueLabel: NSTextField?
 
-    init(userID: Int32, connectionController: TeamTalkConnectionController) {
+    init(userID: Int32, stream: Stream, connectionController: TeamTalkConnectionController) {
         self.userID = userID
+        self.stream = stream
         self.connectionController = connectionController
     }
 
     @objc func sliderChanged(_ sender: NSSlider) {
-        let percent = sender.doubleValue
+        let percent = sender.doubleValue.rounded()
+        sender.doubleValue = percent
+        let formatted = Self.formatPercent(percent)
+        sender.setAccessibilityValueDescription(formatted)
+        valueLabel?.stringValue = formatted
         let clamped = TeamTalkConnectionController.userVolumeFromPercent(percent)
-        connectionController.setUserVoiceVolumeImmediate(userID: userID, volume: clamped)
+        switch stream {
+        case .voice:
+            connectionController.setUserVoiceVolumeImmediate(userID: userID, volume: clamped)
+        case .mediaFile:
+            connectionController.setUserMediaFileVolumeImmediate(userID: userID, volume: clamped)
+        }
+    }
+
+    static func formatPercent(_ value: Double) -> String {
+        String(format: "%.0f%%", min(max(value.rounded(), 0), 100))
     }
 }

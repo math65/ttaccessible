@@ -44,9 +44,10 @@ struct ttaccessibleApp: App {
                     Button(L10n.text("savedServers.menu.import")) {
                         appDelegate.importTeamTalkServers()
                     }
+                    .keyboardShortcut("i", modifiers: [.command, .shift])
 
-                    Button(L10n.text("savedServers.menu.exportTT")) {
-                        appDelegate.exportSelectedSavedServerTTFile()
+                    Button(L10n.text("serverExport.menu.title")) {
+                        appDelegate.exportServer()
                     }
                     .disabled(menuState.hasSelection == false)
 
@@ -161,6 +162,10 @@ struct ttaccessibleApp: App {
                     }
                     .keyboardShortcut("l", modifiers: [.command, .shift])
 
+                    Button(L10n.text("serverExport.menu.title")) {
+                        appDelegate.exportServer()
+                    }
+
                     Divider()
 
                     Button(L10n.text("connectedServer.menu.disconnect")) {
@@ -184,6 +189,14 @@ struct ttaccessibleApp: App {
                         appDelegate.toggleMuteSelectedUser()
                     }
                     .keyboardShortcut("m", modifiers: [.command, .shift])
+                    .disabled(menuState.hasSingleSelectedOtherUser == false)
+
+                    Button(menuState.isSelectedUserMediaFileMuted
+                           ? L10n.text("user.menu.unmuteMediaFile")
+                           : L10n.text("user.menu.muteMediaFile")) {
+                        appDelegate.toggleMuteSelectedUserMediaFile()
+                    }
+                    .keyboardShortcut("m", modifiers: [.command, .control, .shift])
                     .disabled(menuState.hasSingleSelectedOtherUser == false)
 
                     Button(L10n.text("user.menu.volume")) {

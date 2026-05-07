@@ -39,6 +39,7 @@ final class ChannelFilesViewController: NSViewController {
     private var speedSampleDate = Date()
     private var speedBytesPerSecond: Double = 0
     private var cancelledTransferIDs: Set<Int32> = []
+    private var announcedTransferIDs: Set<Int32> = []
 
     private var sortedFiles: [ChannelFile] {
         guard !sortDescriptors.isEmpty else { return session.channelFiles }
@@ -108,6 +109,7 @@ final class ChannelFilesViewController: NSViewController {
         let oldUploadIDs = Set(activeUploadTransfers.map(\.transferID))
 
         self.session = session
+        announceNewTransfers(session.activeTransfers)
 
         let newUploadIDs = Set(activeUploadTransfers.map(\.transferID))
         if session.channelFiles != oldFiles || newUploadIDs != oldUploadIDs {
@@ -152,6 +154,7 @@ final class ChannelFilesViewController: NSViewController {
             outputGainDB: session.outputGainDB,
             recordingActive: session.recordingActive
         )
+        announceNewTransfers(transfers)
         if oldUploads != activeUploadTransfers {
             reloadFiles(previousFiles: oldFiles, previousUploads: oldUploads)
         }
@@ -483,8 +486,7 @@ final class ChannelFilesViewController: NSViewController {
 
         panel.beginSheetModal(for: window) { [weak self] response in
             guard let self, response == .OK, let url = panel.url else { return }
-            self.announce(L10n.format("files.transfer.uploadStarted", url.lastPathComponent))
-            self.connectionController.sendFile(toChannelID: self.session.currentChannelID, localPath: url.path) { [weak self] result in
+            self.connectionController.sendFile(toChannelID: self.session.currentChannelID, localURL: url) { [weak self] result in
                 guard let self else { return }
                 if case .failure(let error) = result {
                     self.presentActionError(error.localizedDescription)
@@ -503,8 +505,7 @@ final class ChannelFilesViewController: NSViewController {
 
         panel.beginSheetModal(for: window) { [weak self] response in
             guard let self, response == .OK, let url = panel.url else { return }
-            self.announce(L10n.format("files.transfer.downloadStarted", file.name))
-            self.connectionController.receiveFile(fromChannelID: file.channelID, fileID: file.id, toLocalPath: url.path) { [weak self] result in
+            self.connectionController.receiveFile(fromChannelID: file.channelID, fileID: file.id, toLocalURL: url) { [weak self] result in
                 guard let self else { return }
                 if case .failure(let error) = result {
                     self.presentActionError(error.localizedDescription)
@@ -540,6 +541,13 @@ final class ChannelFilesViewController: NSViewController {
         alert.messageText = L10n.text("connectedServer.action.error.title")
         alert.informativeText = message
         alert.runModal()
+    }
+
+    private func announceNewTransfers(_ transfers: [FileTransferProgress]) {
+        for transfer in transfers where announcedTransferIDs.insert(transfer.transferID).inserted {
+            let key = transfer.isDownload ? "files.transfer.downloadStarted" : "files.transfer.uploadStarted"
+            announce(L10n.format(key, transfer.fileName))
+        }
     }
 
     private func announce(_ message: String) {

@@ -545,7 +545,7 @@ extension TeamTalkConnectionController {
                     self.delegate?.teamTalkConnectionController(self, didReceiveServerStatistics: stats)
                 }
             case CLIENTEVENT_FILETRANSFER:
-                handleFileTransferEventLocked(message.filetransfer)
+                publishInvalidation.formUnion(handleFileTransferEventLocked(message.filetransfer))
                 if connectedRecord != nil {
                     publishInvalidation.insert(.activeTransfers)
                 }
@@ -567,8 +567,10 @@ extension TeamTalkConnectionController {
                 pendingBannedUsers.append(makeBannedUserProperties(from: message.banneduser))
             case CLIENTEVENT_CMD_SUCCESS:
                 pendingChannelMessageCommandIDs.remove(message.nSource)
+                publishInvalidation.formUnion(handleFileTransferCommandSuccessLocked(commandID: message.nSource))
                 if message.nSource == listUserAccountsCmdID {
                     let accounts = pendingUserAccounts
+                    cachedUserAccounts = accounts
                     pendingUserAccounts = []
                     listUserAccountsCmdID = -1
                     DispatchQueue.main.async { [weak self] in
@@ -586,6 +588,7 @@ extension TeamTalkConnectionController {
                     }
                 }
             case CLIENTEVENT_CMD_ERROR:
+                publishInvalidation.formUnion(handleFileTransferCommandErrorLocked(message))
                 if pendingChannelMessageCommandIDs.remove(message.nSource) != nil,
                    message.clienterrormsg.nErrorNo == CMDERR_NOT_AUTHORIZED.rawValue,
                    connectedRecord != nil {
@@ -680,6 +683,9 @@ extension TeamTalkConnectionController {
                         if let storedVolume = userVolumeStore.volume(forUsername: joinedUsername) {
                             _ = TT_SetUserVolume(instance, message.user.nUserID, STREAMTYPE_VOICE, storedVolume)
                         }
+                        if let storedMediaFileVolume = userVolumeStore.mediaFileVolume(forUsername: joinedUsername) {
+                            _ = TT_SetUserVolume(instance, message.user.nUserID, STREAMTYPE_MEDIAFILE_AUDIO, storedMediaFileVolume)
+                        }
                         if let storedBalance = userVolumeStore.stereoBalance(forUsername: joinedUsername) {
                             _ = TT_SetUserStereo(instance, message.user.nUserID, STREAMTYPE_VOICE, storedBalance.left ? 1 : 0, storedBalance.right ? 1 : 0)
                         }
@@ -748,6 +754,10 @@ extension TeamTalkConnectionController {
         channelChatHistory = []
         sessionHistory = []
         activeTransferProgress = [:]
+        pendingFileTransferCommands.removeAll()
+        fileTransferCommandIDsByTransferID.removeAll()
+        securityScopedFileTransferURLs.values.forEach { $0.stopAccessingSecurityScopedResource() }
+        securityScopedFileTransferURLs.removeAll()
         lastBuiltSessionSnapshot = nil
         pendingTextMessages.removeAll()
         pendingChannelMessageCommandIDs.removeAll()
@@ -755,6 +765,9 @@ extension TeamTalkConnectionController {
         suppressLoginHistoryUntil = .distantPast
         suppressJoinHistoryUntil = .distantPast
         channelPasswords.removeAll()
+        pendingUserAccounts.removeAll()
+        cachedUserAccounts.removeAll()
+        listUserAccountsCmdID = -1
         privateConversations.removeAll()
         selectedPrivateConversationUserID = nil
         visiblePrivateConversationUserID = nil
@@ -805,10 +818,18 @@ extension TeamTalkConnectionController {
             switch message.nClientEvent {
             case CLIENTEVENT_CMD_SUCCESS:
                 pendingChannelMessageCommandIDs.remove(message.nSource)
+                let fileInvalidation = handleFileTransferCommandSuccessLocked(commandID: message.nSource)
+                if !fileInvalidation.isEmpty, let connectedRecord {
+                    publishSessionLocked(instance: instance, record: connectedRecord, invalidation: fileInvalidation)
+                }
                 if message.nSource == commandID {
                     return
                 }
             case CLIENTEVENT_CMD_ERROR:
+                let fileInvalidation = handleFileTransferCommandErrorLocked(message)
+                if !fileInvalidation.isEmpty, let connectedRecord {
+                    publishSessionLocked(instance: instance, record: connectedRecord, invalidation: fileInvalidation)
+                }
                 if pendingChannelMessageCommandIDs.remove(message.nSource) != nil,
                    message.clienterrormsg.nErrorNo == CMDERR_NOT_AUTHORIZED.rawValue,
                    let connectedRecord {
@@ -901,6 +922,9 @@ extension TeamTalkConnectionController {
                         if let storedVolume = userVolumeStore.volume(forUsername: joinedUsername) {
                             _ = TT_SetUserVolume(instance, message.user.nUserID, STREAMTYPE_VOICE, storedVolume)
                         }
+                        if let storedMediaFileVolume = userVolumeStore.mediaFileVolume(forUsername: joinedUsername) {
+                            _ = TT_SetUserVolume(instance, message.user.nUserID, STREAMTYPE_MEDIAFILE_AUDIO, storedMediaFileVolume)
+                        }
                         if let storedBalance = userVolumeStore.stereoBalance(forUsername: joinedUsername) {
                             _ = TT_SetUserStereo(instance, message.user.nUserID, STREAMTYPE_VOICE, storedBalance.left ? 1 : 0, storedBalance.right ? 1 : 0)
                         }
@@ -920,6 +944,16 @@ extension TeamTalkConnectionController {
                 if let connectedRecord {
                     if handleTextMessageEventLocked(message.textmessage, instance: instance, record: connectedRecord) {
                         publishSessionLocked(instance: instance, record: connectedRecord)
+                    }
+                }
+            case CLIENTEVENT_FILETRANSFER:
+                let fileInvalidation = handleFileTransferEventLocked(message.filetransfer)
+                if !fileInvalidation.isEmpty, let connectedRecord {
+                    if fileInvalidation.contains(.activeTransfers),
+                       fileInvalidation.intersection([.rootTree, .chat, .history, .privateConversations, .channelFiles, .audio, .identity, .permissions]).isEmpty {
+                        publishActiveTransfersLocked(currentChannelID: TT_GetMyChannelID(instance))
+                    } else {
+                        publishSessionLocked(instance: instance, record: connectedRecord, invalidation: fileInvalidation)
                     }
                 }
             case CLIENTEVENT_INTERNAL_ERROR:

@@ -75,6 +75,8 @@ final class NotificationParameterSliderNSView: NSView {
         self.onChange = onChange
         slider.minValue = minimum
         slider.maxValue = maximum
+        setAccessibilityMinValue(minimum)
+        setAccessibilityMaxValue(maximum)
         setValue(value)
     }
 
@@ -124,7 +126,8 @@ final class NotificationParameterSliderNSView: NSView {
         slider.doubleValue = value
         let text = formatter(value)
         valueLabel.stringValue = text
-        setAccessibilityValue(text)
+        setAccessibilityValue(value)
+        setAccessibilityValueDescription(text)
     }
 
     private func adjust(by delta: Double) {

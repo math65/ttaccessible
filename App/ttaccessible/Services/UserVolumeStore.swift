@@ -7,6 +7,7 @@ import Foundation
 
 final class UserVolumeStore {
     private let key = "userVoiceVolumeByUsername"
+    private let mediaFileKey = "userMediaFileVolumeByUsername"
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
@@ -21,6 +22,25 @@ final class UserVolumeStore {
     }
 
     func setVolume(_ volume: Int32, forUsername username: String) {
+        setVolume(volume, forUsername: username, key: key)
+    }
+
+    func mediaFileVolume(forUsername username: String) -> Int32? {
+        volume(forUsername: username, key: mediaFileKey)
+    }
+
+    func setMediaFileVolume(_ volume: Int32, forUsername username: String) {
+        setVolume(volume, forUsername: username, key: mediaFileKey)
+    }
+
+    private func volume(forUsername username: String, key: String) -> Int32? {
+        guard !username.isEmpty,
+              let dict = defaults.dictionary(forKey: key),
+              let value = dict[username] as? Int else { return nil }
+        return Int32(value)
+    }
+
+    private func setVolume(_ volume: Int32, forUsername username: String, key: String) {
         guard !username.isEmpty else { return }
         var dict = defaults.dictionary(forKey: key) ?? [:]
         if volume == SOUND_VOLUME_DEFAULT.rawValue {
