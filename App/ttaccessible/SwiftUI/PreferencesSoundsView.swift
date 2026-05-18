@@ -81,8 +81,6 @@ struct PreferencesSoundsView: View {
                             }
                         }
                     }
-
-                    Divider()
                 }
 
                 Divider()
