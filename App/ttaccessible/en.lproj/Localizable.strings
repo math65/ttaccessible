@@ -24,6 +24,10 @@
 "savedServers.alert.delete.confirm" = "Delete";
 "savedServers.alert.delete.cancel" = "Cancel";
 "savedServers.alert.error.title" = "Action Failed";
+"savedServers.alert.loginFailed.title" = "Login Failed";
+"savedServers.alert.loginFailed.message" = "The server refused the connection: %@\n\nDo you want to update the username or password and try again?";
+"savedServers.alert.loginFailed.editCredentials" = "Edit Credentials…";
+"savedServers.alert.loginFailed.cancel" = "Cancel";
 "savedServers.sort.label" = "Sort";
 "savedServers.sort.field.accessibilityLabel" = "Server sort criterion";
 "savedServers.sort.direction.accessibilityLabel" = "Server sort order";
