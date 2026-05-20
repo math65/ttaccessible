@@ -704,7 +704,12 @@ extension TeamTalkConnectionController {
                                 if let connectedRecord {
                                     publishSessionLocked(instance: instance, record: connectedRecord)
                                 }
-                            } catch {}
+                            } catch {
+                                AudioLogger.log(
+                                    "auto-restore mic on join failed: %@",
+                                    error.localizedDescription
+                                )
+                            }
                         }
                         let joinedUsername = ttString(from: message.user.szUsername)
                         if let storedVolume = userVolumeStore.volume(forUsername: joinedUsername) {
@@ -952,7 +957,12 @@ extension TeamTalkConnectionController {
                                     try ensureAdvancedMicrophoneInputReadyLocked(instance: instance)
                                     voiceTransmissionEnabled = true
                                     SoundPlayer.shared.play(.voxMeEnable)
-                                } catch {}
+                                } catch {
+                                    AudioLogger.log(
+                                        "auto-restore mic on channel join failed: %@",
+                                        error.localizedDescription
+                                    )
+                                }
                             }
                             if recordingMuxedActive {
                                 restartMuxedRecordingForChannelChange()

@@ -87,6 +87,7 @@ final class AdvancedMicrophoneAudioEngine {
     private struct StateSnapshot {
         let configuration: AdvancedMicrophoneAudioConfiguration
         let streamID: Int32
+        let encoderFormat: AdvancedMicrophoneAudioTargetFormat
     }
 
     private let stateLock = NSLock()
@@ -94,8 +95,12 @@ final class AdvancedMicrophoneAudioEngine {
 
     private var engine: AVAudioEngine?
     private var currentConfiguration: AdvancedMicrophoneAudioConfiguration?
+    /// Sample rate/channels expected by TeamTalk encoder (channel codec or preview target).
+    private var encoderOutputFormat: AdvancedMicrophoneAudioTargetFormat?
     private var nextStreamID: Int32 = 1
     private var activeStreamID: Int32 = 0
+    private var consecutiveAECDropCount = 0
+    private let maxConsecutiveAECDrops = 8
 
     /// Mixer node used as the stable tap point.
     private var mixerNode: AVAudioMixerNode?
@@ -172,14 +177,9 @@ final class AdvancedMicrophoneAudioEngine {
             throw AdvancedMicrophoneAudioEngineError.deviceUnavailable
         }
 
-        let defaultDeviceID = Self.systemDefaultInputDeviceID()
-        let isSystemDefault = (deviceID == defaultDeviceID)
-
-        if isSystemDefault {
-            return try startWithAVAudioEngine(configuration: configuration, deviceID: deviceID)
-        } else {
-            return try startWithStandaloneAUHAL(configuration: configuration, deviceID: deviceID)
-        }
+        // Always use AUHAL with an explicit CoreAudio device so system default behaves
+        // the same as named devices (AVAudioEngine was unreliable during TeamTalk transmit).
+        return try startWithStandaloneAUHAL(configuration: configuration, deviceID: deviceID)
     }
 
     // MARK: - AVAudioEngine Path (system default device)
@@ -436,10 +436,17 @@ final class AdvancedMicrophoneAudioEngine {
         let accumTargetFrames = max(Int((sampleRate * Double(tapIntervalMSec)) / 1000.0), 256)
         let accumBufferSize = (accumTargetFrames + Int(maxFrames)) * channelCount
 
+        let encoderFormat = configuration.targetFormat
         let effectiveTargetFormat = AdvancedMicrophoneAudioTargetFormat(
             sampleRate: sampleRate,
-            channels: configuration.targetFormat.channels,
-            txIntervalMSec: configuration.targetFormat.txIntervalMSec
+            channels: encoderFormat.channels,
+            txIntervalMSec: encoderFormat.txIntervalMSec
+        )
+
+        AudioCaptureDiagnostics.shared.resetForNewCapture(
+            path: "AUHAL",
+            captureRate: Int(sampleRate.rounded()),
+            outputRate: Int(encoderFormat.sampleRate.rounded())
         )
 
         // Store state before setting callback.
@@ -457,6 +464,8 @@ final class AdvancedMicrophoneAudioEngine {
                 echoCancellationEnabled: configuration.echoCancellationEnabled
             )
             currentConfiguration = stored
+            encoderOutputFormat = encoderFormat
+            consecutiveAECDropCount = 0
             standaloneAUHAL = au
             auhalChannelCount = channelCount
             auhalSampleRate = sampleRate
@@ -501,6 +510,7 @@ final class AdvancedMicrophoneAudioEngine {
             withStateLock {
                 standaloneAUHAL = nil
                 currentConfiguration = nil
+                encoderOutputFormat = nil
                 activeStreamID = 0
             }
             throw AdvancedMicrophoneAudioEngineError.deviceUnavailable
@@ -514,6 +524,7 @@ final class AdvancedMicrophoneAudioEngine {
             withStateLock {
                 standaloneAUHAL = nil
                 currentConfiguration = nil
+                encoderOutputFormat = nil
                 activeStreamID = 0
             }
             throw AdvancedMicrophoneAudioEngineError.engineStartFailed
@@ -527,6 +538,7 @@ final class AdvancedMicrophoneAudioEngine {
             withStateLock {
                 standaloneAUHAL = nil
                 currentConfiguration = nil
+                encoderOutputFormat = nil
                 activeStreamID = 0
             }
             throw AdvancedMicrophoneAudioEngineError.engineStartFailed
@@ -537,6 +549,8 @@ final class AdvancedMicrophoneAudioEngine {
 
     private func stopLocked() {
         echoCanceller = nil
+        encoderOutputFormat = nil
+        consecutiveAECDropCount = 0
 
         // Stop AVAudioEngine path.
         // Capture mixerNode before clearState (which sets it to nil).
@@ -567,6 +581,7 @@ final class AdvancedMicrophoneAudioEngine {
             freeAUHALRenderBuffers()
             withStateLock {
                 currentConfiguration = nil
+                encoderOutputFormat = nil
                 activeStreamID = 0
             }
         }
@@ -688,15 +703,17 @@ final class AdvancedMicrophoneAudioEngine {
         guard let snapshot: StateSnapshot = withStateLock({
             guard engine != nil || standaloneAUHAL != nil,
                   let configuration = currentConfiguration,
+                  let encoderFormat = encoderOutputFormat,
                   activeStreamID > 0 else {
                 return nil
             }
-            return StateSnapshot(configuration: configuration, streamID: activeStreamID)
+            return StateSnapshot(configuration: configuration, streamID: activeStreamID, encoderFormat: encoderFormat)
         }) else {
             return
         }
 
         let configuration = snapshot.configuration
+        let encoderFormat = snapshot.encoderFormat
 
         let selection = resolvedSelection(for: configuration.preset, availableChannels: availableChannels, physicalChannels: configuration.device.inputChannels)
 
@@ -748,27 +765,93 @@ final class AdvancedMicrophoneAudioEngine {
         }
 
         // Apply WebRTC AEC3 on Int16 PCM data.
-        let samples: [Int16]
+        var samples: [Int16]
         if let aec = echoCanceller {
             let processed = int16Buffer.withUnsafeBufferPointer { buf in
                 guard let baseAddress = buf.baseAddress else { return [Int16]() }
                 return aec.processCapture(baseAddress, count: adaptedCount)
             }
             if processed.isEmpty {
-                // AEC hasn't accumulated a full 10ms frame yet; skip this chunk.
-                return
+                consecutiveAECDropCount += 1
+                if consecutiveAECDropCount < maxConsecutiveAECDrops {
+                    return
+                }
+                AudioCaptureDiagnostics.shared.recordAECPassthrough()
+                AudioLogger.log("AEC: passthrough after %d empty outputs", consecutiveAECDropCount)
+                samples = Array(int16Buffer.prefix(adaptedCount))
+            } else {
+                consecutiveAECDropCount = 0
+                samples = processed
             }
-            samples = processed
         } else {
+            consecutiveAECDropCount = 0
             samples = Array(int16Buffer.prefix(adaptedCount))
         }
 
+        var workingSamples = samples
+        var workingFrameCount = workingSamples.count / targetChannels
+        guard workingFrameCount > 0 else { return }
+
+        let captureRate = configuration.targetFormat.sampleRate
+        let outputRate = encoderFormat.sampleRate
+        let outputChannels = max(encoderFormat.channels, 1)
+
+        if targetChannels != outputChannels {
+            let channelAdaptedCount = workingFrameCount * outputChannels
+            if adaptedBuffer.count < workingSamples.count {
+                adaptedBuffer = [Float](repeating: 0, count: workingSamples.count)
+            }
+            for index in 0..<workingSamples.count {
+                adaptedBuffer[index] = Float(workingSamples[index]) / 32_767.0
+            }
+            if selectedBuffer.count < channelAdaptedCount {
+                selectedBuffer = [Float](repeating: 0, count: channelAdaptedCount)
+            }
+            adaptChannelCountInPlace(
+                from: &adaptedBuffer,
+                to: &selectedBuffer,
+                frameCount: workingFrameCount,
+                sourceChannels: targetChannels,
+                targetChannels: outputChannels
+            )
+            if int16Buffer.count < channelAdaptedCount {
+                int16Buffer = [Int16](repeating: 0, count: channelAdaptedCount)
+            }
+            for index in 0..<channelAdaptedCount {
+                int16Buffer[index] = floatToPCM16(selectedBuffer[index])
+            }
+            workingSamples = Array(int16Buffer.prefix(channelAdaptedCount))
+            workingFrameCount = workingSamples.count / outputChannels
+        }
+
+        let resampled: AudioPCMResampler.Result
+        if abs(captureRate - outputRate) >= 0.5 {
+            resampled = AudioPCMResampler.resampleInterleaved(
+                workingSamples,
+                frameCount: workingFrameCount,
+                channels: outputChannels,
+                inputRate: captureRate,
+                outputRate: outputRate
+            )
+        } else {
+            resampled = AudioPCMResampler.Result(samples: workingSamples, frameCount: workingFrameCount)
+        }
+
+        let peak = resampled.samples.reduce(Int32(0)) { partial, sample in
+            max(partial, abs(Int32(sample)))
+        }
+        AudioCaptureDiagnostics.shared.recordChunk(
+            sampleRate: Int32(outputRate.rounded()),
+            peak: peak,
+            nonZero: peak > 32
+        )
+
         let chunk = AdvancedMicrophoneAudioChunk(
             streamID: snapshot.streamID,
-            sampleRate: Int32(configuration.targetFormat.sampleRate.rounded()),
-            channels: Int32(targetChannels),
-            sampleCount: Int32(samples.count / targetChannels),
-            samples: samples
+            sampleRate: Int32(outputRate.rounded()),
+            channels: Int32(outputChannels),
+            sampleCount: Int32(resampled.frameCount),
+            samples: resampled.samples
         )
 
         onAudioChunk(chunk)
@@ -786,6 +869,7 @@ final class AdvancedMicrophoneAudioEngine {
             engine = nil
             if standaloneAUHAL == nil {
                 currentConfiguration = nil
+                encoderOutputFormat = nil
                 activeStreamID = 0
             }
             mixerNode = nil

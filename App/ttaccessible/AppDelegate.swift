@@ -105,6 +105,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AudioLogger.clear()
         let sdkVersion = String(cString: TT_GetVersion())
         AudioLogger.log("App launched — TeamTalk SDK %@", sdkVersion)
+        #if DEBUG
+        _ = AudioPCMResamplerSelfTest.runAll()
+        #endif
         connectionController.delegate = self
         connectionController.audioDeviceChangeMonitor = audioDeviceChangeMonitor
         UNUserNotificationCenter.current().delegate = self

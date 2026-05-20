@@ -136,6 +136,7 @@
 "connectedServer.audio.error.inputStartFailed" = "Impossible d'initialiser l'entrée audio.";
 "connectedServer.audio.error.notInChannel" = "Vous devez rejoindre un canal avant d'activer le micro.";
 "connectedServer.audio.error.microphonePermissionDenied" = "L'accès au micro a été refusé par macOS.";
+"connectedServer.audio.error.microphoneRestartFailed" = "Le micro s'est arrêté après un changement de périphérique audio. Réactivez-le.";
 "connectedServer.chat.sent" = "Message envoyé.";
 "connectedServer.chat.sender.unknown" = "Utilisateur %@";
 "chat.sender.you" = "Vous";

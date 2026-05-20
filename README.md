@@ -102,7 +102,7 @@ If you already use TeamTalk on your Mac, you can import your saved servers:
 
 ## Architecture
 
-Native **macOS AppKit app** with SwiftUI preference panes. The audio pipeline uses a custom dual-path capture engine — AVAudioEngine for the system default input device, standalone AUHAL AudioUnit for non-default devices — bypassing the TeamTalk SDK's built-in audio capture (which causes crackling on macOS). Audio is injected into the SDK via `TT_InsertAudioBlock` through a virtual sound device.
+Native **macOS AppKit app** with SwiftUI preference panes. The audio pipeline uses a custom AUHAL capture engine (explicit CoreAudio device binding for every input, including system default) bypassing the TeamTalk SDK's built-in audio capture (which causes crackling on macOS). Captured PCM is resampled to the channel codec rate before injection via `TT_InsertAudioBlock` through a virtual sound device.
 
 Echo cancellation uses WebRTC AEC3 (from `webrtc-audio-processing` v2.0, WebRTC M131) with the actual speaker output captured via Core Audio taps as the reference signal — not just the decoded TeamTalk audio. This allows cancellation of VoiceOver, system sounds, and all other audio.
 

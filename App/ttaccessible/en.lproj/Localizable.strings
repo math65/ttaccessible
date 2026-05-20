@@ -136,6 +136,7 @@
 "connectedServer.audio.error.inputStartFailed" = "Unable to initialize audio input.";
 "connectedServer.audio.error.notInChannel" = "You must join a channel before enabling the microphone.";
 "connectedServer.audio.error.microphonePermissionDenied" = "Microphone access was denied by macOS.";
+"connectedServer.audio.error.microphoneRestartFailed" = "Microphone stopped after an audio device change. Turn it on again.";
 "connectedServer.chat.sent" = "Message sent.";
 "connectedServer.chat.sender.unknown" = "User %@";
 "chat.sender.you" = "You";

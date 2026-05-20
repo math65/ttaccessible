@@ -35,7 +35,23 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
             }
             .store(in: &cancellables)
 
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleStopPreviewNotification),
+            name: .stopAdvancedMicrophonePreview,
+            object: nil
+        )
+
         refreshState(normalizeIfNeeded: true)
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    @objc
+    private func handleStopPreviewNotification() {
+        stopPreview()
     }
 
     var advancedPreferences: AdvancedInputAudioPreferences {
