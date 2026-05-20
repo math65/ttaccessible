@@ -10,6 +10,7 @@
             <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <enclosure url="https://github.com/math65/ttaccessible/releases/download/v1.1.0/ttaccessible-1.1.0-17.zip" length="40718970" type="application/octet-stream" sparkle:edSignature="cW/++ohUv+UTXyjUjYOTuAkHwTHdXkhtl40ZFggiuxKvozjwUCChKixmeU5rdEyAuPR9No2d0T6HUccRu0GMCw=="/>
+            <sparkle:releaseNotesLink>https://math65.github.io/ttaccessible/ttaccessible-1.1.0-17.md</sparkle:releaseNotesLink>
         </item>
     </channel>
 </rss>
