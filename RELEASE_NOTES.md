@@ -1,17 +1,17 @@
-Critical Sparkle fix. **Manual install required this one time** if you're on 1.1.0 or 1.1.1.
+Auto-Away reliability fix.
 
 ## Fixed
 
-- **Sparkle update install failed with "An error occurred while running the updater."** The mach-lookup entitlements that let the sandboxed app reach Sparkle's helper XPC services were signed with the literal string `$(PRODUCT_BUNDLE_IDENTIFIER)-spks` instead of `com.math65.ttaccessible-spks` because the build script's call to `codesign` doesn't expand Xcode build variables. Hardcoded the bundle identifier in the entitlements so the substitution happens at-source.
+- **Auto-Away no longer flips back to Available without input.** Earlier versions used IOKit's `HIDIdleTime`, which silently returns 0 when its system query fails — looking exactly like "the user just typed something" and pulling the user out of Away within seconds of going Away. The detection now uses `CGEventSource.secondsSinceLastEventType` (keyboard + mouse buttons), with a "sharp idle drop" requirement so a single transient reading can't trigger deactivation. Polling tightens to 0.5s while Away so real input restores Available within a second. Thanks to [Casey Reeves (@xogium)](https://github.com/xogium) for the patch ([PR #6](https://github.com/math65/ttaccessible/pull/6)).
 
-## One-time manual install
+## Install
 
-If you're on **1.1.0 or 1.1.1**, Sparkle in those versions cannot install this update for you — that's the bug we're fixing. Install once manually:
+If you're on 1.1.2, ttaccessible will install this update for you — no action needed.
 
-1. Download `ttaccessible-1.1.2-19.zip` below.
+If you're on 1.1.0 or 1.1.1, you still need to install 1.1.2 manually first (see the [v1.1.2 release notes](https://github.com/math65/ttaccessible/releases/tag/v1.1.2)). 1.1.3 will follow automatically after that.
+
+Manual install:
+
+1. Download `ttaccessible-1.1.3-20.zip` below.
 2. Unzip and drag `ttaccessible.app` into your `/Applications` folder, replacing the previous version.
 3. Double-click — no Gatekeeper warning thanks to notarization.
-
-From 1.1.2 onward, Sparkle takes over normally for every future release.
-
-If you're on 1.0.2, the old in-app updater will surface 1.1.2 the next time you check — install it manually the same way (as planned for the Sparkle migration).
