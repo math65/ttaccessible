@@ -10,6 +10,7 @@
 		94A4A5F73B941A8E00C01234 /* libTeamTalk5.dylib in Embed TeamTalk */ = {isa = PBXBuildFile; fileRef = 94A4A5F63B941A8E00C01234 /* libTeamTalk5.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		94A4A5F93B941A8E00C01234 /* libTeamTalk5.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 94A4A5F63B941A8E00C01234 /* libTeamTalk5.dylib */; };
 		94WEBRTC013B941A8E00C0AB /* libwebrtc-audio-processing.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 94WEBRTC003B941A8E00C0AB /* libwebrtc-audio-processing.a */; };
+		94BABE0100000000000000A1 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 94BABE0300000000000000A3 /* Sparkle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -47,6 +48,7 @@
 			files = (
 				94A4A5F93B941A8E00C01234 /* libTeamTalk5.dylib in Frameworks */,
 				94WEBRTC013B941A8E00C0AB /* libwebrtc-audio-processing.a in Frameworks */,
+				94BABE0100000000000000A1 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -100,6 +102,7 @@
 			);
 			name = ttaccessible;
 			packageProductDependencies = (
+				94BABE0300000000000000A3 /* Sparkle */,
 			);
 			productName = ttaccessible;
 			productReference = 943281C62F68C35A00682D6B /* ttaccessible.app */;
@@ -130,6 +133,9 @@
 			);
 			mainGroup = 943281BD2F68C35A00682D6B;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				94BABE0200000000000000A2 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 943281C72F68C35A00682D6B /* Products */;
 			projectDirPath = "";
@@ -397,6 +403,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		94BABE0200000000000000A2 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.6.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		94BABE0300000000000000A3 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 94BABE0200000000000000A2 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 943281BE2F68C35A00682D6B /* Project object */;
 }

@@ -67,6 +67,14 @@ final class AppPreferencesStore: ObservableObject {
         mutate { $0.useRelativeTimestamps = enabled }
     }
 
+    func updateAutoCheckForUpdates(_ enabled: Bool) {
+        mutate { $0.autoCheckForUpdates = enabled }
+    }
+
+    func updateIncludeBetaUpdates(_ enabled: Bool) {
+        mutate { $0.includeBetaUpdates = enabled }
+    }
+
     func updateLastRecordingWasActive(_ active: Bool) {
         mutate { $0.lastRecordingWasActive = active }
     }

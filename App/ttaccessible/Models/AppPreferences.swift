@@ -93,6 +93,8 @@ struct AppPreferences: Codable, Equatable {
         case skipKickConfirmation
         case adaptiveJitterBuffer
         case channelSortMode
+        case autoCheckForUpdates
+        case includeBetaUpdates
     }
 
     var defaultNickname: String
@@ -142,6 +144,8 @@ struct AppPreferences: Codable, Equatable {
     var skipKickConfirmation: Bool
     var adaptiveJitterBuffer: Bool
     var channelSortMode: ChannelSortMode
+    var autoCheckForUpdates: Bool
+    var includeBetaUpdates: Bool
     init(
         defaultNickname: String = "TTAccessible",
         defaultStatusMessage: String = "",
@@ -189,7 +193,9 @@ struct AppPreferences: Codable, Equatable {
         disabledSoundEvents: Set<NotificationSound> = [],
         skipKickConfirmation: Bool = false,
         adaptiveJitterBuffer: Bool = false,
-        channelSortMode: ChannelSortMode = .name
+        channelSortMode: ChannelSortMode = .name,
+        autoCheckForUpdates: Bool = true,
+        includeBetaUpdates: Bool = false
     ) {
         self.defaultNickname = defaultNickname
         self.defaultStatusMessage = defaultStatusMessage
@@ -238,6 +244,8 @@ struct AppPreferences: Codable, Equatable {
         self.skipKickConfirmation = skipKickConfirmation
         self.adaptiveJitterBuffer = adaptiveJitterBuffer
         self.channelSortMode = channelSortMode
+        self.autoCheckForUpdates = autoCheckForUpdates
+        self.includeBetaUpdates = includeBetaUpdates
     }
 
     nonisolated static func clampGainDB(_ value: Double) -> Double {
@@ -328,6 +336,8 @@ struct AppPreferences: Codable, Equatable {
         skipKickConfirmation = try container.decodeIfPresent(Bool.self, forKey: .skipKickConfirmation) ?? false
         adaptiveJitterBuffer = try container.decodeIfPresent(Bool.self, forKey: .adaptiveJitterBuffer) ?? false
         channelSortMode = try container.decodeIfPresent(ChannelSortMode.self, forKey: .channelSortMode) ?? .name
+        autoCheckForUpdates = try container.decodeIfPresent(Bool.self, forKey: .autoCheckForUpdates) ?? true
+        includeBetaUpdates = try container.decodeIfPresent(Bool.self, forKey: .includeBetaUpdates) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -379,6 +389,8 @@ struct AppPreferences: Codable, Equatable {
         try container.encode(skipKickConfirmation, forKey: .skipKickConfirmation)
         try container.encode(adaptiveJitterBuffer, forKey: .adaptiveJitterBuffer)
         try container.encode(channelSortMode, forKey: .channelSortMode)
+        try container.encode(autoCheckForUpdates, forKey: .autoCheckForUpdates)
+        try container.encode(includeBetaUpdates, forKey: .includeBetaUpdates)
     }
 
     func isSubscriptionEnabledByDefault(_ option: UserSubscriptionOption) -> Bool {

@@ -117,6 +117,36 @@ struct PreferencesGeneralView: View {
                     )
                 )
                 .toggleStyle(.switch)
+
+                Divider()
+
+                Text(L10n.text("preferences.updates.section"))
+                    .font(.headline)
+                    .accessibilityAddTraits(.isHeader)
+
+                Toggle(
+                    L10n.text("preferences.updates.autoCheck"),
+                    isOn: Binding(
+                        get: { rootStore.preferences.autoCheckForUpdates },
+                        set: { rootStore.updateAutoCheckForUpdates($0) }
+                    )
+                )
+                .toggleStyle(.switch)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Toggle(
+                        L10n.text("preferences.updates.includeBeta"),
+                        isOn: Binding(
+                            get: { rootStore.preferences.includeBetaUpdates },
+                            set: { rootStore.updateIncludeBetaUpdates($0) }
+                        )
+                    )
+                    .toggleStyle(.switch)
+
+                    Text(L10n.text("preferences.updates.includeBeta.help"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .onAppear {

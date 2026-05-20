@@ -79,5 +79,17 @@
 	<string>TTAccessible can capture audio from other applications to stream it to TeamTalk channels.</string>
 	<key>NSScreenCaptureUsageDescription</key>
 	<string>TTAccessible can capture audio from specific applications to stream it to TeamTalk channels.</string>
+	<key>SUFeedURL</key>
+	<string>https://math65.github.io/ttaccessible/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>DSDUNhrNE0tBI9oT++xFgxQW4Hs6/8SyiNNDTXfj/to=</string>
+	<key>SUEnableInstallerLauncherService</key>
+	<true/>
+	<key>SUEnableDownloaderService</key>
+	<true/>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
 </dict>
 </plist>
