@@ -24,4 +24,6 @@ BuildArtifacts/
 
 # Internal files
 CLAUDE.md
-build.sh
+
+# Sparkle appcast generation staging (transient)
+.appcast-staging/
