@@ -1,12 +1,11 @@
-Bug fix release with two important fixes around quit stability and microphone transmission.
+Bug fix release restoring the keyboard shortcut for streaming an audio file.
 
 ## Fixed
 
-- **Quit crash**: a race condition in the TeamTalk SDK could crash the app on quit when an active session was being torn down. The app now waits briefly for the SDK's internal threads to finish before letting the process exit.
-- **Microphone transmission on the system default device**: voice was not being transmitted when the selected microphone was the macOS system default input. The capture engine now uses an explicit Core Audio device binding for every input, including the system default. Thanks to [Casey Reeves (@xogium)](https://github.com/xogium) for the fix.
+- **Stream Audio File keyboard shortcut**: ⌥⌘S no longer triggered streaming a file after 1.0.1's Stream submenu refactor — and ⌥⌘U / ⌥⌘. were affected too. SwiftUI does not register `keyboardShortcut` accelerators on items nested inside a `Menu(...)` within a `CommandMenu`. The three Stream items are now back at the top level of the Shortcuts menu, so all three accelerators work and appear next to their menu items. Thanks to the AppleVis forum reporter.
 
 ## Install
 
-1. Download `ttaccessible-1.0.1-15.zip` below.
+1. Download `ttaccessible-1.0.2-16.zip` below.
 2. Unzip and drag `ttaccessible.app` into your `/Applications` folder, replacing the previous version.
 3. Double-click — no Gatekeeper warning thanks to notarization.
