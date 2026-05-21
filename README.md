@@ -22,6 +22,7 @@ The official TeamTalk Qt client on Mac has significant accessibility issues — 
 - **Three sound packs** — Default, Majorly-G, Old
 - **Auto-reconnect** — with last channel rejoin
 - **.tt file import/export** — and tt:// link support
+- **Automatic updates** — signed and notarized releases delivered in-app via [Sparkle](https://sparkle-project.org)
 - **English and French localization**
 
 ## Requirements
@@ -49,6 +50,8 @@ This downloads `libTeamTalk5.dylib` and `TeamTalk.h` from the [official TeamTalk
 
 ### Build
 
+For development:
+
 ```bash
 # Debug build
 xcodebuild -project App/ttaccessible.xcodeproj -scheme ttaccessible -configuration Debug build
@@ -57,15 +60,21 @@ xcodebuild -project App/ttaccessible.xcodeproj -scheme ttaccessible -configurati
 xcodebuild -project App/ttaccessible.xcodeproj -scheme ttaccessible -configuration Release build
 ```
 
+To produce a local Release `.app` and zip without signing:
+
+```bash
+./build.sh
+```
+
+Packaging signed and notarized releases (publishing to GitHub, updating the Sparkle appcast) is maintainer-only and requires a `Developer ID Application` certificate.
+
 ## Installation
 
-The app is currently **unsigned** (no Apple Developer certificate). On first launch:
+1. Download the latest `ttaccessible-*.zip` from the [GitHub releases page](https://github.com/math65/ttaccessible/releases).
+2. Unzip and drag `ttaccessible.app` into `/Applications`.
+3. Double-click to launch.
 
-1. Move `ttaccessible.app` to `/Applications`
-2. Try to open it — macOS will block it
-3. Open **System Settings > Privacy & Security**
-4. Find the message about TTAccessible being blocked and click **Open Anyway**
-5. You only need to do this once
+The app is signed with a Developer ID certificate and notarized by Apple, so no Gatekeeper prompt appears on first launch. Subsequent updates are delivered automatically in-app via Sparkle — you can also trigger a check manually from **ttaccessible > Check for updates…**.
 
 ## Importing servers
 
@@ -77,32 +86,81 @@ If you already use TeamTalk on your Mac, you can import your saved servers:
 
 ## Keyboard shortcuts
 
+### Application & navigation
+
 | Shortcut | Action |
 |----------|--------|
+| Cmd+, | Preferences |
 | F2 | Connect / Disconnect |
 | Cmd+N | New server |
-| Cmd+E | Edit server |
+| Cmd+E | Edit server (server list) / Open private messages (connected) |
+| Cmd+Shift+I | Import TeamTalk servers (server list) / Server stats (connected) |
 | Cmd+1/2/3/4 | Focus: tree / chat / message / history |
-| Cmd+J | Join channel |
-| Cmd+L | Leave channel |
+
+### Identity & channels
+
+| Shortcut | Action |
+|----------|--------|
 | F5 | Change nickname |
+| Shift+F5 | Upload file |
 | F6 | Change status |
 | F7 / Shift+F7 | Create / Edit channel |
+| F8 | Delete channel |
+| Cmd+J | Join channel |
+| Cmd+L | Leave channel |
+
+### Messages, files & sharing
+
+| Shortcut | Action |
+|----------|--------|
+| Cmd+Shift+E | Open private messages |
+| Cmd+Shift+F | Open channel files |
+| Cmd+Shift+S | Export chat to file |
+| Cmd+Shift+L | Copy server link |
+
+### Audio
+
+| Shortcut | Action |
+|----------|--------|
 | Cmd+Shift+A | Toggle microphone |
-| Cmd+M | Mute/unmute master volume |
-| Cmd+Shift+M | Mute/unmute selected user |
-| Cmd+U | Adjust user volume |
+| Cmd+M | Mute / unmute master volume |
+| Cmd+Shift+H | Hear myself (loopback) |
+| Cmd+R | Start / stop recording |
+| F9 | Announce audio state |
+
+### User actions
+
+| Shortcut | Action |
+|----------|--------|
 | Cmd+I | User info |
-| Cmd+R | Start/stop recording |
+| Cmd+U | Adjust user volume & stereo |
+| Cmd+Shift+M | Mute / unmute selected user |
+| Ctrl+Cmd+Shift+M | Mute / unmute user's media file |
+| Ctrl+Cmd+O | Toggle channel operator |
 | Cmd+K | Kick from channel |
 | Cmd+Shift+K | Kick from server |
-| Cmd+Shift+H | Hear myself (loopback) |
-| F9 | Announce audio state |
-| Cmd+, | Preferences |
+| Cmd+Option+X | Move user to channel |
+
+### Administration
+
+| Shortcut | Action |
+|----------|--------|
+| Cmd+Shift+U | User accounts |
+| Cmd+Shift+B | Banned users |
+| Cmd+Shift+P | Server properties |
+| Cmd+B | Broadcast message |
+
+### Media streaming
+
+| Shortcut | Action |
+|----------|--------|
+| Cmd+Option+S | Stream media from file |
+| Cmd+Option+U | Stream media from URL |
+| Cmd+Option+. | Stop media streaming |
 
 ## Architecture
 
-Native **macOS AppKit app** with SwiftUI preference panes. The audio pipeline uses a custom dual-path capture engine — AVAudioEngine for the system default input device, standalone AUHAL AudioUnit for non-default devices — bypassing the TeamTalk SDK's built-in audio capture (which causes crackling on macOS). Audio is injected into the SDK via `TT_InsertAudioBlock` through a virtual sound device.
+Native **macOS AppKit app** with SwiftUI preference panes. The audio pipeline uses a custom AUHAL capture engine (explicit CoreAudio device binding for every input, including system default) bypassing the TeamTalk SDK's built-in audio capture (which causes crackling on macOS). Captured PCM is resampled to the channel codec rate before injection via `TT_InsertAudioBlock` through a virtual sound device.
 
 Echo cancellation uses WebRTC AEC3 (from `webrtc-audio-processing` v2.0, WebRTC M131) with the actual speaker output captured via Core Audio taps as the reference signal — not just the decoded TeamTalk audio. This allows cancellation of VoiceOver, system sounds, and all other audio.
 

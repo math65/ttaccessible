@@ -33,6 +33,7 @@ final class SavedServersMenuState: ObservableObject {
     @Published private(set) var isSelectedUserChannelOperator = false
     @Published private(set) var isMasterMuted = false
     @Published private(set) var isRecordingActive = false
+    @Published private(set) var isMediaStreamingActive = false
     @Published private(set) var selectedUserSubscriptionStates: [UserSubscriptionOption: Bool] = [:]
 
     private init() {
@@ -65,6 +66,7 @@ final class SavedServersMenuState: ObservableObject {
         setSelectedUsersState(hasSelectedUsers: false, hasSingleSelectedUser: false, hasSingleSelectedOtherUser: false, isSelectedUserMuted: false, isSelectedUserMediaFileMuted: false, isSelectedUserChannelOperator: false, states: [:])
         setMasterMuted(false)
         setRecordingActive(false)
+        setMediaStreamingActive(false)
     }
 
     func setAdministrator(_ value: Bool) {
@@ -90,6 +92,11 @@ final class SavedServersMenuState: ObservableObject {
     func setRecordingActive(_ value: Bool) {
         if isRecordingActive != value { isRecordingActive = value }
     }
+
+    func setMediaStreamingActive(_ value: Bool) {
+        if isMediaStreamingActive != value { isMediaStreamingActive = value }
+    }
+
 
     func setSelectedUsersState(hasSelectedUsers: Bool, hasSingleSelectedUser: Bool, hasSingleSelectedOtherUser: Bool, isSelectedUserMuted: Bool, isSelectedUserMediaFileMuted: Bool, isSelectedUserChannelOperator: Bool, states: [UserSubscriptionOption: Bool]) {
         if self.hasSelectedUsers != hasSelectedUsers {

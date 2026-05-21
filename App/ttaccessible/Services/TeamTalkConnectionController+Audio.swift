@@ -46,6 +46,12 @@ extension TeamTalkConnectionController {
         }
     }
 
+    func setPushToTalkPressed(_ pressed: Bool) {
+        queue.async { [weak self] in
+            self?.pushToTalkPressed = pressed
+        }
+    }
+
     func restartSoundSystem(completion: @escaping (Result<Void, Error>) -> Void) {
         queue.async { [weak self] in
             guard let self else {
@@ -118,10 +124,13 @@ extension TeamTalkConnectionController {
                 } catch {
                     AudioLogger.log("restartSoundSystem: mic restart failed — %@", error.localizedDescription)
                     self.voiceTransmissionEnabled = false
+                    self.inputAudioReady = false
+                    self.advancedMicrophoneTargetFormat = nil
                     SoundPlayer.shared.play(.voxMeDisable)
                     if let connectedRecord = self.connectedRecord {
                         self.publishSessionLocked(instance: instance, record: connectedRecord)
                     }
+                    self.lastAudioWarningMessage = L10n.text("connectedServer.audio.error.microphoneRestartFailed")
                 }
             }
 
@@ -287,6 +296,10 @@ extension TeamTalkConnectionController {
             return
         }
 
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .stopAdvancedMicrophonePreview, object: nil)
+        }
+
         guard let deviceInfo = InputAudioDeviceResolver.resolveCurrentInputDevice(for: preferencesStore.preferences.preferredInputDevice) else {
             throw TeamTalkConnectionError.internalError(L10n.text("preferences.audio.advanced.error.deviceUnavailable"))
         }
@@ -312,6 +325,7 @@ extension TeamTalkConnectionController {
             _ = try advancedMicrophoneEngine.start(configuration: configuration)
             advancedMicrophoneTargetFormat = targetFormat
             inputAudioReady = true
+            lastAudioWarningMessage = nil
 
             // Monitor sample rate changes on the active input device.
             let activeDeviceUID = deviceInfo.uid
@@ -392,6 +406,9 @@ extension TeamTalkConnectionController {
         }
         if recordingMuxedActive || recordingSeparateActive {
             status += " — " + L10n.text("connectedServer.audio.status.recording")
+        }
+        if let lastAudioWarningMessage {
+            status += " — " + lastAudioWarningMessage
         }
         return status
     }
@@ -533,9 +550,23 @@ extension TeamTalkConnectionController {
     }
 
     func insertAdvancedMicrophoneAudioChunkLocked(_ chunk: AdvancedMicrophoneAudioChunk) {
-        guard voiceTransmissionEnabled,
-              let instance,
-              TT_GetMyChannelID(instance) > 0 else {
+        guard let instance else {
+            AudioCaptureDiagnostics.shared.recordInsertAttempt(
+                sampleRate: chunk.sampleRate,
+                accepted: false,
+                gated: true
+            )
+            return
+        }
+        let inChannel = TT_GetMyChannelID(instance) > 0
+        let pttMode = preferencesStore.preferences.microphoneMode == .pushToTalk
+        let allowTransmission = !pttMode || pushToTalkPressed
+        guard voiceTransmissionEnabled, inChannel, allowTransmission else {
+            AudioCaptureDiagnostics.shared.recordInsertAttempt(
+                sampleRate: chunk.sampleRate,
+                accepted: false,
+                gated: true
+            )
             return
         }
 
@@ -548,7 +579,13 @@ extension TeamTalkConnectionController {
             audioBlock.lpRawAudio = UnsafeMutableRawPointer(mutating: baseAddress)
             audioBlock.nSamples = chunk.sampleCount
             audioBlock.uSampleIndex = 0
-            if TT_InsertAudioBlock(instance, &audioBlock) == 0 {
+            let accepted = TT_InsertAudioBlock(instance, &audioBlock) != 0
+            AudioCaptureDiagnostics.shared.recordInsertAttempt(
+                sampleRate: chunk.sampleRate,
+                accepted: accepted,
+                gated: false
+            )
+            if accepted == false {
                 AudioLogger.log("TT_InsertAudioBlock: queue full, audio block dropped")
             }
         }

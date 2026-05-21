@@ -27,6 +27,7 @@ protocol TeamTalkConnectionControllerDelegate: AnyObject {
     func teamTalkConnectionController(_ controller: TeamTalkConnectionController, didReceiveUserAccounts accounts: [UserAccountProperties])
     func teamTalkConnectionController(_ controller: TeamTalkConnectionController, didReceiveBannedUsers users: [BannedUserProperties])
     func teamTalkConnectionController(_ controller: TeamTalkConnectionController, didReceiveIncomingTextMessage event: IncomingTextMessageEvent)
+    func teamTalkConnectionController(_ controller: TeamTalkConnectionController, didUpdateMediaStreamingProgress progress: MediaStreamingProgress)
 }
 
 final class TeamTalkConnectionController {
@@ -103,12 +104,22 @@ final class TeamTalkConnectionController {
     var outputAudioReady = false
     var inputAudioReady = false
     var voiceTransmissionEnabled = false
+    var pushToTalkPressed = false
+    var lastAudioWarningMessage: String?
     var masterMuted = false
     var hearMyselfEnabled = false
     var recordingMuxedActive = false
     var recordingSeparateActive = false
     var recordingFolder: URL?
     var recordingFormat: AudioFileFormat = AFF_WAVE_FORMAT
+    var mediaStreamingActive = false
+    var mediaStreamingFileName: String?
+    var mediaStreamingSecurityScopedURL: URL?
+    var mediaStreamingPaused = false
+    var mediaStreamingDurationMSec: UInt32 = 0
+    var mediaStreamingElapsedMSec: UInt32 = 0
+    var mediaStreamingElapsedSampleAt: Date?
+    var mediaStreamingBroadcastGainLevel: INT32 = 1000
     var teamTalkVirtualInputReady = false
     var advancedMicrophoneTargetFormat: AdvancedMicrophoneAudioTargetFormat?
     var reconnectTimer: DispatchSourceTimer?
@@ -122,6 +133,8 @@ final class TeamTalkConnectionController {
     var isAutoAwayActive = false
     var autoAwayActivationTime: Date?
     var autoAwayRestoreStatusMessage = ""
+    /// Highest HID idle time observed since auto-away activated (input resets pull this down).
+    var autoAwayPeakIdleSeconds: Double?
     var pendingUserAccounts: [UserAccountProperties] = []
     var cachedUserAccounts: [UserAccountProperties] = []
     var listUserAccountsCmdID: Int32 = -1

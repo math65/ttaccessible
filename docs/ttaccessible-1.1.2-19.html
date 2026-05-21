@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ttaccessible-1.1.2-19</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --code-bg: #f5f5f7;
+  --link: #0066cc;
+  --link-hover: #0040a0;
+  --rule: #e5e5ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #ececec;
+    --muted: #a0a0a0;
+    --code-bg: #2d2d2d;
+    --link: #4eaaff;
+    --link-hover: #82c4ff;
+    --rule: #3a3a3a;
+  }
+}
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  padding: 1rem 1.25rem 1.5rem;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.15rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.2em; }
+h3 { font-size: 1.02rem; }
+h4 { font-size: 0.95rem; color: var(--muted); }
+p { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; margin: 0.6em 0; }
+li { margin: 0.25em 0; }
+li > p { margin: 0.3em 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover, a:focus { color: var(--link-hover); text-decoration: underline; }
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.75em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+pre code { background: transparent; padding: 0; border-radius: 0; }
+blockquote {
+  border-left: 3px solid var(--rule);
+  margin: 0.8em 0;
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--muted);
+}
+hr { border: 0; border-top: 1px solid var(--rule); margin: 1.5em 0; }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<p>Critical Sparkle fix. <strong>Manual install required this one
+time</strong> if you're on 1.1.0 or 1.1.1.</p>
+<h2 id="fixed">Fixed</h2>
+<ul>
+<li><strong>Sparkle update install failed with "An error occurred while
+running the updater."</strong> The mach-lookup entitlements that let the
+sandboxed app reach Sparkle's helper XPC services were signed with the
+literal string <code>$(PRODUCT_BUNDLE_IDENTIFIER)-spks</code> instead of
+<code>com.math65.ttaccessible-spks</code> because the build script's
+call to <code>codesign</code> doesn't expand Xcode build variables.
+Hardcoded the bundle identifier in the entitlements so the substitution
+happens at-source.</li>
+</ul>
+<h2 id="one-time-manual-install">One-time manual install</h2>
+<p>If you're on <strong>1.1.0 or 1.1.1</strong>, Sparkle in those
+versions cannot install this update for you — that's the bug we're
+fixing. Install once manually:</p>
+<ol type="1">
+<li>Download <code>ttaccessible-1.1.2-19.zip</code> below.</li>
+<li>Unzip and drag <code>ttaccessible.app</code> into your
+<code>/Applications</code> folder, replacing the previous version.</li>
+<li>Double-click — no Gatekeeper warning thanks to notarization.</li>
+</ol>
+<p>From 1.1.2 onward, Sparkle takes over normally for every future
+release.</p>
+<p>If you're on 1.0.2, the old in-app updater will surface 1.1.2 the
+next time you check — install it manually the same way (as planned for
+the Sparkle migration).</p>
+</body>
+</html>

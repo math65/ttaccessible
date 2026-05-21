@@ -160,6 +160,8 @@ struct ConnectedServerSession: Equatable {
     let inputGainDB: Double
     let outputGainDB: Double
     let recordingActive: Bool
+    let mediaStreamingActive: Bool
+    let mediaStreamingFileName: String?
 }
 
 struct ConnectedUserAudioState: Equatable {

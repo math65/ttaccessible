@@ -446,8 +446,9 @@ extension TeamTalkConnectionController {
                 }
             }
             let now = CFAbsoluteTimeGetCurrent()
+            let autoAwayPollInterval = isAutoAwayActive ? 0.5 : 5.0
             if connectedRecord != nil,
-               now - lastAutoAwayCheckTime >= 5.0 {
+               now - lastAutoAwayCheckTime >= autoAwayPollInterval {
                 lastAutoAwayCheckTime = now
                 if updateAutoAwayIfNeededLocked(instance: instance) {
                     publishInvalidation = .all
@@ -559,6 +560,33 @@ extension TeamTalkConnectionController {
                     if status == MFS_ERROR || status == MFS_ABORTED {
                         recordingMuxedActive = false
                         publishInvalidation = .all
+                    }
+                }
+            case CLIENTEVENT_STREAM_MEDIAFILE:
+                if connectedRecord != nil {
+                    let info = message.mediafileinfo
+                    let status = info.nStatus
+                    switch status {
+                    case MFS_STARTED:
+                        if info.uDurationMSec > 0 {
+                            mediaStreamingDurationMSec = info.uDurationMSec
+                        }
+                        if let fileName = mediaStreamingFileName {
+                            appendMediaStreamingStartedHistoryLocked(fileName: fileName)
+                            publishInvalidation.insert(.history)
+                        }
+                        updateMediaStreamingProgressLocked(elapsedMSec: info.uElapsedMSec, durationMSec: info.uDurationMSec)
+                    case MFS_PLAYING:
+                        updateMediaStreamingProgressLocked(elapsedMSec: info.uElapsedMSec, durationMSec: info.uDurationMSec)
+                    case MFS_PAUSED:
+                        mediaStreamingPaused = true
+                        updateMediaStreamingProgressLocked(elapsedMSec: info.uElapsedMSec, durationMSec: info.uDurationMSec)
+                    case MFS_FINISHED, MFS_ABORTED, MFS_CLOSED:
+                        finalizeMediaStreamingLocked(instance: instance, reason: .finished)
+                    case MFS_ERROR:
+                        finalizeMediaStreamingLocked(instance: instance, reason: .error)
+                    default:
+                        break
                     }
                 }
             case CLIENTEVENT_CMD_USERACCOUNT:
@@ -677,7 +705,12 @@ extension TeamTalkConnectionController {
                                 if let connectedRecord {
                                     publishSessionLocked(instance: instance, record: connectedRecord)
                                 }
-                            } catch {}
+                            } catch {
+                                AudioLogger.log(
+                                    "auto-restore mic on join failed: %@",
+                                    error.localizedDescription
+                                )
+                            }
                         }
                         let joinedUsername = ttString(from: message.user.szUsername)
                         if let storedVolume = userVolumeStore.volume(forUsername: joinedUsername) {
@@ -728,6 +761,9 @@ extension TeamTalkConnectionController {
         stopPollingLocked()
 
         if let instance {
+            if mediaStreamingActive {
+                _ = TT_StopStreamingMediaFileToChannel(instance)
+            }
             if isAnyMicrophoneEngineRunning || inputAudioReady {
                 stopAdvancedMicrophoneInputLocked(instance: instance, reason: "destroyLocked")
             }
@@ -745,6 +781,16 @@ extension TeamTalkConnectionController {
             TT_CloseTeamTalk(instance)
         }
 
+        mediaStreamingSecurityScopedURL?.stopAccessingSecurityScopedResource()
+        mediaStreamingSecurityScopedURL = nil
+        mediaStreamingActive = false
+        mediaStreamingFileName = nil
+        mediaStreamingPaused = false
+        mediaStreamingDurationMSec = 0
+        mediaStreamingElapsedMSec = 0
+        mediaStreamingElapsedSampleAt = nil
+        mediaStreamingBroadcastGainLevel = INT32(SOUND_GAIN_DEFAULT.rawValue)
+        publishMediaStreamingProgressLocked()
         recordingMuxedActive = false
         recordingSeparateActive = false
         recordingFolder = nil
@@ -780,7 +826,9 @@ extension TeamTalkConnectionController {
         teamTalkVirtualInputReady = false
         advancedMicrophoneTargetFormat = nil
         isAutoAwayActive = false
+        autoAwayActivationTime = nil
         autoAwayRestoreStatusMessage = ""
+        autoAwayPeakIdleSeconds = nil
     }
 
     // MARK: - Error helpers
@@ -912,7 +960,12 @@ extension TeamTalkConnectionController {
                                     try ensureAdvancedMicrophoneInputReadyLocked(instance: instance)
                                     voiceTransmissionEnabled = true
                                     SoundPlayer.shared.play(.voxMeEnable)
-                                } catch {}
+                                } catch {
+                                    AudioLogger.log(
+                                        "auto-restore mic on channel join failed: %@",
+                                        error.localizedDescription
+                                    )
+                                }
                             }
                             if recordingMuxedActive {
                                 restartMuxedRecordingForChannelChange()

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ttaccessible-1.1.0-17</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --code-bg: #f5f5f7;
+  --link: #0066cc;
+  --link-hover: #0040a0;
+  --rule: #e5e5ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #ececec;
+    --muted: #a0a0a0;
+    --code-bg: #2d2d2d;
+    --link: #4eaaff;
+    --link-hover: #82c4ff;
+    --rule: #3a3a3a;
+  }
+}
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  padding: 1rem 1.25rem 1.5rem;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.15rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.2em; }
+h3 { font-size: 1.02rem; }
+h4 { font-size: 0.95rem; color: var(--muted); }
+p { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; margin: 0.6em 0; }
+li { margin: 0.25em 0; }
+li > p { margin: 0.3em 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover, a:focus { color: var(--link-hover); text-decoration: underline; }
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.75em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+pre code { background: transparent; padding: 0; border-radius: 0; }
+blockquote {
+  border-left: 3px solid var(--rule);
+  margin: 0.8em 0;
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--muted);
+}
+hr { border: 0; border-top: 1px solid var(--rule); margin: 1.5em 0; }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<p><strong>ttaccessible now updates itself.</strong> This release
+migrates the app from a homemade updater to <a
+href="https://sparkle-project.org">Sparkle</a>, the framework used by
+most third-party Mac apps. Once you're on 1.1.0, future updates install
+on a click — no more downloading a zip, unzipping, and dragging the app
+to /Applications.</p>
+<h2 id="whats-new">What's new</h2>
+<ul>
+<li><strong>Automatic updates.</strong> Sparkle checks for new versions
+once every 24 hours in the background. When one is available, you get
+its release notes in a native dialog. Click <strong>Install
+Update</strong>, the app quits, the new version swaps in, and the app
+relaunches — usually under 10 seconds end to end.</li>
+<li><strong>Manual check anytime.</strong> <em>ttaccessible → Check for
+Updates…</em> in the menu bar (Cmd+, then look around if it moves).</li>
+<li><strong>Auto-check toggle.</strong> <em>Preferences → General →
+Updates → Check for updates automatically</em>. On by default. Disable
+it if you want strict manual control.</li>
+<li><strong>Beta channel.</strong> <em>Preferences → General → Updates →
+Include beta versions</em>. Off by default. Turn it on if you want to
+test pre-release builds as soon as they ship.</li>
+</ul>
+<h2 id="one-time-migration-step">One-time migration step</h2>
+<p>If you're on 1.0.2 or earlier, the old in-app updater will offer
+1.1.0 as a manual download — that's the same flow you've used until now:
+download the zip, unzip, drag into /Applications. Do this once.</p>
+<p>From 1.1.0 onward, Sparkle takes over. You won't need to download
+zips by hand again.</p>
+<h2 id="how-updates-are-verified">How updates are verified</h2>
+<p>Every update is signed with an EdDSA key whose public counterpart
+ships inside ttaccessible itself. Sparkle refuses to install anything
+that doesn't match. The app is also still sandboxed, notarized by Apple,
+and stapled — same security guarantees as before, no relaxations.</p>
+<h2 id="install">Install</h2>
+<ol type="1">
+<li>Download <code>ttaccessible-1.1.0-17.zip</code> below.</li>
+<li>Unzip and drag <code>ttaccessible.app</code> into your
+<code>/Applications</code> folder, replacing the previous version.</li>
+<li>Double-click — no Gatekeeper warning thanks to notarization.</li>
+</ol>
+<p>After this, you're done with manual downloads.</p>
+</body>
+</html>

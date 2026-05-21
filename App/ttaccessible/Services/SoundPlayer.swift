@@ -123,7 +123,7 @@ final class SoundPlayer {
         }
 
         let destinationRoot = ensureCustomSoundPacksDirectory()
-        let packName = sourceURL.lastPathComponent
+        let packName = sanitizedPackName(sourceURL.lastPathComponent)
         let destinationURL = destinationRoot.appendingPathComponent(packName, isDirectory: true)
         if sourceURL.standardizedFileURL.path == destinationURL.standardizedFileURL.path {
             return packName

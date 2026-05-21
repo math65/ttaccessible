@@ -8,10 +8,20 @@
 import Foundation
 import Security
 
+/// Stores per-server credentials (server password + channel password) in the
+/// macOS login keychain. For end users running the notarized release build,
+/// the signing identity stays stable so items persist across launches. For
+/// developers re-signing locally, the ACL may break on cert changes — in that
+/// case `SavedServersViewController.handleLoginFailure` lets the user re-enter
+/// the credentials, which simply rewrites the item with the new ACL.
 final class ServerPasswordStore {
-    private enum PasswordKind: String {
-        case server
-        case channel
+    private struct Credentials: Codable {
+        var server: String?
+        var channel: String?
+
+        var isEmpty: Bool {
+            (server?.isEmpty ?? true) && (channel?.isEmpty ?? true)
+        }
     }
 
     enum PasswordStoreError: LocalizedError {
@@ -32,140 +42,139 @@ final class ServerPasswordStore {
     }
 
     private let serviceName: String
-    private let channelServiceName: String
-    private var cachedPasswords: [UUID: String] = [:]
-    private var cachedChannelPasswords: [UUID: String] = [:]
+    private let defaults: UserDefaults
+    private var cache: [UUID: Credentials] = [:]
+    private let cacheLock = NSLock()
 
-    init(serviceName: String = "com.math65.ttaccessible.saved-server-password") {
+    private static let cleanupDoneKey = "ServerPasswordStore.dpkResetCompleted.v3"
+
+    init(
+        serviceName: String = "com.math65.ttaccessible.saved-server-password",
+        defaults: UserDefaults = .standard
+    ) {
         self.serviceName = serviceName
-        self.channelServiceName = serviceName + ".channel"
+        self.defaults = defaults
+        oneShotMigrationCleanup()
     }
 
+    /// Clears markers from older keychain implementations so the app starts clean
+    /// on the first launch after the DPK migration. Older login-keychain items
+    /// (if any) become inaccessible after a signing-cert change anyway, so they
+    /// don't need active deletion — they'll be flushed by macOS over time.
+    private func oneShotMigrationCleanup() {
+        guard !defaults.bool(forKey: Self.cleanupDoneKey) else { return }
+        defaults.removeObject(forKey: "ServerPasswordStore.migratedLegacyIDs")
+        defaults.removeObject(forKey: "ServerPasswordStore.migrationSchemaVersion")
+        defaults.set(true, forKey: Self.cleanupDoneKey)
+    }
+
+    // MARK: - Public API
+
     func password(for id: UUID) throws -> String? {
-        try storedPassword(for: id, kind: .server)
+        nonEmpty(try loadCredentials(for: id).server)
     }
 
     func channelPassword(for id: UUID) throws -> String? {
-        try storedPassword(for: id, kind: .channel)
+        nonEmpty(try loadCredentials(for: id).channel)
     }
 
     func setPassword(_ password: String?, for id: UUID) throws {
-        try setStoredPassword(password, for: id, kind: .server)
+        var credentials = try loadCredentials(for: id)
+        credentials.server = nonEmpty(password)
+        try writeCredentials(credentials, for: id)
     }
 
     func setChannelPassword(_ password: String?, for id: UUID) throws {
-        try setStoredPassword(password, for: id, kind: .channel)
+        var credentials = try loadCredentials(for: id)
+        credentials.channel = nonEmpty(password)
+        try writeCredentials(credentials, for: id)
     }
 
     func deletePassword(for id: UUID) throws {
-        try deleteStoredPassword(for: id, kind: .server)
+        var credentials = try loadCredentials(for: id)
+        credentials.server = nil
+        try writeCredentials(credentials, for: id)
     }
 
     func deleteChannelPassword(for id: UUID) throws {
-        try deleteStoredPassword(for: id, kind: .channel)
+        var credentials = try loadCredentials(for: id)
+        credentials.channel = nil
+        try writeCredentials(credentials, for: id)
     }
 
-    private func storedPassword(for id: UUID, kind: PasswordKind) throws -> String? {
-        if let cached = cachedPassword(for: id, kind: kind) {
+    // MARK: - Internals
+
+    private func loadCredentials(for id: UUID) throws -> Credentials {
+        cacheLock.lock()
+        if let cached = cache[id] {
+            cacheLock.unlock()
             return cached
         }
+        cacheLock.unlock()
 
-        let query: [CFString: Any] = [
-            kSecClass: kSecClassGenericPassword,
-            kSecAttrService: serviceName(for: kind),
-            kSecAttrAccount: id.uuidString,
-            kSecReturnData: true,
-            kSecMatchLimit: kSecMatchLimitOne
-        ]
+        var query = baseQuery(for: id)
+        query[kSecReturnData] = true
+        query[kSecMatchLimit] = kSecMatchLimitOne
 
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
-
         switch status {
         case errSecSuccess:
             guard let data = item as? Data,
-                  let password = String(data: data, encoding: .utf8) else {
+                  let credentials = try? JSONDecoder().decode(Credentials.self, from: data) else {
                 throw PasswordStoreError.invalidPasswordData
             }
-            cache(password: password, for: id, kind: kind)
-            return password
+            cacheCredentials(credentials, for: id)
+            return credentials
         case errSecItemNotFound:
-            clearCache(for: id, kind: kind)
-            return nil
+            let empty = Credentials()
+            cacheCredentials(empty, for: id)
+            return empty
         default:
             throw PasswordStoreError.unexpectedStatus(status)
         }
     }
 
-    private func setStoredPassword(_ password: String?, for id: UUID, kind: PasswordKind) throws {
-        try deleteStoredPassword(for: id, kind: kind)
+    private func writeCredentials(_ credentials: Credentials, for id: UUID) throws {
+        let deleteStatus = SecItemDelete(baseQuery(for: id) as CFDictionary)
+        guard deleteStatus == errSecSuccess || deleteStatus == errSecItemNotFound else {
+            throw PasswordStoreError.unexpectedStatus(deleteStatus)
+        }
 
-        guard let password, password.isEmpty == false else {
-            clearCache(for: id, kind: kind)
+        guard !credentials.isEmpty else {
+            cacheCredentials(credentials, for: id)
             return
         }
 
-        let attributes: [CFString: Any] = [
-            kSecClass: kSecClassGenericPassword,
-            kSecAttrService: serviceName(for: kind),
-            kSecAttrAccount: id.uuidString,
-            kSecValueData: Data(password.utf8)
-        ]
+        let data = try JSONEncoder().encode(credentials)
+        var attributes = baseQuery(for: id)
+        attributes[kSecValueData] = data
 
-        let status = SecItemAdd(attributes as CFDictionary, nil)
-        guard status == errSecSuccess else {
-            throw PasswordStoreError.unexpectedStatus(status)
+        let addStatus = SecItemAdd(attributes as CFDictionary, nil)
+        guard addStatus == errSecSuccess else {
+            throw PasswordStoreError.unexpectedStatus(addStatus)
         }
-        cache(password: password, for: id, kind: kind)
+        cacheCredentials(credentials, for: id)
     }
 
-    private func deleteStoredPassword(for id: UUID, kind: PasswordKind) throws {
-        let query: [CFString: Any] = [
+    private func baseQuery(for id: UUID) -> [CFString: Any] {
+        [
             kSecClass: kSecClassGenericPassword,
-            kSecAttrService: serviceName(for: kind),
+            kSecAttrService: serviceName,
             kSecAttrAccount: id.uuidString
         ]
-
-        let status = SecItemDelete(query as CFDictionary)
-        guard status == errSecSuccess || status == errSecItemNotFound else {
-            throw PasswordStoreError.unexpectedStatus(status)
-        }
-        clearCache(for: id, kind: kind)
     }
 
-    private func serviceName(for kind: PasswordKind) -> String {
-        switch kind {
-        case .server:
-            return serviceName
-        case .channel:
-            return channelServiceName
-        }
+    private func cacheCredentials(_ credentials: Credentials, for id: UUID) {
+        cacheLock.lock()
+        cache[id] = credentials
+        cacheLock.unlock()
     }
 
-    private func cachedPassword(for id: UUID, kind: PasswordKind) -> String? {
-        switch kind {
-        case .server:
-            return cachedPasswords[id]
-        case .channel:
-            return cachedChannelPasswords[id]
+    private func nonEmpty(_ string: String?) -> String? {
+        guard let string, !string.isEmpty else {
+            return nil
         }
-    }
-
-    private func cache(password: String, for id: UUID, kind: PasswordKind) {
-        switch kind {
-        case .server:
-            cachedPasswords[id] = password
-        case .channel:
-            cachedChannelPasswords[id] = password
-        }
-    }
-
-    private func clearCache(for id: UUID, kind: PasswordKind) {
-        switch kind {
-        case .server:
-            cachedPasswords.removeValue(forKey: id)
-        case .channel:
-            cachedChannelPasswords.removeValue(forKey: id)
-        }
+        return string
     }
 }

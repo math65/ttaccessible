@@ -31,6 +31,8 @@ struct SessionHistoryEntry: Equatable, Identifiable {
         case fileAdded
         case fileRemoved
         case transmissionBlocked
+        case mediaStreamingStarted
+        case mediaStreamingFinished
 
         var localizationKey: String {
             "preferences.historyEvent.\(rawValue)"
@@ -68,6 +70,8 @@ struct SessionHistoryEntry: Equatable, Identifiable {
                   kinds: [.subscriptionChanged, .interceptSubscriptionChanged]),
             Group(id: "files", localizationKey: "preferences.historyEvents.group.files",
                   kinds: [.fileAdded, .fileRemoved]),
+            Group(id: "media", localizationKey: "preferences.historyEvents.group.media",
+                  kinds: [.mediaStreamingStarted, .mediaStreamingFinished]),
         ]
     }
 

@@ -9,7 +9,7 @@ import SwiftUI
 final class NotificationParameterSliderNSView: NSView {
     private let titleLabel = NSTextField(labelWithString: "")
     private let valueLabel = NSTextField(labelWithString: "")
-    private let slider = NSSlider(value: 0, minValue: 0, maxValue: 1, target: nil, action: nil)
+    private let slider = AccessibleSlider(value: 0, minValue: 0, maxValue: 1, target: nil, action: nil)
 
     private var value: Double = 0
     private var step: Double = 1

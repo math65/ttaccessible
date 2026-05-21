@@ -152,7 +152,9 @@ final class ChannelFilesViewController: NSViewController {
             audioStatusText: session.audioStatusText,
             inputGainDB: session.inputGainDB,
             outputGainDB: session.outputGainDB,
-            recordingActive: session.recordingActive
+            recordingActive: session.recordingActive,
+            mediaStreamingActive: session.mediaStreamingActive,
+            mediaStreamingFileName: session.mediaStreamingFileName
         )
         announceNewTransfers(transfers)
         if oldUploads != activeUploadTransfers {

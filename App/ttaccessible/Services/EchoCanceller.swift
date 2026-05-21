@@ -45,6 +45,7 @@ final class EchoCanceller {
     private var referenceFramesFed: Int = 0
     private var captureFramesProcessed: Int = 0
     private var lastDiagnosticTime: CFAbsoluteTime = 0
+    private var didLogChannelMismatch = false
 
     init?(configuration: Configuration) {
         self.config = configuration
@@ -71,8 +72,10 @@ final class EchoCanceller {
     func feedReference(_ samples: UnsafePointer<Int16>, count: Int, channels: Int, sampleRate: Int = 0) {
         let frameSamples = config.frameSamplesPerChannel * config.channels
 
-        // If channel count matches, use directly; otherwise skip (rare mismatch case).
-        guard channels == config.channels else { return }
+        guard channels == config.channels else {
+            logChannelMismatchOnce(feedChannels: channels)
+            return
+        }
 
         let effectiveRate = sampleRate > 0 ? sampleRate : config.sampleRate
 
@@ -120,6 +123,16 @@ final class EchoCanceller {
         }
 
         logDiagnosticsIfNeeded(refRate: effectiveRate, refChannels: channels)
+    }
+
+    private func logChannelMismatchOnce(feedChannels: Int) {
+        guard didLogChannelMismatch == false else { return }
+        didLogChannelMismatch = true
+        AudioLogger.log(
+            "AEC: reference channel mismatch feed=%d config=%d — reference ignored",
+            feedChannels,
+            config.channels
+        )
     }
 
     private func logDiagnosticsIfNeeded(refRate: Int, refChannels: Int) {

@@ -110,7 +110,7 @@ extension ConnectedServerViewController {
         accessibilityLabel: String,
         handler: VolumeSliderHandler
     ) -> NSSlider {
-        let slider = NSSlider(value: value, minValue: 0, maxValue: 100, target: handler, action: #selector(VolumeSliderHandler.sliderChanged(_:)))
+        let slider = AccessibleSlider(value: value, minValue: 0, maxValue: 100, target: handler, action: #selector(VolumeSliderHandler.sliderChanged(_:)))
         slider.translatesAutoresizingMaskIntoConstraints = false
         slider.numberOfTickMarks = 0
         slider.altIncrementValue = 1

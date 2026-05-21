@@ -56,6 +56,20 @@ struct PreferencesConnectionView: View {
                 )
                 .toggleStyle(.switch)
 
+                Picker(
+                    L10n.text("preferences.connection.channelSortMode"),
+                    selection: Binding(
+                        get: { store.state.channelSortMode },
+                        set: { store.updateChannelSortMode($0) }
+                    )
+                ) {
+                    Text(L10n.text("preferences.connection.channelSortMode.name"))
+                        .tag(AppPreferences.ChannelSortMode.name)
+                    Text(L10n.text("preferences.connection.channelSortMode.userCount"))
+                        .tag(AppPreferences.ChannelSortMode.userCount)
+                }
+                .pickerStyle(.menu)
+
                 Divider()
 
                 VStack(alignment: .leading, spacing: 8) {

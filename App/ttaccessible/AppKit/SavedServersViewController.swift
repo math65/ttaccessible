@@ -368,8 +368,51 @@ final class SavedServersViewController: NSViewController {
             case .success:
                 return
             case .failure(let error):
-                self.presentErrorAlert(message: error.localizedDescription)
+                if let ttError = error as? TeamTalkConnectionError,
+                   case .loginFailed = ttError {
+                    self.handleLoginFailure(for: record, error: ttError)
+                } else {
+                    self.presentErrorAlert(message: error.localizedDescription)
+                }
             }
+        }
+    }
+
+    private func handleLoginFailure(for record: SavedServerRecord, error: TeamTalkConnectionError) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = L10n.text("savedServers.alert.loginFailed.title")
+        alert.informativeText = L10n.format("savedServers.alert.loginFailed.message", error.localizedDescription)
+        alert.addButton(withTitle: L10n.text("savedServers.alert.loginFailed.editCredentials"))
+        alert.addButton(withTitle: L10n.text("savedServers.alert.loginFailed.cancel"))
+
+        guard alert.runModal() == .alertFirstButtonReturn else {
+            return
+        }
+
+        let currentPassword = (try? passwordStore.password(for: record.id)) ?? ""
+        let currentChannelPassword = (try? passwordStore.channelPassword(for: record.id)) ?? record.initialChannelPassword
+        let draft = SavedServerDraft(
+            record: record,
+            password: currentPassword,
+            initialChannelPassword: currentChannelPassword
+        )
+        let controller = SavedServerEditorWindowController(mode: .edit, draft: draft, parentWindow: view.window)
+
+        guard let result = controller.runModal(),
+              let updatedRecord = result.makeRecord(id: record.id) else {
+            return
+        }
+
+        do {
+            try passwordStore.setPassword(result.password, for: record.id)
+            try passwordStore.setChannelPassword(result.initialChannelPassword, for: record.id)
+            store.update(updatedRecord)
+            store.setSelectedServer(id: record.id)
+            reloadRecords(selecting: record.id)
+            connectSelectedServer()
+        } catch {
+            presentErrorAlert(message: error.localizedDescription)
         }
     }
 

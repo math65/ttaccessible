@@ -154,18 +154,34 @@ extension TeamTalkConnectionController {
                     : ttString(from: channel.szName)
             }
 
-            func buildChannelTree(parentID: Int32, parentPathComponents: [String]) -> [ConnectedServerChannel] {
-                let childChannels = (channelsByParent[parentID] ?? [])
-                    .sorted { lhs, rhs in
-                        let leftName = cachedChannelNames[lhs.nChannelID] ?? ""
-                        let rightName = cachedChannelNames[rhs.nChannelID] ?? ""
-                        if leftName.localizedCaseInsensitiveCompare(rightName) == .orderedSame {
-                            return lhs.nChannelID < rhs.nChannelID
+            func sortChannels(_ channels: [ConnectedServerChannel]) -> [ConnectedServerChannel] {
+                switch preferences.channelSortMode {
+                case .name:
+                    return channels.sorted { lhs, rhs in
+                        if lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedSame {
+                            return lhs.id < rhs.id
                         }
-                        return leftName.localizedCaseInsensitiveCompare(rightName) == .orderedAscending
+                        return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
                     }
+                case .userCount:
+                    return channels.sorted { lhs, rhs in
+                        let leftCount = lhs.totalUserCount
+                        let rightCount = rhs.totalUserCount
+                        if leftCount != rightCount {
+                            return leftCount > rightCount
+                        }
+                        if lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedSame {
+                            return lhs.id < rhs.id
+                        }
+                        return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+                    }
+                }
+            }
 
-                return childChannels.map { channel in
+            func buildChannelTree(parentID: Int32, parentPathComponents: [String]) -> [ConnectedServerChannel] {
+                let childChannels = channelsByParent[parentID] ?? []
+
+                let built = childChannels.map { channel in
                     let channelName = cachedChannelNames[channel.nChannelID] ?? ""
                     let channelPathComponents = parentPathComponents + [channelName]
                     let channelUsers = (usersByChannel[channel.nChannelID] ?? [])
@@ -224,6 +240,8 @@ extension TeamTalkConnectionController {
                         users: channelUsers
                     )
                 }
+
+                return sortChannels(built)
             }
 
             roots = buildChannelTree(parentID: 0, parentPathComponents: [])
@@ -310,7 +328,9 @@ extension TeamTalkConnectionController {
             audioStatusText: makeAudioStatusText(),
             inputGainDB: preferences.inputGainDB,
             outputGainDB: preferences.outputGainDB,
-            recordingActive: recordingMuxedActive || recordingSeparateActive
+            recordingActive: recordingMuxedActive || recordingSeparateActive,
+            mediaStreamingActive: mediaStreamingActive,
+            mediaStreamingFileName: mediaStreamingFileName
         )
     }
 

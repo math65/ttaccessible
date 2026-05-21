@@ -559,7 +559,9 @@ final class ConnectedServerViewController: NSViewController {
             audioStatusText: update.audioStatusText,
             inputGainDB: session.inputGainDB,
             outputGainDB: session.outputGainDB,
-            recordingActive: session.recordingActive
+            recordingActive: session.recordingActive,
+            mediaStreamingActive: session.mediaStreamingActive,
+            mediaStreamingFileName: session.mediaStreamingFileName
         )
 
         updateAudioControls()
@@ -598,6 +600,7 @@ final class ConnectedServerViewController: NSViewController {
             )
         )
         menuState.setRecordingActive(session.recordingActive)
+        menuState.setMediaStreamingActive(session.mediaStreamingActive)
     }
 
     func updateChatInputState() {
@@ -746,7 +749,9 @@ final class ConnectedServerViewController: NSViewController {
             audioStatusText: session.audioStatusText,
             inputGainDB: normalized,
             outputGainDB: session.outputGainDB,
-            recordingActive: session.recordingActive
+            recordingActive: session.recordingActive,
+            mediaStreamingActive: session.mediaStreamingActive,
+            mediaStreamingFileName: session.mediaStreamingFileName
         )
         updateAudioControls()
     }
@@ -781,7 +786,9 @@ final class ConnectedServerViewController: NSViewController {
             audioStatusText: session.audioStatusText,
             inputGainDB: session.inputGainDB,
             outputGainDB: normalized,
-            recordingActive: session.recordingActive
+            recordingActive: session.recordingActive,
+            mediaStreamingActive: session.mediaStreamingActive,
+            mediaStreamingFileName: session.mediaStreamingFileName
         )
         updateAudioControls()
     }

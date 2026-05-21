@@ -10,7 +10,7 @@ import AppKit
 final class AudioGainControlView: NSView {
     let titleLabel = NSTextField(labelWithString: "")
     let valueLabel = NSTextField(labelWithString: "")
-    let slider = NSSlider(value: 50, minValue: 0, maxValue: 100, target: nil, action: nil)
+    let slider = AccessibleSlider(value: 50, minValue: 0, maxValue: 100, target: nil, action: nil)
     var valueDB: Double = 0
     var onChange: ((Double) -> Void)?
 

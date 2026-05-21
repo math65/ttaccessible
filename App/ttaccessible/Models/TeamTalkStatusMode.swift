@@ -14,6 +14,10 @@ enum TeamTalkStatusMode: Int32, CaseIterable, Equatable {
 
     private static let modeMask: Int32 = 0x000000FF
 
+    static func isAwayStatus(_ bitmask: Int32) -> Bool {
+        (bitmask & modeMask) == away.rawValue
+    }
+
     init(bitmask: Int32) {
         switch bitmask & Self.modeMask {
         case Self.away.rawValue:

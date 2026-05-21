@@ -10,6 +10,8 @@
 		94A4A5F73B941A8E00C01234 /* libTeamTalk5.dylib in Embed TeamTalk */ = {isa = PBXBuildFile; fileRef = 94A4A5F63B941A8E00C01234 /* libTeamTalk5.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		94A4A5F93B941A8E00C01234 /* libTeamTalk5.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 94A4A5F63B941A8E00C01234 /* libTeamTalk5.dylib */; };
 		94WEBRTC013B941A8E00C0AB /* libwebrtc-audio-processing.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 94WEBRTC003B941A8E00C0AB /* libwebrtc-audio-processing.a */; };
+		94BABE0100000000000000A1 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 94BABE0300000000000000A3 /* Sparkle */; };
+		94KS010100000000000000B1 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 94KS030100000000000000B3 /* KeyboardShortcuts */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -47,6 +49,8 @@
 			files = (
 				94A4A5F93B941A8E00C01234 /* libTeamTalk5.dylib in Frameworks */,
 				94WEBRTC013B941A8E00C0AB /* libwebrtc-audio-processing.a in Frameworks */,
+				94BABE0100000000000000A1 /* Sparkle in Frameworks */,
+				94KS010100000000000000B1 /* KeyboardShortcuts in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -100,6 +104,8 @@
 			);
 			name = ttaccessible;
 			packageProductDependencies = (
+				94BABE0300000000000000A3 /* Sparkle */,
+				94KS030100000000000000B3 /* KeyboardShortcuts */,
 			);
 			productName = ttaccessible;
 			productReference = 943281C62F68C35A00682D6B /* ttaccessible.app */;
@@ -130,6 +136,10 @@
 			);
 			mainGroup = 943281BD2F68C35A00682D6B;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				94BABE0200000000000000A2 /* XCRemoteSwiftPackageReference "Sparkle" */,
+				94KS020100000000000000B2 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 943281C72F68C35A00682D6B /* Products */;
 			projectDirPath = "";
@@ -285,32 +295,35 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = ttaccessible/ttaccessible.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 21;
+				DEVELOPMENT_TEAM = 633EG76YX5;
 				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = NO;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../Vendor/WebRTC/include",
+				);
 				INFOPLIST_FILE = "ttaccessible-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
-				);
-				HEADER_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/../Vendor/WebRTC/include",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/../Vendor/TeamTalk",
 					"$(SRCROOT)/../Vendor/WebRTC",
 				);
+				MARKETING_VERSION = 1.2.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-lc++",
 				);
-				MARKETING_VERSION = "1.0.0-beta.10";
 				PRODUCT_BUNDLE_IDENTIFIER = com.math65.ttaccessible;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -330,32 +343,35 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = ttaccessible/ttaccessible.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 21;
+				DEVELOPMENT_TEAM = 633EG76YX5;
 				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = NO;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../Vendor/WebRTC/include",
+				);
 				INFOPLIST_FILE = "ttaccessible-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
-				);
-				HEADER_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/../Vendor/WebRTC/include",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/../Vendor/TeamTalk",
 					"$(SRCROOT)/../Vendor/WebRTC",
 				);
+				MARKETING_VERSION = 1.2.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-lc++",
 				);
-				MARKETING_VERSION = "1.0.0-beta.10";
 				PRODUCT_BUNDLE_IDENTIFIER = com.math65.ttaccessible;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -391,6 +407,38 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		94BABE0200000000000000A2 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.6.0;
+			};
+		};
+		94KS020100000000000000B2 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sindresorhus/KeyboardShortcuts";
+			requirement = {
+				kind = exactVersion;
+				version = 2.4.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		94BABE0300000000000000A3 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 94BABE0200000000000000A2 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+		94KS030100000000000000B3 /* KeyboardShortcuts */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 94KS020100000000000000B2 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
+			productName = KeyboardShortcuts;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 943281BE2F68C35A00682D6B /* Project object */;
 }

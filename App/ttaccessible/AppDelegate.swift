@@ -6,8 +6,11 @@
 //
 
 import AppKit
+import Combine
+import KeyboardShortcuts
 import UserNotifications
 import UniformTypeIdentifiers
+import Sparkle
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -74,6 +77,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var userAccountsWindowController: NSWindowController?
     private var bannedUsersWindowController: NSWindowController?
     private var userInfoWindowController: UserInfoWindowController?
+    private var mediaStreamingPlayerWindowController: MediaStreamingPlayerWindowController?
+    private weak var mediaStreamingPlayerViewController: MediaStreamingPlayerViewController?
     private weak var savedServersViewController: SavedServersViewController?
     private weak var connectedServerViewController: ConnectedServerViewController?
     private weak var privateMessagesViewController: PrivateMessagesViewController?
@@ -93,10 +98,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var deviceChangeObserver: Any?
     private var globalDeviceChangeWorkItem: DispatchWorkItem?
 
+    private lazy var updaterController: SPUStandardUpdaterController = SPUStandardUpdaterController(
+        startingUpdater: true,
+        updaterDelegate: self,
+        userDriverDelegate: nil
+    )
+    private var updaterAutoCheckCancellable: AnyCancellable?
+
+    private var pushToTalkModeCancellable: AnyCancellable?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         AudioLogger.clear()
         let sdkVersion = String(cString: TT_GetVersion())
         AudioLogger.log("App launched — TeamTalk SDK %@", sdkVersion)
+        #if DEBUG
+        _ = AudioPCMResamplerSelfTest.runAll()
+        #endif
         connectionController.delegate = self
         connectionController.audioDeviceChangeMonitor = audioDeviceChangeMonitor
         UNUserNotificationCenter.current().delegate = self
@@ -122,6 +139,65 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hasFinishedLaunching = true
         handleLaunchTTFilesIfNeeded()
         processPendingTTFileURLsIfPossible()
+        syncSparkleAutoCheckPreference()
+        scheduleLaunchUpdateCheck()
+        configurePushToTalkObservers()
+    }
+
+    private func configurePushToTalkObservers() {
+        // Static handlers registered once for the lifetime of the app — the
+        // library only fires them while a shortcut is configured for the
+        // .pushToTalk name. Mode gating (always-on vs PTT) happens in the
+        // audio insert path; we still want the press/release effects for the
+        // beep + announcement either way (cheap and harmless if mode is
+        // .alwaysOn — the user wouldn't have set a shortcut in that case).
+        KeyboardShortcuts.onKeyDown(for: .pushToTalk) { [weak self] in
+            self?.handlePushToTalkPress()
+        }
+        KeyboardShortcuts.onKeyUp(for: .pushToTalk) { [weak self] in
+            self?.handlePushToTalkRelease()
+        }
+
+        // Reset transmit state when the mode toggles, so toggling Push-to-talk
+        // off doesn't leave the gate stuck open from a previous press.
+        pushToTalkModeCancellable = preferencesStore.$preferences
+            .map(\.microphoneMode)
+            .removeDuplicates()
+            .sink { [weak self] _ in
+                self?.connectionController.setPushToTalkPressed(false)
+            }
+    }
+
+    private func handlePushToTalkPress() {
+        connectionController.setPushToTalkPressed(true)
+        playPushToTalkBeep()
+    }
+
+    private func handlePushToTalkRelease() {
+        connectionController.setPushToTalkPressed(false)
+        playPushToTalkBeep()
+    }
+
+    private func playPushToTalkBeep() {
+        guard preferencesStore.preferences.pushToTalkBeepEnabled else { return }
+        SoundPlayer.shared.play(.hotkey)
+    }
+
+    private func syncSparkleAutoCheckPreference() {
+        updaterController.updater.automaticallyChecksForUpdates = preferencesStore.preferences.autoCheckForUpdates
+        updaterAutoCheckCancellable = preferencesStore.$preferences
+            .map(\.autoCheckForUpdates)
+            .removeDuplicates()
+            .sink { [weak self] enabled in
+                self?.updaterController.updater.automaticallyChecksForUpdates = enabled
+            }
+    }
+
+    private func scheduleLaunchUpdateCheck() {
+        guard preferencesStore.preferences.autoCheckForUpdates else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+            self?.updaterController.updater.checkForUpdatesInBackground()
+        }
     }
 
     private func requestNotificationPermission() {
@@ -226,6 +302,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         connectionController.disconnectSynchronously()
+        // The TeamTalk SDK's internal reactor thread sometimes outlives
+        // TT_CloseTeamTalk and crashes when exit()'s static destructors race
+        // with it. A short sleep lets the SDK threads finish unwinding before
+        // we return and the C++ statics tear down. See the 2026-05-19 crash
+        // report in libTeamTalk5.dylib::ACE_Reactor::run_reactor_event_loop.
+        Thread.sleep(forTimeInterval: 0.3)
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard confirmSavePendingUnsavedServerIfNeeded() else {
+            return .terminateCancel
+        }
+
+        connectionController.disconnectSynchronously()
+        return .terminateNow
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
@@ -1152,6 +1243,93 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    func startStreamingMediaFromFile() {
+        guard menuState.mode == .connectedServer, !menuState.isMediaStreamingActive else { return }
+        promptMediaStreamFile()
+    }
+
+    func startStreamingMediaFromURL() {
+        guard menuState.mode == .connectedServer, !menuState.isMediaStreamingActive else { return }
+        promptMediaStreamURL()
+    }
+
+    func stopMediaStreaming() {
+        guard menuState.mode == .connectedServer, menuState.isMediaStreamingActive else { return }
+        connectionController.stopStreamingMediaFile()
+        announceWithVoiceOver(L10n.text("mediaStream.announced.finished"))
+    }
+
+    private func promptMediaStreamFile() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = false
+        panel.title = L10n.text("mediaStream.panel.title")
+        panel.message = L10n.text("mediaStream.panel.message")
+        panel.prompt = L10n.text("mediaStream.panel.choose")
+        panel.allowedContentTypes = [.audio, .mp3, .mpeg4Audio, .wav, .aiff]
+        guard let parentWindow = NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first else { return }
+        panel.beginSheetModal(for: parentWindow) { [weak self] response in
+            guard response == .OK, let url = panel.url, let self else { return }
+            self.connectionController.startStreamingMediaFile(at: url) { [weak self] result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success:
+                        self?.announceWithVoiceOver(L10n.format("mediaStream.announced.started", url.lastPathComponent))
+                    case .failure(let error):
+                        self?.announceWithVoiceOver(L10n.text("mediaStream.announced.error"))
+                        let alert = NSAlert(error: error)
+                        alert.runModal()
+                    }
+                }
+            }
+        }
+    }
+
+    private func promptMediaStreamURL() {
+        let alert = NSAlert()
+        alert.messageText = L10n.text("mediaStream.url.prompt.title")
+        alert.informativeText = L10n.text("mediaStream.url.prompt.message")
+        alert.addButton(withTitle: L10n.text("mediaStream.url.prompt.start"))
+        alert.addButton(withTitle: L10n.text("common.cancel"))
+
+        let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 320, height: 24))
+        textField.placeholderString = L10n.text("mediaStream.url.prompt.placeholder")
+        textField.setAccessibilityLabel(L10n.text("mediaStream.url.prompt.accessibilityLabel"))
+        alert.accessoryView = textField
+        alert.window.initialFirstResponder = textField
+
+        guard let parentWindow = NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first else { return }
+        alert.beginSheetModal(for: parentWindow) { [weak self] response in
+            guard response == .alertFirstButtonReturn, let self else { return }
+            let raw = textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let url = URL(string: raw),
+                  let scheme = url.scheme?.lowercased(),
+                  ["http", "https", "rtmp", "rtmps", "rtsp", "mms"].contains(scheme),
+                  url.host?.isEmpty == false else {
+                self.announceWithVoiceOver(L10n.text("mediaStream.url.error.invalid"))
+                let errorAlert = NSAlert()
+                errorAlert.messageText = L10n.text("mediaStream.url.error.invalid.title")
+                errorAlert.informativeText = L10n.text("mediaStream.url.error.invalid")
+                errorAlert.runModal()
+                return
+            }
+            self.connectionController.startStreamingMediaURL(url) { [weak self] result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success:
+                        self?.announceWithVoiceOver(L10n.text("mediaStream.announced.startedURL"))
+                    case .failure(let error):
+                        self?.announceWithVoiceOver(L10n.text("mediaStream.announced.error"))
+                        let alert = NSAlert(error: error)
+                        alert.runModal()
+                    }
+                }
+            }
+        }
+    }
+
     func toggleMasterMute() {
         guard menuState.mode == .connectedServer else { return }
         connectionController.toggleMasterMute { [weak self] muted in
@@ -1203,6 +1381,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             )
         }
         preferencesWindowController?.showPreferences()
+    }
+
+    // MARK: - Updates
+
+    func checkForUpdates() {
+        updaterController.checkForUpdates(nil)
     }
 
     private func preloadPreferencesWindow() {
@@ -1916,6 +2100,77 @@ extension AppDelegate: TeamTalkConnectionControllerDelegate {
 
     func teamTalkConnectionController(_ controller: TeamTalkConnectionController, didReceiveBannedUsers bans: [BannedUserProperties]) {
         bannedUsersViewController?.update(bans: bans)
+    }
+
+    func teamTalkConnectionController(_ controller: TeamTalkConnectionController, didUpdateMediaStreamingProgress progress: MediaStreamingProgress) {
+        menuState.setMediaStreamingActive(progress.isActive)
+        if progress.isActive {
+            showMediaStreamingPlayerWindow(with: progress)
+        } else {
+            closeMediaStreamingPlayerWindow()
+        }
+    }
+}
+
+extension AppDelegate: MediaStreamingPlayerActions {
+    func mediaStreamingPlayerDidTogglePlayPause() {
+        connectionController.toggleMediaStreamingPaused()
+    }
+
+    func mediaStreamingPlayerDidStop() {
+        connectionController.stopStreamingMediaFile()
+    }
+
+    func mediaStreamingPlayerDidSeek(toMSec offsetMSec: UInt32) {
+        connectionController.seekMediaStreaming(toMSec: offsetMSec)
+    }
+
+    func mediaStreamingPlayerDidChangeBroadcastGainPercent(_ percent: Int) {
+        connectionController.setMediaStreamingBroadcastGainPercent(percent)
+    }
+}
+
+private extension AppDelegate {
+    func showMediaStreamingPlayerWindow(with progress: MediaStreamingProgress) {
+        let viewController: MediaStreamingPlayerViewController
+        if let existing = mediaStreamingPlayerViewController {
+            viewController = existing
+        } else {
+            let newViewController = MediaStreamingPlayerViewController()
+            newViewController.actions = self
+            mediaStreamingPlayerViewController = newViewController
+            viewController = newViewController
+        }
+
+        if mediaStreamingPlayerWindowController == nil {
+            let controller = MediaStreamingPlayerWindowController(contentViewController: viewController)
+            controller.onCloseRequested = { [weak self] in
+                self?.connectionController.stopStreamingMediaFile()
+            }
+            mediaStreamingPlayerWindowController = controller
+        }
+
+        viewController.update(with: progress)
+
+        if let window = mediaStreamingPlayerWindowController?.window, !window.isVisible {
+            mediaStreamingPlayerWindowController?.showWindow(nil)
+            window.makeKeyAndOrderFront(nil)
+        }
+    }
+
+    func closeMediaStreamingPlayerWindow() {
+        mediaStreamingPlayerWindowController?.close()
+        mediaStreamingPlayerWindowController = nil
+        mediaStreamingPlayerViewController = nil
+    }
+}
+
+extension AppDelegate: SPUUpdaterDelegate {
+    nonisolated func allowedChannels(for updater: SPUUpdater) -> Set<String> {
+        let includeBeta = MainActor.assumeIsolated {
+            preferencesStore.preferences.includeBetaUpdates
+        }
+        return includeBeta ? ["beta"] : []
     }
 }
 
