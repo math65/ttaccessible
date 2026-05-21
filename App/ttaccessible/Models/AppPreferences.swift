@@ -102,6 +102,7 @@ struct AppPreferences: Codable, Equatable {
         case includeBetaUpdates
         case microphoneMode
         case pushToTalkBeepEnabled
+        case videoPanelExpanded
     }
 
     var defaultNickname: String
@@ -155,6 +156,7 @@ struct AppPreferences: Codable, Equatable {
     var includeBetaUpdates: Bool
     var microphoneMode: MicrophoneMode
     var pushToTalkBeepEnabled: Bool
+    var videoPanelExpanded: Bool
     init(
         defaultNickname: String = "TTAccessible",
         defaultStatusMessage: String = "",
@@ -206,7 +208,8 @@ struct AppPreferences: Codable, Equatable {
         autoCheckForUpdates: Bool = true,
         includeBetaUpdates: Bool = false,
         microphoneMode: MicrophoneMode = .alwaysOn,
-        pushToTalkBeepEnabled: Bool = true
+        pushToTalkBeepEnabled: Bool = true,
+        videoPanelExpanded: Bool = true
     ) {
         self.defaultNickname = defaultNickname
         self.defaultStatusMessage = defaultStatusMessage
@@ -259,6 +262,7 @@ struct AppPreferences: Codable, Equatable {
         self.includeBetaUpdates = includeBetaUpdates
         self.microphoneMode = microphoneMode
         self.pushToTalkBeepEnabled = pushToTalkBeepEnabled
+        self.videoPanelExpanded = videoPanelExpanded
     }
 
     nonisolated static func clampGainDB(_ value: Double) -> Double {
@@ -353,6 +357,7 @@ struct AppPreferences: Codable, Equatable {
         includeBetaUpdates = try container.decodeIfPresent(Bool.self, forKey: .includeBetaUpdates) ?? false
         microphoneMode = try container.decodeIfPresent(MicrophoneMode.self, forKey: .microphoneMode) ?? .alwaysOn
         pushToTalkBeepEnabled = try container.decodeIfPresent(Bool.self, forKey: .pushToTalkBeepEnabled) ?? true
+        videoPanelExpanded = try container.decodeIfPresent(Bool.self, forKey: .videoPanelExpanded) ?? true
     }
 
     func encode(to encoder: Encoder) throws {
@@ -408,6 +413,7 @@ struct AppPreferences: Codable, Equatable {
         try container.encode(includeBetaUpdates, forKey: .includeBetaUpdates)
         try container.encode(microphoneMode, forKey: .microphoneMode)
         try container.encode(pushToTalkBeepEnabled, forKey: .pushToTalkBeepEnabled)
+        try container.encode(videoPanelExpanded, forKey: .videoPanelExpanded)
     }
 
     func isSubscriptionEnabledByDefault(_ option: UserSubscriptionOption) -> Bool {

@@ -551,8 +551,13 @@ extension TeamTalkConnectionController {
                     publishInvalidation.insert(.activeTransfers)
                 }
             case CLIENTEVENT_USER_STATECHANGE:
-                if connectedRecord != nil {
+                if let record = connectedRecord {
                     publishAudioRuntimeUpdateLocked(instance: instance)
+                    publishSessionLocked(instance: instance, record: record, invalidation: .rootTree)
+                }
+            case CLIENTEVENT_USER_MEDIAFILE_VIDEO:
+                if connectedRecord != nil {
+                    handleUserMediaFileVideoEventLocked(userID: message.nSource)
                 }
             case CLIENTEVENT_USER_RECORD_MEDIAFILE:
                 if connectedRecord != nil {
@@ -576,12 +581,21 @@ extension TeamTalkConnectionController {
                             publishInvalidation.insert(.history)
                         }
                         updateMediaStreamingProgressLocked(elapsedMSec: info.uElapsedMSec, durationMSec: info.uDurationMSec)
-                    case MFS_PLAYING:
-                        updateMediaStreamingProgressLocked(elapsedMSec: info.uElapsedMSec, durationMSec: info.uDurationMSec)
                     case MFS_PAUSED:
-                        mediaStreamingPaused = true
-                        updateMediaStreamingProgressLocked(elapsedMSec: info.uElapsedMSec, durationMSec: info.uDurationMSec)
+                        if !mediaStreamingRestartInFlight {
+                            mediaStreamingUserPauseIntent = false
+                            mediaStreamingPaused = true
+                            updateMediaStreamingProgressLocked(elapsedMSec: info.uElapsedMSec, durationMSec: info.uDurationMSec)
+                        }
+                    case MFS_PLAYING:
+                        if !mediaStreamingRestartInFlight, !mediaStreamingUserPauseIntent {
+                            mediaStreamingPaused = false
+                            updateMediaStreamingProgressLocked(elapsedMSec: info.uElapsedMSec, durationMSec: info.uDurationMSec)
+                        }
                     case MFS_FINISHED, MFS_ABORTED, MFS_CLOSED:
+                        if shouldIgnoreMediaStreamingFinalizeLocked(info: info) {
+                            break
+                        }
                         finalizeMediaStreamingLocked(instance: instance, reason: .finished)
                     case MFS_ERROR:
                         finalizeMediaStreamingLocked(instance: instance, reason: .error)
@@ -761,6 +775,7 @@ extension TeamTalkConnectionController {
         stopPollingLocked()
 
         if let instance {
+            cleanupVideoLocked()
             if mediaStreamingActive {
                 _ = TT_StopStreamingMediaFileToChannel(instance)
             }
@@ -784,12 +799,21 @@ extension TeamTalkConnectionController {
         mediaStreamingSecurityScopedURL?.stopAccessingSecurityScopedResource()
         mediaStreamingSecurityScopedURL = nil
         mediaStreamingActive = false
+        mediaStreamingPath = nil
         mediaStreamingFileName = nil
+        mediaStreamingRestartInFlight = false
+        mediaStreamingUserPauseIntent = false
         mediaStreamingPaused = false
         mediaStreamingDurationMSec = 0
         mediaStreamingElapsedMSec = 0
         mediaStreamingElapsedSampleAt = nil
         mediaStreamingBroadcastGainLevel = INT32(SOUND_GAIN_DEFAULT.rawValue)
+        mediaStreamingHasVideo = false
+        mediaStreamingActiveVideoCodec = VideoCodec()
+        mediaStreamingFinalizeSuppressedUntil = nil
+        mediaStreamingTranscodedURL = nil
+        activeVideoDisplayUserID = 0
+        usersWithPendingMediaVideoFrame.removeAll()
         publishMediaStreamingProgressLocked()
         recordingMuxedActive = false
         recordingSeparateActive = false

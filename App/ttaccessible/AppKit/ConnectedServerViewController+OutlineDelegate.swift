@@ -84,6 +84,7 @@ extension ConnectedServerViewController: NSOutlineViewDelegate {
     func outlineViewSelectionDidChange(_ notification: Notification) {
         selectedKey = currentSelectionKey()
         updateMenuState()
+        updateVideoSelectionFromTree()
     }
 
     func outlineView(_ outlineView: NSOutlineView, heightOfRowByItem item: Any) -> CGFloat {

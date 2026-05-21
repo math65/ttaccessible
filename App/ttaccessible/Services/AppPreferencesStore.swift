@@ -67,6 +67,10 @@ final class AppPreferencesStore: ObservableObject {
         mutate { $0.useRelativeTimestamps = enabled }
     }
 
+    func updateVideoPanelExpanded(_ expanded: Bool) {
+        mutate { $0.videoPanelExpanded = expanded }
+    }
+
     func updateAutoCheckForUpdates(_ enabled: Bool) {
         mutate { $0.autoCheckForUpdates = enabled }
     }

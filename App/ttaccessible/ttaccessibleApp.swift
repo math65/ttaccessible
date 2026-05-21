@@ -363,8 +363,6 @@ struct ttaccessibleApp: App {
                 .keyboardShortcut(".", modifiers: [.command, .option])
                 .disabled(menuState.mode != .connectedServer || !menuState.isMediaStreamingActive)
 
-                Divider()
-
                 Button(L10n.text("shortcuts.hearMyself")) {
                     appDelegate.toggleHearMyself()
                 }

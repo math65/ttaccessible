@@ -28,6 +28,7 @@ protocol TeamTalkConnectionControllerDelegate: AnyObject {
     func teamTalkConnectionController(_ controller: TeamTalkConnectionController, didReceiveBannedUsers users: [BannedUserProperties])
     func teamTalkConnectionController(_ controller: TeamTalkConnectionController, didReceiveIncomingTextMessage event: IncomingTextMessageEvent)
     func teamTalkConnectionController(_ controller: TeamTalkConnectionController, didUpdateMediaStreamingProgress progress: MediaStreamingProgress)
+    func teamTalkConnectionController(_ controller: TeamTalkConnectionController, didUpdateVideoDisplay state: VideoDisplayState)
 }
 
 final class TeamTalkConnectionController {
@@ -113,13 +114,23 @@ final class TeamTalkConnectionController {
     var recordingFolder: URL?
     var recordingFormat: AudioFileFormat = AFF_WAVE_FORMAT
     var mediaStreamingActive = false
+    var mediaStreamingPath: String?
     var mediaStreamingFileName: String?
     var mediaStreamingSecurityScopedURL: URL?
+    var mediaStreamingRestartInFlight = false
+    /// True after the user requests pause until the SDK reports `MFS_PAUSED` (blocks spurious `MFS_PLAYING`).
+    var mediaStreamingUserPauseIntent = false
     var mediaStreamingPaused = false
     var mediaStreamingDurationMSec: UInt32 = 0
     var mediaStreamingElapsedMSec: UInt32 = 0
     var mediaStreamingElapsedSampleAt: Date?
     var mediaStreamingBroadcastGainLevel: INT32 = 1000
+    var mediaStreamingHasVideo = false
+    var mediaStreamingActiveVideoCodec = VideoCodec()
+    var mediaStreamingFinalizeSuppressedUntil: Date?
+    var mediaStreamingTranscodedURL: URL?
+    var activeVideoDisplayUserID: Int32 = 0
+    var usersWithPendingMediaVideoFrame = Set<Int32>()
     var teamTalkVirtualInputReady = false
     var advancedMicrophoneTargetFormat: AdvancedMicrophoneAudioTargetFormat?
     var reconnectTimer: DispatchSourceTimer?

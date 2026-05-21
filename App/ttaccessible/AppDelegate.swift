@@ -77,8 +77,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var userAccountsWindowController: NSWindowController?
     private var bannedUsersWindowController: NSWindowController?
     private var userInfoWindowController: UserInfoWindowController?
-    private var mediaStreamingPlayerWindowController: MediaStreamingPlayerWindowController?
-    private weak var mediaStreamingPlayerViewController: MediaStreamingPlayerViewController?
     private weak var savedServersViewController: SavedServersViewController?
     private weak var connectedServerViewController: ConnectedServerViewController?
     private weak var privateMessagesViewController: PrivateMessagesViewController?
@@ -1259,7 +1257,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.title = L10n.text("mediaStream.panel.title")
         panel.message = L10n.text("mediaStream.panel.message")
         panel.prompt = L10n.text("mediaStream.panel.choose")
-        panel.allowedContentTypes = [.audio, .mp3, .mpeg4Audio, .wav, .aiff]
+        panel.allowedContentTypes = [.audio, .mp3, .mpeg4Audio, .wav, .aiff, .movie, .mpeg4Movie, .video, .avi, .quickTimeMovie]
         guard let parentWindow = NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first else { return }
         panel.beginSheetModal(for: parentWindow) { [weak self] response in
             guard response == .OK, let url = panel.url, let self else { return }
@@ -2095,64 +2093,11 @@ extension AppDelegate: TeamTalkConnectionControllerDelegate {
 
     func teamTalkConnectionController(_ controller: TeamTalkConnectionController, didUpdateMediaStreamingProgress progress: MediaStreamingProgress) {
         menuState.setMediaStreamingActive(progress.isActive)
-        if progress.isActive {
-            showMediaStreamingPlayerWindow(with: progress)
-        } else {
-            closeMediaStreamingPlayerWindow()
-        }
-    }
-}
-
-extension AppDelegate: MediaStreamingPlayerActions {
-    func mediaStreamingPlayerDidTogglePlayPause() {
-        connectionController.toggleMediaStreamingPaused()
+        connectedServerViewController?.applyMediaStreamingProgress(progress)
     }
 
-    func mediaStreamingPlayerDidStop() {
-        connectionController.stopStreamingMediaFile()
-    }
-
-    func mediaStreamingPlayerDidSeek(toMSec offsetMSec: UInt32) {
-        connectionController.seekMediaStreaming(toMSec: offsetMSec)
-    }
-
-    func mediaStreamingPlayerDidChangeBroadcastGainPercent(_ percent: Int) {
-        connectionController.setMediaStreamingBroadcastGainPercent(percent)
-    }
-}
-
-private extension AppDelegate {
-    func showMediaStreamingPlayerWindow(with progress: MediaStreamingProgress) {
-        let viewController: MediaStreamingPlayerViewController
-        if let existing = mediaStreamingPlayerViewController {
-            viewController = existing
-        } else {
-            let newViewController = MediaStreamingPlayerViewController()
-            newViewController.actions = self
-            mediaStreamingPlayerViewController = newViewController
-            viewController = newViewController
-        }
-
-        if mediaStreamingPlayerWindowController == nil {
-            let controller = MediaStreamingPlayerWindowController(contentViewController: viewController)
-            controller.onCloseRequested = { [weak self] in
-                self?.connectionController.stopStreamingMediaFile()
-            }
-            mediaStreamingPlayerWindowController = controller
-        }
-
-        viewController.update(with: progress)
-
-        if let window = mediaStreamingPlayerWindowController?.window, !window.isVisible {
-            mediaStreamingPlayerWindowController?.showWindow(nil)
-            window.makeKeyAndOrderFront(nil)
-        }
-    }
-
-    func closeMediaStreamingPlayerWindow() {
-        mediaStreamingPlayerWindowController?.close()
-        mediaStreamingPlayerWindowController = nil
-        mediaStreamingPlayerViewController = nil
+    func teamTalkConnectionController(_ controller: TeamTalkConnectionController, didUpdateVideoDisplay state: VideoDisplayState) {
+        connectedServerViewController?.applyVideoDisplay(state)
     }
 }
 
