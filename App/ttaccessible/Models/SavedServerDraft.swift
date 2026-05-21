@@ -25,7 +25,7 @@ struct SavedServerDraft: Equatable {
         tcpPort: String = "10333",
         udpPort: String = "10333",
         encrypted: Bool = false,
-        nickname: String = "TTAccessible",
+        nickname: String = AppPreferences.nicknameFromComputerName(),
         username: String = "",
         password: String = "",
         initialChannelPath: String = "",
