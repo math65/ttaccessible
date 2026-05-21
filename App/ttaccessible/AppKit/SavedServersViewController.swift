@@ -348,7 +348,7 @@ final class SavedServersViewController: NSViewController {
             password = try passwordStore.password(for: record.id) ?? ""
             channelPassword = try passwordStore.channelPassword(for: record.id) ?? record.initialChannelPassword
         } catch {
-            presentErrorAlert(message: error.localizedDescription)
+            openCredentialEditor(for: record, errorMessage: error.localizedDescription)
             return
         }
 
@@ -379,10 +379,14 @@ final class SavedServersViewController: NSViewController {
     }
 
     private func handleLoginFailure(for record: SavedServerRecord, error: TeamTalkConnectionError) {
+        openCredentialEditor(for: record, errorMessage: L10n.format("savedServers.alert.loginFailed.message", error.localizedDescription))
+    }
+
+    private func openCredentialEditor(for record: SavedServerRecord, errorMessage: String) {
         let alert = NSAlert()
         alert.alertStyle = .warning
         alert.messageText = L10n.text("savedServers.alert.loginFailed.title")
-        alert.informativeText = L10n.format("savedServers.alert.loginFailed.message", error.localizedDescription)
+        alert.informativeText = errorMessage
         alert.addButton(withTitle: L10n.text("savedServers.alert.loginFailed.editCredentials"))
         alert.addButton(withTitle: L10n.text("savedServers.alert.loginFailed.cancel"))
 
