@@ -104,7 +104,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         userDriverDelegate: nil
     )
     private var updaterAutoCheckCancellable: AnyCancellable?
-
+    private var nicknameCancellable: AnyCancellable?
     private var pushToTalkModeCancellable: AnyCancellable?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -140,6 +140,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         handleLaunchTTFilesIfNeeded()
         processPendingTTFileURLsIfPossible()
         syncSparkleAutoCheckPreference()
+        syncNicknamePreference()
         scheduleLaunchUpdateCheck()
         configurePushToTalkObservers()
     }
@@ -181,6 +182,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func playPushToTalkBeep() {
         guard preferencesStore.preferences.pushToTalkBeepEnabled else { return }
         SoundPlayer.shared.play(.hotkey)
+    }
+
+    private func syncNicknamePreference() {
+        nicknameCancellable = preferencesStore.$preferences
+            .map(\.defaultNickname)
+            .removeDuplicates()
+            .dropFirst()
+            .sink { [weak self] nickname in
+                guard let self else { return }
+                connectionController.changeNickname(to: nickname) { _ in }
+            }
     }
 
     private func syncSparkleAutoCheckPreference() {

@@ -8,6 +8,17 @@
 import Foundation
 
 struct AppPreferences: Codable, Equatable {
+    static func nicknameFromComputerName() -> String {
+        let name = Host.current().localizedName ?? ""
+        if let idx = name.firstIndex(of: "'") {
+            let firstName = String(name[name.startIndex..<idx])
+            if !firstName.isEmpty { return firstName }
+        }
+        let firstWord = name.components(separatedBy: .whitespaces).first ?? ""
+        return firstWord.isEmpty ? "TTAccessible" : firstWord
+    }
+
+
     enum ChannelSortMode: String, Codable, CaseIterable {
         case name
         case userCount
@@ -156,7 +167,7 @@ struct AppPreferences: Codable, Equatable {
     var microphoneMode: MicrophoneMode
     var pushToTalkBeepEnabled: Bool
     init(
-        defaultNickname: String = "TTAccessible",
+        defaultNickname: String = AppPreferences.nicknameFromComputerName(),
         defaultStatusMessage: String = "",
         defaultGender: TeamTalkGender = .neutral,
         autoAwayTimeoutMinutes: Int = 3,
@@ -289,7 +300,7 @@ struct AppPreferences: Codable, Equatable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        defaultNickname = try container.decodeIfPresent(String.self, forKey: .defaultNickname) ?? "TTAccessible"
+        defaultNickname = try container.decodeIfPresent(String.self, forKey: .defaultNickname) ?? AppPreferences.nicknameFromComputerName()
         defaultStatusMessage = try container.decodeIfPresent(String.self, forKey: .defaultStatusMessage) ?? ""
         defaultGender = try container.decodeIfPresent(TeamTalkGender.self, forKey: .defaultGender) ?? .neutral
         autoAwayTimeoutMinutes = Self.clampAutoAwayTimeoutMinutes(try container.decodeIfPresent(Int.self, forKey: .autoAwayTimeoutMinutes) ?? 3)
