@@ -7,6 +7,7 @@
 
 import AppKit
 import Combine
+import KeyboardShortcuts
 import UserNotifications
 import UniformTypeIdentifiers
 import Sparkle
@@ -104,6 +105,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     )
     private var updaterAutoCheckCancellable: AnyCancellable?
 
+    private var pushToTalkModeCancellable: AnyCancellable?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         AudioLogger.clear()
         let sdkVersion = String(cString: TT_GetVersion())
@@ -138,6 +141,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         processPendingTTFileURLsIfPossible()
         syncSparkleAutoCheckPreference()
         scheduleLaunchUpdateCheck()
+        configurePushToTalkObservers()
+    }
+
+    private func configurePushToTalkObservers() {
+        // Static handlers registered once for the lifetime of the app — the
+        // library only fires them while a shortcut is configured for the
+        // .pushToTalk name. Mode gating (always-on vs PTT) happens in the
+        // audio insert path; we still want the press/release effects for the
+        // beep + announcement either way (cheap and harmless if mode is
+        // .alwaysOn — the user wouldn't have set a shortcut in that case).
+        KeyboardShortcuts.onKeyDown(for: .pushToTalk) { [weak self] in
+            self?.handlePushToTalkPress()
+        }
+        KeyboardShortcuts.onKeyUp(for: .pushToTalk) { [weak self] in
+            self?.handlePushToTalkRelease()
+        }
+
+        // Reset transmit state when the mode toggles, so toggling Push-to-talk
+        // off doesn't leave the gate stuck open from a previous press.
+        pushToTalkModeCancellable = preferencesStore.$preferences
+            .map(\.microphoneMode)
+            .removeDuplicates()
+            .sink { [weak self] _ in
+                self?.connectionController.setPushToTalkPressed(false)
+            }
+    }
+
+    private func handlePushToTalkPress() {
+        connectionController.setPushToTalkPressed(true)
+        playPushToTalkBeep()
+    }
+
+    private func handlePushToTalkRelease() {
+        connectionController.setPushToTalkPressed(false)
+        playPushToTalkBeep()
+    }
+
+    private func playPushToTalkBeep() {
+        guard preferencesStore.preferences.pushToTalkBeepEnabled else { return }
+        SoundPlayer.shared.play(.hotkey)
     }
 
     private func syncSparkleAutoCheckPreference() {

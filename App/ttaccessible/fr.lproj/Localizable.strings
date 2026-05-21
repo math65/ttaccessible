@@ -394,6 +394,13 @@
 "preferences.audio.refreshDevices" = "Actualiser les périphériques";
 "preferences.audio.refreshDevices.error" = "Impossible de redémarrer le système audio. Veuillez relancer l'application.";
 "preferences.audio.help" = "Les changements audio sont appliqués immédiatement si une session TeamTalk est déjà connectée.";
+
+"preferences.audio.pushToTalk.section" = "Push-to-Talk";
+"preferences.audio.microphoneMode.label" = "Mode du microphone";
+"preferences.audio.microphoneMode.alwaysOn" = "Toujours actif";
+"preferences.audio.microphoneMode.pushToTalk" = "Push-to-talk (maintenez une touche pour parler)";
+"preferences.audio.pushToTalk.key.label" = "Raccourci";
+"preferences.audio.pushToTalk.beep.label" = "Jouer un son au début et à la fin de la transmission";
 "preferences.accessibility.title" = "Accessibilité";
 "preferences.accessibility.channelAnnouncements" = "Annoncer les messages de canal";
 "preferences.accessibility.privateAnnouncements" = "Annoncer les messages privés";

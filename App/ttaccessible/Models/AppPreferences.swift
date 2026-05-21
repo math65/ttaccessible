@@ -13,6 +13,11 @@ struct AppPreferences: Codable, Equatable {
         case userCount
     }
 
+    enum MicrophoneMode: String, Codable, CaseIterable {
+        case alwaysOn
+        case pushToTalk
+    }
+
     enum SavedServersSortField: String, Codable, CaseIterable {
         case manual
         case name
@@ -95,6 +100,8 @@ struct AppPreferences: Codable, Equatable {
         case channelSortMode
         case autoCheckForUpdates
         case includeBetaUpdates
+        case microphoneMode
+        case pushToTalkBeepEnabled
     }
 
     var defaultNickname: String
@@ -146,6 +153,8 @@ struct AppPreferences: Codable, Equatable {
     var channelSortMode: ChannelSortMode
     var autoCheckForUpdates: Bool
     var includeBetaUpdates: Bool
+    var microphoneMode: MicrophoneMode
+    var pushToTalkBeepEnabled: Bool
     init(
         defaultNickname: String = "TTAccessible",
         defaultStatusMessage: String = "",
@@ -195,7 +204,9 @@ struct AppPreferences: Codable, Equatable {
         adaptiveJitterBuffer: Bool = false,
         channelSortMode: ChannelSortMode = .name,
         autoCheckForUpdates: Bool = true,
-        includeBetaUpdates: Bool = false
+        includeBetaUpdates: Bool = false,
+        microphoneMode: MicrophoneMode = .alwaysOn,
+        pushToTalkBeepEnabled: Bool = true
     ) {
         self.defaultNickname = defaultNickname
         self.defaultStatusMessage = defaultStatusMessage
@@ -246,6 +257,8 @@ struct AppPreferences: Codable, Equatable {
         self.channelSortMode = channelSortMode
         self.autoCheckForUpdates = autoCheckForUpdates
         self.includeBetaUpdates = includeBetaUpdates
+        self.microphoneMode = microphoneMode
+        self.pushToTalkBeepEnabled = pushToTalkBeepEnabled
     }
 
     nonisolated static func clampGainDB(_ value: Double) -> Double {
@@ -338,6 +351,8 @@ struct AppPreferences: Codable, Equatable {
         channelSortMode = try container.decodeIfPresent(ChannelSortMode.self, forKey: .channelSortMode) ?? .name
         autoCheckForUpdates = try container.decodeIfPresent(Bool.self, forKey: .autoCheckForUpdates) ?? true
         includeBetaUpdates = try container.decodeIfPresent(Bool.self, forKey: .includeBetaUpdates) ?? false
+        microphoneMode = try container.decodeIfPresent(MicrophoneMode.self, forKey: .microphoneMode) ?? .alwaysOn
+        pushToTalkBeepEnabled = try container.decodeIfPresent(Bool.self, forKey: .pushToTalkBeepEnabled) ?? true
     }
 
     func encode(to encoder: Encoder) throws {
@@ -391,6 +406,8 @@ struct AppPreferences: Codable, Equatable {
         try container.encode(channelSortMode, forKey: .channelSortMode)
         try container.encode(autoCheckForUpdates, forKey: .autoCheckForUpdates)
         try container.encode(includeBetaUpdates, forKey: .includeBetaUpdates)
+        try container.encode(microphoneMode, forKey: .microphoneMode)
+        try container.encode(pushToTalkBeepEnabled, forKey: .pushToTalkBeepEnabled)
     }
 
     func isSubscriptionEnabledByDefault(_ option: UserSubscriptionOption) -> Bool {

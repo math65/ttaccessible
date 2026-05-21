@@ -2,6 +2,8 @@
 //  PreferencesAudioView.swift
 //  ttaccessible
 
+import AppKit
+import KeyboardShortcuts
 import SwiftUI
 
 struct PreferencesAudioView: View {
@@ -96,6 +98,8 @@ struct PreferencesAudioView: View {
                     .disabled(store.state.catalog.inputDevices.isEmpty && store.advancedDeviceInfo == nil)
                 }
 
+                pushToTalkSection
+
                 if let feedbackMessage = store.state.advancedFeedbackMessage, feedbackMessage.isEmpty == false {
                     Text(feedbackMessage)
                         .font(.caption)
@@ -142,6 +146,51 @@ struct PreferencesAudioView: View {
 
     private func persistAndApply() {
         store.updateSelectedDevices(inputID: selectedInputID, outputID: selectedOutputID)
+    }
+
+    @ViewBuilder
+    private var pushToTalkSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(L10n.text("preferences.audio.pushToTalk.section"))
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(L10n.text("preferences.audio.microphoneMode.label"))
+                Picker(
+                    "",
+                    selection: Binding(
+                        get: { store.state.microphoneMode },
+                        set: { store.updateMicrophoneMode($0) }
+                    )
+                ) {
+                    Text(L10n.text("preferences.audio.microphoneMode.alwaysOn"))
+                        .tag(AppPreferences.MicrophoneMode.alwaysOn)
+                    Text(L10n.text("preferences.audio.microphoneMode.pushToTalk"))
+                        .tag(AppPreferences.MicrophoneMode.pushToTalk)
+                }
+                .labelsHidden()
+                .pickerStyle(.radioGroup)
+                .accessibilityLabel(L10n.text("preferences.audio.microphoneMode.label"))
+            }
+
+            if store.state.microphoneMode == .pushToTalk {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(L10n.text("preferences.audio.pushToTalk.key.label"))
+                    KeyboardShortcuts.Recorder(for: .pushToTalk)
+                        .accessibilityLabel(L10n.text("preferences.audio.pushToTalk.key.label"))
+                }
+
+                Toggle(
+                    L10n.text("preferences.audio.pushToTalk.beep.label"),
+                    isOn: Binding(
+                        get: { store.state.pushToTalkBeepEnabled },
+                        set: { store.updatePushToTalkBeepEnabled($0) }
+                    )
+                )
+                .toggleStyle(.switch)
+            }
+        }
     }
 
     private func syncSelectionFromStore() {

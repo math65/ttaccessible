@@ -234,6 +234,14 @@ final class AppPreferencesStore: ObservableObject {
         mutate { $0.channelSortMode = mode }
     }
 
+    func mutateMicrophoneMode(_ mode: AppPreferences.MicrophoneMode) {
+        mutate { $0.microphoneMode = mode }
+    }
+
+    func mutatePushToTalkBeepEnabled(_ enabled: Bool) {
+        mutate { $0.pushToTalkBeepEnabled = enabled }
+    }
+
     func updateDisabledSoundEvents(_ disabled: Set<NotificationSound>) {
         mutate { $0.disabledSoundEvents = disabled }
         SoundPlayer.shared.disabledSounds = disabled
@@ -427,6 +435,8 @@ final class AudioPreferencesStore: ObservableObject {
         var lastErrorMessage: String?
         var advancedFeedbackMessage: String?
         var advancedErrorMessage: String?
+        var microphoneMode: AppPreferences.MicrophoneMode
+        var pushToTalkBeepEnabled: Bool
     }
 
     @Published private(set) var state: State
@@ -474,7 +484,9 @@ final class AudioPreferencesStore: ObservableObject {
             isCatalogLoading: false,
             lastErrorMessage: nil,
             advancedFeedbackMessage: advancedSettingsStore.feedbackMessage,
-            advancedErrorMessage: advancedSettingsStore.lastErrorMessage
+            advancedErrorMessage: advancedSettingsStore.lastErrorMessage,
+            microphoneMode: rootStore.preferences.microphoneMode,
+            pushToTalkBeepEnabled: rootStore.preferences.pushToTalkBeepEnabled
         )
 
         rootStore.$preferences
@@ -482,12 +494,12 @@ final class AudioPreferencesStore: ObservableObject {
                 guard let self else { return }
                 let input = preferences.preferredInputDevice
                 let output = preferences.preferredOutputDevice
-                guard self.state.preferredInputDevice != input
-                    || self.state.preferredOutputDevice != output else {
-                    return
-                }
-                self.state.preferredInputDevice = input
-                self.state.preferredOutputDevice = output
+                let mode = preferences.microphoneMode
+                let beep = preferences.pushToTalkBeepEnabled
+                if self.state.preferredInputDevice != input { self.state.preferredInputDevice = input }
+                if self.state.preferredOutputDevice != output { self.state.preferredOutputDevice = output }
+                if self.state.microphoneMode != mode { self.state.microphoneMode = mode }
+                if self.state.pushToTalkBeepEnabled != beep { self.state.pushToTalkBeepEnabled = beep }
             }
             .store(in: &cancellables)
 
@@ -596,6 +608,14 @@ final class AudioPreferencesStore: ObservableObject {
 
     func updateEchoCancellationEnabled(_ enabled: Bool) {
         advancedSettingsStore.updateEchoCancellationEnabled(enabled)
+    }
+
+    func updateMicrophoneMode(_ mode: AppPreferences.MicrophoneMode) {
+        rootStore.mutateMicrophoneMode(mode)
+    }
+
+    func updatePushToTalkBeepEnabled(_ enabled: Bool) {
+        rootStore.mutatePushToTalkBeepEnabled(enabled)
     }
 
     func updatePreset(_ preset: InputChannelPreset) {

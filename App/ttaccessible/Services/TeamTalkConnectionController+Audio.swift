@@ -46,6 +46,12 @@ extension TeamTalkConnectionController {
         }
     }
 
+    func setPushToTalkPressed(_ pressed: Bool) {
+        queue.async { [weak self] in
+            self?.pushToTalkPressed = pressed
+        }
+    }
+
     func restartSoundSystem(completion: @escaping (Result<Void, Error>) -> Void) {
         queue.async { [weak self] in
             guard let self else {
@@ -553,7 +559,9 @@ extension TeamTalkConnectionController {
             return
         }
         let inChannel = TT_GetMyChannelID(instance) > 0
-        guard voiceTransmissionEnabled, inChannel else {
+        let pttMode = preferencesStore.preferences.microphoneMode == .pushToTalk
+        let allowTransmission = !pttMode || pushToTalkPressed
+        guard voiceTransmissionEnabled, inChannel, allowTransmission else {
             AudioCaptureDiagnostics.shared.recordInsertAttempt(
                 sampleRate: chunk.sampleRate,
                 accepted: false,
