@@ -33,6 +33,8 @@ struct SessionHistoryEntry: Equatable, Identifiable {
         case transmissionBlocked
         case mediaStreamingStarted
         case mediaStreamingFinished
+        case webcamStarted
+        case webcamStopped
 
         var localizationKey: String {
             "preferences.historyEvent.\(rawValue)"

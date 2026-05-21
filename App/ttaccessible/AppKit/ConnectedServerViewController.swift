@@ -45,6 +45,9 @@ final class ConnectedServerViewController: NSViewController {
     let messageField = NSTextField(frame: .zero)
     let sendButton = NSButton(title: "", target: nil, action: nil)
     let microphoneButton = NSButton(title: "", target: nil, action: nil)
+    let collapsibleVideoPanel = CollapsibleVideoPanelView()
+    let embeddedMediaStreamingControls = MediaStreamingPlayerViewController()
+    var lastVideoDisplayState = VideoDisplayState.empty
     lazy var inputGainControl = AudioGainControlView(
         title: L10n.text("connectedServer.audio.inputGain.label"),
         accessibilityLabel: L10n.text("connectedServer.audio.inputGain.accessibilityLabel")
@@ -101,6 +104,8 @@ final class ConnectedServerViewController: NSViewController {
         self.menuState = menuState
         self.appDelegate = appDelegate
         super.init(nibName: nil, bundle: nil)
+        embeddedMediaStreamingControls.actions = self
+        collapsibleVideoPanel.delegate = self
     }
 
     @available(*, unavailable)
@@ -405,6 +410,12 @@ final class ConnectedServerViewController: NSViewController {
         microphoneButton.action = #selector(toggleMicrophone)
         microphoneButton.bezelStyle = .rounded
 
+        collapsibleVideoPanel.setExpanded(preferencesStore.preferences.videoPanelExpanded, notifyDelegate: false)
+        collapsibleVideoPanel.translatesAutoresizingMaskIntoConstraints = false
+
+        addChild(embeddedMediaStreamingControls)
+        embeddedMediaStreamingControls.view.translatesAutoresizingMaskIntoConstraints = false
+
         // -- Layout en colonne unique --
         // Ordre : titre, statut, recherche, liste canaux, gains, audio, chat, message, historique
 
@@ -418,14 +429,24 @@ final class ConnectedServerViewController: NSViewController {
         chatScrollView.translatesAutoresizingMaskIntoConstraints = false
         historyScrollView.translatesAutoresizingMaskIntoConstraints = false
 
+        let audioControlsStack = NSStackView(views: [
+            outputGainControl,
+            inputGainControl,
+            embeddedMediaStreamingControls.view
+        ])
+        audioControlsStack.orientation = .vertical
+        audioControlsStack.alignment = .leading
+        audioControlsStack.spacing = 8
+        audioControlsStack.translatesAutoresizingMaskIntoConstraints = false
+
         let mainStack = NSStackView(views: [
             titleLabel,
             statusLabel,
             audioStatusLabel,
             microphoneButton,
             channelsScrollView,
-            outputGainControl,
-            inputGainControl,
+            collapsibleVideoPanel,
+            audioControlsStack,
             chatTitleLabel,
             chatScrollView,
             inputStack,
@@ -446,8 +467,11 @@ final class ConnectedServerViewController: NSViewController {
             mainStack.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -20),
             channelsScrollView.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
             channelsScrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 200),
-            outputGainControl.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
-            inputGainControl.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
+            collapsibleVideoPanel.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
+            audioControlsStack.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
+            outputGainControl.widthAnchor.constraint(equalTo: audioControlsStack.widthAnchor),
+            inputGainControl.widthAnchor.constraint(equalTo: audioControlsStack.widthAnchor),
+            embeddedMediaStreamingControls.view.widthAnchor.constraint(equalTo: audioControlsStack.widthAnchor),
             chatScrollView.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
             chatScrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 160),
             inputStack.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
@@ -493,6 +517,7 @@ final class ConnectedServerViewController: NSViewController {
         }
         updateChatInputState()
         updateAudioControls()
+        updateVideoSelectionFromTree()
 
         // Only reload the outline when the channel tree or user list changed.
         let treeChanged = previousSession.rootChannels != session.rootChannels
@@ -561,12 +586,40 @@ final class ConnectedServerViewController: NSViewController {
             outputGainDB: session.outputGainDB,
             recordingActive: session.recordingActive,
             mediaStreamingActive: session.mediaStreamingActive,
-            mediaStreamingFileName: session.mediaStreamingFileName
+            mediaStreamingFileName: session.mediaStreamingFileName,
+            mediaStreamingHasVideo: session.mediaStreamingHasVideo
         )
 
         updateAudioControls()
         reloadVisibleUserRows(for: changedUserIDs)
         updateMenuState()
+    }
+
+    func applyVideoDisplay(_ state: VideoDisplayState) {
+        lastVideoDisplayState = state
+        collapsibleVideoPanel.updateVideoState(state)
+    }
+
+    func applyMediaStreamingProgress(_ progress: MediaStreamingProgress) {
+        embeddedMediaStreamingControls.update(with: progress)
+    }
+
+    func updateVideoSelectionFromTree() {
+        guard case .user(let user)? = selectedNode else {
+            if session.mediaStreamingActive, session.mediaStreamingHasVideo, let me = session.currentUser {
+                connectionController.setActiveVideoDisplayFromSelection(
+                    userID: me.id,
+                    hasMediaVideo: true
+                )
+            } else {
+                connectionController.setActiveVideoDisplayFromSelection(userID: 0, hasMediaVideo: false)
+            }
+            return
+        }
+        connectionController.setActiveVideoDisplayFromSelection(
+            userID: user.id,
+            hasMediaVideo: user.isStreamingMediaFileVideo
+        )
     }
 
     func updateMenuState() {
@@ -673,6 +726,7 @@ final class ConnectedServerViewController: NSViewController {
                     isTalking: update.isTalking,
                     isMuted: update.isMuted,
                     isMediaFileMuted: update.isMediaFileMuted,
+                    isStreamingMediaFileVideo: user.isStreamingMediaFileVideo,
                     isAway: user.isAway,
                     isQuestion: user.isQuestion,
                     ipAddress: user.ipAddress,
@@ -751,7 +805,8 @@ final class ConnectedServerViewController: NSViewController {
             outputGainDB: session.outputGainDB,
             recordingActive: session.recordingActive,
             mediaStreamingActive: session.mediaStreamingActive,
-            mediaStreamingFileName: session.mediaStreamingFileName
+            mediaStreamingFileName: session.mediaStreamingFileName,
+            mediaStreamingHasVideo: session.mediaStreamingHasVideo
         )
         updateAudioControls()
     }
@@ -788,7 +843,8 @@ final class ConnectedServerViewController: NSViewController {
             outputGainDB: normalized,
             recordingActive: session.recordingActive,
             mediaStreamingActive: session.mediaStreamingActive,
-            mediaStreamingFileName: session.mediaStreamingFileName
+            mediaStreamingFileName: session.mediaStreamingFileName,
+            mediaStreamingHasVideo: session.mediaStreamingHasVideo
         )
         updateAudioControls()
     }
@@ -1327,6 +1383,31 @@ extension ConnectedServerViewController: ConnectedServerOutlineViewActionDelegat
         case .channel, .user:
             return contextMenu
         }
+    }
+}
+
+extension ConnectedServerViewController: MediaStreamingPlayerActions {
+    func mediaStreamingPlayerDidTogglePlayPause() {
+        connectionController.toggleMediaStreamingPaused()
+    }
+
+    func mediaStreamingPlayerDidStop() {
+        connectionController.stopStreamingMediaFile()
+        announce(L10n.text("mediaStream.announced.finished"))
+    }
+
+    func mediaStreamingPlayerDidSeek(toMSec offsetMSec: UInt32) {
+        connectionController.seekMediaStreaming(toMSec: offsetMSec)
+    }
+
+    func mediaStreamingPlayerDidChangeBroadcastGainPercent(_ percent: Int) {
+        connectionController.setMediaStreamingBroadcastGainPercent(percent)
+    }
+}
+
+extension ConnectedServerViewController: CollapsibleVideoPanelViewDelegate {
+    func collapsibleVideoPanelViewDidToggleExpanded(_ view: CollapsibleVideoPanelView, expanded: Bool) {
+        preferencesStore.updateVideoPanelExpanded(expanded)
     }
 }
 

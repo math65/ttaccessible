@@ -154,7 +154,8 @@ final class ChannelFilesViewController: NSViewController {
             outputGainDB: session.outputGainDB,
             recordingActive: session.recordingActive,
             mediaStreamingActive: session.mediaStreamingActive,
-            mediaStreamingFileName: session.mediaStreamingFileName
+            mediaStreamingFileName: session.mediaStreamingFileName,
+            mediaStreamingHasVideo: session.mediaStreamingHasVideo
         )
         announceNewTransfers(transfers)
         if oldUploads != activeUploadTransfers {

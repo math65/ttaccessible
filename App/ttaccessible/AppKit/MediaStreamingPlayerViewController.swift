@@ -13,6 +13,7 @@ protocol MediaStreamingPlayerActions: AnyObject {
     func mediaStreamingPlayerDidChangeBroadcastGainPercent(_ percent: Int)
 }
 
+/// Compact embedded playback controls (no separate window).
 final class MediaStreamingPlayerViewController: NSViewController {
     weak var actions: MediaStreamingPlayerActions?
 
@@ -30,27 +31,13 @@ final class MediaStreamingPlayerViewController: NSViewController {
     private var suppressGainAction = false
 
     override func loadView() {
-        let visualEffectView = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: 440, height: 320))
-        visualEffectView.material = .underWindowBackground
-        visualEffectView.blendingMode = .behindWindow
-        visualEffectView.state = .active
-        view = visualEffectView
+        view = NSView()
         configureUI()
-    }
-
-    override func viewDidAppear() {
-        super.viewDidAppear()
-        startDisplayTimer()
-        view.window?.makeFirstResponder(view)
-    }
-
-    override func viewWillDisappear() {
-        super.viewWillDisappear()
-        stopDisplayTimer()
     }
 
     func update(with progress: MediaStreamingProgress) {
         lastProgress = progress
+        view.isHidden = !progress.isActive
 
         if let fileName = progress.fileName {
             fileNameLabel.stringValue = L10n.format("mediaPlayer.fileName.format", fileName)
@@ -78,8 +65,6 @@ final class MediaStreamingPlayerViewController: NSViewController {
         refreshTimeLabel()
     }
 
-    // MARK: - Keyboard
-
     override var acceptsFirstResponder: Bool { true }
 
     override func keyDown(with event: NSEvent) {
@@ -87,41 +72,21 @@ final class MediaStreamingPlayerViewController: NSViewController {
         let noModifiers = modifiers.isDisjoint(with: [.command, .option, .control, .shift])
 
         switch event.keyCode {
-        case 49: // Space
-            if noModifiers {
-                actions?.mediaStreamingPlayerDidTogglePlayPause()
-                return
-            }
-        case 53: // Escape
-            if noModifiers {
-                actions?.mediaStreamingPlayerDidStop()
-                return
-            }
-        case 123: // Left arrow
-            if noModifiers {
-                seekDelta(seconds: -5)
-                return
-            }
-        case 124: // Right arrow
-            if noModifiers {
-                seekDelta(seconds: +5)
-                return
-            }
-        case 126: // Up arrow
-            if noModifiers {
-                adjustBroadcastGain(delta: +5)
-                return
-            }
-        case 125: // Down arrow
-            if noModifiers {
-                adjustBroadcastGain(delta: -5)
-                return
-            }
+        case 49 where noModifiers:
+            actions?.mediaStreamingPlayerDidTogglePlayPause()
+        case 53 where noModifiers:
+            actions?.mediaStreamingPlayerDidStop()
+        case 123 where noModifiers:
+            seekDelta(seconds: -5)
+        case 124 where noModifiers:
+            seekDelta(seconds: +5)
+        case 126 where noModifiers:
+            adjustBroadcastGain(delta: +5)
+        case 125 where noModifiers:
+            adjustBroadcastGain(delta: -5)
         default:
-            break
+            super.keyDown(with: event)
         }
-
-        super.keyDown(with: event)
     }
 
     private func seekDelta(seconds: Int) {
@@ -137,8 +102,6 @@ final class MediaStreamingPlayerViewController: NSViewController {
         let newValue = max(0, min(100, lastProgress.broadcastGainPercent + delta))
         actions?.mediaStreamingPlayerDidChangeBroadcastGainPercent(newValue)
     }
-
-    // MARK: - Actions (controls)
 
     @objc private func playPauseButtonClicked() {
         actions?.mediaStreamingPlayerDidTogglePlayPause()
@@ -156,8 +119,7 @@ final class MediaStreamingPlayerViewController: NSViewController {
             return
         }
         isUserDraggingPosition = false
-        let target = UInt32(max(0, sender.doubleValue))
-        actions?.mediaStreamingPlayerDidSeek(toMSec: target)
+        actions?.mediaStreamingPlayerDidSeek(toMSec: UInt32(max(0, sender.doubleValue)))
     }
 
     @objc private func broadcastGainSliderAction(_ sender: NSSlider) {
@@ -165,22 +127,15 @@ final class MediaStreamingPlayerViewController: NSViewController {
         actions?.mediaStreamingPlayerDidChangeBroadcastGainPercent(Int(sender.doubleValue.rounded()))
     }
 
-    // MARK: - Display refresh
-
-    private func startDisplayTimer() {
-        stopDisplayTimer()
-        let timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+    private func startDisplayTimerIfNeeded() {
+        guard displayTimer == nil else { return }
+        displayTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
-                self?.refreshTimeLabel()
-                self?.refreshPositionSliderIfNeeded()
+                guard let self, self.lastProgress.isActive else { return }
+                self.refreshTimeLabel()
+                self.refreshPositionSliderIfNeeded()
             }
         }
-        displayTimer = timer
-    }
-
-    private func stopDisplayTimer() {
-        displayTimer?.invalidate()
-        displayTimer = nil
     }
 
     private func refreshTimeLabel() {
@@ -207,43 +162,32 @@ final class MediaStreamingPlayerViewController: NSViewController {
     }
 
     private func updatePositionLabelPreview(forSliderValue value: Double) {
-        let elapsed = UInt32(max(0, value))
-        timeLabel.stringValue = "\(formatMSec(elapsed)) / \(formatMSec(lastProgress.durationMSec))"
+        timeLabel.stringValue = "\(formatMSec(UInt32(max(0, value)))) / \(formatMSec(lastProgress.durationMSec))"
     }
 
     private func formatMSec(_ msec: UInt32) -> String {
         let totalSec = Int(msec / 1000)
-        let m = totalSec / 60
-        let s = totalSec % 60
-        return String(format: "%02d:%02d", m, s)
+        return String(format: "%02d:%02d", totalSec / 60, totalSec % 60)
     }
 
-    // MARK: - UI
-
     private func configureUI() {
-        fileNameLabel.font = .preferredFont(forTextStyle: .title3)
+        view.isHidden = true
+
         fileNameLabel.lineBreakMode = .byTruncatingMiddle
         fileNameLabel.maximumNumberOfLines = 1
-        fileNameLabel.setAccessibilityRole(.staticText)
 
-        timeLabel.font = .monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+        timeLabel.font = .monospacedDigitSystemFont(ofSize: NSFont.smallSystemFontSize, weight: .regular)
         timeLabel.textColor = .secondaryLabelColor
 
         positionSlider.target = self
         positionSlider.action = #selector(positionSliderAction(_:))
-        positionSlider.minValue = 0
-        positionSlider.maxValue = 1
-        positionSlider.doubleValue = 0
         positionSlider.isContinuous = true
-        positionSlider.isEnabled = false
-        positionSlider.pageStep = 10_000 // 10 seconds per Page Up / Page Down
+        positionSlider.pageStep = 10_000
         positionSlider.setAccessibilityLabel(L10n.text("mediaPlayer.position.label"))
 
         playPauseButton.bezelStyle = .rounded
-        playPauseButton.title = L10n.text("mediaPlayer.pause")
         playPauseButton.target = self
         playPauseButton.action = #selector(playPauseButtonClicked)
-        playPauseButton.keyEquivalent = ""
 
         stopButton.bezelStyle = .rounded
         stopButton.title = L10n.text("mediaPlayer.stop")
@@ -254,56 +198,36 @@ final class MediaStreamingPlayerViewController: NSViewController {
         broadcastGainSlider.action = #selector(broadcastGainSliderAction(_:))
         broadcastGainSlider.minValue = 0
         broadcastGainSlider.maxValue = 100
-        broadcastGainSlider.doubleValue = 50
         broadcastGainSlider.isContinuous = true
         broadcastGainSlider.setAccessibilityLabel(L10n.text("mediaPlayer.broadcastGain.label"))
 
-        let controlsRow = NSStackView(views: [playPauseButton, stopButton])
+        broadcastGainValueLabel.font = .monospacedDigitSystemFont(ofSize: NSFont.smallSystemFontSize, weight: .regular)
+
+        let controlsRow = NSStackView(views: [playPauseButton, stopButton, timeLabel])
         controlsRow.orientation = .horizontal
         controlsRow.spacing = 8
 
-        let broadcastGainTitle = NSTextField(labelWithString: L10n.text("mediaPlayer.broadcastGain.label"))
-        broadcastGainTitle.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
-        let broadcastGainRow = NSStackView(views: [broadcastGainSlider, broadcastGainValueLabel])
-        broadcastGainRow.orientation = .horizontal
-        broadcastGainRow.spacing = 8
-        broadcastGainRow.distribution = .fill
+        let gainRow = NSStackView(views: [broadcastGainSlider, broadcastGainValueLabel])
+        gainRow.orientation = .horizontal
+        gainRow.spacing = 8
         broadcastGainSlider.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        broadcastGainValueLabel.setContentHuggingPriority(.required, for: .horizontal)
-        broadcastGainValueLabel.font = .monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
 
-        let hint = NSTextField(labelWithString: L10n.text("mediaPlayer.shortcuts.hint"))
-        hint.textColor = .tertiaryLabelColor
-        hint.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
-        hint.lineBreakMode = .byWordWrapping
-        hint.maximumNumberOfLines = 0
-
-        let stack = NSStackView(views: [
-            fileNameLabel,
-            timeLabel,
-            positionSlider,
-            controlsRow,
-            broadcastGainTitle,
-            broadcastGainRow,
-            hint
-        ])
+        let stack = NSStackView(views: [fileNameLabel, positionSlider, controlsRow, gainRow])
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 8
+        stack.spacing = 6
         stack.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(stack)
 
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            stack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            stack.topAnchor.constraint(equalTo: view.topAnchor, constant: 20),
-            stack.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor, constant: -20),
-
-            positionSlider.leadingAnchor.constraint(equalTo: stack.leadingAnchor),
-            positionSlider.trailingAnchor.constraint(equalTo: stack.trailingAnchor),
-
-            broadcastGainRow.leadingAnchor.constraint(equalTo: stack.leadingAnchor),
-            broadcastGainRow.trailingAnchor.constraint(equalTo: stack.trailingAnchor)
+            stack.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            stack.topAnchor.constraint(equalTo: view.topAnchor),
+            stack.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            positionSlider.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            gainRow.widthAnchor.constraint(equalTo: stack.widthAnchor)
         ])
+
+        startDisplayTimerIfNeeded()
     }
 }

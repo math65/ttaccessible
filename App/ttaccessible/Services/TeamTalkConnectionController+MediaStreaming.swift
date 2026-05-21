@@ -13,6 +13,7 @@ extension TeamTalkConnectionController {
             path: url.path,
             displayName: url.lastPathComponent,
             securityScopedURL: didAccess ? url : nil,
+            sourceURL: url,
             completion: completion
         )
     }
@@ -22,6 +23,7 @@ extension TeamTalkConnectionController {
             path: url.absoluteString,
             displayName: url.host ?? url.absoluteString,
             securityScopedURL: nil,
+            sourceURL: nil,
             completion: completion
         )
     }
@@ -30,6 +32,7 @@ extension TeamTalkConnectionController {
         path: String,
         displayName: String,
         securityScopedURL: URL?,
+        sourceURL: URL?,
         completion: @escaping (Result<Void, Error>) -> Void
     ) {
         queue.async { [weak self] in
@@ -43,41 +46,91 @@ extension TeamTalkConnectionController {
                 return
             }
 
+
             if self.mediaStreamingActive {
                 self.stopStreamingMediaFileLocked(instance: instance)
             }
 
-            self.mediaStreamingPaused = false
-            self.mediaStreamingBroadcastGainLevel = INT32(SOUND_GAIN_DEFAULT.rawValue)
+            do {
+                let resolved = try self.resolveStreamingPathLocked(originalPath: path, sourceURL: sourceURL)
+                self.mediaStreamingPaused = false
+                self.mediaStreamingBroadcastGainLevel = INT32(SOUND_GAIN_DEFAULT.rawValue)
+                self.mediaStreamingHasVideo = resolved.probe.hasVideo
 
-            var playback = self.makeMediaFilePlaybackLocked(offsetMSec: 0)
-            var videoCodec = VideoCodec()
-            videoCodec.nCodec = NO_CODEC
+                var playback = self.makeMediaFilePlaybackLocked(offsetMSec: 0)
+                var videoCodec = self.makeVideoCodecLocked(from: resolved.probe)
+                self.mediaStreamingActiveVideoCodec = videoCodec
 
-            let started = path.withCString { cPath -> Bool in
-                TT_StartStreamingMediaFileToChannelEx(instance, cPath, &playback, &videoCodec) != 0
-            }
+                let started = resolved.path.withCString { cPath -> Bool in
+                    TT_StartStreamingMediaFileToChannelEx(instance, cPath, &playback, &videoCodec) != 0
+                }
 
-            guard started else {
+                guard started else {
+                    self.removeTranscodedMediaFileLocked()
+                    securityScopedURL?.stopAccessingSecurityScopedResource()
+                    DispatchQueue.main.async {
+                        completion(.failure(TeamTalkConnectionError.internalError(L10n.text("mediaStream.error.startFailed"))))
+                    }
+                    return
+                }
+
+                if resolved.probe.durationMSec > 0 {
+                    self.mediaStreamingDurationMSec = resolved.probe.durationMSec
+                }
+
+                self.mediaStreamingActive = true
+                self.mediaStreamingPath = resolved.path
+                self.mediaStreamingFileName = displayName
+                self.mediaStreamingSecurityScopedURL = securityScopedURL
+                self.mediaStreamingElapsedMSec = 0
+                self.mediaStreamingElapsedSampleAt = nil
+
+                let myID = TT_GetMyUserID(instance)
+                if resolved.probe.hasVideo, myID > 0 {
+                    self.activeVideoDisplayUserID = myID
+                }
+
+                self.publishSessionLocked(instance: instance, record: record, invalidation: .audio)
+                self.publishMediaStreamingProgressLocked()
+                self.publishVideoDisplayStateLocked()
+                DispatchQueue.main.async {
+                    completion(.success(()))
+                }
+            } catch {
                 securityScopedURL?.stopAccessingSecurityScopedResource()
                 DispatchQueue.main.async {
-                    completion(.failure(TeamTalkConnectionError.internalError(L10n.text("mediaStream.error.startFailed"))))
+                    completion(.failure(error))
                 }
-                return
-            }
-
-            self.mediaStreamingActive = true
-            self.mediaStreamingFileName = displayName
-            self.mediaStreamingSecurityScopedURL = securityScopedURL
-            self.mediaStreamingDurationMSec = 0
-            self.mediaStreamingElapsedMSec = 0
-            self.mediaStreamingElapsedSampleAt = nil
-            self.publishSessionLocked(instance: instance, record: record, invalidation: .audio)
-            self.publishMediaStreamingProgressLocked()
-            DispatchQueue.main.async {
-                completion(.success(()))
             }
         }
+    }
+
+    private struct ResolvedStreamingPath {
+        let path: String
+        let probe: MediaFileProbe
+    }
+
+    private func resolveStreamingPathLocked(originalPath: String, sourceURL: URL?) throws -> ResolvedStreamingPath {
+        removeTranscodedMediaFileLocked()
+
+        var probe = probeMediaFileLocked(path: originalPath)
+        if probe.sdkSupported {
+            return ResolvedStreamingPath(path: originalPath, probe: probe)
+        }
+
+        let fileURL = sourceURL ?? URL(fileURLWithPath: originalPath)
+        guard fileURL.isFileURL else {
+            throw TeamTalkConnectionError.internalError(L10n.text("mediaStream.error.unsupportedFormat"))
+        }
+
+        let transcoded = try MediaTranscodeService.transcodeForTeamTalk(sourceURL: fileURL)
+        mediaStreamingTranscodedURL = transcoded
+        probe = probeMediaFileLocked(path: transcoded.path)
+        guard probe.sdkSupported else {
+            removeTranscodedMediaFileLocked()
+            throw TeamTalkConnectionError.internalError(L10n.text("mediaStream.error.unsupportedFormat"))
+        }
+        return ResolvedStreamingPath(path: transcoded.path, probe: probe)
     }
 
     func stopStreamingMediaFile() {
@@ -103,11 +156,23 @@ extension TeamTalkConnectionController {
         mediaStreamingSecurityScopedURL?.stopAccessingSecurityScopedResource()
         mediaStreamingSecurityScopedURL = nil
         mediaStreamingActive = false
+        mediaStreamingPath = nil
         mediaStreamingFileName = nil
+        mediaStreamingRestartInFlight = false
+        mediaStreamingUserPauseIntent = false
         mediaStreamingPaused = false
         mediaStreamingDurationMSec = 0
         mediaStreamingElapsedMSec = 0
         mediaStreamingElapsedSampleAt = nil
+        mediaStreamingHasVideo = false
+        mediaStreamingActiveVideoCodec = VideoCodec()
+        mediaStreamingFinalizeSuppressedUntil = nil
+        removeTranscodedMediaFileLocked()
+        let myID = TT_GetMyUserID(instance)
+        if myID > 0, activeVideoDisplayUserID == myID {
+            activeVideoDisplayUserID = 0
+            publishVideoDisplayStateLocked(clearFrame: true)
+        }
 
         switch reason {
         case .finished:
@@ -151,33 +216,48 @@ extension TeamTalkConnectionController {
     private func setMediaStreamingPausedLocked(_ paused: Bool) {
         guard let instance = self.instance, self.mediaStreamingActive else { return }
         if self.mediaStreamingPaused == paused { return }
-        if paused {
-            self.mediaStreamingElapsedMSec = self.currentMediaStreamingElapsedMSecLocked()
+
+        let offsetMSec = currentMediaStreamingElapsedMSecLocked()
+        let previousPaused = mediaStreamingPaused
+        let previousPauseIntent = mediaStreamingUserPauseIntent
+
+        mediaStreamingPaused = paused
+        mediaStreamingElapsedMSec = offsetMSec
+        mediaStreamingElapsedSampleAt = paused ? nil : Date()
+        mediaStreamingUserPauseIntent = paused
+
+        var playback = makeMediaFilePlaybackLocked(offsetMSec: UInt32(TT_MEDIAPLAYBACK_OFFSET_IGNORE))
+        guard applyMediaStreamingUpdateLocked(instance: instance, playback: &playback) else {
+            mediaStreamingPaused = previousPaused
+            mediaStreamingUserPauseIntent = previousPauseIntent
+            mediaStreamingElapsedSampleAt = previousPaused ? nil : Date()
+            AudioLogger.log("Media stream: pause/resume update failed paused=%d", paused ? 1 : 0)
+            return
         }
-        self.mediaStreamingPaused = paused
-        self.mediaStreamingElapsedSampleAt = Date()
-        var playback = self.makeMediaFilePlaybackLocked(offsetMSec: UInt32(TT_MEDIAPLAYBACK_OFFSET_IGNORE))
-        var videoCodec = VideoCodec()
-        videoCodec.nCodec = NO_CODEC
-        _ = TT_UpdateStreamingMediaFileToChannel(instance, &playback, &videoCodec)
-        self.publishMediaStreamingProgressLocked()
+        publishMediaStreamingProgressLocked()
     }
 
     func seekMediaStreaming(toMSec offsetMSec: UInt32) {
         queue.async { [weak self] in
             guard let self, let instance = self.instance, self.mediaStreamingActive else { return }
-            let clamped: UInt32
-            if self.mediaStreamingDurationMSec > 0 {
-                clamped = min(offsetMSec, self.mediaStreamingDurationMSec - 1)
+            let clamped = self.clampedMediaStreamOffsetMSec(offsetMSec)
+            if self.mediaStreamingHasVideo {
+                guard self.restartMediaStreamLocked(instance: instance, offsetMSec: clamped, paused: self.mediaStreamingPaused) else {
+                    AudioLogger.log("Media stream: seek restart failed at %u ms", clamped)
+                    self.publishMediaStreamingProgressLocked()
+                    return
+                }
             } else {
-                clamped = offsetMSec
+                var playback = self.makeMediaFilePlaybackLocked(offsetMSec: clamped)
+                guard self.applyMediaStreamingUpdateLocked(instance: instance, playback: &playback) else {
+                    AudioLogger.log("Media stream: seek update failed at %u ms", clamped)
+                    self.publishMediaStreamingProgressLocked()
+                    return
+                }
+                self.mediaStreamingElapsedMSec = clamped
+                self.mediaStreamingElapsedSampleAt = self.mediaStreamingPaused ? nil : Date()
             }
-            self.mediaStreamingElapsedMSec = clamped
-            self.mediaStreamingElapsedSampleAt = Date()
-            var playback = self.makeMediaFilePlaybackLocked(offsetMSec: clamped)
-            var videoCodec = VideoCodec()
-            videoCodec.nCodec = NO_CODEC
-            _ = TT_UpdateStreamingMediaFileToChannel(instance, &playback, &videoCodec)
+            self.mediaStreamingFinalizeSuppressedUntil = Date().addingTimeInterval(1.0)
             self.publishMediaStreamingProgressLocked()
         }
     }
@@ -187,11 +267,66 @@ extension TeamTalkConnectionController {
             guard let self, let instance = self.instance, self.mediaStreamingActive else { return }
             self.mediaStreamingBroadcastGainLevel = Self.userVolumeFromPercent(Double(percent))
             var playback = self.makeMediaFilePlaybackLocked(offsetMSec: UInt32(TT_MEDIAPLAYBACK_OFFSET_IGNORE))
-            var videoCodec = VideoCodec()
-            videoCodec.nCodec = NO_CODEC
-            _ = TT_UpdateStreamingMediaFileToChannel(instance, &playback, &videoCodec)
+            guard self.applyMediaStreamingUpdateLocked(instance: instance, playback: &playback) else {
+                AudioLogger.log("Media stream: broadcast gain update failed")
+                return
+            }
             self.publishMediaStreamingProgressLocked()
         }
+    }
+
+    private func clampedMediaStreamOffsetMSec(_ offsetMSec: UInt32) -> UInt32 {
+        guard mediaStreamingDurationMSec > 1 else { return offsetMSec }
+        return min(offsetMSec, mediaStreamingDurationMSec - 1)
+    }
+
+    func shouldIgnoreMediaStreamingFinalizeLocked(info: MediaFileInfo) -> Bool {
+        if mediaStreamingRestartInFlight { return true }
+        guard let until = mediaStreamingFinalizeSuppressedUntil, Date() < until else {
+            return false
+        }
+        guard mediaStreamingDurationMSec > 0 else { return true }
+        // Ignore spurious finish/abort right after a seek while still far from the end.
+        return info.uElapsedMSec + 2_000 < mediaStreamingDurationMSec
+    }
+
+    /// Stop and restart channel media streaming (used for seek on video files where TT_Update is unreliable).
+    @discardableResult
+    private func restartMediaStreamLocked(
+        instance: UnsafeMutableRawPointer,
+        offsetMSec: UInt32,
+        paused: Bool
+    ) -> Bool {
+        guard let path = mediaStreamingPath else { return false }
+
+        mediaStreamingRestartInFlight = true
+        defer { mediaStreamingRestartInFlight = false }
+
+        _ = TT_StopStreamingMediaFileToChannel(instance)
+
+        var playback = makeMediaFilePlaybackLocked(offsetMSec: offsetMSec)
+        playback.bPaused = paused ? 1 : 0
+        var videoCodec = mediaStreamingActiveVideoCodec
+
+        let started = path.withCString { cPath -> Bool in
+            TT_StartStreamingMediaFileToChannelEx(instance, cPath, &playback, &videoCodec) != 0
+        }
+        guard started else { return false }
+
+        mediaStreamingElapsedMSec = offsetMSec
+        mediaStreamingPaused = paused
+        mediaStreamingElapsedSampleAt = paused ? nil : Date()
+        mediaStreamingFinalizeSuppressedUntil = Date().addingTimeInterval(1.0)
+        return true
+    }
+
+    @discardableResult
+    private func applyMediaStreamingUpdateLocked(
+        instance: UnsafeMutableRawPointer,
+        playback: inout MediaFilePlayback
+    ) -> Bool {
+        // Audio-only updates: pass NULL video codec per SDK (do not re-send WEBM_VP8 on update).
+        TT_UpdateStreamingMediaFileToChannel(instance, &playback, nil) != 0
     }
 
     // MARK: - Internals
@@ -230,6 +365,9 @@ extension TeamTalkConnectionController {
             mediaStreamingDurationMSec = durationMSec
         }
         publishMediaStreamingProgressLocked()
+        if mediaStreamingHasVideo, let instance, activeVideoDisplayUserID == TT_GetMyUserID(instance) {
+            tryAcquireMediaVideoFrameLocked(userID: activeVideoDisplayUserID)
+        }
     }
 
     func publishMediaStreamingProgressLocked() {
@@ -237,7 +375,7 @@ extension TeamTalkConnectionController {
             isActive: mediaStreamingActive,
             isPaused: mediaStreamingPaused,
             fileName: mediaStreamingFileName,
-            elapsedMSec: mediaStreamingElapsedMSec,
+            elapsedMSec: currentMediaStreamingElapsedMSecLocked(),
             elapsedSampleAt: mediaStreamingElapsedSampleAt,
             durationMSec: mediaStreamingDurationMSec,
             broadcastGainPercent: Self.percentFromUserVolume(mediaStreamingBroadcastGainLevel)

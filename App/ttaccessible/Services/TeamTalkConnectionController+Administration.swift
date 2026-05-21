@@ -903,6 +903,7 @@ extension TeamTalkConnectionController {
             }
             updateObservedSubscriptionStateLocked(option, enabled: enabled, userID: userID)
         }
+        unsubscribeMask |= UInt32(SUBSCRIBE_VIDEOCAPTURE.rawValue)
         if unsubscribeMask != 0 {
             _ = TT_DoUnsubscribe(instance, userID, Subscriptions(unsubscribeMask))
         }
