@@ -29,7 +29,13 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
         self.preferencesStore = preferencesStore
         self.connectionController = connectionController
 
+        // dropFirst() skips the synchronous emit Combine delivers at
+        // subscription time. That initial emit re-ran the same device
+        // enumeration as the explicit warm-up below — a redundant second
+        // synchronous CoreAudio pass during construction. We only want this
+        // sink to react to *subsequent* preference changes.
         preferencesStore.$preferences
+            .dropFirst()
             .sink { [weak self] _ in
                 self?.refreshState(normalizeIfNeeded: true)
             }
@@ -42,7 +48,15 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
             object: nil
         )
 
-        refreshState(normalizeIfNeeded: true)
+        // The app eagerly constructs this store at launch to warm the
+        // Preferences window, but refreshState() does synchronous CoreAudio
+        // device enumeration that blocked the launch run-loop tick. Defer it so
+        // construction returns immediately; the Audio pane re-runs refresh()
+        // via prepareIfNeeded() before it is ever shown, so nothing user-facing
+        // depends on this having completed synchronously.
+        DispatchQueue.main.async { [weak self] in
+            self?.refreshState(normalizeIfNeeded: true)
+        }
     }
 
     deinit {
