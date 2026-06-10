@@ -15,27 +15,28 @@ extension TeamTalkConnectionController {
         case output
     }
 
-    @MainActor
-    func availableAudioDevices() -> AudioDeviceCatalog {
-        if DispatchQueue.getSpecific(key: queueKey) != nil {
-            return availableAudioDevicesLocked(forceRefresh: false)
-        }
-        return queue.sync {
-            availableAudioDevicesLocked(forceRefresh: false)
+    // Build the audio-device catalog on the connection queue and deliver it on
+    // the main actor. The TeamTalk SDK's TT_GetSoundDevices can take many
+    // seconds to probe a large CoreAudio setup (27 devices ≈ 15s on a Pro
+    // Tools / aggregate-heavy rig), so this must never run through a main-thread
+    // queue.sync — doing so froze the app for the entire probe during launch.
+    func availableAudioDevices(completion: @escaping @MainActor (AudioDeviceCatalog) -> Void) {
+        queue.async { [weak self] in
+            let catalog = self?.availableAudioDevicesLocked(forceRefresh: false) ?? .empty
+            Task { @MainActor in completion(catalog) }
         }
     }
 
-    @MainActor
-    func refreshAvailableAudioDevices() -> AudioDeviceCatalog {
-        if DispatchQueue.getSpecific(key: queueKey) != nil {
-            cachedSoundDevices = []
-            cachedAudioDeviceCatalog = nil
-            return availableAudioDevicesLocked(forceRefresh: true)
-        }
-        return queue.sync {
-            cachedSoundDevices = []
-            cachedAudioDeviceCatalog = nil
-            return availableAudioDevicesLocked(forceRefresh: true)
+    func refreshAvailableAudioDevices(completion: @escaping @MainActor (AudioDeviceCatalog) -> Void) {
+        queue.async { [weak self] in
+            guard let self else {
+                Task { @MainActor in completion(.empty) }
+                return
+            }
+            self.cachedSoundDevices = []
+            self.cachedAudioDeviceCatalog = nil
+            let catalog = self.availableAudioDevicesLocked(forceRefresh: true)
+            Task { @MainActor in completion(catalog) }
         }
     }
 

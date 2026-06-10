@@ -607,11 +607,13 @@ final class AudioPreferencesStore: ObservableObject {
             guard let self else { return }
             switch result {
             case .success:
-                let catalog = self.connectionController.refreshAvailableAudioDevices()
-                self.state.catalog = catalog
-                self.state.isCatalogLoading = false
-                self.state.lastErrorMessage = nil
-                self.advancedSettingsStore.refresh()
+                self.connectionController.refreshAvailableAudioDevices { [weak self] catalog in
+                    guard let self else { return }
+                    self.state.catalog = catalog
+                    self.state.isCatalogLoading = false
+                    self.state.lastErrorMessage = nil
+                    self.advancedSettingsStore.refresh()
+                }
             case .failure(let error):
                 self.state.isCatalogLoading = false
                 self.state.lastErrorMessage = error.localizedDescription
@@ -674,13 +676,15 @@ final class AudioPreferencesStore: ObservableObject {
         }
 
         state.isCatalogLoading = true
-        Task { @MainActor [weak self, connectionController] in
-            let catalog = forceRefresh
-                ? connectionController.refreshAvailableAudioDevices()
-                : connectionController.availableAudioDevices()
+        let apply: @MainActor (AudioDeviceCatalog) -> Void = { [weak self] catalog in
             guard let self else { return }
             self.state.catalog = catalog
             self.state.isCatalogLoading = false
+        }
+        if forceRefresh {
+            connectionController.refreshAvailableAudioDevices(completion: apply)
+        } else {
+            connectionController.availableAudioDevices(completion: apply)
         }
     }
 
