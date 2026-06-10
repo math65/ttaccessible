@@ -460,8 +460,11 @@ final class AudioPreferencesStore: ObservableObject {
     private var hasPrepared = false
     private var isVisible = false
     private var applyWorkItem: DispatchWorkItem?
-    private var lastAppliedInputPreference: AudioDevicePreference
-    private var lastAppliedOutputPreference: AudioDevicePreference
+    // nil means "the applied audio state is unknown" — set after a failed apply
+    // so the dedup guard in scheduleApplyAudioPreferencesIfNeeded never skips a
+    // recovery re-selection (including re-picking the previously-applied device).
+    private var lastAppliedInputPreference: AudioDevicePreference?
+    private var lastAppliedOutputPreference: AudioDevicePreference?
 
     var advancedPreferences: AdvancedInputAudioPreferences {
         advancedSettingsStore.advancedPreferences
@@ -701,6 +704,13 @@ final class AudioPreferencesStore: ObservableObject {
                     self.lastAppliedOutputPreference = outputPreference
                     self.state.lastErrorMessage = nil
                 case .failure(let error):
+                    // The apply failed, so the audio system is in neither the
+                    // requested nor the previously-applied state. Forget the
+                    // applied prefs so the dedup guard above won't skip a
+                    // recovery re-selection — otherwise re-picking the prior
+                    // device is silently ignored and audio never comes back.
+                    self.lastAppliedInputPreference = nil
+                    self.lastAppliedOutputPreference = nil
                     self.state.lastErrorMessage = error.localizedDescription
                 }
             }
