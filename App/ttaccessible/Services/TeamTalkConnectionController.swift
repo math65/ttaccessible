@@ -104,6 +104,12 @@ final class TeamTalkConnectionController {
     var isPrivateMessagesWindowVisible = false
     var outputAudioReady = false
     var inputAudioReady = false
+    // The input/output device preferences currently open in the SDK, so a
+    // preference change can reinitialize only the device that actually changed
+    // (avoids needlessly closing the output — and its intermittent SDK deadlock —
+    // when only the input changed, and vice versa).
+    var appliedInputPreference: AudioDevicePreference?
+    var appliedOutputPreference: AudioDevicePreference?
     var voiceTransmissionEnabled = false
     var pushToTalkPressed = false
     var pushToTalkShortcutResolver: (() -> Bool)?

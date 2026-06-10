@@ -188,8 +188,29 @@ extension TeamTalkConnectionController {
             // valid for routing-only changes (hardware add/remove is handled
             // separately and refreshes the cache). Fall back to the full restart
             // only if the fast reopen actually throws.
+            // Only reinitialize the device(s) that actually changed. An input-only
+            // change must NOT close/reopen the output (and vice versa) — both to
+            // avoid a needless playback gap and to keep input switches away from
+            // the intermittent TT_CloseSoundOutputDevice deadlock entirely.
+            let outputChanged = self.appliedOutputPreference == nil
+                || preferences.preferredOutputDevice != self.appliedOutputPreference
+            let inputChanged = self.appliedInputPreference == nil
+                || preferences.preferredInputDevice != self.appliedInputPreference
+
+            guard outputChanged || inputChanged else {
+                self.appliedOutputPreference = preferences.preferredOutputDevice
+                self.appliedInputPreference = preferences.preferredInputDevice
+                DispatchQueue.main.async { completion(.success(())) }
+                return
+            }
+
             do {
-                try self.reinitializeAudioDevicesLocked(instance: instance, preferences: preferences)
+                try self.reinitializeAudioDevicesLocked(
+                    instance: instance,
+                    preferences: preferences,
+                    reinitInput: inputChanged,
+                    reinitOutput: outputChanged
+                )
                 self.captureAudioRoutingSnapshotLocked()
                 self.publishSessionLocked(instance: instance, record: record)
                 DispatchQueue.main.async {
@@ -363,6 +384,7 @@ extension TeamTalkConnectionController {
             _ = try advancedMicrophoneEngine.start(configuration: configuration)
             advancedMicrophoneTargetFormat = targetFormat
             inputAudioReady = true
+            appliedInputPreference = preferencesStore.preferences.preferredInputDevice
             lastAudioWarningMessage = nil
 
             // Monitor sample rate changes on the active input device.
@@ -398,10 +420,14 @@ extension TeamTalkConnectionController {
 
     func reinitializeAudioDevicesLocked(
         instance: UnsafeMutableRawPointer,
-        preferences: AppPreferences
+        preferences: AppPreferences,
+        reinitInput: Bool = true,
+        reinitOutput: Bool = true
     ) throws {
         let aecTapActive = speakerTapCaptureStorage != nil
-        AudioLogger.log("reinitializeAudioDevicesLocked: begin (voice=%d inputReady=%d outputReady=%d micEngine=%d aecTap=%d virtualInput=%d)",
+        AudioLogger.log("reinitializeAudioDevicesLocked: begin (reinitInput=%d reinitOutput=%d voice=%d inputReady=%d outputReady=%d micEngine=%d aecTap=%d virtualInput=%d)",
+            reinitInput ? 1 : 0,
+            reinitOutput ? 1 : 0,
             voiceTransmissionEnabled ? 1 : 0,
             inputAudioReady ? 1 : 0,
             outputAudioReady ? 1 : 0,
@@ -410,54 +436,59 @@ extension TeamTalkConnectionController {
             teamTalkVirtualInputReady ? 1 : 0)
         let wasVoiceTransmissionEnabled = voiceTransmissionEnabled
         let wasInputAudioReady = inputAudioReady
-        if wasVoiceTransmissionEnabled || wasInputAudioReady || isAnyMicrophoneEngineRunning {
-            stopAdvancedMicrophoneInputLocked(instance: instance, reason: "reinitializeAudioDevicesLocked")
-        }
-        AudioLogger.log("reinit: mic input stopped")
-        voiceTransmissionEnabled = false
-        inputAudioReady = false
-        advancedMicrophoneTargetFormat = nil
 
-        if teamTalkVirtualInputReady {
-            AudioLogger.log("reinit: closing virtual input device")
-            _ = TT_CloseSoundInputDevice(instance)
-            AudioLogger.log("reinit: closed virtual input device")
-            teamTalkVirtualInputReady = false
-        }
+        if reinitInput {
+            if wasVoiceTransmissionEnabled || wasInputAudioReady || isAnyMicrophoneEngineRunning {
+                stopAdvancedMicrophoneInputLocked(instance: instance, reason: "reinitializeAudioDevicesLocked")
+            }
+            AudioLogger.log("reinit: mic input stopped")
+            voiceTransmissionEnabled = false
+            inputAudioReady = false
+            advancedMicrophoneTargetFormat = nil
 
-        if outputAudioReady {
-            // Quiesce the output before closing. TT_CloseSoundOutputDevice locks
-            // the SDK audio mutex (ClientNode::CloseSoundOutputDevice -> ACE
-            // recursive_mutex -> ResetAudioPlayers) and intermittently deadlocks
-            // when the PortAudio/CoreAudio output IO thread is stuck holding that
-            // mutex under HAL overload. Muting makes the IO proc emit silence and
-            // a short settle lets in-flight IO drain, so the close is far less
-            // likely to land while the IO thread is wedged. (Mitigation for an
-            // SDK-level deadlock; the real fix is in the TeamTalk/PortAudio SDK.)
-            AudioLogger.log("reinit: quiescing output (mute + settle) before close")
-            _ = TT_SetSoundOutputMute(instance, 1)
-            Thread.sleep(forTimeInterval: 0.06)
-            AudioLogger.log("reinit: closing output device")
-            _ = TT_CloseSoundOutputDevice(instance)
-            AudioLogger.log("reinit: closed output device")
-            outputAudioReady = false
+            if teamTalkVirtualInputReady {
+                AudioLogger.log("reinit: closing virtual input device")
+                _ = TT_CloseSoundInputDevice(instance)
+                AudioLogger.log("reinit: closed virtual input device")
+                teamTalkVirtualInputReady = false
+            }
         }
 
-        AudioLogger.log("reinit: opening new output device")
-        try ensureDirectOutputAudioReadyLocked(instance: instance)
-        // Restore mute state on the freshly opened device (it opens unmuted).
-        if masterMuted {
-            _ = TT_SetSoundOutputMute(instance, 1)
-        }
-        AudioLogger.log("reinit: output reopened")
+        if reinitOutput {
+            if outputAudioReady {
+                // Quiesce the output before closing. TT_CloseSoundOutputDevice locks
+                // the SDK audio mutex (ClientNode::CloseSoundOutputDevice -> ACE
+                // recursive_mutex -> ResetAudioPlayers) and intermittently deadlocks
+                // when the PortAudio/CoreAudio output IO thread is stuck holding that
+                // mutex under HAL overload. Muting makes the IO proc emit silence and
+                // a short settle lets in-flight IO drain, so the close is far less
+                // likely to land while the IO thread is wedged. (Mitigation for an
+                // SDK-level deadlock; the real fix is in the TeamTalk/PortAudio SDK.)
+                AudioLogger.log("reinit: quiescing output (mute + settle) before close")
+                _ = TT_SetSoundOutputMute(instance, 1)
+                Thread.sleep(forTimeInterval: 0.06)
+                AudioLogger.log("reinit: closing output device")
+                _ = TT_CloseSoundOutputDevice(instance)
+                AudioLogger.log("reinit: closed output device")
+                outputAudioReady = false
+            }
 
-        if wasVoiceTransmissionEnabled || wasInputAudioReady {
+            AudioLogger.log("reinit: opening new output device")
+            try ensureDirectOutputAudioReadyLocked(instance: instance)
+            // Restore mute state on the freshly opened device (it opens unmuted).
+            if masterMuted {
+                _ = TT_SetSoundOutputMute(instance, 1)
+            }
+            AudioLogger.log("reinit: output reopened")
+        }
+
+        if reinitInput, wasVoiceTransmissionEnabled || wasInputAudioReady {
             AudioLogger.log("reinit: restarting mic input")
             try ensureAdvancedMicrophoneInputReadyLocked(instance: instance)
             AudioLogger.log("reinit: mic input restarted")
         }
 
-        if wasVoiceTransmissionEnabled {
+        if reinitInput, wasVoiceTransmissionEnabled {
             voiceTransmissionEnabled = true
         }
 
@@ -553,6 +584,7 @@ extension TeamTalkConnectionController {
             throw TeamTalkConnectionError.internalError(L10n.text("connectedServer.audio.error.outputStartFailed"))
         }
         outputAudioReady = true
+        appliedOutputPreference = preferencesStore.preferences.preferredOutputDevice
         applyOutputGainLocked(instance: instance, gainDB: preferencesStore.preferences.outputGainDB)
         AudioLogger.log("ensureDirectOutputAudioReady: output ready")
     }
