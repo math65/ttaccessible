@@ -635,11 +635,21 @@ final class AdvancedMicrophoneAudioEngine {
         }
 
         // Write interleaved frames to accumulation buffer.
-        for frame in 0..<frameCount {
-            for ch in 0..<channelCount {
-                let srcPtr = auhalRenderDataPtrs[ch]
-                auhalAccumBuffer[auhalAccumWriteIndex] = srcPtr[frame]
-                auhalAccumWriteIndex += 1
+        // This runs inside the real-time AUHAL IO callback, so it uses raw
+        // pointers instead of array subscripts: Swift's per-element bounds
+        // checks (kept in unoptimized/Debug builds) made this loop miss the
+        // IO deadline at 96kHz, causing HAL overload and audible crackle.
+        auhalAccumBuffer.withUnsafeMutableBufferPointer { accumBuf in
+            auhalRenderDataPtrs.withUnsafeBufferPointer { srcBuf in
+                guard let accum = accumBuf.baseAddress, let srcPtrs = srcBuf.baseAddress else { return }
+                var writeIndex = auhalAccumWriteIndex
+                for frame in 0..<frameCount {
+                    for ch in 0..<channelCount {
+                        accum[writeIndex] = srcPtrs[ch][frame]
+                        writeIndex += 1
+                    }
+                }
+                auhalAccumWriteIndex = writeIndex
             }
         }
 
@@ -660,8 +670,13 @@ final class AdvancedMicrophoneAudioEngine {
         if interleavedBuffer.count < totalSamples {
             interleavedBuffer = [Float](repeating: 0, count: totalSamples)
         }
-        for i in 0..<totalSamples {
-            interleavedBuffer[i] = auhalAccumBuffer[i]
+        // Bulk copy (memcpy) instead of a per-sample bounds-checked loop — same
+        // real-time-deadline reasoning as the interleave loop above.
+        interleavedBuffer.withUnsafeMutableBufferPointer { dst in
+            auhalAccumBuffer.withUnsafeBufferPointer { src in
+                guard let d = dst.baseAddress, let s = src.baseAddress else { return }
+                d.update(from: s, count: totalSamples)
+            }
         }
 
         processInterleavedAudio(interleavedData: &interleavedBuffer, frameCount: frameCount, availableChannels: channelCount)
