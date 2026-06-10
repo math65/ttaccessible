@@ -3,6 +3,7 @@
 //  ttaccessible
 //
 
+import AppKit
 import AVFoundation
 import Foundation
 
@@ -63,7 +64,11 @@ final class SoundPlayer {
         return base.appendingPathComponent("Sound Packs", isDirectory: true)
     }
 
-    private var players: [NotificationSound: AVAudioPlayer] = [:]
+    private var sounds: [NotificationSound: NSSound] = [:]
+    // CoreAudio UID of the user's selected output device, so app notification
+    // sounds play through the same device as TeamTalk audio instead of the
+    // system default. nil = follow system default.
+    private var outputDeviceUID: String?
     private let queue = DispatchQueue(label: "com.math65.ttaccessible.soundplayer")
     var isEnabled = true
     var disabledSounds: Set<NotificationSound> = []
@@ -84,12 +89,35 @@ final class SoundPlayer {
         queue.async { [weak self] in
             guard let self else { return }
             self.currentPack = resolvedPackName
-            self.players.removeAll()
+            let uid = self.outputDeviceUID
+            self.sounds.removeAll()
             for (sound, url) in resolvedURLs {
-                if let player = try? AVAudioPlayer(contentsOf: url) {
-                    player.prepareToPlay()
-                    self.players[sound] = player
+                if let nsSound = NSSound(contentsOf: url, byReference: false) {
+                    nsSound.playbackDeviceIdentifier = uid
+                    self.sounds[sound] = nsSound
                 }
+            }
+        }
+    }
+
+    /// Route notification sounds to a specific output device (by CoreAudio UID).
+    /// Pass the user's preferred output preference; nil/empty follows the system
+    /// default. Resolves the TeamTalk/preference identity to a CoreAudio device.
+    func updateOutputDevice(persistentID: String?, displayName: String?) {
+        queue.async { [weak self] in
+            guard let self else { return }
+            let uid: String?
+            if let persistentID, persistentID.isEmpty == false {
+                uid = InputAudioDeviceResolver.resolveOutputDevice(
+                    persistentID: persistentID,
+                    displayName: displayName
+                )?.uid
+            } else {
+                uid = nil
+            }
+            self.outputDeviceUID = uid
+            for nsSound in self.sounds.values {
+                nsSound.playbackDeviceIdentifier = uid
             }
         }
     }
@@ -97,13 +125,15 @@ final class SoundPlayer {
     func play(_ sound: NotificationSound) {
         guard isEnabled, !disabledSounds.contains(sound) else { return }
         queue.async { [weak self] in
-            guard let player = self?.players[sound] else { return }
-            if player.isPlaying {
-                player.stop()
+            guard let self, let nsSound = self.sounds[sound] else { return }
+            let uid = self.outputDeviceUID
+            DispatchQueue.main.async {
+                if nsSound.isPlaying {
+                    nsSound.stop()
+                }
+                nsSound.playbackDeviceIdentifier = uid
+                nsSound.play()
             }
-            player.currentTime = 0
-            player.prepareToPlay()
-            player.play()
         }
     }
 

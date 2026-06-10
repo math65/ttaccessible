@@ -34,6 +34,10 @@ final class AppPreferencesStore: ObservableObject {
         SoundPlayer.shared.isEnabled = preferences.soundNotificationsEnabled
         SoundPlayer.shared.loadPack(preferences.soundPack)
         SoundPlayer.shared.disabledSounds = preferences.disabledSoundEvents
+        SoundPlayer.shared.updateOutputDevice(
+            persistentID: preferences.preferredOutputDevice.persistentID,
+            displayName: preferences.preferredOutputDevice.displayName
+        )
     }
 
     /// Last device catalog persisted from a successful scan. Used to populate the
@@ -108,6 +112,11 @@ final class AppPreferencesStore: ObservableObject {
 
     func updatePreferredOutputDevice(_ preference: AudioDevicePreference) {
         mutate { $0.preferredOutputDevice = preference }
+        // Keep notification sounds on the same output device as TeamTalk audio.
+        SoundPlayer.shared.updateOutputDevice(
+            persistentID: preference.persistentID,
+            displayName: preference.displayName
+        )
     }
 
     func advancedInputAudio(for deviceID: String?) -> AdvancedInputAudioPreferences {
