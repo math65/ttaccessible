@@ -6,6 +6,7 @@
 //
 
 import Combine
+import CoreAudio
 import Foundation
 
 @MainActor
@@ -200,8 +201,23 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
             for: deviceInfo
         ).preferences
 
+        // Resolve the selected output device so preview monitoring plays through
+        // it (not the system default) and at its native sample rate. The output
+        // preference is a TeamTalk device id, which doesn't translate directly to
+        // a CoreAudio device, so resolveOutputDevice matches by UID then name.
+        let outputPreference = preferencesStore.preferences.preferredOutputDevice
+        let resolvedOutput = outputPreference.usesSystemDefault
+            ? nil
+            : InputAudioDeviceResolver.resolveOutputDevice(
+                persistentID: outputPreference.persistentID,
+                displayName: outputPreference.displayName
+            )
+        let outputDeviceID = resolvedOutput?.deviceID
+        let previewSampleRate = resolvedOutput?.nominalSampleRate
+            ?? (deviceInfo.nominalSampleRate > 0 ? deviceInfo.nominalSampleRate : 48_000)
+
         let targetFormat = AdvancedMicrophoneAudioTargetFormat(
-            sampleRate: deviceInfo.nominalSampleRate > 0 ? deviceInfo.nominalSampleRate : 48_000,
+            sampleRate: previewSampleRate,
             channels: previewChannelCount(for: normalized.preset, availableChannels: deviceInfo.inputChannels),
             txIntervalMSec: 40
         )
@@ -214,7 +230,7 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
             echoCancellationEnabled: false
         )
 
-        try previewController.start(configuration: configuration)
+        try previewController.start(configuration: configuration, outputDeviceID: outputDeviceID)
     }
 
     private func previewChannelCount(for preset: InputChannelPreset, availableChannels: Int) -> Int {
