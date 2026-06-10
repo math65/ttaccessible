@@ -12,6 +12,7 @@ import Foundation
 final class AppPreferencesStore: ObservableObject {
     private enum Keys {
         static let preferences = "appPreferences.value"
+        static let audioDeviceCatalog = "audioDeviceCatalog.cache"
     }
 
     @Published private(set) var preferences: AppPreferences
@@ -33,6 +34,20 @@ final class AppPreferencesStore: ObservableObject {
         SoundPlayer.shared.isEnabled = preferences.soundNotificationsEnabled
         SoundPlayer.shared.loadPack(preferences.soundPack)
         SoundPlayer.shared.disabledSounds = preferences.disabledSoundEvents
+    }
+
+    /// Last device catalog persisted from a successful scan. Used to populate the
+    /// Audio preferences pickers instantly on launch while a fresh (slow) SDK
+    /// scan runs in the background — the picker no longer shows a bare "System
+    /// Default" for ~10s on large device setups.
+    func cachedAudioDeviceCatalog() -> AudioDeviceCatalog? {
+        guard let data = userDefaults.data(forKey: Keys.audioDeviceCatalog) else { return nil }
+        return try? decoder.decode(AudioDeviceCatalog.self, from: data)
+    }
+
+    func storeCachedAudioDeviceCatalog(_ catalog: AudioDeviceCatalog) {
+        guard catalog != .empty, let data = try? encoder.encode(catalog) else { return }
+        userDefaults.set(data, forKey: Keys.audioDeviceCatalog)
     }
 
     func updateDefaultNickname(_ nickname: String) {
@@ -495,7 +510,9 @@ final class AudioPreferencesStore: ObservableObject {
         self.state = State(
             preferredInputDevice: rootStore.preferences.preferredInputDevice,
             preferredOutputDevice: rootStore.preferences.preferredOutputDevice,
-            catalog: .empty,
+            // Seed from the last persisted scan so the pickers populate instantly;
+            // a fresh background scan (see loadCatalogIfNeeded) replaces it.
+            catalog: rootStore.cachedAudioDeviceCatalog() ?? .empty,
             isCatalogLoading: false,
             lastErrorMessage: nil,
             advancedFeedbackMessage: advancedSettingsStore.feedbackMessage,
@@ -612,6 +629,8 @@ final class AudioPreferencesStore: ObservableObject {
                     self.state.catalog = catalog
                     self.state.isCatalogLoading = false
                     self.state.lastErrorMessage = nil
+                    self.hasLoadedFreshCatalog = true
+                    self.rootStore.storeCachedAudioDeviceCatalog(catalog)
                     self.advancedSettingsStore.refresh()
                 }
             case .failure(let error):
@@ -670,8 +689,13 @@ final class AudioPreferencesStore: ObservableObject {
         return persistentID
     }
 
+    private var hasLoadedFreshCatalog = false
+
     private func loadCatalogIfNeeded(forceRefresh: Bool) {
-        if forceRefresh == false, state.catalog != .empty || state.isCatalogLoading {
+        // Gate on whether a real scan has happened this session, not on catalog
+        // emptiness — the catalog is seeded non-empty from the persisted cache, so
+        // an emptiness check would never trigger the background refresh.
+        if forceRefresh == false, hasLoadedFreshCatalog || state.isCatalogLoading {
             return
         }
 
@@ -680,6 +704,8 @@ final class AudioPreferencesStore: ObservableObject {
             guard let self else { return }
             self.state.catalog = catalog
             self.state.isCatalogLoading = false
+            self.hasLoadedFreshCatalog = true
+            self.rootStore.storeCachedAudioDeviceCatalog(catalog)
         }
         if forceRefresh {
             connectionController.refreshAvailableAudioDevices(completion: apply)
