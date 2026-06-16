@@ -8,6 +8,12 @@ import Foundation
 /// Tracks the set of profiles known to ttaccessible. The registry lives in a
 /// dedicated UserDefaults suite that every running instance can read, so a
 /// profile created in one instance shows up in another's picker immediately.
+///
+/// Mutating calls hold an in-process lock and force the suite to sync after
+/// writing. Cross-process simultaneous registrations could still race (two
+/// instances each reading the suite, modifying, and writing back) — that's
+/// inherent to UserDefaults and tolerable here because registrations are
+/// user-initiated and rare.
 final class ProfileRegistry {
     struct Entry: Codable, Equatable {
         var slug: String
@@ -21,6 +27,7 @@ final class ProfileRegistry {
     }
 
     private let defaults: UserDefaults
+    private let lock = NSLock()
 
     init(defaults: UserDefaults = ProfileRegistry.makeSharedDefaults()) {
         self.defaults = defaults
@@ -68,17 +75,71 @@ final class ProfileRegistry {
         let slug = ProfileContext.normalizeSlug(trimmed)
         guard slug.isEmpty == false, slug != ProfileContext.defaultSlug else { return nil }
 
-        var entries = loadCustomEntries()
+        lock.lock()
+        defer { lock.unlock() }
+
+        var entries = loadCustomEntriesLocked()
         if let existing = entries.first(where: { $0.slug == slug }) {
             return existing
         }
         let entry = Entry(slug: slug, displayName: trimmed)
         entries.append(entry)
-        persist(entries)
+        persistLocked(entries)
         return entry
     }
 
+    /// Update the display name of an existing custom profile. The slug stays
+    /// the same (it identifies on-disk paths and keychain items). Returns the
+    /// updated entry on success.
+    @discardableResult
+    func rename(slug rawSlug: String, to rawName: String) -> Entry? {
+        let slug = ProfileContext.normalizeSlug(rawSlug)
+        let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard slug.isEmpty == false, slug != ProfileContext.defaultSlug, trimmed.isEmpty == false else {
+            return nil
+        }
+
+        lock.lock()
+        defer { lock.unlock() }
+
+        var entries = loadCustomEntriesLocked()
+        guard let index = entries.firstIndex(where: { $0.slug == slug }) else {
+            return nil
+        }
+        entries[index].displayName = trimmed
+        persistLocked(entries)
+        return entries[index]
+    }
+
+    /// Drop the registry entry for a custom profile. Does NOT touch the
+    /// on-disk data, UserDefaults suite, or keychain items — call
+    /// `ProfileContext.purgeStorage(forSlug:)` for that. Returns true if an
+    /// entry was removed.
+    @discardableResult
+    func remove(slug rawSlug: String) -> Bool {
+        let slug = ProfileContext.normalizeSlug(rawSlug)
+        guard slug.isEmpty == false, slug != ProfileContext.defaultSlug else { return false }
+
+        lock.lock()
+        defer { lock.unlock() }
+
+        var entries = loadCustomEntriesLocked()
+        let before = entries.count
+        entries.removeAll { $0.slug == slug }
+        guard entries.count != before else { return false }
+        persistLocked(entries)
+        return true
+    }
+
+    // MARK: - Storage
+
     private func loadCustomEntries() -> [Entry] {
+        lock.lock()
+        defer { lock.unlock() }
+        return loadCustomEntriesLocked()
+    }
+
+    private func loadCustomEntriesLocked() -> [Entry] {
         guard let data = defaults.data(forKey: Keys.entries),
               let decoded = try? JSONDecoder().decode([Entry].self, from: data) else {
             return []
@@ -86,8 +147,9 @@ final class ProfileRegistry {
         return decoded.filter { $0.slug != ProfileContext.defaultSlug }
     }
 
-    private func persist(_ entries: [Entry]) {
+    private func persistLocked(_ entries: [Entry]) {
         guard let data = try? JSONEncoder().encode(entries) else { return }
         defaults.set(data, forKey: Keys.entries)
+        defaults.synchronize()
     }
 }

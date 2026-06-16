@@ -36,6 +36,10 @@ struct ttaccessibleApp: App {
                     appDelegate.openNewInstanceDialog()
                 }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
+
+                Button(L10n.text("profile.menu.manage")) {
+                    appDelegate.openManageProfilesDialog()
+                }
             }
 
             CommandGroup(after: .help) {

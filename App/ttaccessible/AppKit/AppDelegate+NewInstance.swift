@@ -59,6 +59,54 @@ extension AppDelegate {
         }
     }
 
+    /// Show the picker that lets the user rename or delete an existing custom
+    /// profile. Triggered from the "Manage Profiles…" menu item.
+    func openManageProfilesDialog() {
+        let registry = ProfileRegistry.shared
+        let custom = registry.customProfiles()
+
+        guard custom.isEmpty == false else {
+            let alert = NSAlert()
+            alert.alertStyle = .informational
+            alert.messageText = L10n.text("profile.manage.title")
+            alert.informativeText = L10n.text("profile.manage.empty.message")
+            alert.addButton(withTitle: L10n.text("common.ok"))
+            alert.runModal()
+            return
+        }
+
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = L10n.text("profile.manage.title")
+        alert.informativeText = L10n.text("profile.manage.message")
+        alert.addButton(withTitle: L10n.text("profile.manage.rename"))
+        alert.addButton(withTitle: L10n.text("profile.manage.delete"))
+        alert.addButton(withTitle: L10n.text("common.cancel"))
+
+        let popup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 320, height: 26), pullsDown: false)
+        popup.setAccessibilityLabel(L10n.text("profile.manage.picker.accessibilityLabel"))
+        for entry in custom {
+            popup.addItem(withTitle: entry.displayName)
+            popup.lastItem?.representedObject = entry.slug
+        }
+        alert.accessoryView = popup
+
+        let response = alert.runModal()
+        guard let slug = popup.selectedItem?.representedObject as? String,
+              let entry = custom.first(where: { $0.slug == slug }) else {
+            return
+        }
+
+        switch response {
+        case .alertFirstButtonReturn:
+            promptRenameProfile(entry)
+        case .alertSecondButtonReturn:
+            promptDeleteProfile(entry)
+        default:
+            return
+        }
+    }
+
     private func promptCreateAndLaunchProfile() {
         let alert = NSAlert()
         alert.alertStyle = .informational
@@ -98,6 +146,69 @@ extension AppDelegate {
         launchInstance(forSlug: entry.slug)
     }
 
+    private func promptRenameProfile(_ entry: ProfileRegistry.Entry) {
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = L10n.text("profile.rename.title")
+        alert.informativeText = L10n.format("profile.rename.message", entry.displayName)
+        alert.addButton(withTitle: L10n.text("profile.rename.confirm"))
+        alert.addButton(withTitle: L10n.text("common.cancel"))
+
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 320, height: 24))
+        field.stringValue = entry.displayName
+        field.placeholderString = L10n.text("profile.create.placeholder")
+        field.setAccessibilityLabel(L10n.text("profile.create.field.accessibilityLabel"))
+        alert.accessoryView = field
+        alert.window.initialFirstResponder = field
+
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        let newName = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard newName.isEmpty == false else {
+            presentNewInstanceError(message: L10n.text("profile.create.error.empty"))
+            return
+        }
+        if newName == entry.displayName {
+            return
+        }
+        guard ProfileRegistry.shared.rename(slug: entry.slug, to: newName) != nil else {
+            presentNewInstanceError(message: L10n.text("profile.rename.error.failed"))
+            return
+        }
+    }
+
+    private func promptDeleteProfile(_ entry: ProfileRegistry.Entry) {
+        if entry.slug == ProfileContext.current.slug {
+            presentNewInstanceError(message: L10n.format(
+                "profile.delete.error.currentRunning",
+                entry.displayName
+            ))
+            return
+        }
+        if ProfileInstanceLock.isAnotherInstanceRunning(forSlug: entry.slug) {
+            presentNewInstanceError(message: L10n.format(
+                "profile.delete.error.otherInstanceRunning",
+                entry.displayName
+            ))
+            return
+        }
+
+        let confirm = NSAlert()
+        confirm.alertStyle = .warning
+        confirm.messageText = L10n.format("profile.delete.confirm.title", entry.displayName)
+        confirm.informativeText = L10n.text("profile.delete.confirm.message")
+        confirm.addButton(withTitle: L10n.text("profile.delete.confirm.button"))
+        confirm.addButton(withTitle: L10n.text("common.cancel"))
+        // Make Cancel the default Return action so an accidental Enter doesn't
+        // wipe the profile.
+        confirm.buttons.first?.keyEquivalent = ""
+        confirm.buttons.last?.keyEquivalent = "\r"
+        guard confirm.runModal() == .alertFirstButtonReturn else { return }
+
+        ProfileContext.purgeStorage(forSlug: entry.slug)
+        ProfileRegistry.shared.remove(slug: entry.slug)
+    }
+
     private func launchInstance(forSlug rawSlug: String) {
         let slug = ProfileContext.normalizeSlug(rawSlug)
 
@@ -109,6 +220,19 @@ extension AppDelegate {
             presentNewInstanceError(message: L10n.format(
                 "profile.newInstance.error.sameProfile",
                 ProfileContext.current.displayName
+            ))
+            return
+        }
+
+        // Cross-process check: another instance may already be running this
+        // slug. Best-effort PID-file lock — see ProfileInstanceLock for the
+        // limitations (stale-on-crash + PID recycling).
+        if ProfileInstanceLock.isAnotherInstanceRunning(forSlug: slug) {
+            let entry = ProfileRegistry.shared.entry(forSlug: slug)
+            let name = entry?.displayName ?? slug
+            presentNewInstanceError(message: L10n.format(
+                "profile.newInstance.error.alreadyRunning",
+                name
             ))
             return
         }

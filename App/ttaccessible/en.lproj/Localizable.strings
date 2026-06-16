@@ -952,3 +952,21 @@
 "profile.create.error.empty" = "Please enter a name for the profile.";
 "profile.create.error.invalid" = "The profile name doesn't contain any usable characters. Try a name with letters or numbers.";
 "profile.create.error.reservedDefault" = "The name \"Default\" is reserved. Please choose a different name.";
+
+"profile.menu.manage" = "Manage Profiles…";
+"profile.manage.title" = "Manage profiles";
+"profile.manage.message" = "Pick a profile, then choose Rename or Delete.";
+"profile.manage.empty.message" = "No custom profiles yet. Use New Instance… to create one.";
+"profile.manage.picker.accessibilityLabel" = "Profile to manage";
+"profile.manage.rename" = "Rename…";
+"profile.manage.delete" = "Delete…";
+"profile.rename.title" = "Rename profile";
+"profile.rename.message" = "Enter a new display name for \"%@\". The profile's data is not moved or duplicated.";
+"profile.rename.confirm" = "Rename";
+"profile.rename.error.failed" = "Could not rename the profile. Try again or restart the app.";
+"profile.delete.confirm.title" = "Delete the profile \"%@\"?";
+"profile.delete.confirm.message" = "This removes the profile from the picker and deletes its saved servers, preferences, sound packs, chat history, and stored passwords. This cannot be undone.";
+"profile.delete.confirm.button" = "Delete";
+"profile.delete.error.currentRunning" = "The profile \"%@\" is the one currently running in this window. Quit this instance first, then delete it from another instance.";
+"profile.delete.error.otherInstanceRunning" = "Another instance of ttaccessible is running with the profile \"%@\". Quit that instance first.";
+"profile.newInstance.error.alreadyRunning" = "Another instance of ttaccessible is already running with the profile \"%@\". Bring that window forward instead of launching a second copy.";

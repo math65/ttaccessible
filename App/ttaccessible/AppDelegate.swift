@@ -107,9 +107,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var pushToTalkModeCancellable: AnyCancellable?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        ProfileInstanceLock.acquire(for: ProfileContext.current)
         AudioLogger.clear()
         let sdkVersion = String(cString: TT_GetVersion())
-        AudioLogger.log("App launched — TeamTalk SDK %@", sdkVersion)
+        AudioLogger.log("App launched — TeamTalk SDK %@ — profile %@", sdkVersion, ProfileContext.current.slug)
         #if DEBUG
         _ = AudioPCMResamplerSelfTest.runAll()
         #endif
@@ -318,6 +319,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        ProfileInstanceLock.release(for: ProfileContext.current)
         connectionController.disconnectSynchronously()
         // The TeamTalk SDK's internal reactor thread sometimes outlives
         // TT_CloseTeamTalk and crashes when exit()'s static destructors race

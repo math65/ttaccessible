@@ -10,7 +10,13 @@ enum AudioLogger {
         let dir = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Logs/TTAccessible", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        return dir.appendingPathComponent("audio.log")
+        // The default profile keeps the historical `audio.log` filename. Other
+        // profiles get `audio-<slug>.log` so two instances don't overwrite
+        // each other's log on launch (and so the feedback bug-report attaches
+        // the right one).
+        let profile = ProfileContext.current
+        let fileName = profile.isDefault ? "audio.log" : "audio-\(profile.slug).log"
+        return dir.appendingPathComponent(fileName)
     }()
 
     private static let queue = DispatchQueue(label: "com.ttaccessible.audiologger")
