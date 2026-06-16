@@ -10,7 +10,7 @@ final class UserVolumeStore {
     private let mediaFileKey = "userMediaFileVolumeByUsername"
     private let defaults: UserDefaults
 
-    init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = ProfileContext.current.userDefaults) {
         self.defaults = defaults
     }
 

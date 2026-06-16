@@ -70,8 +70,8 @@ final class ServerPasswordStore {
     private static let cleanupDoneKey = "ServerPasswordStore.dpkResetCompleted.v3"
 
     init(
-        serviceName: String = "com.math65.ttaccessible.saved-server-password",
-        defaults: UserDefaults = .standard
+        serviceName: String = ProfileContext.current.keychainServiceName,
+        defaults: UserDefaults = ProfileContext.current.userDefaults
     ) {
         self.serviceName = serviceName
         self.defaults = defaults

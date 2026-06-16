@@ -49,7 +49,7 @@ final class SoundPlayer {
     private static let deletedBuiltInPacksKey = "soundPlayer.deletedBuiltInPacks"
 
     static var availablePacks: [String] {
-        let deletedBuiltInPacks = Set(UserDefaults.standard.stringArray(forKey: deletedBuiltInPacksKey) ?? [])
+        let deletedBuiltInPacks = Set(ProfileContext.current.userDefaults.stringArray(forKey: deletedBuiltInPacksKey) ?? [])
         let bundled = builtInPacks.filter { !deletedBuiltInPacks.contains($0) }
         let custom = customPackDirectories().map(\.lastPathComponent)
         return Set(bundled + custom).sorted {
@@ -58,9 +58,7 @@ final class SoundPlayer {
     }
 
     static var customSoundPacksDirectory: URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-            ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support", isDirectory: true)
-        return base.appendingPathComponent("Sound Packs", isDirectory: true)
+        ProfileContext.current.customSoundPacksDirectory
     }
 
     private var players: [NotificationSound: AVAudioPlayer] = [:]
@@ -158,9 +156,10 @@ final class SoundPlayer {
         if isCustomPack(packName) {
             try FileManager.default.removeItem(at: customPackDirectory(named: packName))
         } else if builtInPacks.contains(packName) {
-            var deletedBuiltInPacks = Set(UserDefaults.standard.stringArray(forKey: deletedBuiltInPacksKey) ?? [])
+            let defaults = ProfileContext.current.userDefaults
+            var deletedBuiltInPacks = Set(defaults.stringArray(forKey: deletedBuiltInPacksKey) ?? [])
             deletedBuiltInPacks.insert(packName)
-            UserDefaults.standard.set(Array(deletedBuiltInPacks), forKey: deletedBuiltInPacksKey)
+            defaults.set(Array(deletedBuiltInPacks), forKey: deletedBuiltInPacksKey)
         }
     }
 

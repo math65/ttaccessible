@@ -52,7 +52,7 @@ private struct FeedbackView: View {
     private static let savedEmailKey = "appBackendFeedbackEmail"
 
     @State private var contactType: AppBackendClient.ContactType = .bug
-    @State private var email = UserDefaults.standard.string(forKey: FeedbackView.savedEmailKey) ?? ""
+    @State private var email = ProfileContext.current.userDefaults.string(forKey: FeedbackView.savedEmailKey) ?? ""
     @State private var message = ""
     @State private var attachAudioLog = true
     @State private var isSending = false
@@ -154,7 +154,7 @@ private struct FeedbackView: View {
             isSending = false
             switch result {
             case .success:
-                UserDefaults.standard.set(trimmedEmail, forKey: FeedbackView.savedEmailKey)
+                ProfileContext.current.userDefaults.set(trimmedEmail, forKey: FeedbackView.savedEmailKey)
                 isShowingSuccess = true
             case .failure(let error):
                 sendErrorMessage = error.localizedMessage

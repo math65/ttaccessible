@@ -30,7 +30,7 @@ final class AnnouncementService {
     }
 
     private func presentIfNeeded(_ announcement: AppBackendClient.Announcement) {
-        let defaults = UserDefaults.standard
+        let defaults = ProfileContext.current.userDefaults
         var seenIDs = defaults.stringArray(forKey: Self.seenAnnouncementIDsKey) ?? []
         if announcement.mode == "once", seenIDs.contains(announcement.id) {
             return
@@ -53,7 +53,7 @@ final class AnnouncementService {
     /// Stable per-install UUID. The server only stores a hash of it, for
     /// deduplicating the announcement reach counter.
     private static var installID: String {
-        let defaults = UserDefaults.standard
+        let defaults = ProfileContext.current.userDefaults
         if let existing = defaults.string(forKey: installIDKey), existing.isEmpty == false {
             return existing
         }

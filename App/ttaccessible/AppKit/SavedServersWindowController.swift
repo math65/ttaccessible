@@ -20,7 +20,7 @@ final class SavedServersWindowController: NSWindowController {
             backing: .buffered,
             defer: false
         )
-        window.title = L10n.text("savedServers.window.title")
+        window.title = ProfileContext.current.decorateWindowTitle(L10n.text("savedServers.window.title"))
         window.center()
         window.minSize = NSSize(width: 680, height: 420)
         window.setFrameAutosaveName("SavedServersWindow")

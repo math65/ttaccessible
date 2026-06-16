@@ -21,7 +21,7 @@ final class AppPreferencesStore: ObservableObject {
     private let decoder = JSONDecoder()
     private var pendingPersistWorkItem: DispatchWorkItem?
 
-    init(userDefaults: UserDefaults = .standard) {
+    init(userDefaults: UserDefaults = ProfileContext.current.userDefaults) {
         self.userDefaults = userDefaults
 
         if let data = userDefaults.data(forKey: Keys.preferences),

@@ -934,3 +934,21 @@
 "feedback.error.rateLimited" = "Too many messages were sent recently. Please try again in an hour.";
 "feedback.error.validation" = "Check that your email address is valid and the message is not empty.";
 "feedback.error.server" = "The server could not process the message. Please try again later.";
+
+"profile.menu.newInstance" = "New Instance…";
+"profile.newInstance.title" = "Open a new instance";
+"profile.newInstance.message" = "Choose a profile to launch as a separate instance. Each profile has its own servers, preferences, and settings, and runs side-by-side with the current one.";
+"profile.newInstance.launch" = "Launch";
+"profile.newInstance.createNew" = "New Profile…";
+"profile.newInstance.picker.accessibilityLabel" = "Profile to launch";
+"profile.newInstance.picker.currentSuffix" = "%@ (current)";
+"profile.newInstance.error.title" = "Could Not Launch Instance";
+"profile.newInstance.error.sameProfile" = "The profile \"%@\" is already running in this window. Pick a different profile, or create a new one.";
+"profile.create.title" = "Create a new profile";
+"profile.create.message" = "Enter a name for the new profile. A separate instance of ttaccessible will launch with its own settings and saved servers.";
+"profile.create.launch" = "Create & Launch";
+"profile.create.placeholder" = "Profile name";
+"profile.create.field.accessibilityLabel" = "Profile name";
+"profile.create.error.empty" = "Please enter a name for the profile.";
+"profile.create.error.invalid" = "The profile name doesn't contain any usable characters. Try a name with letters or numbers.";
+"profile.create.error.reservedDefault" = "The name \"Default\" is reserved. Please choose a different name.";

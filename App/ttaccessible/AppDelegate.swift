@@ -380,7 +380,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            window.contentViewController is SavedServersViewController == false {
             let viewController = makeSavedServersViewController()
             window.contentViewController = viewController
-            window.title = L10n.text("savedServers.window.title")
+            window.title = ProfileContext.current.decorateWindowTitle(L10n.text("savedServers.window.title"))
         }
 
         menuState.setMode(.savedServers)
@@ -435,7 +435,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         savedServersWindowController?.window?.contentViewController = viewController
-        savedServersWindowController?.window?.title = L10n.format("connectedServer.window.title", session.displayName)
+        savedServersWindowController?.window?.title = ProfileContext.current.decorateWindowTitle(
+            L10n.format("connectedServer.window.title", session.displayName)
+        )
         menuState.setMode(.connectedServer)
         menuState.setHasSelection(false)
         if shouldActivateWindow {

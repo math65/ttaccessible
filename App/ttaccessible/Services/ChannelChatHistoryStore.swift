@@ -10,8 +10,7 @@ final class ChannelChatHistoryStore {
     private let fileManager = FileManager.default
 
     private var storageDirectory: URL? {
-        fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
-            .appendingPathComponent("ttaccessible/history", isDirectory: true)
+        ProfileContext.current.channelChatHistoryDirectory
     }
 
     func load(forKey key: String) -> [ChannelChatMessage] {

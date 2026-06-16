@@ -14,7 +14,7 @@ final class TeamTalkConfigAccessStore {
 
     private let userDefaults: UserDefaults
 
-    init(userDefaults: UserDefaults = .standard) {
+    init(userDefaults: UserDefaults = ProfileContext.current.userDefaults) {
         self.userDefaults = userDefaults
     }
 

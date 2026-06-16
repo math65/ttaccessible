@@ -9,7 +9,7 @@ final class LastChannelStore {
     private let key = "lastChannelPathByServer"
     private let defaults: UserDefaults
 
-    init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = ProfileContext.current.userDefaults) {
         self.defaults = defaults
     }
 
