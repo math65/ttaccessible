@@ -72,10 +72,12 @@ final class TeamTalkConnectionController {
 
     let queueKey = DispatchSpecificKey<Void>()
     let queue = DispatchQueue(label: "com.math65.ttaccessible.teamtalk")
-    /// Dedicated queue for the SDK's TT_GetSoundDevices probe, which can take ~12 s
-    /// on a large CoreAudio rig. Kept OFF the main `queue` so the probe never blocks
-    /// connecting or starves the realtime audio mixer pump.
-    let soundDeviceProbeQueue = DispatchQueue(label: "com.math65.ttaccessible.sounddevices", qos: .utility)
+    /// Dedicated queue for the SDK's TT_GetSoundDevices / TT_InitTeamTalkPoll probes,
+    /// kept OFF the main `queue` so they never block connecting or starve the realtime
+    /// audio mixer pump. QoS is `.userInitiated` (not `.utility`): the connect path runs
+    /// at user-initiated priority and waits on the prewarm done here, so a lower QoS
+    /// caused a priority inversion (Thread Performance Checker) that slowed connecting.
+    let soundDeviceProbeQueue = DispatchQueue(label: "com.math65.ttaccessible.sounddevices", qos: .userInitiated)
     /// Connection-instance prewarm. `TT_InitTeamTalkPoll` triggers the SDK sound
     /// system init, which enumerates every CoreAudio device (~12 s on a large rig).
     /// The app creates a fresh instance per connect, so that 12 s landed on EVERY
