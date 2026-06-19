@@ -638,6 +638,13 @@
 "mixer.pan.right" = "Right %d%%";
 "mixer.muted.voice" = "voice muted";
 "mixer.muted.media" = "media muted";
+"mixer.area.label" = "Mixer";
+"mixer.voice.label.short" = "Volume";
+"mixer.media.label.short" = "Media volume";
+"mixer.pan.label.short" = "Pan";
+"mixer.mute.label.short" = "Mute";
+"mixer.toggle.muted" = "muted";
+"mixer.toggle.unmuted" = "unmuted";
 "files.empty" = "No files in this channel.";
 "files.column.name" = "Name";
 "files.column.size" = "Size";

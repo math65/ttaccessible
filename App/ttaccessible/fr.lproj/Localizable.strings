@@ -638,6 +638,13 @@
 "mixer.pan.right" = "Droite %d %%";
 "mixer.muted.voice" = "voix coupée";
 "mixer.muted.media" = "média coupé";
+"mixer.area.label" = "Mixeur";
+"mixer.voice.label.short" = "Volume";
+"mixer.media.label.short" = "Volume du média";
+"mixer.pan.label.short" = "Panoramique";
+"mixer.mute.label.short" = "Sourdine";
+"mixer.toggle.muted" = "coupé";
+"mixer.toggle.unmuted" = "rétabli";
 "files.empty" = "Aucun fichier dans ce canal.";
 "files.column.name" = "Nom";
 "files.column.size" = "Taille";
