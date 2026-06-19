@@ -168,7 +168,14 @@ private final class PreferencesContainerViewController: NSViewController {
     }
 
     func warmupExpensiveDependencies() {
-        audioPreferencesStore.warmup()
+        // NOTE: deliberately NOT warming the audio device catalog here. That probe
+        // calls the SDK's TT_GetSoundDevices, which on a large rig takes ~12 s AND
+        // the SDK serializes sound-system access internally — so a launch-time warm
+        // serialized against the connect's TT_InitSoundOutputDevice and made
+        // connecting take ~12 s. The audio device list is seeded instantly from the
+        // persisted cache, and refreshes when the user actually opens Audio prefs
+        // (AudioPreferencesStore.prepareIfNeeded). Output/input themselves use the
+        // virtual device, so the connection never needs this catalog.
         notificationsPreferencesStore.prepareIfNeeded()
     }
 

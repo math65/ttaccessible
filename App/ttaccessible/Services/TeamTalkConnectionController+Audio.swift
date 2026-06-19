@@ -22,8 +22,15 @@ extension TeamTalkConnectionController {
     // queue.sync — doing so froze the app for the entire probe during launch.
     func availableAudioDevices(completion: @escaping @MainActor (AudioDeviceCatalog) -> Void) {
         queue.async { [weak self] in
-            let catalog = self?.availableAudioDevicesLocked(forceRefresh: false) ?? .empty
-            Task { @MainActor in completion(catalog) }
+            guard let self else {
+                Task { @MainActor in completion(.empty) }
+                return
+            }
+            if let cached = self.cachedAudioDeviceCatalog {
+                Task { @MainActor in completion(cached) }
+                return
+            }
+            self.probeSoundDevicesOffQueue(completion: completion)
         }
     }
 
@@ -33,11 +40,56 @@ extension TeamTalkConnectionController {
                 Task { @MainActor in completion(.empty) }
                 return
             }
-            self.cachedSoundDevices = []
-            self.cachedAudioDeviceCatalog = nil
-            let catalog = self.availableAudioDevicesLocked(forceRefresh: true)
-            Task { @MainActor in completion(catalog) }
+            self.probeSoundDevicesOffQueue(completion: completion)
         }
+    }
+
+    /// Run the heavy TT_GetSoundDevices probe on `soundDeviceProbeQueue` (it can
+    /// take ~12 s on a large rig), then hop back to `queue` to build + cache the
+    /// catalog. This keeps the connection queue — and the realtime mixer pump that
+    /// rides on it — free during the probe. Must be called on `queue`.
+    private func probeSoundDevicesOffQueue(completion: @escaping @MainActor (AudioDeviceCatalog) -> Void) {
+        soundDeviceProbeQueue.async { [weak self] in
+            let devices = Self.probeSoundDevices()
+            self?.queue.async {
+                guard let self else {
+                    Task { @MainActor in completion(.empty) }
+                    return
+                }
+                let catalog = self.buildAndCacheCatalogLocked(from: devices)
+                Task { @MainActor in completion(catalog) }
+            }
+        }
+    }
+
+    /// TT_GetSoundDevices probe with no controller-state access — safe to run off
+    /// the connection queue.
+    nonisolated static func probeSoundDevices() -> [SoundDevice] {
+        var count: INT32 = 0
+        guard TT_GetSoundDevices(nil, &count) != 0, count > 0 else { return [] }
+        var devices = Array(repeating: SoundDevice(), count: Int(count))
+        guard TT_GetSoundDevices(&devices, &count) != 0 else { return [] }
+        return Array(devices.prefix(Int(count)))
+    }
+
+    /// Build the catalog from already-probed devices and store it in the cache.
+    /// Must be called on `queue`.
+    func buildAndCacheCatalogLocked(from devices: [SoundDevice]) -> AudioDeviceCatalog {
+        cachedSoundDevices = devices
+        let activeDevices = devices
+            .filter { ttString(from: $0.szDeviceName).hasPrefix("CADefaultDeviceAggregate") == false }
+        let inputDevices = activeDevices
+            .filter { $0.nMaxInputChannels > 0 && $0.nDeviceID != TT_SOUNDDEVICE_ID_TEAMTALK_VIRTUAL }
+            .map(makeAudioDeviceOption(from:))
+            .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+        let outputDevices = activeDevices
+            .filter { $0.nMaxOutputChannels > 0 && $0.nDeviceID != TT_SOUNDDEVICE_ID_TEAMTALK_VIRTUAL }
+            .map(makeAudioDeviceOption(from:))
+            .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+        let catalog = AudioDeviceCatalog(inputDevices: inputDevices, outputDevices: outputDevices)
+        cachedAudioDeviceCatalog = catalog
+        AudioLogger.log("buildAndCacheCatalog: %d devices", devices.count)
+        return catalog
     }
 
     func invalidateAudioDeviceCache() {
@@ -107,6 +159,7 @@ extension TeamTalkConnectionController {
 
             let hadOutput = self.outputAudioReady
             if hadOutput, let instance = self.instance {
+                self.teardownOutputRenderLocked(instance: instance)
                 _ = TT_CloseSoundOutputDevice(instance)
                 self.outputAudioReady = false
             }
@@ -126,10 +179,9 @@ extension TeamTalkConnectionController {
 
             if hadOutput, let instance = self.instance {
                 do {
+                    // Reopens the virtual output + muxed event; the render engine
+                    // restarts on the next muxed block (gain/mute reapplied inside).
                     try self.ensureDirectOutputAudioReadyLocked(instance: instance)
-                    if self.masterMuted {
-                        _ = TT_SetSoundOutputMute(instance, 1)
-                    }
                 } catch {
                     AudioLogger.log("restartSoundSystem: output re-open failed — %@", error.localizedDescription)
                     DispatchQueue.main.async { completion(.failure(error)) }
@@ -399,7 +451,9 @@ extension TeamTalkConnectionController {
                 if #available(macOS 14.2, *), startSpeakerTapForAEC() {
                     AudioLogger.log("AEC: using speaker tap for reference signal")
                 } else {
-                    // Fallback: use SDK muxed audio (only TeamTalk audio, not VoiceOver/system).
+                    // Fallback (pre-macOS 14.2): use the SDK muxed (remote) stream as
+                    // the AEC far-end reference. Playback uses per-user mixing, so this
+                    // muxed event is for AEC only; handleAudioBlockLocked feeds it.
                     TT_EnableAudioBlockEvent(instance, TT_MUXED_USERID, UInt32(STREAMTYPE_VOICE.rawValue), 1)
                     AudioLogger.log("AEC: using SDK muxed audio for reference signal (fallback)")
                 }
@@ -455,31 +509,25 @@ extension TeamTalkConnectionController {
         }
 
         if reinitOutput {
-            if outputAudioReady {
-                // Quiesce the output before closing. TT_CloseSoundOutputDevice locks
-                // the SDK audio mutex (ClientNode::CloseSoundOutputDevice -> ACE
-                // recursive_mutex -> ResetAudioPlayers) and intermittently deadlocks
-                // when the PortAudio/CoreAudio output IO thread is stuck holding that
-                // mutex under HAL overload. Muting makes the IO proc emit silence and
-                // a short settle lets in-flight IO drain, so the close is far less
-                // likely to land while the IO thread is wedged. (Mitigation for an
-                // SDK-level deadlock; the real fix is in the TeamTalk/PortAudio SDK.)
-                AudioLogger.log("reinit: quiescing output (mute + settle) before close")
-                _ = TT_SetSoundOutputMute(instance, 1)
-                Thread.sleep(forTimeInterval: 0.06)
-                AudioLogger.log("reinit: closing output device")
-                _ = TT_CloseSoundOutputDevice(instance)
-                AudioLogger.log("reinit: closed output device")
-                outputAudioReady = false
+            // Output bypass: the SDK output stays on the virtual device and is
+            // NEVER closed here — that close (TT_CloseSoundOutputDevice -> ACE
+            // recursive_mutex -> ResetAudioPlayers) is the call that intermittently
+            // deadlocks under HAL overload. Switching the output device is purely a
+            // rebind of OUR render engine to the newly-selected CoreAudio device:
+            // all our code, fast, and no SDK audio mutex involved. Master gain/mute
+            // persist in the engine across the switch.
+            if let device = resolveOutputEngineDeviceLocked() {
+                if outputRenderEngine.isRunning {
+                    AudioLogger.log("reinit: switching output engine to %@", device.name)
+                    try outputRenderEngine.switchDevice(device.deviceID)
+                    AudioLogger.log("reinit: output engine switched")
+                } else {
+                    AudioLogger.log("reinit: output engine idle; starts on next muxed block")
+                }
+            } else {
+                AudioLogger.log("reinit: no output device resolved for switch")
             }
-
-            AudioLogger.log("reinit: opening new output device")
-            try ensureDirectOutputAudioReadyLocked(instance: instance)
-            // Restore mute state on the freshly opened device (it opens unmuted).
-            if masterMuted {
-                _ = TT_SetSoundOutputMute(instance, 1)
-            }
-            AudioLogger.log("reinit: output reopened")
+            appliedOutputPreference = preferencesStore.preferences.preferredOutputDevice
         }
 
         if reinitInput, wasVoiceTransmissionEnabled || wasInputAudioReady {
@@ -577,16 +625,173 @@ extension TeamTalkConnectionController {
             return
         }
 
-        let outputDeviceID = try selectedOutputDeviceIDLocked()
-        AudioLogger.log("ensureDirectOutputAudioReady: opening output device ID=%d", outputDeviceID)
-        guard TT_InitSoundOutputDevice(instance, outputDeviceID) != 0 else {
-            AudioLogger.log("ensureDirectOutputAudioReady: FAILED to open output device")
+        // Output bypass: point the SDK at the virtual output device so it never
+        // owns a physical CoreAudio output device (whose close intermittently
+        // deadlocks). We receive each remote user's decoded PCM as per-user audio
+        // blocks and MIX them ourselves (the local user is never fed in, so you
+        // never hear yourself) through OutputAudioRenderEngine, which also lets us
+        // own per-person pan/volume/mute.
+        AudioLogger.log("ensureDirectOutputAudioReady: opening virtual output device (bypass)")
+        guard TT_InitSoundOutputDevice(instance, TT_SOUNDDEVICE_ID_TEAMTALK_VIRTUAL) != 0 else {
+            AudioLogger.log("ensureDirectOutputAudioReady: FAILED to open virtual output device")
             throw TeamTalkConnectionError.internalError(L10n.text("connectedServer.audio.error.outputStartFailed"))
         }
         outputAudioReady = true
         appliedOutputPreference = preferencesStore.preferences.preferredOutputDevice
-        applyOutputGainLocked(instance: instance, gainDB: preferencesStore.preferences.outputGainDB)
-        AudioLogger.log("ensureDirectOutputAudioReady: output ready")
+        startOutputRenderEngineLocked()
+        // Enable per-user audio block events for whoever is already in our channel.
+        refreshPerUserAudioEventsLocked(instance: instance)
+        AudioLogger.log("ensureDirectOutputAudioReady: virtual output ready")
+    }
+
+    /// Resolve the CoreAudio output device the render engine should bind to,
+    /// honoring the user's explicit preference and falling back to the system
+    /// default output.
+    func resolveOutputEngineDeviceLocked() -> InputAudioDeviceResolver.OutputAudioDeviceInfo? {
+        let pref = preferencesStore.preferences.preferredOutputDevice
+        if pref.usesSystemDefault == false,
+           let info = InputAudioDeviceResolver.resolveOutputDevice(
+               persistentID: pref.persistentID,
+               displayName: pref.displayName
+           ) {
+            return info
+        }
+        let devices = InputAudioDeviceResolver.availableOutputDevices()
+        if let defaultUID = InputAudioDeviceResolver.defaultOutputDeviceUID(),
+           let match = devices.first(where: { $0.uid == defaultUID }) {
+            return match
+        }
+        return devices.first
+    }
+
+    /// Start the output render engine on the currently-selected output device.
+    func startOutputRenderEngineLocked() {
+        guard outputAudioReady, outputRenderEngine.isRunning == false else { return }
+        guard let device = resolveOutputEngineDeviceLocked() else {
+            AudioLogger.log("outputRenderEngine: no output device available to start")
+            return
+        }
+        outputRenderEngine.setMasterGainDB(preferencesStore.preferences.outputGainDB)
+        outputRenderEngine.setMuted(masterMuted)
+        do {
+            try outputRenderEngine.start(deviceID: device.deviceID)
+            AudioLogger.log("outputRenderEngine: started on %@", device.name)
+        } catch {
+            AudioLogger.log("outputRenderEngine: start failed — %@", error.localizedDescription)
+        }
+    }
+
+    /// Separate mixer key for a user's media-file stream (kept distinct from their
+    /// voice stream).
+    func outputMediaSourceKey(_ userID: Int32) -> Int32 { userID | 0x4000_0000 }
+
+    /// Reserved mixer key for the local "hear myself" monitor (negative, so it
+    /// never collides with real user IDs or media keys, both positive).
+    var localMonitorEngineKey: Int32 { -1 }
+
+    /// Reconcile per-user audio block events with the users currently in our
+    /// channel: enable for newly-present remote users, disable + drop for users
+    /// who left. The local user is never enabled, so our own voice is never mixed.
+    func refreshPerUserAudioEventsLocked(instance: UnsafeMutableRawPointer) {
+        perUserAudioNeedsRefresh = false
+        guard outputAudioReady else { return }
+        let myUserID = TT_GetMyUserID(instance)
+        let myChannel = TT_GetMyChannelID(instance)
+        // Per-user audio block events want a SINGLE stream type (unlike the muxed
+        // user, which accepts an OR'd mask), so enable VOICE and MEDIA separately.
+        let voice = UInt32(STREAMTYPE_VOICE.rawValue)
+        let media = UInt32(STREAMTYPE_MEDIAFILE_AUDIO.rawValue)
+
+        var desired = Set<Int32>()
+        if myChannel > 0 {
+            for user in channelUsersLocked(instance: instance, channelID: myChannel)
+            where user.nUserID != myUserID && user.nUserID > 0 {
+                desired.insert(user.nUserID)
+            }
+        }
+
+        let toEnable = desired.subtracting(perUserAudioEnabled)
+        let toDisable = perUserAudioEnabled.subtracting(desired)
+        for userID in toEnable {
+            TT_EnableAudioBlockEvent(instance, userID, voice, 1)
+            TT_EnableAudioBlockEvent(instance, userID, media, 1)
+        }
+        for userID in toDisable {
+            TT_EnableAudioBlockEvent(instance, userID, voice, 0)
+            TT_EnableAudioBlockEvent(instance, userID, media, 0)
+            outputRenderEngine.removeUser(userID)
+            outputRenderEngine.removeUser(outputMediaSourceKey(userID))
+            loggedAudioBlockSources.remove(userID)
+            loggedAudioBlockSources.remove(outputMediaSourceKey(userID))
+        }
+        perUserAudioEnabled = desired
+        if toEnable.isEmpty == false || toDisable.isEmpty == false {
+            AudioLogger.log("perUser audio events: channel=%d active=%d (+%d -%d)", myChannel, desired.count, toEnable.count, toDisable.count)
+        }
+    }
+
+    func channelUsersLocked(instance: UnsafeMutableRawPointer, channelID: Int32) -> [User] {
+        var count: INT32 = 0
+        guard TT_GetChannelUsers(instance, channelID, nil, &count) != 0, count > 0 else { return [] }
+        var users = Array(repeating: User(), count: Int(count))
+        guard TT_GetChannelUsers(instance, channelID, &users, &count) != 0 else { return [] }
+        return Array(users.prefix(Int(count)))
+    }
+
+    /// Dispatch a CLIENTEVENT_USER_AUDIOBLOCK. A remote user's voice/media goes to
+    /// the mixer for playback; the muxed stream (only enabled as the pre-14.2 AEC
+    /// fallback) feeds the echo canceller's far-end reference.
+    func handleAudioBlockLocked(instance: UnsafeMutableRawPointer, source: Int32) {
+        if source == TT_MUXED_USERID {
+            guard let block = TT_AcquireUserAudioBlock(instance, UInt32(STREAMTYPE_VOICE.rawValue), TT_MUXED_USERID) else { return }
+            if speakerTapCaptureStorage == nil,
+               let aec = advancedMicrophoneEngine.echoCanceller,
+               let rawAudio = block.pointee.lpRawAudio {
+                let int16Ptr = rawAudio.assumingMemoryBound(to: Int16.self)
+                aec.feedReference(int16Ptr, count: Int(block.pointee.nSamples), channels: Int(block.pointee.nChannels), sampleRate: Int(block.pointee.nSampleRate))
+            }
+            TT_ReleaseUserAudioBlock(instance, block)
+            return
+        }
+
+        let myUserID = TT_GetMyUserID(instance)
+        guard source > 0, source != myUserID else { return }
+        enqueueUserAudioBlockLocked(instance: instance, userID: source, streamType: STREAMTYPE_VOICE, engineKey: source)
+        enqueueUserAudioBlockLocked(instance: instance, userID: source, streamType: STREAMTYPE_MEDIAFILE_AUDIO, engineKey: outputMediaSourceKey(source))
+    }
+
+    private func enqueueUserAudioBlockLocked(instance: UnsafeMutableRawPointer, userID: Int32, streamType: StreamType, engineKey: Int32) {
+        guard let block = TT_AcquireUserAudioBlock(instance, UInt32(streamType.rawValue), userID) else { return }
+        defer { TT_ReleaseUserAudioBlock(instance, block) }
+        let frames = Int(block.pointee.nSamples)
+        let channels = Int(block.pointee.nChannels)
+        let sampleRate = Int(block.pointee.nSampleRate)
+        guard frames > 0, channels > 0, sampleRate > 0, let rawAudio = block.pointee.lpRawAudio else { return }
+        if loggedAudioBlockSources.insert(engineKey).inserted {
+            AudioLogger.log("perUser audioblock: key=%d frames=%d ch=%d rate=%d", engineKey, frames, channels, sampleRate)
+        }
+        outputRenderEngine.enqueueUser(
+            engineKey,
+            pcm: rawAudio.assumingMemoryBound(to: Int16.self),
+            frames: frames, channels: channels, sampleRate: Double(sampleRate)
+        )
+    }
+
+    /// Tear down the output render path (engine + all per-user / muxed events).
+    func teardownOutputRenderLocked(instance: UnsafeMutableRawPointer?) {
+        outputRenderEngine.stop()
+        if let instance {
+            let voice = UInt32(STREAMTYPE_VOICE.rawValue)
+            let media = UInt32(STREAMTYPE_MEDIAFILE_AUDIO.rawValue)
+            for userID in perUserAudioEnabled {
+                TT_EnableAudioBlockEvent(instance, userID, voice, 0)
+                TT_EnableAudioBlockEvent(instance, userID, media, 0)
+            }
+            TT_EnableAudioBlockEvent(instance, TT_MUXED_USERID, voice, 0)
+        }
+        perUserAudioEnabled.removeAll()
+        loggedAudioBlockSources.removeAll()
+        perUserAudioNeedsRefresh = false
     }
 
     func stopAdvancedMicrophoneInputLocked(instance: UnsafeMutableRawPointer, reason: String) {
@@ -596,8 +801,11 @@ extension TeamTalkConnectionController {
             (speakerTapCaptureStorage as? SpeakerTapCapture)?.stop()
         }
         speakerTapCaptureStorage = nil
+        // Disable the muxed AEC-reference event (playback uses per-user events,
+        // managed separately by refreshPerUserAudioEventsLocked).
         TT_EnableAudioBlockEvent(instance, TT_MUXED_USERID, UInt32(STREAMTYPE_VOICE.rawValue), 0)
         advancedMicrophoneEngine.stop()
+        outputRenderEngine.removeUser(localMonitorEngineKey)
         _ = TT_InsertAudioBlock(instance, nil)
         inputAudioReady = false
         advancedMicrophoneTargetFormat = nil
@@ -697,6 +905,18 @@ extension TeamTalkConnectionController {
             if accepted == false {
                 AudioLogger.log("TT_InsertAudioBlock: queue full, audio block dropped")
             }
+
+            // Local "hear myself" monitor: feed the same processed mic audio we're
+            // transmitting straight into the output mixer — local, no SDK round-trip.
+            if hearMyselfEnabled {
+                outputRenderEngine.enqueueUser(
+                    localMonitorEngineKey,
+                    pcm: baseAddress,
+                    frames: Int(chunk.sampleCount),
+                    channels: Int(chunk.channels),
+                    sampleRate: Double(chunk.sampleRate)
+                )
+            }
         }
     }
 
@@ -795,8 +1015,8 @@ extension TeamTalkConnectionController {
     }
 
     func applyOutputGainLocked(instance: UnsafeMutableRawPointer, gainDB: Double) {
-        let volume = Self.teamTalkVolume(for: gainDB)
-        _ = TT_SetSoundOutputVolume(instance, volume)
+        // Master output gain is applied by our render engine on the muxed stream.
+        outputRenderEngine.setMasterGainDB(gainDB)
     }
 
     // MARK: - Jitter Control
@@ -816,16 +1036,17 @@ extension TeamTalkConnectionController {
     func toggleHearMyself(completion: @escaping @MainActor (Bool) -> Void) {
         queue.async { [weak self] in
             guard let self, let instance = self.instance else { return }
-            let myUserID = TT_GetMyUserID(instance)
-            guard myUserID > 0 else { return }
+            guard TT_GetMyUserID(instance) > 0 else { return }
             let newEnabled = !self.hearMyselfEnabled
-            let sub = Subscriptions(SUBSCRIBE_VOICE.rawValue)
-            if newEnabled {
-                _ = TT_DoSubscribe(instance, myUserID, sub)
-            } else {
-                _ = TT_DoUnsubscribe(instance, myUserID, sub)
-            }
             self.hearMyselfEnabled = newEnabled
+            // LOCAL monitor — no SDK round-trip. When on, the mic-chunk path feeds
+            // your own processed audio straight into the output mixer (see
+            // insertAdvancedMicrophoneAudioChunkLocked), so you hear yourself with
+            // only local buffering latency instead of mic→server→back. When off,
+            // drop the monitor source.
+            if newEnabled == false {
+                self.outputRenderEngine.removeUser(self.localMonitorEngineKey)
+            }
             DispatchQueue.main.async { completion(newEnabled) }
         }
     }
@@ -988,9 +1209,9 @@ extension TeamTalkConnectionController {
 
     func toggleMasterMute(completion: @escaping @MainActor (Bool) -> Void) {
         queue.async { [weak self] in
-            guard let self, let instance = self.instance else { return }
+            guard let self, self.instance != nil else { return }
             let newMuted = !self.masterMuted
-            _ = TT_SetSoundOutputMute(instance, newMuted ? 1 : 0)
+            self.outputRenderEngine.setMuted(newMuted)
             self.masterMuted = newMuted
             SoundPlayer.shared.play(newMuted ? .muteAll : .unmuteAll)
             DispatchQueue.main.async {
@@ -1148,12 +1369,21 @@ extension TeamTalkConnectionController {
         )
         let outputPreference = preferences.preferredOutputDevice
         let outputPersistentID = outputPreference.persistentID
-        let catalog = availableAudioDevicesLocked(forceRefresh: true)
+        // Read ONLY the already-cached SDK device catalog — never trigger a load
+        // here. On a large rig the SDK's TT_GetSoundDevices probe takes ~12 s; doing
+        // it on the connect path (this snapshot runs during connect) is what made
+        // connecting slow. If the catalog hasn't been loaded yet, assume the chosen
+        // output is present — a later snapshot corrects it once the cache populates
+        // (the device picker, or processAudioHardwareChangeLocked on a real change).
         let outputInCatalog: Bool
-        if let outputPersistentID, outputPersistentID.isEmpty == false {
-            outputInCatalog = catalog.outputDevices.contains { $0.persistentID == outputPersistentID }
+        if let catalog = cachedAudioDeviceCatalog {
+            if let outputPersistentID, outputPersistentID.isEmpty == false {
+                outputInCatalog = catalog.outputDevices.contains { $0.persistentID == outputPersistentID }
+            } else {
+                outputInCatalog = catalog.outputDevices.isEmpty == false
+            }
         } else {
-            outputInCatalog = catalog.outputDevices.isEmpty == false
+            outputInCatalog = true
         }
 
         return AudioRoutingSnapshot(
