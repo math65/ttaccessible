@@ -346,6 +346,7 @@ final class A11yVirtualGridOverlayView: NSView {
     private(set) var virtualStrips: [VirtualStripView] = []
     private var provider: (@MainActor () -> [MixerStripDescriptor])?
     private var areaLabel: String = "Mixer"
+    private var areaRoleDescription: String = "area"
     private var lastStripIds: [Int32] = []
 
     override init(frame: NSRect) { super.init(frame: frame) }
@@ -355,11 +356,14 @@ final class A11yVirtualGridOverlayView: NSView {
 
     override func isAccessibilityElement() -> Bool { true }
     override func accessibilityRole() -> NSAccessibility.Role? { .group }
+    override func accessibilityRoleDescription() -> String? { areaRoleDescription }
     override func accessibilityLabel() -> String? { areaLabel }
     override func accessibilityChildren() -> [Any]? { virtualStrips.isEmpty ? nil : virtualStrips }
 
-    func configure(areaLabel: String, provider: @escaping @MainActor () -> [MixerStripDescriptor]) {
+    func configure(areaLabel: String, areaRoleDescription: String,
+                   provider: @escaping @MainActor () -> [MixerStripDescriptor]) {
         self.areaLabel = areaLabel
+        self.areaRoleDescription = areaRoleDescription
         self.provider = provider
         rebuildStrips()
     }

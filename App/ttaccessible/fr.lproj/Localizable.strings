@@ -639,6 +639,7 @@
 "mixer.muted.voice" = "voix coupée";
 "mixer.muted.media" = "média coupé";
 "mixer.area.label" = "Mixeur";
+"mixer.area.roleDescription" = "zone";
 "mixer.voice.label.short" = "Volume";
 "mixer.media.label.short" = "Volume du média";
 "mixer.pan.label.short" = "Panoramique";

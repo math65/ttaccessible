@@ -20,19 +20,38 @@ final class ChannelMixerCoordinator {
     private weak var controller: TeamTalkConnectionController?
     private var session: ConnectedServerSession?
 
+    // Caches so the slider value the user sees is the EXACT value they set — the
+    // percent→SDK-volume→percent round-trip is lossy and would otherwise make the
+    // slider snap/jump while adjusting. muteCache is optimistic mute intent awaiting
+    // session confirmation (so the toggle is responsive and announces once).
+    private var voicePctCache: [Int32: Double] = [:]
+    private var mediaPctCache: [Int32: Double] = [:]
+    private var panCache: [Int32: Double] = [:]
+    private var muteCache: [Int32: Bool] = [:]
+
     // Adjustment steps (VO swipe + keyboard arrows share these).
     private let volumeStep: Double = 2     // percent
     private let panStep: Double = 0.05     // -1...+1
 
     init(controller: TeamTalkConnectionController) {
         self.controller = controller
-        overlay.configure(areaLabel: L10n.text("mixer.area.label")) { [weak self] in
+        overlay.configure(areaLabel: L10n.text("mixer.area.label"),
+                          areaRoleDescription: L10n.text("mixer.area.roleDescription")) { [weak self] in
             self?.buildDescriptors() ?? []
         }
     }
 
     func update(session: ConnectedServerSession) {
         self.session = session
+        // Reconcile optimistic mute intent: once the session agrees, drop the override.
+        let ids = Set(usersInChannel().map { $0.id })
+        for (id, intent) in muteCache where !ids.contains(id) || isMutedFromSession(id) == intent {
+            muteCache[id] = nil
+        }
+        // Prune value caches for users no longer present.
+        voicePctCache = voicePctCache.filter { ids.contains($0.key) }
+        mediaPctCache = mediaPctCache.filter { ids.contains($0.key) }
+        panCache = panCache.filter { ids.contains($0.key) }
         overlay.rebuildStrips()
     }
 
@@ -81,20 +100,28 @@ final class ChannelMixerCoordinator {
     // MARK: Live value access
 
     private func voicePercent(_ id: Int32) -> Double {
+        if let cached = voicePctCache[id] { return cached }
         guard let controller, let user = user(for: id) else { return 0 }
         let v = controller.userVolumeStore.volume(forUsername: user.username) ?? user.volumeVoice
         return Double(TeamTalkConnectionController.percentFromUserVolume(v))
     }
 
     private func mediaPercent(_ id: Int32) -> Double {
+        if let cached = mediaPctCache[id] { return cached }
         guard let controller, let user = user(for: id) else { return 0 }
         let v = controller.userVolumeStore.mediaFileVolume(forUsername: user.username) ?? user.volumeMediaFile
         return Double(TeamTalkConnectionController.percentFromUserVolume(v))
     }
 
     private func panValue(_ id: Int32) -> Double {
+        if let cached = panCache[id] { return cached }
         guard let controller, let user = user(for: id) else { return 0 }
         return Double(controller.userVolumeStore.pan(forUsername: user.username) ?? 0)
+    }
+
+    private func isMutedFromSession(_ id: Int32) -> Bool {
+        guard let user = user(for: id) else { return false }
+        return user.isMuted || user.isMediaFileMuted
     }
 
     // MARK: Control configs
@@ -107,7 +134,7 @@ final class ChannelMixerCoordinator {
             setValue: { [weak self] v in self?.setVoice(id: id, percent: v) },
             incrementValue: { [volumeStep] v in min(100, v + volumeStep) },
             decrementValue: { [volumeStep] v in max(0, v - volumeStep) },
-            minValue: 0, maxValue: 100, resetValue: 100
+            minValue: 0, maxValue: 100, resetValue: 50
         )
     }
 
@@ -119,7 +146,7 @@ final class ChannelMixerCoordinator {
             setValue: { [weak self] v in self?.setMedia(id: id, percent: v) },
             incrementValue: { [volumeStep] v in min(100, v + volumeStep) },
             decrementValue: { [volumeStep] v in max(0, v - volumeStep) },
-            minValue: 0, maxValue: 100, resetValue: 100
+            minValue: 0, maxValue: 100, resetValue: 50
         )
     }
 
@@ -138,11 +165,23 @@ final class ChannelMixerCoordinator {
     private func muteConfig(id: Int32) -> VirtualToggleConfig {
         VirtualToggleConfig(
             getLabel: { L10n.text("mixer.mute.label.short") },
-            getState: { [weak self] in self?.user(for: id)?.isMuted },
-            setState: { [weak self] muted in self?.controller?.muteUser(userID: id, mute: muted) },
+            getState: { [weak self] in
+                guard let self else { return nil }
+                return self.muteCache[id] ?? self.isMutedFromSession(id)
+            },
+            setState: { [weak self] muted in self?.applyMute(id: id, muted: muted) },
             onAnnouncement: L10n.text("mixer.toggle.muted"),
             offAnnouncement: L10n.text("mixer.toggle.unmuted")
         )
+    }
+
+    /// Mute the WHOLE user — both voice and media — since a single "Mute" should
+    /// silence everyone, including media-only sources like the radio bot.
+    func applyMute(id: Int32, muted: Bool) {
+        guard let controller else { return }
+        muteCache[id] = muted
+        controller.muteUser(userID: id, mute: muted)
+        controller.muteUserMediaFile(userID: id, mute: muted)
     }
 
     // MARK: Apply (also used by the keyboard controller)
@@ -150,6 +189,7 @@ final class ChannelMixerCoordinator {
     func setVoice(id: Int32, percent: Double) {
         guard let controller, let user = user(for: id) else { return }
         let clamped = min(100, max(0, percent))
+        voicePctCache[id] = clamped
         controller.setUserVoiceVolume(userID: id, username: user.username,
                                       volume: TeamTalkConnectionController.userVolumeFromPercent(clamped))
     }
@@ -157,23 +197,23 @@ final class ChannelMixerCoordinator {
     func setMedia(id: Int32, percent: Double) {
         guard let controller, let user = user(for: id) else { return }
         let clamped = min(100, max(0, percent))
+        mediaPctCache[id] = clamped
         controller.setUserMediaFileVolume(userID: id, username: user.username,
                                           volume: TeamTalkConnectionController.userVolumeFromPercent(clamped))
     }
 
     func setPan(id: Int32, value: Double) {
         guard let controller, let user = user(for: id) else { return }
-        controller.setUserPan(userID: id, username: user.username, pan: Float(min(1, max(-1, value))))
+        let clamped = Double(min(1, max(-1, value)))
+        panCache[id] = clamped
+        controller.setUserPan(userID: id, username: user.username, pan: Float(clamped))
     }
 
     func currentVoicePercent(_ id: Int32) -> Double { voicePercent(id) }
     func currentMediaPercent(_ id: Int32) -> Double { mediaPercent(id) }
     func currentPan(_ id: Int32) -> Double { panValue(id) }
-    func isMuted(_ id: Int32) -> Bool { user(for: id)?.isMuted ?? false }
-    func toggleMute(_ id: Int32) {
-        guard let controller else { return }
-        controller.muteUser(userID: id, mute: !isMuted(id))
-    }
+    func isMuted(_ id: Int32) -> Bool { muteCache[id] ?? isMutedFromSession(id) }
+    func toggleMute(_ id: Int32) { applyMute(id: id, muted: !isMuted(id)) }
 
     static func panDescription(_ pan: Double) -> String {
         let pct = Int((abs(pan) * 100).rounded())

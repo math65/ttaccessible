@@ -639,6 +639,7 @@
 "mixer.muted.voice" = "voice muted";
 "mixer.muted.media" = "media muted";
 "mixer.area.label" = "Mixer";
+"mixer.area.roleDescription" = "area";
 "mixer.voice.label.short" = "Volume";
 "mixer.media.label.short" = "Media volume";
 "mixer.pan.label.short" = "Pan";

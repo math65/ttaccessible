@@ -13,22 +13,22 @@ import AppKit
 
 extension ConnectedServerViewController {
     func buildChannelMixerSection() -> NSView {
-        let heading = NSTextField(labelWithString: L10n.text("mixer.area.label"))
-        heading.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
-        heading.setAccessibilityElement(false)   // VoiceOver uses the overlay's group label
-
+        // VoiceOver gets the "Mixer" label + "area" role from the overlay itself, so no
+        // separate visible heading (it leaked a duplicate "Mixer" static text to VO).
+        // The visible strip rendering is a later pass; right now this hosts the invisible
+        // virtual-accessibility overlay the screen reader navigates.
         let overlay = channelMixerCoordinator.overlay
         overlay.translatesAutoresizingMaskIntoConstraints = false
 
-        let container = NSStackView(views: [heading, overlay])
-        container.orientation = .vertical
-        container.alignment = .leading
-        container.spacing = 4
+        let container = NSView()
         container.translatesAutoresizingMaskIntoConstraints = false
-
+        container.addSubview(overlay)
         NSLayoutConstraint.activate([
-            overlay.widthAnchor.constraint(equalTo: container.widthAnchor),
-            overlay.heightAnchor.constraint(greaterThanOrEqualToConstant: 160)
+            overlay.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            overlay.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            overlay.topAnchor.constraint(equalTo: container.topAnchor),
+            overlay.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            container.heightAnchor.constraint(greaterThanOrEqualToConstant: 120)
         ])
         return container
     }
