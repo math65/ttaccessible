@@ -46,6 +46,8 @@ final class ConnectedServerViewController: NSViewController {
     let sendButton = NSButton(title: "", target: nil, action: nil)
     let microphoneButton = NSButton(title: "", target: nil, action: nil)
     let collapsibleVideoPanel = CollapsibleVideoPanelView()
+    lazy var channelMixerCoordinator = ChannelMixerCoordinator(controller: connectionController)
+    lazy var channelMixerSectionView: NSView = buildChannelMixerSection()
     let embeddedMediaStreamingControls = MediaStreamingPlayerViewController()
     var lastVideoDisplayState = VideoDisplayState.empty
     lazy var inputGainControl = AudioGainControlView(
@@ -138,6 +140,7 @@ final class ConnectedServerViewController: NSViewController {
     func update(session: ConnectedServerSession) {
         applySession(session, preserveSelection: true)
         startRelativeTimestampTimerIfNeeded()
+        channelMixerCoordinator.update(session: session)
     }
 
     func showReconnecting() {
@@ -448,6 +451,7 @@ final class ConnectedServerViewController: NSViewController {
             channelsScrollView,
             collapsibleVideoPanel,
             audioControlsStack,
+            channelMixerSectionView,
             chatTitleLabel,
             chatScrollView,
             inputStack,
@@ -469,6 +473,7 @@ final class ConnectedServerViewController: NSViewController {
             channelsScrollView.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
             channelsScrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 200),
             collapsibleVideoPanel.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
+            channelMixerSectionView.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
             audioControlsStack.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
             outputGainControl.widthAnchor.constraint(equalTo: audioControlsStack.widthAnchor),
             inputGainControl.widthAnchor.constraint(equalTo: audioControlsStack.widthAnchor),
