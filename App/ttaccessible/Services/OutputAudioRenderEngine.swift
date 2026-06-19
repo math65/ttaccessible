@@ -227,7 +227,6 @@ final class OutputAudioRenderEngine {
     private var gainSmoothCoeff: Float = 0.01
 
     private var underflowCount = 0
-    private var pumpCount = 0
 
     init() {
         gainCell.initialize(to: 1)
@@ -472,14 +471,6 @@ final class OutputAudioRenderEngine {
 
     func pumpMix() {
         guard let ring, isRunning else { return }
-
-        pumpCount += 1
-        if pumpCount % 100 == 0 {
-            var avail = 0
-            for src in userSources.values { avail += src.availableFrames }
-            AudioLogger.log("pumpMix: sources=%d availFrames=%d ringFill=%d primed=%d underflows=%d",
-                            userSources.count, avail, ring.fillCount() / mixChannels, primedCell.pointee, underflowCount)
-        }
 
         let fillFrames = ring.fillCount() / mixChannels
         var produce = targetFillFrames - fillFrames

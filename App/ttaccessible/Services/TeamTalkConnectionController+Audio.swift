@@ -721,13 +721,8 @@ extension TeamTalkConnectionController {
             TT_EnableAudioBlockEvent(instance, userID, media, 0)
             outputRenderEngine.removeUser(userID)
             outputRenderEngine.removeUser(outputMediaSourceKey(userID))
-            loggedAudioBlockSources.remove(userID)
-            loggedAudioBlockSources.remove(outputMediaSourceKey(userID))
         }
         perUserAudioEnabled = desired
-        if toEnable.isEmpty == false || toDisable.isEmpty == false {
-            AudioLogger.log("perUser audio events: channel=%d active=%d (+%d -%d)", myChannel, desired.count, toEnable.count, toDisable.count)
-        }
     }
 
     func channelUsersLocked(instance: UnsafeMutableRawPointer, channelID: Int32) -> [User] {
@@ -767,9 +762,6 @@ extension TeamTalkConnectionController {
         let channels = Int(block.pointee.nChannels)
         let sampleRate = Int(block.pointee.nSampleRate)
         guard frames > 0, channels > 0, sampleRate > 0, let rawAudio = block.pointee.lpRawAudio else { return }
-        if loggedAudioBlockSources.insert(engineKey).inserted {
-            AudioLogger.log("perUser audioblock: key=%d frames=%d ch=%d rate=%d", engineKey, frames, channels, sampleRate)
-        }
         outputRenderEngine.enqueueUser(
             engineKey,
             pcm: rawAudio.assumingMemoryBound(to: Int16.self),
@@ -790,7 +782,6 @@ extension TeamTalkConnectionController {
             TT_EnableAudioBlockEvent(instance, TT_MUXED_USERID, voice, 0)
         }
         perUserAudioEnabled.removeAll()
-        loggedAudioBlockSources.removeAll()
         perUserAudioNeedsRefresh = false
     }
 

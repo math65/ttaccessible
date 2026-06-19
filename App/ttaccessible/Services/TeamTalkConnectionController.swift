@@ -214,8 +214,6 @@ final class TeamTalkConnectionController {
     /// Set when channel membership changes; the message loop reconciles per-user
     /// audio events on its next tick.
     var perUserAudioNeedsRefresh = false
-    /// Engine keys we've already logged a first audio block for (diagnostic only).
-    var loggedAudioBlockSources: Set<Int32> = []
     /// Coalesced session-publish state: the message poll is fast (for smooth
     /// per-user audio), but the expensive full-tree `publishSessionLocked` is
     /// throttled to ~old cadence so it doesn't rebuild every tick during the

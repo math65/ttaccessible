@@ -937,7 +937,6 @@ extension TeamTalkConnectionController {
         isPrivateMessagesWindowVisible = false
         outputRenderEngine.stop()
         perUserAudioEnabled.removeAll()
-        loggedAudioBlockSources.removeAll()
         perUserAudioNeedsRefresh = false
         pendingPublishInvalidation = []
         lastSnapshotPublishAt = 0
