@@ -143,6 +143,12 @@ if [[ $NOTARIZE -eq 1 ]]; then
         --link "https://github.com/math65/ttaccessible/releases/tag/v${VERSION}" \
         -o "$DOCS_DIR/appcast.xml"
 
+    # generate_appcast emits the unsuffixed (English) <sparkle:releaseNotesLink>
+    # WITHOUT an xml:lang. When a localized (fr) sibling is present Sparkle warns
+    # "one of them does not have xml:lang specified". Tag the untagged English
+    # links explicitly as xml:lang="en" to silence it.
+    sed -i '' 's#<sparkle:releaseNotesLink>#<sparkle:releaseNotesLink xml:lang="en">#g' "$DOCS_DIR/appcast.xml"
+
     rm -rf "$APPCAST_STAGING"
     echo "✓ docs/appcast.xml généré"
 fi
