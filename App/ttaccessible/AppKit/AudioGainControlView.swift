@@ -111,6 +111,12 @@ final class AudioGainControlView: NSView {
         return true
     }
 
+    override func accessibilityPerformPress() -> Bool {
+        // VoiceOver double-tap resets the gain to unity (0 dB = 50% on the slider),
+        // matching the channel mixer's reset-on-press.
+        resetToZeroAccessibilityAction()
+    }
+
     override func accessibilityChildren() -> [Any]? {
         []
     }

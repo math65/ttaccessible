@@ -644,6 +644,8 @@
 "mixer.media.label.short" = "Volume du média";
 "mixer.pan.label.short" = "Panoramique";
 "mixer.mute.label.short" = "Sourdine";
+"mixer.mute.action.mute" = "Couper le son";
+"mixer.mute.action.unmute" = "Rétablir le son";
 "mixer.toggle.muted" = "coupé";
 "mixer.toggle.unmuted" = "rétabli";
 "files.empty" = "Aucun fichier dans ce canal.";

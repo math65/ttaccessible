@@ -164,7 +164,12 @@ final class ChannelMixerCoordinator {
 
     private func muteConfig(id: Int32) -> VirtualToggleConfig {
         VirtualToggleConfig(
-            getLabel: { L10n.text("mixer.mute.label.short") },
+            getLabel: { [weak self] in
+                // Action-style label so VoiceOver conveys state: "Unmute" means it's
+                // currently muted, "Mute" means it's not.
+                (self?.isMuted(id) ?? false) ? L10n.text("mixer.mute.action.unmute")
+                                             : L10n.text("mixer.mute.action.mute")
+            },
             getState: { [weak self] in
                 guard let self else { return nil }
                 return self.muteCache[id] ?? self.isMutedFromSession(id)

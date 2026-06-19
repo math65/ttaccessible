@@ -1258,35 +1258,28 @@ extension TeamTalkConnectionController {
         return INT32(clamped)
     }
 
+    // Percent <-> SDK volume uses a GEOMETRIC (perceptually-uniform / dB-linear) curve:
+    // 50% = SOUND_VOLUME_DEFAULT (unity), 100% = SOUND_VOLUME_MAX, 0% = silence. Each
+    // percent is a constant ~0.6 dB step, so the slider sounds even across its range. A
+    // plain linear-gain mapping made the top half brutal — at SOUND_VOLUME_MAX=32000
+    // (32x), 50->51% jumped 1x->1.6x (~+4 dB) while 99->100% barely moved.
     nonisolated static func userVolumeFromPercent(_ percent: Double) -> INT32 {
-        let clampedPercent = min(max(percent.rounded(), 0), 100)
-        let minVolume = Double(SOUND_VOLUME_MIN.rawValue)
+        let pct = min(max(percent, 0), 100)
+        if pct <= 0 { return INT32(SOUND_VOLUME_MIN.rawValue) }
         let defaultVolume = Double(SOUND_VOLUME_DEFAULT.rawValue)
         let maxVolume = Double(SOUND_VOLUME_MAX.rawValue)
-        let raw: Double
-        if clampedPercent <= 50 {
-            raw = minVolume + (defaultVolume - minVolume) * (clampedPercent / 50)
-        } else {
-            raw = defaultVolume + (maxVolume - defaultVolume) * ((clampedPercent - 50) / 50)
-        }
-        let clamped = min(max(raw.rounded(), Double(SOUND_VOLUME_MIN.rawValue)), Double(SOUND_VOLUME_MAX.rawValue))
-        return INT32(clamped)
+        let ratio = pow(maxVolume / defaultVolume, (pct - 50) / 50)
+        let raw = (defaultVolume * ratio).rounded()
+        return INT32(min(max(raw, 1), maxVolume))
     }
 
     nonisolated static func percentFromUserVolume(_ volume: INT32) -> Int {
-        let v = min(max(Double(volume), Double(SOUND_VOLUME_MIN.rawValue)), Double(SOUND_VOLUME_MAX.rawValue))
-        let minVolume = Double(SOUND_VOLUME_MIN.rawValue)
+        let v = Double(volume)
+        if v <= 0 { return 0 }
         let defaultVolume = Double(SOUND_VOLUME_DEFAULT.rawValue)
         let maxVolume = Double(SOUND_VOLUME_MAX.rawValue)
-        let percent: Double
-        if v <= defaultVolume {
-            let span = max(defaultVolume - minVolume, 1)
-            percent = (v - minVolume) / span * 50
-        } else {
-            let span = max(maxVolume - defaultVolume, 1)
-            percent = 50 + ((v - defaultVolume) / span * 50)
-        }
-        return Int(min(max(percent.rounded(), 0), 100))
+        let pct = 50 + 50 * (log(v / defaultVolume) / log(maxVolume / defaultVolume))
+        return Int(min(max(pct.rounded(), 0), 100))
     }
 
     nonisolated static func formatGainDB(_ value: Double) -> String {
