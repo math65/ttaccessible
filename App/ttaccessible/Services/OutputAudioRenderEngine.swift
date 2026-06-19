@@ -227,6 +227,7 @@ final class OutputAudioRenderEngine {
     private var gainSmoothCoeff: Float = 0.01
 
     private var underflowCount = 0
+    private var lastLoggedUnderflow = 0   // diagnostic: only log on NEW underruns
 
     init() {
         gainCell.initialize(to: 1)
@@ -359,6 +360,7 @@ final class OutputAudioRenderEngine {
         self.currentGain = gainCell.pointee
         self.gainSmoothCoeff = Float(1.0 - exp(-1.0 / (0.008 * devRate)))
         self.underflowCount = 0
+        self.lastLoggedUnderflow = 0
         primedCell.pointee = 0
 
         status = AudioUnitInitialize(au)
@@ -471,6 +473,18 @@ final class OutputAudioRenderEngine {
 
     func pumpMix() {
         guard let ring, isRunning else { return }
+
+        // DIAGNOSTIC (audio dropouts): log each NEW underrun with the source availability
+        // at that instant. underrun + sourceAvail>0 => the client ring starved despite
+        // having audio (CPU/scheduling, our side). underrun + sourceAvail==0 => the feed
+        // gapped (source/VPS, the paced cushion wasn't enough). Remove before release.
+        if underflowCount != lastLoggedUnderflow {
+            var avail = 0
+            for src in userSources.values { avail += src.availableFrames }
+            AudioLogger.log("UNDERRUN underflows=%d sourceAvail=%d ringFill=%d primed=%d",
+                            underflowCount, avail, ring.fillCount() / mixChannels, primedCell.pointee)
+            lastLoggedUnderflow = underflowCount
+        }
 
         let fillFrames = ring.fillCount() / mixChannels
         var produce = targetFillFrames - fillFrames
