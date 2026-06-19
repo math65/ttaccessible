@@ -336,7 +336,7 @@
 "preferences.notifications.tts.volume" = "Volume";
 "preferences.notifications.tts.volume.value" = "%@%%";
 "preferences.notifications.tts.test" = "Test voice";
-"preferences.notifications.tts.testPhrase" = "This is a TTAccessible speech test.";
+"preferences.notifications.tts.testPhrase" = "This is a ttAccessible speech test.";
 "preferences.import.title" = "Import";
 "preferences.general.defaultNickname" = "Default nickname";
 "preferences.general.defaultNickname.help" = "Used when a saved server has no specific nickname.";

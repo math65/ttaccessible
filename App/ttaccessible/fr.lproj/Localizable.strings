@@ -336,7 +336,7 @@
 "preferences.notifications.tts.volume" = "Volume";
 "preferences.notifications.tts.volume.value" = "%@%%";
 "preferences.notifications.tts.test" = "Tester la voix";
-"preferences.notifications.tts.testPhrase" = "Ceci est un test de la synthèse vocale de TTAccessible.";
+"preferences.notifications.tts.testPhrase" = "Ceci est un test de la synthèse vocale de ttAccessible.";
 "preferences.import.title" = "Import";
 "preferences.general.defaultNickname" = "Pseudo par défaut";
 "preferences.general.defaultNickname.help" = "Utilisé quand un serveur enregistré n'a pas de pseudo spécifique.";

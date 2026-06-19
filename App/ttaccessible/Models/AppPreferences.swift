@@ -11,7 +11,7 @@ struct AppPreferences: Codable, Equatable {
     static func defaultNicknameFromAccount() -> String {
         let fullName = NSFullUserName().trimmingCharacters(in: .whitespacesAndNewlines)
         let firstWord = fullName.components(separatedBy: .whitespacesAndNewlines).first ?? ""
-        return firstWord.isEmpty ? "TTAccessible" : firstWord
+        return firstWord.isEmpty ? "ttAccessible" : firstWord
     }
 
     enum ChannelSortMode: String, Codable, CaseIterable {
