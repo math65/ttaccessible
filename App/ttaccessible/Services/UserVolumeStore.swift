@@ -80,4 +80,32 @@ final class UserVolumeStore {
         }
         defaults.set(dict, forKey: stereoKey)
     }
+
+    // MARK: - Continuous Pan (Channel Mixer)
+    //
+    // The mixer's pan slider drives OutputAudioRenderEngine.setUserSettings (our own
+    // per-user mix), independent of the SDK's discrete left/right StereoBalance above.
+    // Range -1 (full left) .. 0 (center) .. +1 (full right); center is the default and
+    // is stored as "no entry" so it never overrides a user who only touches the L/R checks.
+
+    private let panKey = "userPanByUsername"
+
+    func pan(forUsername username: String) -> Float? {
+        guard !username.isEmpty,
+              let dict = defaults.dictionary(forKey: panKey),
+              let value = dict[username] as? Double else { return nil }
+        return Float(value)
+    }
+
+    func setPan(_ pan: Float, forUsername username: String) {
+        guard !username.isEmpty else { return }
+        let clamped = max(-1, min(1, pan))
+        var dict = defaults.dictionary(forKey: panKey) ?? [:]
+        if abs(clamped) < 0.0001 {
+            dict.removeValue(forKey: username)
+        } else {
+            dict[username] = Double(clamped)
+        }
+        defaults.set(dict, forKey: panKey)
+    }
 }

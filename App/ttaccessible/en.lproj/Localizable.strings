@@ -622,6 +622,22 @@
 "files.window.title" = "Channel Files";
 "files.menu.open" = "Channel Files";
 "files.menu.upload" = "Upload a File…";
+
+/* Channel Mixer */
+"mixer.menu.open" = "Channel Mixer";
+"mixer.window.title" = "Channel Mixer";
+"mixer.empty" = "No other users in this channel.";
+"mixer.voice.label" = "Voice volume, %@";
+"mixer.media.label" = "Media volume, %@";
+"mixer.pan.label" = "Pan, %@";
+"mixer.mute.voice" = "Mute voice, %@";
+"mixer.mute.media" = "Mute media, %@";
+"mixer.value.percent" = "%d%%";
+"mixer.pan.center" = "Center";
+"mixer.pan.left" = "Left %d%%";
+"mixer.pan.right" = "Right %d%%";
+"mixer.muted.voice" = "voice muted";
+"mixer.muted.media" = "media muted";
 "files.empty" = "No files in this channel.";
 "files.column.name" = "Name";
 "files.column.size" = "Size";

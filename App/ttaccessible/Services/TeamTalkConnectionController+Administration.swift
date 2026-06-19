@@ -783,6 +783,23 @@ extension TeamTalkConnectionController {
         }
     }
 
+    /// Continuous pan for the Channel Mixer (-1 left .. 0 center .. +1 right). Drives
+    /// our own per-user mix (OutputAudioRenderEngine) for BOTH the user's voice and
+    /// media-file sources, independent of the SDK's discrete left/right stereo. Volume
+    /// stays at the SDK layer, so the engine gain is left at 1 and mute at false here.
+    /// Persisted per-username so it survives the session.
+    func setUserPan(userID: Int32, username: String, pan: Float) {
+        let clamped = max(-1, min(1, pan))
+        userVolumeStore.setPan(clamped, forUsername: username)
+        let mediaKey = outputMediaSourceKey(userID)
+        queue.async { [weak self] in
+            guard let self else { return }
+            let settings = OutputUserMixSettings(volume: 1, pan: clamped, muted: false)
+            self.outputRenderEngine.setUserSettings(settings, for: userID)
+            self.outputRenderEngine.setUserSettings(settings, for: mediaKey)
+        }
+    }
+
     func getUserStereo(userID: Int32, completion: @escaping @MainActor (Bool, Bool) -> Void) {
         queue.async { [weak self] in
             guard let self, let instance = self.instance else {

@@ -110,6 +110,12 @@ struct ttaccessibleApp: App {
                     .keyboardShortcut("f", modifiers: [.command, .shift])
                     .disabled(menuState.isInChannel == false)
 
+                    Button(L10n.text("mixer.menu.open")) {
+                        appDelegate.openChannelMixer()
+                    }
+                    .keyboardShortcut("x", modifiers: [.command, .shift])
+                    .disabled(menuState.isInChannel == false)
+
                     Button(L10n.text("files.menu.upload")) {
                         appDelegate.uploadFile()
                     }
