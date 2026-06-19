@@ -51,6 +51,12 @@ echo "Installing to Vendor/TeamTalk/..."
 cp "$TEMP_DIR/${SDK_DIR}/Library/TeamTalk_DLL/libTeamTalk5.dylib" "$VENDOR_DIR/"
 cp "$TEMP_DIR/${SDK_DIR}/Library/TeamTalk_DLL/TeamTalk.h" "$VENDOR_DIR/"
 
+# Skip PortAudio's startup device probe (the ~13 s "slow connect" on large rigs).
+# See scripts/patch-sdk-portaudio.py for the full rationale. The freshly downloaded
+# dylib is the unmodified BearWare build, so re-apply the patch on every download.
+echo "Patching out PortAudio's startup device probe..."
+python3 "$(dirname "$0")/patch-sdk-portaudio.py" "$VENDOR_DIR/libTeamTalk5.dylib"
+
 echo ""
-echo "Done. SDK ${SDK_VERSION} installed:"
+echo "Done. SDK ${SDK_VERSION} installed (PortAudio probe patched):"
 ls -lh "$VENDOR_DIR/libTeamTalk5.dylib" "$VENDOR_DIR/TeamTalk.h"
