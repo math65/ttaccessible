@@ -66,6 +66,7 @@ final class SavedServersWindowController: NSWindowController {
             menuState.$hasSelection.map { _ in () }.eraseToAnyPublisher(),
             menuState.$isMasterMuted.map { _ in () }.eraseToAnyPublisher(),
             menuState.$isRecordingActive.map { _ in () }.eraseToAnyPublisher(),
+            menuState.$isHearMyselfEnabled.map { _ in () }.eraseToAnyPublisher(),
             menuState.$isInChannel.map { _ in () }.eraseToAnyPublisher()
         )
         .receive(on: DispatchQueue.main)
@@ -124,7 +125,14 @@ final class SavedServersWindowController: NSWindowController {
                 )
                 item.isEnabled = menuState.mode == .connectedServer && (recording || menuState.isInChannel)
             case .ttHearMyself:
-                item.isEnabled = menuState.mode == .connectedServer && menuState.isInChannel
+                let enabled = menuState.mode == .connectedServer && menuState.isInChannel
+                item.isEnabled = enabled
+                // Reflect the on-state so VoiceOver announces the button as
+                // "selected" (the toggle-button idiom), like a pressed Bold button.
+                if let button = item.view as? NSButton {
+                    button.isEnabled = enabled
+                    button.state = menuState.isHearMyselfEnabled ? .on : .off
+                }
             case .ttPreferences:
                 item.isEnabled = true
             default:
@@ -266,7 +274,7 @@ extension SavedServersWindowController: NSToolbarDelegate {
                 action: #selector(toolbarRecordingAction(_:))
             )
         case .ttHearMyself:
-            return makeToolbarItem(
+            return makeToggleToolbarItem(
                 identifier: itemIdentifier,
                 labelKey: "toolbar.hearMyself",
                 tooltipKey: "toolbar.hearMyself.tooltip",
@@ -302,6 +310,34 @@ extension SavedServersWindowController: NSToolbarDelegate {
         item.isBordered = true
         item.target = self
         item.action = action
+        return item
+    }
+
+    /// A toolbar item backed by a push-on/push-off NSButton, so its on-state is
+    /// announced by VoiceOver as "selected" (used for Hear myself). State is set in
+    /// refreshToolbarItems via `item.view as? NSButton`.
+    private func makeToggleToolbarItem(
+        identifier: NSToolbarItem.Identifier,
+        labelKey: String,
+        tooltipKey: String,
+        symbolName: String,
+        action: Selector
+    ) -> NSToolbarItem {
+        let item = NSToolbarItem(itemIdentifier: identifier)
+        let label = L10n.text(labelKey)
+        item.label = label
+        item.paletteLabel = label
+        item.toolTip = L10n.text(tooltipKey)
+
+        let button = NSButton()
+        button.setButtonType(.pushOnPushOff)
+        button.bezelStyle = .texturedRounded
+        button.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: label)
+        button.imagePosition = .imageOnly
+        button.target = self
+        button.action = action
+        button.setAccessibilityLabel(label)
+        item.view = button
         return item
     }
 }

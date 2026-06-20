@@ -1250,6 +1250,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func toggleHearMyself() {
         guard menuState.mode == .connectedServer else { return }
         connectionController.toggleHearMyself { [weak self] enabled in
+            self?.menuState.setHearMyselfEnabled(enabled)
             let key = enabled ? "shortcuts.hearMyself.announced.on" : "shortcuts.hearMyself.announced.off"
             self?.announceWithVoiceOver(L10n.text(key))
         }
