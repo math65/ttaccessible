@@ -499,11 +499,10 @@ extension TeamTalkConnectionController {
         defer {
             // Reconcile per-user audio events when channel membership changed, then
             // top up the output mixer's ring for this tick.
-            if outputAudioReady {
-                if perUserAudioNeedsRefresh {
-                    refreshPerUserAudioEventsLocked(instance: instance)
-                }
-                outputRenderEngine.pumpMix()
+            if outputAudioReady, perUserAudioNeedsRefresh {
+                // Audio mixing now runs on the engine's own timer (engineQueue); the
+                // message loop only reconciles which per-user events are enabled.
+                refreshPerUserAudioEventsLocked(instance: instance)
             }
             // Poll active transfers for current progress (SDK only fires CLIENTEVENT_FILETRANSFER
             // at start/end, not during the transfer — we must poll TT_GetFileTransferInfo)

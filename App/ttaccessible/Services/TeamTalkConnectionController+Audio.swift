@@ -762,9 +762,13 @@ extension TeamTalkConnectionController {
         let channels = Int(block.pointee.nChannels)
         let sampleRate = Int(block.pointee.nSampleRate)
         guard frames > 0, channels > 0, sampleRate > 0, let rawAudio = block.pointee.lpRawAudio else { return }
+        // Copy the SDK PCM out before the block is released — the engine consumes it
+        // asynchronously on its own queue.
+        let samplePtr = rawAudio.assumingMemoryBound(to: Int16.self)
+        let pcm = Array(UnsafeBufferPointer(start: samplePtr, count: frames * channels))
         outputRenderEngine.enqueueUser(
             engineKey,
-            pcm: rawAudio.assumingMemoryBound(to: Int16.self),
+            pcm: pcm,
             frames: frames, channels: channels, sampleRate: Double(sampleRate)
         )
     }
@@ -900,9 +904,11 @@ extension TeamTalkConnectionController {
             // Local "hear myself" monitor: feed the same processed mic audio we're
             // transmitting straight into the output mixer — local, no SDK round-trip.
             if hearMyselfEnabled {
+                let pcm = Array(UnsafeBufferPointer(start: baseAddress,
+                                                    count: Int(chunk.sampleCount) * Int(chunk.channels)))
                 outputRenderEngine.enqueueUser(
                     localMonitorEngineKey,
-                    pcm: baseAddress,
+                    pcm: pcm,
                     frames: Int(chunk.sampleCount),
                     channels: Int(chunk.channels),
                     sampleRate: Double(chunk.sampleRate)

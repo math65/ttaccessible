@@ -18,10 +18,16 @@
 //  our AudioUnit — no SDK close, no deadlock.
 //
 //  Threading:
-//  - Producer / control / mix plane: the TeamTalk serial queue. `enqueueUser`,
-//    `pumpMix`, `start`, `stop`, `switchDevice`, the per-user settings, and the
-//    master gain/mute setters all run there (serially), so per-user state is
-//    single-threaded and needs no locking.
+//  - Producer / control / mix plane: this engine's OWN dedicated serial queue
+//    (`engineQueue`, user-interactive). `enqueueUser`, `pumpMix`, `start`, `stop`,
+//    `switchDevice`, and the per-user settings all run there (serially), so per-user
+//    state is single-threaded and needs no locking. `pumpMix` is driven by a fine
+//    timer ON this queue — NOT piggy-backed on the TeamTalk message loop — so the
+//    occasional heavy channel-tree rebuild (publishSessionLocked) can never stall it.
+//    That decoupling is what lets the output ring stay small (low latency) without
+//    underrunning. The producer (`enqueueUser`) is fed a COPIED PCM buffer from the
+//    message loop, then hops to engineQueue. Master gain/mute setters write atomic
+//    cells directly (read by the render callback) and need no queue.
 //  - Consumer: the CoreAudio render callback (real-time thread).
 //  The only cross-thread state is the mixed-output SPSC ring (ordered with
 //  acquire/release fences) and the master gain/mute/primed cells (benign
@@ -203,7 +209,9 @@ final class OutputAudioRenderEngine {
     /// message-loop tick, which can be delayed by message processing / the periodic
     /// session publish — those delays were causing the occasional dropout). Per-user
     /// jitter is handled separately by each source's prime buffer.
-    private let targetFillSeconds = 0.060
+    // Output ring target. Kept small for low latency now that the mixer pump runs on a
+    // fine dedicated timer (engineQueue) that the channel-tree rebuild can't stall.
+    private let targetFillSeconds = 0.020
 
     // MARK: Per-user mix sources (serial queue only)
     private var userSources: [Int32: PerUserMixSource] = [:]
@@ -229,6 +237,13 @@ final class OutputAudioRenderEngine {
     private var underflowCount = 0
     private var lastLoggedUnderflow = 0   // diagnostic: only log on NEW underruns
 
+    /// The engine's own serial plane (see Threading note). Decoupled from the TeamTalk
+    /// message loop so the heavy channel-tree rebuild can't stall the mixer pump.
+    private let engineQueue = DispatchQueue(label: "com.ttaccessible.mix-engine", qos: .userInteractive)
+    /// Fine timer on `engineQueue` that drives `pumpMix` (replaces the 20 ms message-loop tick).
+    private var mixTimer: DispatchSourceTimer?
+    private let pumpIntervalMS = 5
+
     init() {
         gainCell.initialize(to: 1)
         muteCell.initialize(to: 0)
@@ -236,7 +251,7 @@ final class OutputAudioRenderEngine {
     }
 
     deinit {
-        stop()
+        stopImpl()   // direct (no queue hop) — self is being deallocated
         gainCell.deallocate()
         muteCell.deallocate()
         primedCell.deallocate()
@@ -247,7 +262,11 @@ final class OutputAudioRenderEngine {
     // MARK: - Lifecycle
 
     func start(deviceID: AudioDeviceID) throws {
-        stop()
+        try engineQueue.sync { try self.startImpl(deviceID: deviceID) }
+    }
+
+    private func startImpl(deviceID: AudioDeviceID) throws {
+        stopImpl()
 
         var componentDesc = AudioComponentDescription(
             componentType: kAudioUnitType_Output,
@@ -351,8 +370,8 @@ final class OutputAudioRenderEngine {
         // naturally rises to prime+~40 ms right after each block. A ceiling near that
         // would drop on every block (choppy). ~120 ms only trips on a real backlog
         // (a burst / clock drift), dropping back to the jitter target.
-        self.perUserPrimeFrames = max(Int(0.025 * devRate), 64)
-        self.perUserMaxFrames = max(Int(0.120 * devRate), perUserPrimeFrames + 64)
+        self.perUserPrimeFrames = max(Int(0.015 * devRate), 64)
+        self.perUserMaxFrames = max(Int(0.090 * devRate), perUserPrimeFrames + 64)
         self.rtDeviceChannels = devChannels
         self.rtPull = pull
         self.rtPullCapacity = pullCapacity
@@ -371,6 +390,23 @@ final class OutputAudioRenderEngine {
         }
 
         AudioLogger.log("OutputAudioRenderEngine: started device rate=%.0f ch=%d targetFill=%d frames", devRate, devChannels, targetFrames)
+        startMixTimer()
+    }
+
+    /// Drive pumpMix from a fine timer on engineQueue (decoupled from the message loop).
+    private func startMixTimer() {
+        stopMixTimer()
+        let timer = DispatchSource.makeTimerSource(queue: engineQueue)
+        timer.schedule(deadline: .now() + .milliseconds(pumpIntervalMS),
+                       repeating: .milliseconds(pumpIntervalMS), leeway: .milliseconds(1))
+        timer.setEventHandler { [weak self] in self?.pumpMix() }
+        mixTimer = timer
+        timer.resume()
+    }
+
+    private func stopMixTimer() {
+        mixTimer?.cancel()
+        mixTimer = nil
     }
 
     private func teardownAfterFailedStart() {
@@ -383,6 +419,11 @@ final class OutputAudioRenderEngine {
     }
 
     func stop() {
+        engineQueue.sync { self.stopImpl() }
+    }
+
+    private func stopImpl() {
+        stopMixTimer()
         guard let au = auhal else { return }
         AudioOutputUnitStop(au)
         AudioUnitUninitialize(au)
@@ -405,8 +446,10 @@ final class OutputAudioRenderEngine {
     /// from the still-enabled TT events within a tick (settings persist in
     /// `defaultUserSettings`); master gain/mute persist in their cells.
     func switchDevice(_ deviceID: AudioDeviceID) throws {
-        guard isRunning else { return }
-        try start(deviceID: deviceID)
+        try engineQueue.sync {
+            guard self.isRunning else { return }
+            try self.startImpl(deviceID: deviceID)
+        }
     }
 
     // MARK: - Master gain / mute (serial queue)
@@ -419,59 +462,70 @@ final class OutputAudioRenderEngine {
         muteCell.pointee = muted ? 1 : 0
     }
 
-    // MARK: - Per-user controls (serial queue)
+    // MARK: - Per-user controls (engineQueue)
 
     func setUserSettings(_ settings: OutputUserMixSettings, for userID: Int32) {
-        defaultUserSettings[userID] = settings
-        userSources[userID]?.settings = settings
+        engineQueue.async { [weak self] in
+            guard let self else { return }
+            self.defaultUserSettings[userID] = settings
+            self.userSources[userID]?.settings = settings
+        }
     }
 
     func removeUser(_ userID: Int32) {
-        userSources.removeValue(forKey: userID)
+        engineQueue.async { [weak self] in
+            self?.userSources.removeValue(forKey: userID)
+        }
     }
 
     func removeAllUsers() {
-        userSources.removeAll()
+        engineQueue.async { [weak self] in
+            self?.userSources.removeAll()
+        }
     }
 
-    // MARK: - Producer (serial queue): feed one remote user's decoded PCM
+    // MARK: - Producer (engineQueue): feed one remote user's decoded PCM
+    //
+    // `pcm` is a COPY made by the caller (the SDK audio block is released right after),
+    // so we can hop to engineQueue without lifetime concerns. Interleaved, frames*channels.
 
-    func enqueueUser(_ userID: Int32, pcm: UnsafePointer<Int16>, frames: Int, channels: Int, sampleRate: Double) {
-        guard isRunning, frames > 0, channels > 0, deviceSampleRate > 0 else { return }
+    func enqueueUser(_ userID: Int32, pcm: [Int16], frames: Int, channels: Int, sampleRate: Double) {
+        engineQueue.async { [weak self] in
+            guard let self, self.isRunning, frames > 0, channels > 0, self.deviceSampleRate > 0 else { return }
 
-        let source: PerUserMixSource
-        if let existing = userSources[userID], existing.channels == channels {
-            source = existing
-        } else {
-            // Reserved negative keys (e.g. the local "hear myself" monitor) want
-            // minimal buffering for low latency; real users get the normal jitter target.
-            let lowLatency = userID < 0
-            let prime = lowLatency ? max(Int(0.010 * deviceSampleRate), 32) : perUserPrimeFrames
-            let maxF = lowLatency ? max(Int(0.080 * deviceSampleRate), prime + 32) : perUserMaxFrames
-            source = PerUserMixSource(
-                channels: channels,
-                primeFrames: prime,
-                maxFrames: maxF,
-                settings: defaultUserSettings[userID] ?? OutputUserMixSettings()
-            )
-            userSources[userID] = source
-        }
+            let source: PerUserMixSource
+            if let existing = self.userSources[userID], existing.channels == channels {
+                source = existing
+            } else {
+                // Reserved negative keys (e.g. the local "hear myself" monitor) want
+                // minimal buffering for low latency; real users get the normal jitter target.
+                let lowLatency = userID < 0
+                let prime = lowLatency ? max(Int(0.010 * self.deviceSampleRate), 32) : self.perUserPrimeFrames
+                let maxF = lowLatency ? max(Int(0.080 * self.deviceSampleRate), prime + 32) : self.perUserMaxFrames
+                source = PerUserMixSource(
+                    channels: channels,
+                    primeFrames: prime,
+                    maxFrames: maxF,
+                    settings: self.defaultUserSettings[userID] ?? OutputUserMixSettings()
+                )
+                self.userSources[userID] = source
+            }
 
-        if abs(sampleRate - deviceSampleRate) < 0.5 {
-            source.append(Array(UnsafeBufferPointer(start: pcm, count: frames * channels)))
-        } else {
-            let input = Array(UnsafeBufferPointer(start: pcm, count: frames * channels))
-            let result = AudioPCMResampler.resampleInterleaved(
-                input, frameCount: frames, channels: channels,
-                inputRate: sampleRate, outputRate: deviceSampleRate
-            )
-            source.append(result.samples)
+            if abs(sampleRate - self.deviceSampleRate) < 0.5 {
+                source.append(pcm)
+            } else {
+                let result = AudioPCMResampler.resampleInterleaved(
+                    pcm, frameCount: frames, channels: channels,
+                    inputRate: sampleRate, outputRate: self.deviceSampleRate
+                )
+                source.append(result.samples)
+            }
         }
     }
 
     // MARK: - Mixer (serial queue): top the ring up to target by summing users
 
-    func pumpMix() {
+    private func pumpMix() {
         guard let ring, isRunning else { return }
 
         // DIAGNOSTIC (audio dropouts): log each NEW underrun with the source availability
