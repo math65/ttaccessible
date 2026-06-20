@@ -27,11 +27,8 @@ extension TeamTalkConnectionController {
             }
 
             do {
-                AudioLogger.log("connect: begin")
                 self.resetLocked()
-                AudioLogger.log("connect: creating instance")
                 let instance = try self.createInstanceLocked()
-                AudioLogger.log("connect: instance created — connecting + logging in")
                 try self.withSuppressedLoginHistoryLocked {
                     try self.connectAndLoginLocked(
                         instance: instance,
@@ -40,16 +37,12 @@ extension TeamTalkConnectionController {
                         options: options
                     )
                 }
-                AudioLogger.log("connect: logged in — auto-joining channel")
                 self.instance = instance
                 self.connectedRecord = record
                 self.autoJoinAfterLoginLocked(instance: instance, options: options)
-                AudioLogger.log("connect: joined — applying post-login options")
                 try self.applyPostLoginOptionsLocked(instance: instance, options: options)
                 self.applyDefaultSubscriptionPreferencesLocked(instance: instance, preferences: self.preferencesStore.preferences)
-                AudioLogger.log("connect: readying output audio")
                 try self.ensureOutputAudioReadyLocked(instance: instance)
-                AudioLogger.log("connect: output ready — connect complete")
                 self.reconnectPassword = password
                 self.reconnectOptions = options
                 self.appendConnectedHistoryLocked(record: record)
@@ -96,7 +89,6 @@ extension TeamTalkConnectionController {
         // the SDK's ~8 s device enumeration, so this connect is ~1 s instead of cold.
         if let reusable = reusableInstance {
             reusableInstance = nil
-            AudioLogger.log("connect: reusing warm instance")
             return reusable
         }
         // Reuse a background-prewarmed instance if one is ready or in flight — this
@@ -104,7 +96,6 @@ extension TeamTalkConnectionController {
         // connect path. If a prewarm is in flight, wait for it (the probe queue
         // signals the semaphore directly, so blocking `queue` here can't deadlock).
         if prewarmInFlight {
-            AudioLogger.log("connect: waiting for prewarmed instance")
             prewarmReady.wait()
             prewarmInFlight = false
             prewarmBoxLock.lock()
@@ -112,7 +103,6 @@ extension TeamTalkConnectionController {
             prewarmBoxedInstance = nil
             prewarmBoxLock.unlock()
             if let prewarmed {
-                AudioLogger.log("connect: using prewarmed instance")
                 return prewarmed
             }
         }

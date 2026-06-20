@@ -8,6 +8,8 @@ DerivedData/
 *.mode2v3
 *.perspectivev3
 xcuserdata/
+# Auto-generated shared scheme (not tracked upstream)
+App/ttaccessible.xcodeproj/xcshareddata/xcschemes/
 
 # Build artifacts
 BuildArtifacts/
