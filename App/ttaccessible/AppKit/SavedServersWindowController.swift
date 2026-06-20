@@ -125,18 +125,14 @@ final class SavedServersWindowController: NSWindowController {
                 )
                 item.isEnabled = menuState.mode == .connectedServer && (recording || menuState.isInChannel)
             case .ttHearMyself:
-                let enabled = menuState.mode == .connectedServer && menuState.isInChannel
-                item.isEnabled = enabled
-                // Keep it an ordinary button (not a toggle button). VoiceOver doesn't
-                // announce the accessibility-selected flag for a plain button, so fold
-                // the on-state into the accessibility label: VoiceOver then says
-                // "Hear myself, selected" when on and just "Hear myself" when off.
-                if let button = item.view as? NSButton {
-                    button.isEnabled = enabled
-                    button.setAccessibilityLabel(L10n.text(
-                        menuState.isHearMyselfEnabled ? "toolbar.hearMyself.selected" : "toolbar.hearMyself"
-                    ))
-                }
+                // Mirror the Mute/Recording pattern: VoiceOver reads the toolbar
+                // item's label, so swap it to include "selected" when hearing-myself
+                // is on (plain label when off). Stays an ordinary button.
+                let on = menuState.isHearMyselfEnabled
+                item.label = L10n.text(on ? "toolbar.hearMyself.selected" : "toolbar.hearMyself")
+                item.paletteLabel = item.label
+                item.image = NSImage(systemSymbolName: "ear", accessibilityDescription: item.label)
+                item.isEnabled = menuState.mode == .connectedServer && menuState.isInChannel
             case .ttPreferences:
                 item.isEnabled = true
             default:
@@ -278,7 +274,7 @@ extension SavedServersWindowController: NSToolbarDelegate {
                 action: #selector(toolbarRecordingAction(_:))
             )
         case .ttHearMyself:
-            return makeSelectableToolbarItem(
+            return makeToolbarItem(
                 identifier: itemIdentifier,
                 labelKey: "toolbar.hearMyself",
                 tooltipKey: "toolbar.hearMyself.tooltip",
@@ -314,36 +310,6 @@ extension SavedServersWindowController: NSToolbarDelegate {
         item.isBordered = true
         item.target = self
         item.action = action
-        return item
-    }
-
-    /// A toolbar item backed by an ordinary (momentary) NSButton — looks and acts
-    /// like the other toolbar buttons, but the custom view lets us toggle its
-    /// accessibility-selected flag so VoiceOver announces "selected" when the
-    /// feature is on (used for Hear myself). Set in refreshToolbarItems via
-    /// `item.view as? NSButton`.
-    private func makeSelectableToolbarItem(
-        identifier: NSToolbarItem.Identifier,
-        labelKey: String,
-        tooltipKey: String,
-        symbolName: String,
-        action: Selector
-    ) -> NSToolbarItem {
-        let item = NSToolbarItem(itemIdentifier: identifier)
-        let label = L10n.text(labelKey)
-        item.label = label
-        item.paletteLabel = label
-        item.toolTip = L10n.text(tooltipKey)
-
-        let button = NSButton()
-        button.setButtonType(.momentaryPushIn)
-        button.bezelStyle = .texturedRounded
-        button.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: label)
-        button.imagePosition = .imageOnly
-        button.target = self
-        button.action = action
-        button.setAccessibilityLabel(label)
-        item.view = button
         return item
     }
 }
