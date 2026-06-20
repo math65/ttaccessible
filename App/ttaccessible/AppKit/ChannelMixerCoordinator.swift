@@ -28,6 +28,11 @@ final class ChannelMixerCoordinator {
     private var mediaPctCache: [Int32: Double] = [:]
     private var panCache: [Int32: Double] = [:]
     private var muteCache: [Int32: Bool] = [:]
+    // Solo: while any user is soloed, every NON-soloed user is muted in OUR engine
+    // (independent of their persistent SDK mute). Lets you isolate one or more people.
+    private var soloed: Set<Int32> = []
+    private var lastKnownIDs: [Int32] = []
+    private var soloWasActive = false
 
     // Adjustment steps (VO swipe + keyboard arrows share these).
     private let volumeStep: Double = 2     // percent
@@ -52,6 +57,16 @@ final class ChannelMixerCoordinator {
         voicePctCache = voicePctCache.filter { ids.contains($0.key) }
         mediaPctCache = mediaPctCache.filter { ids.contains($0.key) }
         panCache = panCache.filter { ids.contains($0.key) }
+        // Solo: drop leavers; re-apply engine mutes when the roster changed while solo is
+        // (or was just) active, so a joiner gets muted and a departed soloist clears.
+        soloed = soloed.intersection(ids)
+        let idList = Array(ids)
+        let nowActive = !soloed.isEmpty
+        if Set(lastKnownIDs) != ids && (nowActive || soloWasActive) {
+            reapplySolo()
+        }
+        soloWasActive = nowActive
+        lastKnownIDs = idList
         overlay.rebuildStrips()
     }
 
@@ -84,7 +99,8 @@ final class ChannelMixerCoordinator {
                 .slider(voiceConfig(id: id)),
                 .slider(mediaConfig(id: id)),
                 .slider(panConfig(id: id)),
-                .toggle(muteConfig(id: id))
+                .toggle(muteConfig(id: id)),
+                .toggle(soloConfig(id: id))
             ]
         )
     }
@@ -189,6 +205,19 @@ final class ChannelMixerCoordinator {
         controller.muteUserMediaFile(userID: id, mute: muted)
     }
 
+    private func soloConfig(id: Int32) -> VirtualToggleConfig {
+        VirtualToggleConfig(
+            getLabel: { [weak self] in
+                (self?.isSoloed(id) ?? false) ? L10n.text("mixer.solo.action.unsolo")
+                                              : L10n.text("mixer.solo.action.solo")
+            },
+            getState: { [weak self] in self?.isSoloed(id) },
+            setState: { [weak self] _ in self?.toggleSolo(id) },
+            onAnnouncement: L10n.text("mixer.solo.on"),
+            offAnnouncement: L10n.text("mixer.solo.off")
+        )
+    }
+
     // MARK: Apply (also used by the keyboard controller)
 
     func setVoice(id: Int32, percent: Double) {
@@ -211,7 +240,29 @@ final class ChannelMixerCoordinator {
         guard let controller, let user = user(for: id) else { return }
         let clamped = Double(min(1, max(-1, value)))
         panCache[id] = clamped
-        controller.setUserPan(userID: id, username: user.username, pan: Float(clamped))
+        controller.setUserPan(userID: id, username: user.username, pan: Float(clamped), engineMuted: soloMuted(id))
+    }
+
+    // MARK: Solo
+
+    /// A user is solo-muted when solo is active and they are NOT one of the soloed users.
+    private func soloMuted(_ id: Int32) -> Bool { !soloed.isEmpty && !soloed.contains(id) }
+
+    func isSoloed(_ id: Int32) -> Bool { soloed.contains(id) }
+
+    func toggleSolo(_ id: Int32) {
+        if soloed.contains(id) { soloed.remove(id) } else { soloed.insert(id) }
+        soloWasActive = !soloed.isEmpty
+        reapplySolo()
+    }
+
+    /// Push each user's combined engine settings (pan + solo-mute) — the solo set changed.
+    private func reapplySolo() {
+        guard let controller else { return }
+        for u in usersInChannel() {
+            controller.setUserPan(userID: u.id, username: u.username,
+                                  pan: Float(currentPan(u.id)), engineMuted: soloMuted(u.id))
+        }
     }
 
     func currentVoicePercent(_ id: Int32) -> Double { voicePercent(id) }
@@ -242,6 +293,11 @@ final class ChannelMixerCoordinator {
     func toggleMuteAndAnnounce(_ id: Int32) -> String {
         toggleMute(id)
         return isMuted(id) ? L10n.text("mixer.toggle.muted") : L10n.text("mixer.toggle.unmuted")
+    }
+    func soloState(_ id: Int32) -> String { isSoloed(id) ? L10n.text("mixer.solo.on") : L10n.text("mixer.solo.off") }
+    func toggleSoloAndAnnounce(_ id: Int32) -> String {
+        toggleSolo(id)
+        return isSoloed(id) ? L10n.text("mixer.solo.on") : L10n.text("mixer.solo.off")
     }
 
     static func panDescription(_ pan: Double) -> String {

@@ -646,6 +646,10 @@
 "mixer.mute.label.short" = "Sourdine";
 "mixer.mute.action.mute" = "Couper le son";
 "mixer.mute.action.unmute" = "Rétablir le son";
+"mixer.solo.action.solo" = "Solo";
+"mixer.solo.action.unsolo" = "Annuler le solo";
+"mixer.solo.on" = "solo activé";
+"mixer.solo.off" = "solo désactivé";
 "mixer.toggle.muted" = "coupé";
 "mixer.toggle.unmuted" = "rétabli";
 "files.empty" = "Aucun fichier dans ce canal.";

@@ -115,6 +115,11 @@ final class ChannelMixerKeyboardController {
                 onSingle: { [weak self] in self?.announceFrom { $0.muteState(uid) } },
                 onDouble: { [weak self] in self?.announceFrom { $0.toggleMuteAndAnnounce(uid) } })
             return true
+        case "s":
+            keyHandler.handle(key: "s",
+                onSingle: { [weak self] in self?.announceFrom { $0.soloState(uid) } },
+                onDouble: { [weak self] in self?.announceFrom { $0.toggleSoloAndAnnounce(uid) } })
+            return true
         default:
             return false
         }
@@ -126,8 +131,11 @@ final class ChannelMixerKeyboardController {
     }
 
     private func announce(_ text: String) {
+        // .priority must be the NSNumber rawValue, not the enum, or VoiceOver drops it.
+        // Keyboard edits aren't VO actions, so this explicit announcement is the only speech.
         NSAccessibility.post(element: NSApp as Any, notification: .announcementRequested,
-                             userInfo: [.announcement: text, .priority: NSAccessibilityPriorityLevel.high])
+                             userInfo: [.announcement: text,
+                                        .priority: NSAccessibilityPriorityLevel.high.rawValue])
     }
 
     private func arrowKey(from event: NSEvent) -> ArrowKey? {

@@ -646,6 +646,10 @@
 "mixer.mute.label.short" = "Mute";
 "mixer.mute.action.mute" = "Mute";
 "mixer.mute.action.unmute" = "Unmute";
+"mixer.solo.action.solo" = "Solo";
+"mixer.solo.action.unsolo" = "Unsolo";
+"mixer.solo.on" = "soloed";
+"mixer.solo.off" = "unsoloed";
 "mixer.toggle.muted" = "muted";
 "mixer.toggle.unmuted" = "unmuted";
 "files.empty" = "No files in this channel.";
