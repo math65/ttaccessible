@@ -4,7 +4,9 @@
 //
 
 import AppKit
+import AudioToolbox
 import AVFoundation
+import CoreAudio
 import Foundation
 
 enum NotificationSound: String, CaseIterable, Codable {
@@ -64,19 +66,34 @@ final class SoundPlayer {
         return base.appendingPathComponent("Sound Packs", isDirectory: true)
     }
 
-    private var sounds: [NotificationSound: NSSound] = [:]
-    // CoreAudio UID of the user's selected output device, so app notification
-    // sounds play through the same device as TeamTalk audio instead of the
-    // system default. nil = follow system default.
-    private var outputDeviceUID: String?
+    // App notification sounds play through an AVAudioEngine (rather than NSSound)
+    // so the sound-effects + master gain can AMPLIFY a sound past its authored
+    // level — NSSound.volume hard-caps at 1.0, so it can never make a sound louder
+    // than the file itself. Each sound gets a preloaded buffer + its own player
+    // node (so different sounds overlap and replaying one restarts it, matching the
+    // old behavior). Gain up to +12 dB is applied via node volume (≤ unity) or by
+    // scaling the sample buffer (boost, clamped to avoid runaway clipping). The
+    // engine output is pinned to the user's selected device and only runs while
+    // sounds are actually playing (stopped after a short idle), so it never holds
+    // the output device open the way a perpetually-running engine would.
+    private let engine = AVAudioEngine()
+    private var players: [NotificationSound: AVAudioPlayerNode] = [:]
+    private var buffers: [NotificationSound: AVAudioPCMBuffer] = [:]
+    private var graphReady = false
+    // Resolved CoreAudio device the engine output is pinned to. nil = follow the
+    // current system default output (re-resolved each time the engine starts).
+    private var outputDeviceID: AudioDeviceID?
+    private var appliedDeviceID: AudioDeviceID?
+    private var idleStop: DispatchWorkItem?
     private let queue = DispatchQueue(label: "com.math65.ttaccessible.soundplayer")
+    // Maximum amplification above a sound's authored level: +12 dB ≈ 3.98×.
+    private static let maxBoostLinear: Float = 3.981_071_7
     // Sound-effects level, in dB, split into the dedicated "sound effects" slider
     // (base) and the output (master) volume. Master scales the effects too. The
-    // combined gain is clamped to a 0...1 linear NSSound volume. All three are
-    // accessed only on `queue`.
+    // combined gain is clamped to [0, maxBoostLinear]. All accessed only on `queue`.
     private var effectsGainDB: Double = 0
     private var masterGainDB: Double = 0
-    private var effectsVolume: Float = 1
+    private var effectsGainLinear: Float = 1
     var isEnabled = true
     var disabledSounds: Set<NotificationSound> = []
     private(set) var currentPack: String = defaultPack
@@ -90,7 +107,7 @@ final class SoundPlayer {
         queue.async { [weak self] in
             guard let self else { return }
             self.effectsGainDB = db
-            self.recomputeEffectsVolume()
+            self.recomputeEffectsGain()
         }
     }
 
@@ -99,7 +116,7 @@ final class SoundPlayer {
         queue.async { [weak self] in
             guard let self else { return }
             self.masterGainDB = db
-            self.recomputeEffectsVolume()
+            self.recomputeEffectsGain()
         }
     }
 
@@ -109,19 +126,15 @@ final class SoundPlayer {
             guard let self else { return }
             self.effectsGainDB = effectsDB
             self.masterGainDB = masterDB
-            self.recomputeEffectsVolume()
+            self.recomputeEffectsGain()
         }
     }
 
-    /// Recompute the linear NSSound volume (0...1) from the combined gain and
-    /// apply it to the loaded sounds. Must run on `queue`.
-    private func recomputeEffectsVolume() {
-        let linear = pow(10.0, (effectsGainDB + masterGainDB) / 20.0)
-        effectsVolume = Float(min(1.0, max(0.0, linear)))
-        let vol = effectsVolume
-        for nsSound in sounds.values {
-            nsSound.volume = vol
-        }
+    /// Recompute the combined linear gain (clamped to allow up to +12 dB of boost).
+    /// Must run on `queue`.
+    private func recomputeEffectsGain() {
+        let linear = Float(pow(10.0, (effectsGainDB + masterGainDB) / 20.0))
+        effectsGainLinear = min(Self.maxBoostLinear, max(0, linear))
     }
 
     func loadPack(_ packName: String) {
@@ -135,15 +148,14 @@ final class SoundPlayer {
         queue.async { [weak self] in
             guard let self else { return }
             self.currentPack = resolvedPackName
-            let uid = self.outputDeviceUID
-            self.sounds.removeAll()
+            var newBuffers: [NotificationSound: AVAudioPCMBuffer] = [:]
             for (sound, url) in resolvedURLs {
-                if let nsSound = NSSound(contentsOf: url, byReference: false) {
-                    nsSound.playbackDeviceIdentifier = uid
-                    nsSound.volume = self.effectsVolume
-                    self.sounds[sound] = nsSound
+                if let buffer = Self.loadBuffer(url: url) {
+                    newBuffers[sound] = buffer
                 }
             }
+            self.buffers = newBuffers
+            self.rebuildGraphLocked()
         }
     }
 
@@ -153,18 +165,23 @@ final class SoundPlayer {
     func updateOutputDevice(persistentID: String?, displayName: String?) {
         queue.async { [weak self] in
             guard let self else { return }
-            let uid: String?
-            if let persistentID, persistentID.isEmpty == false {
-                uid = InputAudioDeviceResolver.resolveOutputDevice(
-                    persistentID: persistentID,
-                    displayName: displayName
-                )?.uid
-            } else {
-                uid = nil
+            var deviceID: AudioDeviceID?
+            if let persistentID, persistentID.isEmpty == false,
+               let info = InputAudioDeviceResolver.resolveOutputDevice(
+                   persistentID: persistentID,
+                   displayName: displayName
+               ) {
+                deviceID = info.deviceID
             }
-            self.outputDeviceUID = uid
-            for nsSound in self.sounds.values {
-                nsSound.playbackDeviceIdentifier = uid
+            self.outputDeviceID = deviceID
+            // Re-pin the device. The CurrentDevice property can only be changed
+            // while the engine is stopped, so if it's running, bounce it.
+            if self.engine.isRunning {
+                self.engine.stop()
+                self.appliedDeviceID = nil
+                self.startEngineLocked()
+            } else {
+                self.appliedDeviceID = nil
             }
         }
     }
@@ -172,18 +189,136 @@ final class SoundPlayer {
     func play(_ sound: NotificationSound) {
         guard isEnabled, !disabledSounds.contains(sound) else { return }
         queue.async { [weak self] in
-            guard let self, let nsSound = self.sounds[sound] else { return }
-            let uid = self.outputDeviceUID
-            let vol = self.effectsVolume
-            DispatchQueue.main.async {
-                if nsSound.isPlaying {
-                    nsSound.stop()
-                }
-                nsSound.playbackDeviceIdentifier = uid
-                nsSound.volume = vol
-                nsSound.play()
+            guard let self,
+                  let node = self.players[sound],
+                  let buffer = self.buffers[sound] else { return }
+            self.startEngineLocked()
+            guard self.engine.isRunning else { return }
+
+            let gain = self.effectsGainLinear
+            let bufferToPlay: AVAudioPCMBuffer
+            if gain > 1.0 {
+                // Boost beyond unity by scaling the samples (node volume caps at 1).
+                bufferToPlay = Self.scaledBuffer(buffer, gain: gain) ?? buffer
+                node.volume = 1.0
+            } else {
+                bufferToPlay = buffer
+                node.volume = gain
+            }
+
+            // Restart this sound if it's already playing (matches NSSound).
+            node.stop()
+            node.scheduleBuffer(bufferToPlay, at: nil, options: [.interrupts], completionHandler: nil)
+            node.play()
+            self.scheduleIdleStop()
+        }
+    }
+
+    // MARK: - Engine plumbing (all on `queue`)
+
+    private static func loadBuffer(url: URL) -> AVAudioPCMBuffer? {
+        guard let file = try? AVAudioFile(forReading: url) else { return nil }
+        let format = file.processingFormat
+        let frameCount = AVAudioFrameCount(file.length)
+        guard frameCount > 0,
+              let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount) else { return nil }
+        do {
+            try file.read(into: buffer)
+        } catch {
+            return nil
+        }
+        return buffer
+    }
+
+    /// Amplified copy of a buffer (float samples × gain, hard-clamped to ±1).
+    private static func scaledBuffer(_ source: AVAudioPCMBuffer, gain: Float) -> AVAudioPCMBuffer? {
+        guard let sourceData = source.floatChannelData,
+              let copy = AVAudioPCMBuffer(pcmFormat: source.format, frameCapacity: source.frameCapacity),
+              let destData = copy.floatChannelData else { return nil }
+        copy.frameLength = source.frameLength
+        let channels = Int(source.format.channelCount)
+        let frames = Int(source.frameLength)
+        for channel in 0..<channels {
+            let src = sourceData[channel]
+            let dst = destData[channel]
+            for index in 0..<frames {
+                let value = src[index] * gain
+                dst[index] = value > 1.0 ? 1.0 : (value < -1.0 ? -1.0 : value)
             }
         }
+        return copy
+    }
+
+    /// Rebuild the engine graph for the currently-loaded buffers.
+    private func rebuildGraphLocked() {
+        let wasRunning = engine.isRunning
+        engine.stop()
+        for node in players.values {
+            engine.disconnectNodeOutput(node)
+            engine.detach(node)
+        }
+        players.removeAll()
+        for (sound, buffer) in buffers {
+            let node = AVAudioPlayerNode()
+            engine.attach(node)
+            engine.connect(node, to: engine.mainMixerNode, format: buffer.format)
+            players[sound] = node
+        }
+        graphReady = true
+        appliedDeviceID = nil
+        if wasRunning {
+            startEngineLocked()
+        }
+    }
+
+    /// Pin the engine output to the resolved device and start it if needed.
+    private func startEngineLocked() {
+        guard graphReady, !players.isEmpty else { return }
+        applyDeviceLocked()
+        guard !engine.isRunning else { return }
+        engine.prepare()
+        do {
+            try engine.start()
+        } catch {
+            NSLog("SoundPlayer: AVAudioEngine start failed: \(error.localizedDescription)")
+        }
+    }
+
+    /// Set the output node's CurrentDevice. Engine must be stopped before calling.
+    private func applyDeviceLocked() {
+        let target = outputDeviceID
+            ?? InputAudioDeviceResolver.defaultOutputDeviceUID()
+                .flatMap { InputAudioDeviceResolver.audioDeviceID(forUID: $0) }
+        guard let target, target != appliedDeviceID,
+              let outputUnit = engine.outputNode.audioUnit else { return }
+        var deviceID = target
+        let status = AudioUnitSetProperty(
+            outputUnit,
+            kAudioOutputUnitProperty_CurrentDevice,
+            kAudioUnitScope_Global,
+            0,
+            &deviceID,
+            UInt32(MemoryLayout<AudioDeviceID>.size)
+        )
+        if status == noErr {
+            appliedDeviceID = target
+        }
+    }
+
+    /// Stop the engine ~5 s after the last sound so we don't hold the device open.
+    private func scheduleIdleStop() {
+        idleStop?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            if self.players.values.contains(where: { $0.isPlaying }) {
+                self.scheduleIdleStop()   // something is still playing; check again later
+            } else {
+                self.engine.stop()
+                self.appliedDeviceID = nil
+            }
+        }
+        idleStop = work
+        queue.asyncAfter(deadline: .now() + 5.0, execute: work)
     }
 
     @discardableResult
