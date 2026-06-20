@@ -198,7 +198,6 @@ final class TeamTalkConnectionController {
     var fileTransferCommandIDsByTransferID: [Int32: Int32] = [:]
     var securityScopedFileTransferURLs: [Int32: URL] = [:]
     var lastBuiltSessionSnapshot: ConnectedServerSession?
-    var cachedSoundDevices: [SoundDevice] = []
     var cachedAudioDeviceCatalog: AudioDeviceCatalog?
     lazy var advancedMicrophoneEngine = AdvancedMicrophoneAudioEngine { [weak self] chunk in
         self?.queue.async { [weak self] in

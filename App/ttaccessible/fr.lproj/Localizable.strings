@@ -132,7 +132,7 @@
 "connectedServer.audio.outputGain.label" = "Volume de sortie";
 "connectedServer.audio.outputGain.accessibilityLabel" = "Volume de sortie audio";
 "connectedServer.audio.soundEffectsGain.label" = "Volume des effets sonores";
-"connectedServer.audio.soundEffectsGain.accessibilityLabel" = "Volume des effets sonores de l'application";
+"connectedServer.audio.soundEffectsGain.accessibilityLabel" = "Volume des effets sonores";
 "connectedServer.audio.gain.resetAccessibilityAction" = "Réinitialiser à 50 %";
 "connectedServer.audio.voiceEnabled" = "Micro activé.";
 "connectedServer.audio.voiceDisabled" = "Micro coupé.";

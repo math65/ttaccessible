@@ -30,7 +30,9 @@ extension TeamTalkConnectionController {
                 Task { @MainActor in completion(cached) }
                 return
             }
-            self.probeSoundDevicesOffQueue(completion: completion)
+            let catalog = Self.buildCoreAudioCatalog()
+            self.cachedAudioDeviceCatalog = catalog
+            Task { @MainActor in completion(catalog) }
         }
     }
 
@@ -40,61 +42,40 @@ extension TeamTalkConnectionController {
                 Task { @MainActor in completion(.empty) }
                 return
             }
-            self.probeSoundDevicesOffQueue(completion: completion)
+            let catalog = Self.buildCoreAudioCatalog()
+            self.cachedAudioDeviceCatalog = catalog
+            Task { @MainActor in completion(catalog) }
         }
     }
 
-    /// Run the heavy TT_GetSoundDevices probe on `soundDeviceProbeQueue` (it can
-    /// take ~12 s on a large rig), then hop back to `queue` to build + cache the
-    /// catalog. This keeps the connection queue — and the realtime mixer pump that
-    /// rides on it — free during the probe. Must be called on `queue`.
-    private func probeSoundDevicesOffQueue(completion: @escaping @MainActor (AudioDeviceCatalog) -> Void) {
-        soundDeviceProbeQueue.async { [weak self] in
-            let devices = Self.probeSoundDevices()
-            self?.queue.async {
-                guard let self else {
-                    Task { @MainActor in completion(.empty) }
-                    return
-                }
-                let catalog = self.buildAndCacheCatalogLocked(from: devices)
-                Task { @MainActor in completion(catalog) }
-            }
+    /// Build the device-picker catalog directly from CoreAudio, identifying every
+    /// device by its stable `kAudioDevicePropertyDeviceUID`. This is the same
+    /// identity the audio engines actually bind by (see InputAudioDeviceResolver /
+    /// OutputAudioRenderEngine), so the picker, the persisted preference, and the
+    /// binding layer all share ONE stable key. The SDK is bypassed (both
+    /// directions open the TeamTalk virtual device), so its sound-device list —
+    /// whose `nDeviceID` reshuffles across launches/hot-plug and whose
+    /// `szDeviceID` is empty on macOS — is no longer consulted for device
+    /// identity. CoreAudio enumeration is a few ms, so no off-queue probe needed.
+    nonisolated static func buildCoreAudioCatalog() -> AudioDeviceCatalog {
+        func option(uid: String, name: String) -> AudioDeviceOption {
+            AudioDeviceOption(id: uid, persistentID: uid, displayName: name)
         }
-    }
-
-    /// TT_GetSoundDevices probe with no controller-state access — safe to run off
-    /// the connection queue.
-    nonisolated static func probeSoundDevices() -> [SoundDevice] {
-        var count: INT32 = 0
-        guard TT_GetSoundDevices(nil, &count) != 0, count > 0 else { return [] }
-        var devices = Array(repeating: SoundDevice(), count: Int(count))
-        guard TT_GetSoundDevices(&devices, &count) != 0 else { return [] }
-        return Array(devices.prefix(Int(count)))
-    }
-
-    /// Build the catalog from already-probed devices and store it in the cache.
-    /// Must be called on `queue`.
-    func buildAndCacheCatalogLocked(from devices: [SoundDevice]) -> AudioDeviceCatalog {
-        cachedSoundDevices = devices
-        let activeDevices = devices
-            .filter { ttString(from: $0.szDeviceName).hasPrefix("CADefaultDeviceAggregate") == false }
-        let inputDevices = activeDevices
-            .filter { $0.nMaxInputChannels > 0 && $0.nDeviceID != TT_SOUNDDEVICE_ID_TEAMTALK_VIRTUAL }
-            .map(makeAudioDeviceOption(from:))
+        let inputDevices = InputAudioDeviceResolver.availableInputDevices()
+            .filter { $0.name.hasPrefix("CADefaultDeviceAggregate") == false }
+            .map { option(uid: $0.uid, name: $0.name) }
             .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
-        let outputDevices = activeDevices
-            .filter { $0.nMaxOutputChannels > 0 && $0.nDeviceID != TT_SOUNDDEVICE_ID_TEAMTALK_VIRTUAL }
-            .map(makeAudioDeviceOption(from:))
+        let outputDevices = InputAudioDeviceResolver.availableOutputDevices()
+            .filter { $0.name.hasPrefix("CADefaultDeviceAggregate") == false }
+            .map { option(uid: $0.uid, name: $0.name) }
             .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
         let catalog = AudioDeviceCatalog(inputDevices: inputDevices, outputDevices: outputDevices)
-        cachedAudioDeviceCatalog = catalog
-        AudioLogger.log("buildAndCacheCatalog: %d devices", devices.count)
+        AudioLogger.log("buildCoreAudioCatalog: %d input, %d output", inputDevices.count, outputDevices.count)
         return catalog
     }
 
     func invalidateAudioDeviceCache() {
         queue.async { [weak self] in
-            self?.cachedSoundDevices = []
             self?.cachedAudioDeviceCatalog = nil
         }
     }
@@ -165,7 +146,6 @@ extension TeamTalkConnectionController {
             }
 
             let ok = TT_RestartSoundSystem()
-            self.cachedSoundDevices = []
             self.cachedAudioDeviceCatalog = nil
 
             AudioLogger.log("restartSoundSystem: TT_RestartSoundSystem returned %d", ok)
@@ -577,62 +557,6 @@ extension TeamTalkConnectionController {
         return status
     }
 
-    func loadSoundDevicesLocked(forceRefresh: Bool) -> [SoundDevice] {
-        if forceRefresh == false, cachedSoundDevices.isEmpty == false {
-            return cachedSoundDevices
-        }
-
-        var count: INT32 = 0
-        guard TT_GetSoundDevices(nil, &count) != 0, count > 0 else {
-            cachedSoundDevices = []
-            cachedAudioDeviceCatalog = .empty
-            return []
-        }
-
-        var devices = Array(repeating: SoundDevice(), count: Int(count))
-        guard TT_GetSoundDevices(&devices, &count) != 0 else {
-            cachedSoundDevices = []
-            cachedAudioDeviceCatalog = .empty
-            return []
-        }
-
-        cachedSoundDevices = Array(devices.prefix(Int(count)))
-        AudioLogger.log("loadSoundDevicesLocked: loaded %d devices", cachedSoundDevices.count)
-        return cachedSoundDevices
-    }
-
-    func availableAudioDevicesLocked(forceRefresh: Bool) -> AudioDeviceCatalog {
-        if forceRefresh == false, let cachedAudioDeviceCatalog {
-            return cachedAudioDeviceCatalog
-        }
-
-        let activeDevices = loadSoundDevicesLocked(forceRefresh: forceRefresh)
-            .filter { ttString(from: $0.szDeviceName).hasPrefix("CADefaultDeviceAggregate") == false }
-        let inputDevices = activeDevices
-            .filter { $0.nMaxInputChannels > 0 && $0.nDeviceID != TT_SOUNDDEVICE_ID_TEAMTALK_VIRTUAL }
-            .map(makeAudioDeviceOption(from:))
-            .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
-        let outputDevices = activeDevices
-            .filter { $0.nMaxOutputChannels > 0 && $0.nDeviceID != TT_SOUNDDEVICE_ID_TEAMTALK_VIRTUAL }
-            .map(makeAudioDeviceOption(from:))
-            .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
-
-        let catalog = AudioDeviceCatalog(inputDevices: inputDevices, outputDevices: outputDevices)
-        cachedAudioDeviceCatalog = catalog
-        return catalog
-    }
-
-    func makeAudioDeviceOption(from device: SoundDevice) -> AudioDeviceOption {
-        let persistentID = ttString(from: device.szDeviceID).isEmpty
-            ? "legacy:\(device.nDeviceID)"
-            : ttString(from: device.szDeviceID)
-        return AudioDeviceOption(
-            id: persistentID,
-            persistentID: persistentID,
-            displayName: ttString(from: device.szDeviceName)
-        )
-    }
-
     func ensureDirectOutputAudioReadyLocked(instance: UnsafeMutableRawPointer) throws {
         guard outputAudioReady == false else {
             return
@@ -1019,22 +943,6 @@ extension TeamTalkConnectionController {
         }
     }
 
-    func selectedOutputDeviceIDLocked() throws -> INT32 {
-        try selectedDeviceIDLocked(
-            preference: preferencesStore.preferences.preferredOutputDevice,
-            availableDevices: availableAudioDevicesLocked(forceRefresh: false).outputDevices,
-            direction: .output
-        )
-    }
-
-    func selectedInputDeviceIDLocked() throws -> INT32 {
-        try selectedDeviceIDLocked(
-            preference: preferencesStore.preferences.preferredInputDevice,
-            availableDevices: availableAudioDevicesLocked(forceRefresh: false).inputDevices,
-            direction: .input
-        )
-    }
-
     func applyOutputGainLocked(instance: UnsafeMutableRawPointer, gainDB: Double) {
         // Master output gain is applied by our render engine on the muxed stream.
         outputRenderEngine.setMasterGainDB(gainDB)
@@ -1255,43 +1163,6 @@ extension TeamTalkConnectionController {
         }
     }
 
-    func selectedDeviceIDLocked(
-        preference: AudioDevicePreference,
-        availableDevices: [AudioDeviceOption],
-        direction: AudioDirection
-    ) throws -> INT32 {
-        var defaultInputDeviceID: INT32 = 0
-        var defaultOutputDeviceID: INT32 = 0
-        guard TT_GetDefaultSoundDevices(&defaultInputDeviceID, &defaultOutputDeviceID) != 0 else {
-            throw TeamTalkConnectionError.internalError(L10n.text("connectedServer.audio.error.defaultDevicesUnavailable"))
-        }
-
-        guard let persistentID = preference.persistentID, persistentID.isEmpty == false else {
-            return direction == .input ? defaultInputDeviceID : defaultOutputDeviceID
-        }
-
-        guard availableDevices.contains(where: { $0.persistentID == persistentID }) else {
-            return direction == .input ? defaultInputDeviceID : defaultOutputDeviceID
-        }
-
-        for device in loadSoundDevicesLocked(forceRefresh: false) {
-            let candidatePersistentID = ttString(from: device.szDeviceID).isEmpty
-                ? "legacy:\(device.nDeviceID)"
-                : ttString(from: device.szDeviceID)
-            guard candidatePersistentID == persistentID else {
-                continue
-            }
-            if direction == .input, device.nMaxInputChannels > 0 {
-                return device.nDeviceID
-            }
-            if direction == .output, device.nMaxOutputChannels > 0 {
-                return device.nDeviceID
-            }
-        }
-
-        return direction == .input ? defaultInputDeviceID : defaultOutputDeviceID
-    }
-
     nonisolated static func teamTalkVolume(for gainDB: Double) -> INT32 {
         let defaultVolume = Double(SOUND_VOLUME_DEFAULT.rawValue)
         let minVolume = Double(SOUND_VOLUME_MIN.rawValue)
@@ -1347,7 +1218,6 @@ extension TeamTalkConnectionController {
         }
 
         let previous = lastAudioRoutingSnapshot
-        cachedSoundDevices = []
         cachedAudioDeviceCatalog = nil
         let current = makeAudioRoutingSnapshotLocked()
 

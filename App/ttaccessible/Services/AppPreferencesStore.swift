@@ -31,6 +31,12 @@ final class AppPreferencesStore: ObservableObject {
         } else {
             preferences = AppPreferences()
         }
+        // One-time upgrade of device prefs persisted with the old unstable SDK
+        // identifier ("legacy:<nDeviceID>") to the stable CoreAudio UID, so the
+        // picker, the binding layer, and the saved preference all agree and the
+        // selected device survives restarts / hot-plug. Runs before the
+        // SoundPlayer setup below so it picks up the upgraded output ID.
+        migrateAudioDevicePreferencesToStableUIDs()
         SoundPlayer.shared.isEnabled = preferences.soundNotificationsEnabled
         SoundPlayer.shared.setGains(effectsDB: preferences.soundEffectsGainDB, masterDB: preferences.outputGainDB)
         SoundPlayer.shared.loadPack(preferences.soundPack)
@@ -41,10 +47,65 @@ final class AppPreferencesStore: ObservableObject {
         )
     }
 
+    /// Upgrade any device preference still keyed by the legacy unstable SDK
+    /// identifier ("legacy:<nDeviceID>", or any value that is not a current
+    /// CoreAudio UID) to the stable `kAudioDevicePropertyDeviceUID`, matched by
+    /// the saved display name. A device that isn't currently present is left
+    /// untouched — the resolver's name fallback still binds it, and it upgrades
+    /// on a future launch when it's plugged in. Idempotent.
+    private func migrateAudioDevicePreferencesToStableUIDs() {
+        let inputs = InputAudioDeviceResolver.availableInputDevices().map { (uid: $0.uid, name: $0.name) }
+        let outputs = InputAudioDeviceResolver.availableOutputDevices().map { (uid: $0.uid, name: $0.name) }
+
+        func upgraded(_ preference: AudioDevicePreference, in devices: [(uid: String, name: String)]) -> AudioDevicePreference? {
+            // Only real device selections — skip system-default and the no-output sentinel.
+            guard preference.usesSystemDefault == false,
+                  preference.usesNoOutput == false,
+                  let persistentID = preference.persistentID else {
+                return nil
+            }
+            // Already a valid current UID → nothing to do (idempotent).
+            if devices.contains(where: { $0.uid == persistentID }) {
+                return nil
+            }
+            // Resolve by the saved display name; leave untouched if the device
+            // isn't present right now.
+            guard let displayName = preference.displayName,
+                  let match = devices.first(where: { $0.name.localizedCaseInsensitiveCompare(displayName) == .orderedSame }) else {
+                return nil
+            }
+            return AudioDevicePreference(persistentID: match.uid, displayName: match.name)
+        }
+
+        var updated = preferences
+        var changed = false
+
+        if let newInput = upgraded(preferences.preferredInputDevice, in: inputs),
+           let newID = newInput.persistentID {
+            let oldID = preferences.preferredInputDevice.persistentID
+            updated.preferredInputDevice = newInput
+            // Carry any per-device advanced-input profile over to the new UID key.
+            if let oldID, oldID != newID,
+               let profile = updated.advancedInputAudioProfiles.profilesByDeviceID.removeValue(forKey: oldID) {
+                updated.advancedInputAudioProfiles.profilesByDeviceID[newID] = profile
+            }
+            changed = true
+        }
+        if let newOutput = upgraded(preferences.preferredOutputDevice, in: outputs) {
+            updated.preferredOutputDevice = newOutput
+            changed = true
+        }
+
+        guard changed else { return }
+        preferences = updated
+        persist(updated)
+        AudioLogger.log("migrateAudioDevicePreferences: upgraded legacy device ID(s) to CoreAudio UID(s)")
+    }
+
     /// Last device catalog persisted from a successful scan. Used to populate the
-    /// Audio preferences pickers instantly on launch while a fresh (slow) SDK
-    /// scan runs in the background — the picker no longer shows a bare "System
-    /// Default" for ~10s on large device setups.
+    /// Audio preferences pickers instantly on launch while a fresh CoreAudio scan
+    /// runs in the background — the picker no longer shows a bare "System
+    /// Default" while the scan completes.
     func cachedAudioDeviceCatalog() -> AudioDeviceCatalog? {
         guard let data = userDefaults.data(forKey: Keys.audioDeviceCatalog) else { return nil }
         return try? decoder.decode(AudioDeviceCatalog.self, from: data)
