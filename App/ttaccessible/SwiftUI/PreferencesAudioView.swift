@@ -21,6 +21,7 @@ struct PreferencesAudioView: View {
             VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.text("preferences.audio.outputDevice"))
+                        .accessibilityHidden(true)
                     Picker("", selection: $selectedOutputID) {
                         Text(L10n.text("preferences.audio.systemDefault")).tag(defaultDeviceTag)
                         Text(L10n.text("preferences.audio.noOutput")).tag(noOutputDeviceTag)
@@ -37,6 +38,7 @@ struct PreferencesAudioView: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.text("preferences.audio.inputDevice"))
+                        .accessibilityHidden(true)
                     Picker("", selection: $selectedInputID) {
                         Text(L10n.text("preferences.audio.systemDefault")).tag(defaultDeviceTag)
                         ForEach(store.state.catalog.inputDevices) { device in
@@ -61,14 +63,15 @@ struct PreferencesAudioView: View {
                         .font(.headline)
                         .accessibilityAddTraits(.isHeader)
 
-                    Toggle(
-                        L10n.text("preferences.audio.advanced.echoCancellation"),
-                        isOn: Binding(
-                            get: { store.advancedPreferences.echoCancellationEnabled },
-                            set: { store.updateEchoCancellationEnabled($0) }
-                        )
-                    )
+                    Toggle(isOn: Binding(
+                        get: { store.advancedPreferences.echoCancellationEnabled },
+                        set: { store.updateEchoCancellationEnabled($0) }
+                    )) {
+                        Text(L10n.text("preferences.audio.advanced.echoCancellation"))
+                            .accessibilityHidden(true)
+                    }
                     .toggleStyle(.switch)
+                    .accessibilityLabel(L10n.text("preferences.audio.advanced.echoCancellation"))
 
                     Text(L10n.text("preferences.audio.advanced.echoCancellation.help"))
                         .font(.caption)
@@ -76,6 +79,7 @@ struct PreferencesAudioView: View {
 
                     VStack(alignment: .leading, spacing: 6) {
                         Text(L10n.text("preferences.audio.advanced.preset.label"))
+                            .accessibilityHidden(true)
                         Picker(
                             "",
                             selection: Binding(
@@ -160,6 +164,7 @@ struct PreferencesAudioView: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(L10n.text("preferences.audio.microphoneMode.label"))
+                    .accessibilityHidden(true)
                 Picker(
                     "",
                     selection: Binding(
@@ -180,6 +185,7 @@ struct PreferencesAudioView: View {
             if store.state.microphoneMode == .pushToTalk {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.text("preferences.audio.pushToTalk.key.label"))
+                        .accessibilityHidden(true)
                     KeyboardShortcuts.Recorder(for: .pushToTalk)
                         .accessibilityLabel(L10n.text("preferences.audio.pushToTalk.key.label"))
                 }
@@ -191,14 +197,15 @@ struct PreferencesAudioView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                Toggle(
-                    L10n.text("preferences.audio.pushToTalk.beep.label"),
-                    isOn: Binding(
-                        get: { store.state.pushToTalkBeepEnabled },
-                        set: { store.updatePushToTalkBeepEnabled($0) }
-                    )
-                )
+                Toggle(isOn: Binding(
+                    get: { store.state.pushToTalkBeepEnabled },
+                    set: { store.updatePushToTalkBeepEnabled($0) }
+                )) {
+                    Text(L10n.text("preferences.audio.pushToTalk.beep.label"))
+                        .accessibilityHidden(true)
+                }
                 .toggleStyle(.switch)
+                .accessibilityLabel(L10n.text("preferences.audio.pushToTalk.beep.label"))
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in

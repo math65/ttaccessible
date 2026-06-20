@@ -20,6 +20,7 @@ struct PreferencesGeneralView: View {
             VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.text("preferences.general.defaultNickname"))
+                        .accessibilityHidden(true)
                     TextField("", text: $nicknameDraft)
                         .textFieldStyle(.roundedBorder)
                         .accessibilityLabel(L10n.text("preferences.general.defaultNickname"))
@@ -35,6 +36,7 @@ struct PreferencesGeneralView: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.text("preferences.connection.defaultStatusMessage"))
+                        .accessibilityHidden(true)
                     TextField("", text: $statusMessageDraft)
                         .textFieldStyle(.roundedBorder)
                         .accessibilityLabel(L10n.text("preferences.connection.defaultStatusMessage"))
@@ -46,6 +48,7 @@ struct PreferencesGeneralView: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.text("preferences.connection.defaultGender"))
+                        .accessibilityHidden(true)
                     Picker(
                         L10n.text("preferences.connection.defaultGender"),
                         selection: Binding(
@@ -65,6 +68,7 @@ struct PreferencesGeneralView: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.text("preferences.connection.autoAwayTimeout"))
+                        .accessibilityHidden(true)
                     HStack(alignment: .center, spacing: 8) {
                         TextField(
                             "",
@@ -89,6 +93,7 @@ struct PreferencesGeneralView: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.text("preferences.connection.autoAwayStatusMessage"))
+                        .accessibilityHidden(true)
                     TextField("", text: $autoAwayStatusMessageDraft)
                         .textFieldStyle(.roundedBorder)
                         .accessibilityLabel(L10n.text("preferences.connection.autoAwayStatusMessage"))
@@ -100,23 +105,25 @@ struct PreferencesGeneralView: View {
 
                 Divider()
 
-                Toggle(
-                    L10n.text("preferences.general.relativeTimestamps"),
-                    isOn: Binding(
-                        get: { rootStore.preferences.useRelativeTimestamps },
-                        set: { rootStore.updateUseRelativeTimestamps($0) }
-                    )
-                )
+                Toggle(isOn: Binding(
+                    get: { rootStore.preferences.useRelativeTimestamps },
+                    set: { rootStore.updateUseRelativeTimestamps($0) }
+                )) {
+                    Text(L10n.text("preferences.general.relativeTimestamps"))
+                        .accessibilityHidden(true)
+                }
                 .toggleStyle(.switch)
+                .accessibilityLabel(L10n.text("preferences.general.relativeTimestamps"))
 
-                Toggle(
-                    L10n.text("preferences.general.autoDetectImport"),
-                    isOn: Binding(
-                        get: { rootStore.preferences.prefersAutomaticTeamTalkConfigDetection },
-                        set: { rootStore.updatePrefersAutomaticTeamTalkConfigDetection($0) }
-                    )
-                )
+                Toggle(isOn: Binding(
+                    get: { rootStore.preferences.prefersAutomaticTeamTalkConfigDetection },
+                    set: { rootStore.updatePrefersAutomaticTeamTalkConfigDetection($0) }
+                )) {
+                    Text(L10n.text("preferences.general.autoDetectImport"))
+                        .accessibilityHidden(true)
+                }
                 .toggleStyle(.switch)
+                .accessibilityLabel(L10n.text("preferences.general.autoDetectImport"))
 
                 Divider()
 
@@ -124,24 +131,26 @@ struct PreferencesGeneralView: View {
                     .font(.headline)
                     .accessibilityAddTraits(.isHeader)
 
-                Toggle(
-                    L10n.text("preferences.updates.autoCheck"),
-                    isOn: Binding(
-                        get: { rootStore.preferences.autoCheckForUpdates },
-                        set: { rootStore.updateAutoCheckForUpdates($0) }
-                    )
-                )
+                Toggle(isOn: Binding(
+                    get: { rootStore.preferences.autoCheckForUpdates },
+                    set: { rootStore.updateAutoCheckForUpdates($0) }
+                )) {
+                    Text(L10n.text("preferences.updates.autoCheck"))
+                        .accessibilityHidden(true)
+                }
                 .toggleStyle(.switch)
+                .accessibilityLabel(L10n.text("preferences.updates.autoCheck"))
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Toggle(
-                        L10n.text("preferences.updates.includeBeta"),
-                        isOn: Binding(
-                            get: { rootStore.preferences.includeBetaUpdates },
-                            set: { rootStore.updateIncludeBetaUpdates($0) }
-                        )
-                    )
+                    Toggle(isOn: Binding(
+                        get: { rootStore.preferences.includeBetaUpdates },
+                        set: { rootStore.updateIncludeBetaUpdates($0) }
+                    )) {
+                        Text(L10n.text("preferences.updates.includeBeta"))
+                            .accessibilityHidden(true)
+                    }
                     .toggleStyle(.switch)
+                    .accessibilityLabel(L10n.text("preferences.updates.includeBeta"))
 
                     Text(L10n.text("preferences.updates.includeBeta.help"))
                         .font(.caption)
