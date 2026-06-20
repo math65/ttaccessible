@@ -127,12 +127,15 @@ final class SavedServersWindowController: NSWindowController {
             case .ttHearMyself:
                 let enabled = menuState.mode == .connectedServer && menuState.isInChannel
                 item.isEnabled = enabled
-                // Keep it an ordinary button, but mark it accessibility-selected when
-                // hearing-myself is on so VoiceOver appends "selected" (and just the
-                // plain label when off).
+                // Keep it an ordinary button (not a toggle button). VoiceOver doesn't
+                // announce the accessibility-selected flag for a plain button, so fold
+                // the on-state into the accessibility label: VoiceOver then says
+                // "Hear myself, selected" when on and just "Hear myself" when off.
                 if let button = item.view as? NSButton {
                     button.isEnabled = enabled
-                    button.setAccessibilitySelected(menuState.isHearMyselfEnabled)
+                    button.setAccessibilityLabel(L10n.text(
+                        menuState.isHearMyselfEnabled ? "toolbar.hearMyself.selected" : "toolbar.hearMyself"
+                    ))
                 }
             case .ttPreferences:
                 item.isEnabled = true

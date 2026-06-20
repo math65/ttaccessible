@@ -937,6 +937,7 @@
 "toolbar.recording.stop" = "Stop recording";
 "toolbar.recording.stop.tooltip" = "Stop recording (⌘R)";
 "toolbar.hearMyself" = "Hear myself";
+"toolbar.hearMyself.selected" = "Hear myself, selected";
 "toolbar.hearMyself.tooltip" = "Toggle hearing yourself (⌘⇧H)";
 "preferences.updates.section" = "Updates";
 "preferences.updates.autoCheck" = "Check for updates automatically";
