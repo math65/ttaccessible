@@ -944,6 +944,7 @@ extension TeamTalkConnectionController {
         voiceTransmissionEnabled = false
         masterMuted = false
         hearMyselfEnabled = false
+        previewMonitorEnabled = false
         teamTalkVirtualInputReady = false
         advancedMicrophoneTargetFormat = nil
         isAutoAwayActive = false

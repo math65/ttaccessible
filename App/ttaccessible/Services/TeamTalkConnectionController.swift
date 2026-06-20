@@ -139,6 +139,10 @@ final class TeamTalkConnectionController {
     var lastAudioWarningMessage: String?
     var masterMuted = false
     var hearMyselfEnabled = false
+    // When connected, the Audio-preferences mic preview can't open a second capture
+    // on the input device (the live mic engine owns it), so instead it monitors the
+    // live mic through the output engine — same path as hearMyself, gated separately.
+    var previewMonitorEnabled = false
     var recordingMuxedActive = false
     var recordingSeparateActive = false
     var recordingFolder: URL?

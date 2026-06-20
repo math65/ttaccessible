@@ -901,9 +901,11 @@ extension TeamTalkConnectionController {
                 AudioLogger.log("TT_InsertAudioBlock: queue full, audio block dropped")
             }
 
-            // Local "hear myself" monitor: feed the same processed mic audio we're
-            // transmitting straight into the output mixer — local, no SDK round-trip.
-            if hearMyselfEnabled {
+            // Local monitor: feed the same processed mic audio we're transmitting
+            // straight into the output mixer — local, no SDK round-trip. Drives both
+            // "hear myself" and the connected-mode Audio-preferences mic preview
+            // (one shared source key, so enabling both never doubles the audio).
+            if hearMyselfEnabled || previewMonitorEnabled {
                 let pcm = Array(UnsafeBufferPointer(start: baseAddress,
                                                     count: Int(chunk.sampleCount) * Int(chunk.channels)))
                 outputRenderEngine.enqueueUser(
@@ -1041,10 +1043,24 @@ extension TeamTalkConnectionController {
             // insertAdvancedMicrophoneAudioChunkLocked), so you hear yourself with
             // only local buffering latency instead of mic→server→back. When off,
             // drop the monitor source.
-            if newEnabled == false {
+            if newEnabled == false && self.previewMonitorEnabled == false {
                 self.outputRenderEngine.removeUser(self.localMonitorEngineKey)
             }
             DispatchQueue.main.async { completion(newEnabled) }
+        }
+    }
+
+    /// Connected-mode mic preview: monitor the live mic through the output engine
+    /// (the input device is already owned by the live capture, so a second capture
+    /// can't open). Shares the local-monitor source with hearMyself. Produces audio
+    /// only while the mic is actually capturing/transmitting.
+    func setPreviewMonitor(_ enabled: Bool) {
+        queue.async { [weak self] in
+            guard let self else { return }
+            self.previewMonitorEnabled = enabled
+            if enabled == false && self.hearMyselfEnabled == false {
+                self.outputRenderEngine.removeUser(self.localMonitorEngineKey)
+            }
         }
     }
 

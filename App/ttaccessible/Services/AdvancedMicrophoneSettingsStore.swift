@@ -104,6 +104,16 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
             return
         }
 
+        // While connected, the live mic engine owns the input device, so a second
+        // capture can't open. Instead monitor the live mic through the output engine
+        // (it produces sound while the mic is actually capturing/transmitting).
+        if connectionController.isConnected {
+            connectionController.setPreviewMonitor(true)
+            lastErrorMessage = nil
+            isPreviewRunning = true
+            return
+        }
+
         do {
             try startPreview()
             lastErrorMessage = nil
@@ -115,6 +125,7 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
     }
 
     func stopPreview() {
+        connectionController.setPreviewMonitor(false)
         previewController.stop()
         isPreviewRunning = false
     }
@@ -123,7 +134,10 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
         feedbackMessage = nil
         preferencesStore.updateAdvancedInputAudio(preferences, for: deviceInfo?.uid)
         refreshState(normalizeIfNeeded: true)
-        if isPreviewRunning {
+        // Only the local (disconnected) preview needs restarting to pick up new
+        // settings; the connected monitor follows the live engine, which
+        // applyAudioPreferences below reconfigures.
+        if isPreviewRunning && connectionController.isConnected == false {
             do {
                 try startPreview()
                 lastErrorMessage = nil
