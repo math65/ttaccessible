@@ -66,6 +66,12 @@ final class ConnectedServerViewController: NSViewController {
     ) { [weak self] value in
         self?.applyOutputGain(value)
     }
+    lazy var soundEffectsGainControl = AudioGainControlView(
+        title: L10n.text("connectedServer.audio.soundEffectsGain.label"),
+        accessibilityLabel: L10n.text("connectedServer.audio.soundEffectsGain.accessibilityLabel")
+    ) { [weak self] value in
+        self?.applySoundEffectsGain(value)
+    }
     lazy var contextMenu: NSMenu = makeContextMenu()
 
     var session: ConnectedServerSession
@@ -440,6 +446,7 @@ final class ConnectedServerViewController: NSViewController {
         let audioControlsStack = NSStackView(views: [
             outputGainControl,
             inputGainControl,
+            soundEffectsGainControl,
             embeddedMediaStreamingControls.view
         ])
         audioControlsStack.orientation = .vertical
@@ -481,6 +488,7 @@ final class ConnectedServerViewController: NSViewController {
             audioControlsStack.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
             outputGainControl.widthAnchor.constraint(equalTo: audioControlsStack.widthAnchor),
             inputGainControl.widthAnchor.constraint(equalTo: audioControlsStack.widthAnchor),
+            soundEffectsGainControl.widthAnchor.constraint(equalTo: audioControlsStack.widthAnchor),
             embeddedMediaStreamingControls.view.widthAnchor.constraint(equalTo: audioControlsStack.widthAnchor),
             chatScrollView.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
             chatScrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 160),
@@ -685,6 +693,7 @@ final class ConnectedServerViewController: NSViewController {
         microphoneButton.setAccessibilityValue(session.audioStatusText)
         inputGainControl.setValue(session.inputGainDB)
         outputGainControl.setValue(session.outputGainDB)
+        soundEffectsGainControl.setValue(preferencesStore.preferences.soundEffectsGainDB)
     }
 
     func applyIncrementalTableUpdate<T: Equatable>(
@@ -859,6 +868,13 @@ final class ConnectedServerViewController: NSViewController {
             mediaStreamingHasVideo: session.mediaStreamingHasVideo
         )
         updateAudioControls()
+    }
+
+    func applySoundEffectsGain(_ value: Double) {
+        // Sound-effects level is a global preference (not per-session), so it just
+        // persists to the store, which pushes the new level to the SoundPlayer.
+        let normalized = AppPreferences.clampGainDB(value)
+        preferencesStore.updateSoundEffectsGainDB(normalized)
     }
 
     func promptBroadcastMessage() {

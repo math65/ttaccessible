@@ -32,6 +32,7 @@ final class AppPreferencesStore: ObservableObject {
             preferences = AppPreferences()
         }
         SoundPlayer.shared.isEnabled = preferences.soundNotificationsEnabled
+        SoundPlayer.shared.setGains(effectsDB: preferences.soundEffectsGainDB, masterDB: preferences.outputGainDB)
         SoundPlayer.shared.loadPack(preferences.soundPack)
         SoundPlayer.shared.disabledSounds = preferences.disabledSoundEvents
         SoundPlayer.shared.updateOutputDevice(
@@ -177,7 +178,16 @@ final class AppPreferencesStore: ObservableObject {
     }
 
     func updateOutputGainDB(_ value: Double) {
-        mutate { $0.outputGainDB = AppPreferences.clampGainDB(value) }
+        let clamped = AppPreferences.clampGainDB(value)
+        mutate { $0.outputGainDB = clamped }
+        // Master volume also scales the app sound effects.
+        SoundPlayer.shared.setMasterGainDB(clamped)
+    }
+
+    func updateSoundEffectsGainDB(_ value: Double) {
+        let clamped = AppPreferences.clampGainDB(value)
+        mutate { $0.soundEffectsGainDB = clamped }
+        SoundPlayer.shared.setEffectsGainDB(clamped)
     }
 
     func updateSavedServersSortField(_ field: AppPreferences.SavedServersSortField) {

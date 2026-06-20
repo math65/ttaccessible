@@ -70,12 +70,58 @@ final class SoundPlayer {
     // system default. nil = follow system default.
     private var outputDeviceUID: String?
     private let queue = DispatchQueue(label: "com.math65.ttaccessible.soundplayer")
+    // Sound-effects level, in dB, split into the dedicated "sound effects" slider
+    // (base) and the output (master) volume. Master scales the effects too. The
+    // combined gain is clamped to a 0...1 linear NSSound volume. All three are
+    // accessed only on `queue`.
+    private var effectsGainDB: Double = 0
+    private var masterGainDB: Double = 0
+    private var effectsVolume: Float = 1
     var isEnabled = true
     var disabledSounds: Set<NotificationSound> = []
     private(set) var currentPack: String = defaultPack
 
     private init() {
         // Don't load sounds here — AppPreferencesStore will call loadPack() with the user's preferred pack.
+    }
+
+    /// Set the dedicated sound-effects base level (dB).
+    func setEffectsGainDB(_ db: Double) {
+        queue.async { [weak self] in
+            guard let self else { return }
+            self.effectsGainDB = db
+            self.recomputeEffectsVolume()
+        }
+    }
+
+    /// Set the output (master) level (dB), which also scales the sound effects.
+    func setMasterGainDB(_ db: Double) {
+        queue.async { [weak self] in
+            guard let self else { return }
+            self.masterGainDB = db
+            self.recomputeEffectsVolume()
+        }
+    }
+
+    /// Set both the sound-effects base level and the master level at once.
+    func setGains(effectsDB: Double, masterDB: Double) {
+        queue.async { [weak self] in
+            guard let self else { return }
+            self.effectsGainDB = effectsDB
+            self.masterGainDB = masterDB
+            self.recomputeEffectsVolume()
+        }
+    }
+
+    /// Recompute the linear NSSound volume (0...1) from the combined gain and
+    /// apply it to the loaded sounds. Must run on `queue`.
+    private func recomputeEffectsVolume() {
+        let linear = pow(10.0, (effectsGainDB + masterGainDB) / 20.0)
+        effectsVolume = Float(min(1.0, max(0.0, linear)))
+        let vol = effectsVolume
+        for nsSound in sounds.values {
+            nsSound.volume = vol
+        }
     }
 
     func loadPack(_ packName: String) {
@@ -94,6 +140,7 @@ final class SoundPlayer {
             for (sound, url) in resolvedURLs {
                 if let nsSound = NSSound(contentsOf: url, byReference: false) {
                     nsSound.playbackDeviceIdentifier = uid
+                    nsSound.volume = self.effectsVolume
                     self.sounds[sound] = nsSound
                 }
             }
@@ -127,11 +174,13 @@ final class SoundPlayer {
         queue.async { [weak self] in
             guard let self, let nsSound = self.sounds[sound] else { return }
             let uid = self.outputDeviceUID
+            let vol = self.effectsVolume
             DispatchQueue.main.async {
                 if nsSound.isPlaying {
                     nsSound.stop()
                 }
                 nsSound.playbackDeviceIdentifier = uid
+                nsSound.volume = vol
                 nsSound.play()
             }
         }

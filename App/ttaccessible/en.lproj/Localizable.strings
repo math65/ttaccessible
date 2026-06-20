@@ -129,6 +129,8 @@
 "connectedServer.audio.inputGain.accessibilityLabel" = "Microphone input volume";
 "connectedServer.audio.outputGain.label" = "Output volume";
 "connectedServer.audio.outputGain.accessibilityLabel" = "Audio output volume";
+"connectedServer.audio.soundEffectsGain.label" = "Sound effects volume";
+"connectedServer.audio.soundEffectsGain.accessibilityLabel" = "App sound effects volume";
 "connectedServer.audio.gain.resetAccessibilityAction" = "Reset to 50%";
 "connectedServer.audio.voiceEnabled" = "Microphone enabled.";
 "connectedServer.audio.voiceDisabled" = "Microphone muted.";
