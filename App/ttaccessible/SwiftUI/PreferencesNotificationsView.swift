@@ -214,7 +214,7 @@ struct PreferencesNotificationsView: View {
     }
 
     var body: some View {
-        PreferencesPaneScrollView {
+        PreferencesPaneScrollView(accessibilityLabel: L10n.text("preferences.announcements.title")) {
             VStack(alignment: .leading, spacing: 18) {
                 Toggle(
                     L10n.text("preferences.general.soundNotifications"),

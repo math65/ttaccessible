@@ -12,7 +12,7 @@ struct PreferencesSoundsView: View {
     @State private var availablePacks = SoundPlayer.availablePacks
 
     var body: some View {
-        PreferencesPaneScrollView {
+        PreferencesPaneScrollView(accessibilityLabel: L10n.text("preferences.sounds.title")) {
             VStack(alignment: .leading, spacing: 18) {
                 Toggle(
                     isOn: Binding(

@@ -9,7 +9,7 @@ struct PreferencesConnectionView: View {
     @ObservedObject var store: ConnectionPreferencesStore
 
     var body: some View {
-        PreferencesPaneScrollView {
+        PreferencesPaneScrollView(accessibilityLabel: L10n.text("preferences.connection.title")) {
             VStack(alignment: .leading, spacing: 18) {
                 Toggle(
                     L10n.text("preferences.general.autoJoinRootChannel"),

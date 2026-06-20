@@ -9,7 +9,7 @@ struct PreferencesRecordingView: View {
     @ObservedObject var store: RecordingPreferencesStore
 
     var body: some View {
-        PreferencesPaneScrollView {
+        PreferencesPaneScrollView(accessibilityLabel: L10n.text("preferences.recording.title")) {
             VStack(alignment: .leading, spacing: 14) {
                 Text(L10n.text("preferences.recording.folder.label"))
                     .font(.headline)
