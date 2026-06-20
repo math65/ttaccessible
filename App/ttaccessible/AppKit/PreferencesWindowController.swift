@@ -434,6 +434,14 @@ private final class PreferencesSidebarCellView: NSTableCellView {
         nil
     }
 
+    // The row exposes the pane title as its own accessibility label, so don't let
+    // VoiceOver descend into the icon + text field (which made it read e.g.
+    // "Recording, circle image, Recording"). Returning no children leaves just the
+    // single label.
+    override func accessibilityChildren() -> [Any]? {
+        []
+    }
+
     func configure(with pane: PreferencesWindowController.Pane) {
         paneImageView.image = NSImage(systemSymbolName: pane.iconName, accessibilityDescription: nil)
         paneTextField.stringValue = pane.title
