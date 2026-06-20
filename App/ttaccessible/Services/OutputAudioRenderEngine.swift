@@ -209,9 +209,12 @@ final class OutputAudioRenderEngine {
     /// message-loop tick, which can be delayed by message processing / the periodic
     /// session publish — those delays were causing the occasional dropout). Per-user
     /// jitter is handled separately by each source's prime buffer.
-    // Output ring target. Kept small for low latency now that the mixer pump runs on a
-    // fine dedicated timer (engineQueue) that the channel-tree rebuild can't stall.
-    private let targetFillSeconds = 0.020
+    // Output ring target. The decoupled timer pump removed publish-stall underruns, but
+    // under MULTIPLE users the per-block resampling (e.g. 48k users -> 44.1k device) piles
+    // up on the mix queue and delays the pump, so the ring must absorb that. 20ms was too
+    // tight (choppy with several people); 45ms is the reliable floor. (To reclaim the rest
+    // of the latency safely, move resampling off the mix queue — see the producer.)
+    private let targetFillSeconds = 0.045
 
     // MARK: Per-user mix sources (serial queue only)
     private var userSources: [Int32: PerUserMixSource] = [:]
@@ -370,8 +373,8 @@ final class OutputAudioRenderEngine {
         // naturally rises to prime+~40 ms right after each block. A ceiling near that
         // would drop on every block (choppy). ~120 ms only trips on a real backlog
         // (a burst / clock drift), dropping back to the jitter target.
-        self.perUserPrimeFrames = max(Int(0.015 * devRate), 64)
-        self.perUserMaxFrames = max(Int(0.090 * devRate), perUserPrimeFrames + 64)
+        self.perUserPrimeFrames = max(Int(0.025 * devRate), 64)
+        self.perUserMaxFrames = max(Int(0.120 * devRate), perUserPrimeFrames + 64)
         self.rtDeviceChannels = devChannels
         self.rtPull = pull
         self.rtPullCapacity = pullCapacity
