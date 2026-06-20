@@ -220,6 +220,30 @@ final class ChannelMixerCoordinator {
     func isMuted(_ id: Int32) -> Bool { muteCache[id] ?? isMutedFromSession(id) }
     func toggleMute(_ id: Int32) { applyMute(id: id, muted: !isMuted(id)) }
 
+    // MARK: Keyboard actions (return the VoiceOver announcement string)
+
+    func nudgeVoice(_ id: Int32, up: Bool) -> String {
+        let v = min(100, max(0, currentVoicePercent(id) + (up ? volumeStep : -volumeStep)))
+        setVoice(id: id, percent: v)
+        return L10n.format("mixer.value.percent", Int(v.rounded()))
+    }
+    func nudgePan(_ id: Int32, right: Bool) -> String {
+        let p = min(1, max(-1, currentPan(id) + (right ? panStep : -panStep)))
+        setPan(id: id, value: p)
+        return Self.panDescription(p)
+    }
+    func announceVoice(_ id: Int32) -> String { L10n.format("mixer.value.percent", Int(currentVoicePercent(id).rounded())) }
+    func announcePan(_ id: Int32) -> String { Self.panDescription(currentPan(id)) }
+    func resetVoice(_ id: Int32) -> String { setVoice(id: id, percent: 50); return L10n.format("mixer.value.percent", 50) }
+    func resetPan(_ id: Int32) -> String { setPan(id: id, value: 0); return Self.panDescription(0) }
+    func muteState(_ id: Int32) -> String {
+        isMuted(id) ? L10n.text("mixer.toggle.muted") : L10n.text("mixer.toggle.unmuted")
+    }
+    func toggleMuteAndAnnounce(_ id: Int32) -> String {
+        toggleMute(id)
+        return isMuted(id) ? L10n.text("mixer.toggle.muted") : L10n.text("mixer.toggle.unmuted")
+    }
+
     static func panDescription(_ pan: Double) -> String {
         let pct = Int((abs(pan) * 100).rounded())
         if pct == 0 { return L10n.text("mixer.pan.center") }

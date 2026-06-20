@@ -144,6 +144,12 @@ final class AudioGainControlView: NSView {
         setAndNotify(Self.gainDB(forPercent: updated))
     }
 
+    /// Nudge one step and return the spoken value (used by the mixer's Cmd+Up/Down).
+    func adjustAndDescribe(up: Bool) -> String {
+        adjust(by: up ? 1 : -1)
+        return Self.format(percent: slider.doubleValue)
+    }
+
     func setAndNotify(_ value: Double) {
         guard value != valueDB else {
             return

@@ -30,6 +30,10 @@ extension ConnectedServerViewController {
             overlay.bottomAnchor.constraint(equalTo: container.bottomAnchor),
             container.heightAnchor.constraint(greaterThanOrEqualToConstant: 120)
         ])
+
+        // Install the mixer keyboard model (Cmd+arrows master, arrows volume/pan, p/v/m).
+        // The monitor only acts while VoiceOver is focused inside the mixer.
+        channelMixerKeyboardController.start()
         return container
     }
 }

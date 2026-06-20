@@ -48,6 +48,10 @@ final class ConnectedServerViewController: NSViewController {
     let collapsibleVideoPanel = CollapsibleVideoPanelView()
     lazy var channelMixerCoordinator = ChannelMixerCoordinator(controller: connectionController)
     lazy var channelMixerSectionView: NSView = buildChannelMixerSection()
+    lazy var channelMixerKeyboardController = ChannelMixerKeyboardController(
+        coordinator: channelMixerCoordinator,
+        masterVolumeAdjust: { [weak self] up in self?.outputGainControl.adjustAndDescribe(up: up) }
+    )
     let embeddedMediaStreamingControls = MediaStreamingPlayerViewController()
     var lastVideoDisplayState = VideoDisplayState.empty
     lazy var inputGainControl = AudioGainControlView(
