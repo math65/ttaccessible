@@ -36,6 +36,11 @@ struct ConnectedServerUser: Equatable, Identifiable {
         if username.isEmpty {
             return nickname
         }
+        // When the nickname and username are effectively the same, show it once
+        // (otherwise VoiceOver reads e.g. "dom (dom)" — the same name twice).
+        if nickname.caseInsensitiveCompare(username) == .orderedSame {
+            return nickname
+        }
         return "\(nickname) (\(username))"
     }
 
