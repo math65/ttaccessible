@@ -13,9 +13,24 @@
 
 #if os(macOS)
 import AppKit
+import Combine
+
+/// One user's row for the VISIBLE (sighted) mixer rendering. VoiceOver uses the separate
+/// virtual-accessibility overlay, not this.
+struct MixerDisplayStrip: Identifiable, Equatable {
+    let id: Int32
+    let name: String
+    var voicePercent: Double
+    var mediaPercent: Double
+    var pan: Double
+    var muted: Bool
+    var soloed: Bool
+}
 
 @MainActor
-final class ChannelMixerCoordinator {
+final class ChannelMixerCoordinator: ObservableObject {
+    /// Published snapshot driving the on-screen SwiftUI strips (accessibilityHidden on mac).
+    @Published private(set) var displayStrips: [MixerDisplayStrip] = []
     let overlay = A11yVirtualGridOverlayView(frame: .zero)
     private weak var controller: TeamTalkConnectionController?
     private var session: ConnectedServerSession?
@@ -68,6 +83,7 @@ final class ChannelMixerCoordinator {
         soloWasActive = nowActive
         lastKnownIDs = idList
         overlay.rebuildStrips()
+        refreshDisplay()
     }
 
     /// The current user IDs the mixer shows (for the keyboard controller's routing).
@@ -203,6 +219,7 @@ final class ChannelMixerCoordinator {
         muteCache[id] = muted
         controller.muteUser(userID: id, mute: muted)
         controller.muteUserMediaFile(userID: id, mute: muted)
+        refreshDisplay()
     }
 
     private func soloConfig(id: Int32) -> VirtualToggleConfig {
@@ -226,6 +243,7 @@ final class ChannelMixerCoordinator {
         voicePctCache[id] = clamped
         controller.setUserVoiceVolume(userID: id, username: user.username,
                                       volume: TeamTalkConnectionController.userVolumeFromPercent(clamped))
+        refreshDisplay()
     }
 
     func setMedia(id: Int32, percent: Double) {
@@ -234,6 +252,7 @@ final class ChannelMixerCoordinator {
         mediaPctCache[id] = clamped
         controller.setUserMediaFileVolume(userID: id, username: user.username,
                                           volume: TeamTalkConnectionController.userVolumeFromPercent(clamped))
+        refreshDisplay()
     }
 
     func setPan(id: Int32, value: Double) {
@@ -241,6 +260,7 @@ final class ChannelMixerCoordinator {
         let clamped = Double(min(1, max(-1, value)))
         panCache[id] = clamped
         controller.setUserPan(userID: id, username: user.username, pan: Float(clamped), engineMuted: soloMuted(id))
+        refreshDisplay()
     }
 
     // MARK: Solo
@@ -254,6 +274,7 @@ final class ChannelMixerCoordinator {
         if soloed.contains(id) { soloed.remove(id) } else { soloed.insert(id) }
         soloWasActive = !soloed.isEmpty
         reapplySolo()
+        refreshDisplay()
     }
 
     /// Push each user's combined engine settings (pan + solo-mute) — the solo set changed.
@@ -262,6 +283,18 @@ final class ChannelMixerCoordinator {
         for u in usersInChannel() {
             controller.setUserPan(userID: u.id, username: u.username,
                                   pan: Float(currentPan(u.id)), engineMuted: soloMuted(u.id))
+        }
+    }
+
+    /// Rebuild the published snapshot for the on-screen strips from current state.
+    func refreshDisplay() {
+        displayStrips = usersInChannel().map { u in
+            MixerDisplayStrip(id: u.id, name: u.displayName,
+                              voicePercent: currentVoicePercent(u.id),
+                              mediaPercent: currentMediaPercent(u.id),
+                              pan: currentPan(u.id),
+                              muted: isMuted(u.id),
+                              soloed: isSoloed(u.id))
         }
     }
 

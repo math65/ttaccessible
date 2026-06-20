@@ -10,28 +10,35 @@
 
 #if os(macOS)
 import AppKit
+import SwiftUI
 
 extension ConnectedServerViewController {
     func buildChannelMixerSection() -> NSView {
-        // VoiceOver gets the "Mixer" label + "area" role from the overlay itself, so no
-        // separate visible heading (it leaked a duplicate "Mixer" static text to VO).
-        // The visible strip rendering is a later pass; right now this hosts the invisible
-        // virtual-accessibility overlay the screen reader navigates.
+        // The visible (sighted/mouse) SwiftUI strips, with the invisible virtual-
+        // accessibility overlay laid over them — VoiceOver navigates the overlay, mouse
+        // users see/use the SwiftUI. The overlay supplies the "Mixer / area" label+role.
+        let hosting = NSHostingView(rootView: ChannelMixerView(coordinator: channelMixerCoordinator))
+        hosting.translatesAutoresizingMaskIntoConstraints = false
+
         let overlay = channelMixerCoordinator.overlay
         overlay.translatesAutoresizingMaskIntoConstraints = false
 
         let container = NSView()
         container.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(hosting)
         container.addSubview(overlay)
         NSLayoutConstraint.activate([
+            hosting.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            hosting.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            hosting.topAnchor.constraint(equalTo: container.topAnchor),
+            hosting.bottomAnchor.constraint(equalTo: container.bottomAnchor),
             overlay.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             overlay.trailingAnchor.constraint(equalTo: container.trailingAnchor),
             overlay.topAnchor.constraint(equalTo: container.topAnchor),
-            overlay.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-            container.heightAnchor.constraint(greaterThanOrEqualToConstant: 120)
+            overlay.bottomAnchor.constraint(equalTo: container.bottomAnchor)
         ])
 
-        // Install the mixer keyboard model (Cmd+arrows master, arrows volume/pan, p/v/m).
+        // Install the mixer keyboard model (Cmd+arrows master, arrows volume/pan, p/v/m/s).
         // The monitor only acts while VoiceOver is focused inside the mixer.
         channelMixerKeyboardController.start()
         return container

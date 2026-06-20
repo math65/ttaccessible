@@ -75,7 +75,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private weak var statsViewController: StatsViewController?
     private var preferencesWindowController: PreferencesWindowController?
     private var feedbackWindowController: FeedbackWindowController?
-    private var channelMixerWindowController: ChannelMixerWindowController?
     private let announcementService = AnnouncementService()
     private var userAccountsWindowController: NSWindowController?
     private var bannedUsersWindowController: NSWindowController?
@@ -1403,15 +1402,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         feedbackWindowController?.show()
     }
 
-    func openChannelMixer() {
-        if channelMixerWindowController == nil {
-            channelMixerWindowController = ChannelMixerWindowController(connectionController: connectionController)
-        }
-        if let session = connectionController.sessionSnapshot {
-            channelMixerWindowController?.update(session: session)
-        }
-        channelMixerWindowController?.show()
-    }
 
     // MARK: - Updates
 
@@ -2010,7 +2000,6 @@ extension AppDelegate: TeamTalkConnectionControllerDelegate {
         menuState.setNicknameLocked(session.isNicknameLocked)
         menuState.setStatusLocked(session.isStatusLocked)
         showConnectedServerWindow(session: session)
-        channelMixerWindowController?.update(session: session)
 
         // Auto-restart recording when joining a new channel
         let previousChannelID = lastObservedChannelID
