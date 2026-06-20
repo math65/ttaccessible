@@ -6,6 +6,7 @@
 //
 
 import Combine
+import CoreAudio
 import Foundation
 
 @MainActor
@@ -29,7 +30,13 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
         self.preferencesStore = preferencesStore
         self.connectionController = connectionController
 
+        // dropFirst() skips the synchronous emit Combine delivers at
+        // subscription time. That initial emit re-ran the same device
+        // enumeration as the explicit warm-up below — a redundant second
+        // synchronous CoreAudio pass during construction. We only want this
+        // sink to react to *subsequent* preference changes.
         preferencesStore.$preferences
+            .dropFirst()
             .sink { [weak self] _ in
                 self?.refreshState(normalizeIfNeeded: true)
             }
@@ -42,7 +49,15 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
             object: nil
         )
 
-        refreshState(normalizeIfNeeded: true)
+        // The app eagerly constructs this store at launch to warm the
+        // Preferences window, but refreshState() does synchronous CoreAudio
+        // device enumeration that blocked the launch run-loop tick. Defer it so
+        // construction returns immediately; the Audio pane re-runs refresh()
+        // via prepareIfNeeded() before it is ever shown, so nothing user-facing
+        // depends on this having completed synchronously.
+        DispatchQueue.main.async { [weak self] in
+            self?.refreshState(normalizeIfNeeded: true)
+        }
     }
 
     deinit {
@@ -89,6 +104,16 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
             return
         }
 
+        // While connected, the live mic engine owns the input device, so a second
+        // capture can't open. Instead monitor the live mic through the output engine
+        // (it produces sound while the mic is actually capturing/transmitting).
+        if connectionController.isConnected {
+            connectionController.setPreviewMonitor(true)
+            lastErrorMessage = nil
+            isPreviewRunning = true
+            return
+        }
+
         do {
             try startPreview()
             lastErrorMessage = nil
@@ -100,6 +125,7 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
     }
 
     func stopPreview() {
+        connectionController.setPreviewMonitor(false)
         previewController.stop()
         isPreviewRunning = false
     }
@@ -108,7 +134,10 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
         feedbackMessage = nil
         preferencesStore.updateAdvancedInputAudio(preferences, for: deviceInfo?.uid)
         refreshState(normalizeIfNeeded: true)
-        if isPreviewRunning {
+        // Only the local (disconnected) preview needs restarting to pick up new
+        // settings; the connected monitor follows the live engine, which
+        // applyAudioPreferences below reconfigures.
+        if isPreviewRunning && connectionController.isConnected == false {
             do {
                 try startPreview()
                 lastErrorMessage = nil
@@ -186,8 +215,23 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
             for: deviceInfo
         ).preferences
 
+        // Resolve the selected output device so preview monitoring plays through
+        // it (not the system default) and at its native sample rate. The output
+        // preference is a TeamTalk device id, which doesn't translate directly to
+        // a CoreAudio device, so resolveOutputDevice matches by UID then name.
+        let outputPreference = preferencesStore.preferences.preferredOutputDevice
+        let resolvedOutput = outputPreference.usesSystemDefault
+            ? nil
+            : InputAudioDeviceResolver.resolveOutputDevice(
+                persistentID: outputPreference.persistentID,
+                displayName: outputPreference.displayName
+            )
+        let outputDeviceID = resolvedOutput?.deviceID
+        let previewSampleRate = resolvedOutput?.nominalSampleRate
+            ?? (deviceInfo.nominalSampleRate > 0 ? deviceInfo.nominalSampleRate : 48_000)
+
         let targetFormat = AdvancedMicrophoneAudioTargetFormat(
-            sampleRate: deviceInfo.nominalSampleRate > 0 ? deviceInfo.nominalSampleRate : 48_000,
+            sampleRate: previewSampleRate,
             channels: previewChannelCount(for: normalized.preset, availableChannels: deviceInfo.inputChannels),
             txIntervalMSec: 40
         )
@@ -200,7 +244,7 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
             echoCancellationEnabled: false
         )
 
-        try previewController.start(configuration: configuration)
+        try previewController.start(configuration: configuration, outputDeviceID: outputDeviceID)
     }
 
     private func previewChannelCount(for preset: InputChannelPreset, availableChannels: Int) -> Int {

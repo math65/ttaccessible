@@ -11,6 +11,8 @@ xcuserdata/
 
 # Build artifacts
 BuildArtifacts/
+build_verify/
+*.slow-v5.22a-backup
 
 # macOS
 .DS_Store

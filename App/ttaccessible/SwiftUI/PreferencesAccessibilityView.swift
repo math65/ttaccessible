@@ -11,7 +11,7 @@ struct PreferencesAccessibilityView: View {
     @ObservedObject var store: AccessibilityPreferencesStore
 
     var body: some View {
-        PreferencesPaneScrollView {
+        PreferencesPaneScrollView(accessibilityLabel: L10n.text("preferences.accessibility.title")) {
             VStack(alignment: .leading, spacing: 14) {
                 Toggle(
                     L10n.text("preferences.accessibility.channelAnnouncements"),

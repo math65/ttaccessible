@@ -143,6 +143,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.preloadPreferencesWindow()
         }
         hasFinishedLaunching = true
+        // Create the first TeamTalk instance in the background now. TT_InitTeamTalkPoll
+        // enumerates all CoreAudio devices (~12 s on a large rig); prewarming it here
+        // keeps that cost off the connect path so connecting is fast.
+        connectionController.prewarmConnection()
         handleLaunchTTFilesIfNeeded()
         processPendingTTFileURLsIfPossible()
         syncSparkleAutoCheckPreference()
@@ -1355,6 +1359,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func toggleHearMyself() {
         guard menuState.mode == .connectedServer else { return }
         connectionController.toggleHearMyself { [weak self] enabled in
+            self?.menuState.setHearMyselfEnabled(enabled)
             let key = enabled ? "shortcuts.hearMyself.announced.on" : "shortcuts.hearMyself.announced.off"
             self?.announceWithVoiceOver(L10n.text(key))
         }
@@ -1513,6 +1518,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         feedbackWindowController?.show()
     }
+
 
     // MARK: - Updates
 

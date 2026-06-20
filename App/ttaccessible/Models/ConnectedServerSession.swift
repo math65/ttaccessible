@@ -101,6 +101,28 @@ enum ServerTreeNode: Equatable {
     case user(ConnectedServerUser)
 }
 
+// ServerTreeNode is the item type backing the channel NSOutlineView, so AppKit calls
+// -hash on it constantly during reloads (heaviest right at connect, when the whole
+// tree populates). Without Hashable, that hits a slow Obj-C reflection fallback —
+// flagged by the runtime as a "severe performance problem" and a CPU drain in exactly
+// the window the audio engine is starting. Hash by identity only (case + id), NOT the
+// channel's recursive children/users (a synthesized hash would deep-traverse the whole
+// subtree). This stays consistent with the synthesized Equatable: equal nodes share the
+// same id, so they hash equally; differing-but-same-id nodes may collide, which Hashable
+// permits. Equality (and thus outline item identity) is unchanged.
+extension ServerTreeNode: Hashable {
+    func hash(into hasher: inout Hasher) {
+        switch self {
+        case .channel(let channel):
+            hasher.combine(0)
+            hasher.combine(channel.id)
+        case .user(let user):
+            hasher.combine(1)
+            hasher.combine(user.id)
+        }
+    }
+}
+
 struct FileTransferProgress: Equatable {
     let transferID: Int32
     let fileName: String

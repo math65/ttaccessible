@@ -33,6 +33,7 @@ final class SavedServersMenuState: ObservableObject {
     @Published private(set) var isSelectedUserChannelOperator = false
     @Published private(set) var isMasterMuted = false
     @Published private(set) var isRecordingActive = false
+    @Published private(set) var isHearMyselfEnabled = false
     @Published private(set) var isMediaStreamingActive = false
     @Published private(set) var selectedUserSubscriptionStates: [UserSubscriptionOption: Bool] = [:]
 
@@ -66,6 +67,7 @@ final class SavedServersMenuState: ObservableObject {
         setSelectedUsersState(hasSelectedUsers: false, hasSingleSelectedUser: false, hasSingleSelectedOtherUser: false, isSelectedUserMuted: false, isSelectedUserMediaFileMuted: false, isSelectedUserChannelOperator: false, states: [:])
         setMasterMuted(false)
         setRecordingActive(false)
+        setHearMyselfEnabled(false)
         setMediaStreamingActive(false)
     }
 
@@ -91,6 +93,10 @@ final class SavedServersMenuState: ObservableObject {
 
     func setRecordingActive(_ value: Bool) {
         if isRecordingActive != value { isRecordingActive = value }
+    }
+
+    func setHearMyselfEnabled(_ value: Bool) {
+        if isHearMyselfEnabled != value { isHearMyselfEnabled = value }
     }
 
     func setMediaStreamingActive(_ value: Bool) {

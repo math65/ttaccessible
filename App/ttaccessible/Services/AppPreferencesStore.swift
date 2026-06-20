@@ -12,6 +12,7 @@ import Foundation
 final class AppPreferencesStore: ObservableObject {
     private enum Keys {
         static let preferences = "appPreferences.value"
+        static let audioDeviceCatalog = "audioDeviceCatalog.cache"
     }
 
     @Published private(set) var preferences: AppPreferences
@@ -31,8 +32,27 @@ final class AppPreferencesStore: ObservableObject {
             preferences = AppPreferences()
         }
         SoundPlayer.shared.isEnabled = preferences.soundNotificationsEnabled
+        SoundPlayer.shared.setGains(effectsDB: preferences.soundEffectsGainDB, masterDB: preferences.outputGainDB)
         SoundPlayer.shared.loadPack(preferences.soundPack)
         SoundPlayer.shared.disabledSounds = preferences.disabledSoundEvents
+        SoundPlayer.shared.updateOutputDevice(
+            persistentID: preferences.preferredOutputDevice.persistentID,
+            displayName: preferences.preferredOutputDevice.displayName
+        )
+    }
+
+    /// Last device catalog persisted from a successful scan. Used to populate the
+    /// Audio preferences pickers instantly on launch while a fresh (slow) SDK
+    /// scan runs in the background — the picker no longer shows a bare "System
+    /// Default" for ~10s on large device setups.
+    func cachedAudioDeviceCatalog() -> AudioDeviceCatalog? {
+        guard let data = userDefaults.data(forKey: Keys.audioDeviceCatalog) else { return nil }
+        return try? decoder.decode(AudioDeviceCatalog.self, from: data)
+    }
+
+    func storeCachedAudioDeviceCatalog(_ catalog: AudioDeviceCatalog) {
+        guard catalog != .empty, let data = try? encoder.encode(catalog) else { return }
+        userDefaults.set(data, forKey: Keys.audioDeviceCatalog)
     }
 
     func updateDefaultNickname(_ nickname: String) {
@@ -93,6 +113,11 @@ final class AppPreferencesStore: ObservableObject {
 
     func updatePreferredOutputDevice(_ preference: AudioDevicePreference) {
         mutate { $0.preferredOutputDevice = preference }
+        // Keep notification sounds on the same output device as TeamTalk audio.
+        SoundPlayer.shared.updateOutputDevice(
+            persistentID: preference.persistentID,
+            displayName: preference.displayName
+        )
     }
 
     func advancedInputAudio(for deviceID: String?) -> AdvancedInputAudioPreferences {
@@ -153,7 +178,16 @@ final class AppPreferencesStore: ObservableObject {
     }
 
     func updateOutputGainDB(_ value: Double) {
-        mutate { $0.outputGainDB = AppPreferences.clampGainDB(value) }
+        let clamped = AppPreferences.clampGainDB(value)
+        mutate { $0.outputGainDB = clamped }
+        // Master volume also scales the app sound effects.
+        SoundPlayer.shared.setMasterGainDB(clamped)
+    }
+
+    func updateSoundEffectsGainDB(_ value: Double) {
+        let clamped = AppPreferences.clampGainDB(value)
+        mutate { $0.soundEffectsGainDB = clamped }
+        SoundPlayer.shared.setEffectsGainDB(clamped)
     }
 
     func updateSavedServersSortField(_ field: AppPreferences.SavedServersSortField) {
@@ -480,8 +514,11 @@ final class AudioPreferencesStore: ObservableObject {
     private var hasPrepared = false
     private var isVisible = false
     private var applyWorkItem: DispatchWorkItem?
-    private var lastAppliedInputPreference: AudioDevicePreference
-    private var lastAppliedOutputPreference: AudioDevicePreference
+    // nil means "the applied audio state is unknown" — set after a failed apply
+    // so the dedup guard in scheduleApplyAudioPreferencesIfNeeded never skips a
+    // recovery re-selection (including re-picking the previously-applied device).
+    private var lastAppliedInputPreference: AudioDevicePreference?
+    private var lastAppliedOutputPreference: AudioDevicePreference?
 
     var advancedPreferences: AdvancedInputAudioPreferences {
         advancedSettingsStore.advancedPreferences
@@ -512,7 +549,9 @@ final class AudioPreferencesStore: ObservableObject {
         self.state = State(
             preferredInputDevice: rootStore.preferences.preferredInputDevice,
             preferredOutputDevice: rootStore.preferences.preferredOutputDevice,
-            catalog: .empty,
+            // Seed from the last persisted scan so the pickers populate instantly;
+            // a fresh background scan (see loadCatalogIfNeeded) replaces it.
+            catalog: rootStore.cachedAudioDeviceCatalog() ?? .empty,
             isCatalogLoading: false,
             lastErrorMessage: nil,
             advancedFeedbackMessage: advancedSettingsStore.feedbackMessage,
@@ -624,11 +663,15 @@ final class AudioPreferencesStore: ObservableObject {
             guard let self else { return }
             switch result {
             case .success:
-                let catalog = self.connectionController.refreshAvailableAudioDevices()
-                self.state.catalog = catalog
-                self.state.isCatalogLoading = false
-                self.state.lastErrorMessage = nil
-                self.advancedSettingsStore.refresh()
+                self.connectionController.refreshAvailableAudioDevices { [weak self] catalog in
+                    guard let self else { return }
+                    self.state.catalog = catalog
+                    self.state.isCatalogLoading = false
+                    self.state.lastErrorMessage = nil
+                    self.hasLoadedFreshCatalog = true
+                    self.rootStore.storeCachedAudioDeviceCatalog(catalog)
+                    self.advancedSettingsStore.refresh()
+                }
             case .failure(let error):
                 self.state.isCatalogLoading = false
                 self.state.lastErrorMessage = error.localizedDescription
@@ -688,19 +731,28 @@ final class AudioPreferencesStore: ObservableObject {
         return persistentID
     }
 
+    private var hasLoadedFreshCatalog = false
+
     private func loadCatalogIfNeeded(forceRefresh: Bool) {
-        if forceRefresh == false, state.catalog != .empty || state.isCatalogLoading {
+        // Gate on whether a real scan has happened this session, not on catalog
+        // emptiness — the catalog is seeded non-empty from the persisted cache, so
+        // an emptiness check would never trigger the background refresh.
+        if forceRefresh == false, hasLoadedFreshCatalog || state.isCatalogLoading {
             return
         }
 
         state.isCatalogLoading = true
-        Task { @MainActor [weak self, connectionController] in
-            let catalog = forceRefresh
-                ? connectionController.refreshAvailableAudioDevices()
-                : connectionController.availableAudioDevices()
+        let apply: @MainActor (AudioDeviceCatalog) -> Void = { [weak self] catalog in
             guard let self else { return }
             self.state.catalog = catalog
             self.state.isCatalogLoading = false
+            self.hasLoadedFreshCatalog = true
+            self.rootStore.storeCachedAudioDeviceCatalog(catalog)
+        }
+        if forceRefresh {
+            connectionController.refreshAvailableAudioDevices(completion: apply)
+        } else {
+            connectionController.availableAudioDevices(completion: apply)
         }
     }
 
@@ -724,6 +776,13 @@ final class AudioPreferencesStore: ObservableObject {
                     self.lastAppliedOutputPreference = outputPreference
                     self.state.lastErrorMessage = nil
                 case .failure(let error):
+                    // The apply failed, so the audio system is in neither the
+                    // requested nor the previously-applied state. Forget the
+                    // applied prefs so the dedup guard above won't skip a
+                    // recovery re-selection — otherwise re-picking the prior
+                    // device is silently ignored and audio never comes back.
+                    self.lastAppliedInputPreference = nil
+                    self.lastAppliedOutputPreference = nil
                     self.state.lastErrorMessage = error.localizedDescription
                 }
             }

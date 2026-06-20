@@ -16,7 +16,7 @@ struct PreferencesGeneralView: View {
     @State private var autoAwayCommitTask: Task<Void, Never>?
 
     var body: some View {
-        PreferencesPaneScrollView {
+        PreferencesPaneScrollView(accessibilityLabel: L10n.text("preferences.general.title")) {
             VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.text("preferences.general.defaultNickname"))

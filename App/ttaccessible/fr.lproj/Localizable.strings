@@ -131,6 +131,8 @@
 "connectedServer.audio.inputGain.accessibilityLabel" = "Volume d'entrée du microphone";
 "connectedServer.audio.outputGain.label" = "Volume de sortie";
 "connectedServer.audio.outputGain.accessibilityLabel" = "Volume de sortie audio";
+"connectedServer.audio.soundEffectsGain.label" = "Volume des effets sonores";
+"connectedServer.audio.soundEffectsGain.accessibilityLabel" = "Volume des effets sonores de l'application";
 "connectedServer.audio.gain.resetAccessibilityAction" = "Réinitialiser à 50 %";
 "connectedServer.audio.voiceEnabled" = "Micro activé.";
 "connectedServer.audio.voiceDisabled" = "Micro coupé.";
@@ -342,7 +344,7 @@
 "preferences.notifications.tts.volume" = "Volume";
 "preferences.notifications.tts.volume.value" = "%@%%";
 "preferences.notifications.tts.test" = "Tester la voix";
-"preferences.notifications.tts.testPhrase" = "Ceci est un test de la synthèse vocale de TTAccessible.";
+"preferences.notifications.tts.testPhrase" = "Ceci est un test de la synthèse vocale de ttAccessible.";
 "preferences.import.title" = "Import";
 "preferences.general.defaultNickname" = "Pseudo par défaut";
 "preferences.general.defaultNickname.help" = "Utilisé quand un serveur enregistré n'a pas de pseudo spécifique.";
@@ -630,6 +632,36 @@
 "files.window.title" = "Fichiers du canal";
 "files.menu.open" = "Fichiers du canal";
 "files.menu.upload" = "Envoyer un fichier…";
+
+/* Mixeur du canal */
+"mixer.menu.open" = "Mixeur du canal";
+"mixer.window.title" = "Mixeur du canal";
+"mixer.empty" = "Aucun autre utilisateur dans ce canal.";
+"mixer.voice.label" = "Volume de la voix, %@";
+"mixer.media.label" = "Volume du média, %@";
+"mixer.pan.label" = "Panoramique, %@";
+"mixer.mute.voice" = "Couper la voix, %@";
+"mixer.mute.media" = "Couper le média, %@";
+"mixer.value.percent" = "%d %%";
+"mixer.pan.center" = "Centre";
+"mixer.pan.left" = "Gauche %d %%";
+"mixer.pan.right" = "Droite %d %%";
+"mixer.muted.voice" = "voix coupée";
+"mixer.muted.media" = "média coupé";
+"mixer.area.label" = "Mixeur";
+"mixer.area.roleDescription" = "zone";
+"mixer.voice.label.short" = "Volume";
+"mixer.media.label.short" = "Volume du média";
+"mixer.pan.label.short" = "Panoramique";
+"mixer.mute.label.short" = "Sourdine";
+"mixer.mute.action.mute" = "Couper le son";
+"mixer.mute.action.unmute" = "Rétablir le son";
+"mixer.solo.action.solo" = "Solo";
+"mixer.solo.action.unsolo" = "Annuler le solo";
+"mixer.solo.on" = "solo activé";
+"mixer.solo.off" = "solo désactivé";
+"mixer.toggle.muted" = "coupé";
+"mixer.toggle.unmuted" = "rétabli";
 "files.empty" = "Aucun fichier dans ce canal.";
 "files.column.name" = "Nom";
 "files.column.size" = "Taille";
@@ -942,6 +974,7 @@
 "toolbar.recording.stop" = "Arrêter l'enregistrement";
 "toolbar.recording.stop.tooltip" = "Arrêter l'enregistrement (⌘R)";
 "toolbar.hearMyself" = "M'entendre";
+"toolbar.hearMyself.selected" = "M'entendre, sélectionné";
 "toolbar.hearMyself.tooltip" = "Activer / désactiver l'écoute de soi (⌘⇧H)";
 "preferences.updates.section" = "Mises à jour";
 "preferences.updates.autoCheck" = "Vérifier les mises à jour automatiquement";

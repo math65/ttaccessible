@@ -167,8 +167,22 @@ private final class PreferencesContainerViewController: NSViewController {
         selectPane(.general)
     }
 
+    // Escape closes the Preferences window. As the window's content view
+    // controller, this VC is in the responder chain, so an unhandled Escape
+    // (cancelOperation:) bubbles up to here.
+    override func cancelOperation(_ sender: Any?) {
+        view.window?.performClose(nil)
+    }
+
     func warmupExpensiveDependencies() {
-        audioPreferencesStore.warmup()
+        // NOTE: deliberately NOT warming the audio device catalog here. That probe
+        // calls the SDK's TT_GetSoundDevices, which on a large rig takes ~12 s AND
+        // the SDK serializes sound-system access internally — so a launch-time warm
+        // serialized against the connect's TT_InitSoundOutputDevice and made
+        // connecting take ~12 s. The audio device list is seeded instantly from the
+        // persisted cache, and refreshes when the user actually opens Audio prefs
+        // (AudioPreferencesStore.prepareIfNeeded). Output/input themselves use the
+        // virtual device, so the connection never needs this catalog.
         notificationsPreferencesStore.prepareIfNeeded()
     }
 
@@ -391,9 +405,13 @@ private final class PreferencesSidebarCellView: NSTableCellView {
 
         paneImageView.translatesAutoresizingMaskIntoConstraints = false
         paneImageView.imageScaling = .scaleProportionallyDown
+        // The row already carries the pane title as its accessibility label, so the
+        // icon and the duplicate text field shouldn't be separate VoiceOver stops.
+        paneImageView.setAccessibilityElement(false)
 
         paneTextField.translatesAutoresizingMaskIntoConstraints = false
         paneTextField.font = .systemFont(ofSize: NSFont.systemFontSize)
+        paneTextField.setAccessibilityElement(false)
 
         addSubview(paneImageView)
         addSubview(paneTextField)
@@ -414,6 +432,14 @@ private final class PreferencesSidebarCellView: NSTableCellView {
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         nil
+    }
+
+    // The row exposes the pane title as its own accessibility label, so don't let
+    // VoiceOver descend into the icon + text field (which made it read e.g.
+    // "Recording, circle image, Recording"). Returning no children leaves just the
+    // single label.
+    override func accessibilityChildren() -> [Any]? {
+        []
     }
 
     func configure(with pane: PreferencesWindowController.Pane) {

@@ -146,6 +146,90 @@ enum InputAudioDeviceResolver {
         return deviceID
     }
 
+    struct OutputAudioDeviceInfo: Equatable {
+        let deviceID: AudioDeviceID
+        let uid: String
+        let name: String
+        let nominalSampleRate: Double
+    }
+
+    /// Resolve the user's selected output device to a CoreAudio device so preview
+    /// monitoring can bind to it. The stored preference's persistentID is the
+    /// TeamTalk szDeviceID, which on macOS does NOT translate via
+    /// kAudioHardwarePropertyTranslateUIDToDevice, so we match the CoreAudio
+    /// output device by UID first and fall back to the (shared) device name.
+    nonisolated static func resolveOutputDevice(persistentID: String?, displayName: String?) -> OutputAudioDeviceInfo? {
+        let devices = availableOutputDevices()
+        if let persistentID, persistentID.isEmpty == false,
+           let match = devices.first(where: { $0.uid == persistentID }) {
+            return match
+        }
+        if let displayName, displayName.isEmpty == false,
+           let match = devices.first(where: { $0.name.localizedCaseInsensitiveCompare(displayName) == .orderedSame }) {
+            return match
+        }
+        return nil
+    }
+
+    nonisolated static func availableOutputDevices() -> [OutputAudioDeviceInfo] {
+        let systemObjectID = AudioObjectID(kAudioObjectSystemObject)
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDevices,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var dataSize: UInt32 = 0
+        guard AudioObjectGetPropertyDataSize(systemObjectID, &address, 0, nil, &dataSize) == noErr else {
+            return []
+        }
+        let count = Int(dataSize) / MemoryLayout<AudioObjectID>.size
+        var deviceIDs = Array(repeating: AudioObjectID(), count: count)
+        guard AudioObjectGetPropertyData(systemObjectID, &address, 0, nil, &dataSize, &deviceIDs) == noErr else {
+            return []
+        }
+        return deviceIDs.compactMap(makeOutputDeviceInfo(for:))
+    }
+
+    private nonisolated static func makeOutputDeviceInfo(for objectID: AudioObjectID) -> OutputAudioDeviceInfo? {
+        guard outputChannelCount(for: objectID) > 0,
+              let name = stringProperty(objectID: objectID, selector: kAudioObjectPropertyName, scope: kAudioObjectPropertyScopeGlobal),
+              let uid = stringProperty(objectID: objectID, selector: kAudioDevicePropertyDeviceUID, scope: kAudioObjectPropertyScopeGlobal) else {
+            return nil
+        }
+        let sampleRate = doubleProperty(
+            objectID: objectID,
+            selector: kAudioDevicePropertyNominalSampleRate,
+            scope: kAudioObjectPropertyScopeGlobal
+        ) ?? 48_000
+        return OutputAudioDeviceInfo(deviceID: objectID, uid: uid, name: name, nominalSampleRate: sampleRate)
+    }
+
+    private nonisolated static func outputChannelCount(for objectID: AudioObjectID) -> Int {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyStreamConfiguration,
+            mScope: kAudioDevicePropertyScopeOutput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var dataSize: UInt32 = 0
+        guard AudioObjectGetPropertyDataSize(objectID, &address, 0, nil, &dataSize) == noErr else {
+            return 0
+        }
+        let bufferListPointer = UnsafeMutableRawPointer.allocate(
+            byteCount: Int(dataSize),
+            alignment: MemoryLayout<AudioBufferList>.alignment
+        )
+        defer {
+            bufferListPointer.deallocate()
+        }
+        guard AudioObjectGetPropertyData(objectID, &address, 0, nil, &dataSize, bufferListPointer) == noErr else {
+            return 0
+        }
+        let bufferList = UnsafeMutableAudioBufferListPointer(bufferListPointer.assumingMemoryBound(to: AudioBufferList.self))
+        return bufferList.reduce(0) { partialResult, buffer in
+            partialResult + Int(buffer.mNumberChannels)
+        }
+    }
+
     nonisolated static func contains(_ preset: InputChannelPreset, for device: InputAudioDeviceInfo?) -> Bool {
         guard let device, device.inputChannels > 0 else {
             switch preset {

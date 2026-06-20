@@ -66,6 +66,7 @@ final class SavedServersWindowController: NSWindowController {
             menuState.$hasSelection.map { _ in () }.eraseToAnyPublisher(),
             menuState.$isMasterMuted.map { _ in () }.eraseToAnyPublisher(),
             menuState.$isRecordingActive.map { _ in () }.eraseToAnyPublisher(),
+            menuState.$isHearMyselfEnabled.map { _ in () }.eraseToAnyPublisher(),
             menuState.$isInChannel.map { _ in () }.eraseToAnyPublisher()
         )
         .receive(on: DispatchQueue.main)
@@ -124,6 +125,13 @@ final class SavedServersWindowController: NSWindowController {
                 )
                 item.isEnabled = menuState.mode == .connectedServer && (recording || menuState.isInChannel)
             case .ttHearMyself:
+                // Mirror the Mute/Recording pattern: VoiceOver reads the toolbar
+                // item's label, so swap it to include "selected" when hearing-myself
+                // is on (plain label when off). Stays an ordinary button.
+                let on = menuState.isHearMyselfEnabled
+                item.label = L10n.text(on ? "toolbar.hearMyself.selected" : "toolbar.hearMyself")
+                item.paletteLabel = item.label
+                item.image = NSImage(systemSymbolName: "ear", accessibilityDescription: item.label)
                 item.isEnabled = menuState.mode == .connectedServer && menuState.isInChannel
             case .ttPreferences:
                 item.isEnabled = true

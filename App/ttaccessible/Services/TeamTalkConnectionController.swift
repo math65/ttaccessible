@@ -72,7 +72,30 @@ final class TeamTalkConnectionController {
 
     let queueKey = DispatchSpecificKey<Void>()
     let queue = DispatchQueue(label: "com.math65.ttaccessible.teamtalk")
-    let clientName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "TTAccessible"
+    /// Dedicated queue for the SDK's TT_GetSoundDevices / TT_InitTeamTalkPoll probes,
+    /// kept OFF the main `queue` so they never block connecting or starve the realtime
+    /// audio mixer pump. QoS is `.userInitiated` (not `.utility`): the connect path runs
+    /// at user-initiated priority and waits on the prewarm done here, so a lower QoS
+    /// caused a priority inversion (Thread Performance Checker) that slowed connecting.
+    let soundDeviceProbeQueue = DispatchQueue(label: "com.math65.ttaccessible.sounddevices", qos: .userInitiated)
+    /// Connection-instance prewarm. `TT_InitTeamTalkPoll` triggers the SDK sound
+    /// system init, which enumerates every CoreAudio device (~12 s on a large rig).
+    /// The app creates a fresh instance per connect, so that 12 s landed on EVERY
+    /// connect. We instead create the next instance ahead of time on the probe
+    /// queue (at launch and after disconnect) so connect reuses a ready one.
+    var prewarmInFlight = false                              // `queue`-only
+    let prewarmReady = DispatchSemaphore(value: 0)
+    let prewarmBoxLock = NSLock()
+    var prewarmBoxedInstance: UnsafeMutableRawPointer?       // probe queue → `queue`, lock + semaphore guarded
+    /// A disconnected-but-still-alive TeamTalk instance kept WARM for reuse. The
+    /// SDK re-runs its ~8 s device enumeration every time a fresh instance is
+    /// created, so closing the instance on disconnect made every reconnect cold
+    /// (~8 s). Keeping it (TT_Disconnect, not TT_CloseTeamTalk) makes reconnects
+    /// reuse the warm instance and connect in ~1 s. `queue`-only.
+    var reusableInstance: UnsafeMutableRawPointer?
+    let clientName = (Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
+        ?? (Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String)
+        ?? "ttAccessible"
     let preferencesStore: AppPreferencesStore
     let userVolumeStore = UserVolumeStore()
     let lastChannelStore = LastChannelStore()
@@ -104,12 +127,22 @@ final class TeamTalkConnectionController {
     var isPrivateMessagesWindowVisible = false
     var outputAudioReady = false
     var inputAudioReady = false
+    // The input/output device preferences currently open in the SDK, so a
+    // preference change can reinitialize only the device that actually changed
+    // (avoids needlessly closing the output — and its intermittent SDK deadlock —
+    // when only the input changed, and vice versa).
+    var appliedInputPreference: AudioDevicePreference?
+    var appliedOutputPreference: AudioDevicePreference?
     var voiceTransmissionEnabled = false
     var pushToTalkPressed = false
     var pushToTalkShortcutResolver: (() -> Bool)?
     var lastAudioWarningMessage: String?
     var masterMuted = false
     var hearMyselfEnabled = false
+    // When connected, the Audio-preferences mic preview can't open a second capture
+    // on the input device (the live mic engine owns it), so instead it monitors the
+    // live mic through the output engine — same path as hearMyself, gated separately.
+    var previewMonitorEnabled = false
     var recordingMuxedActive = false
     var recordingSeparateActive = false
     var recordingFolder: URL?
@@ -174,6 +207,23 @@ final class TeamTalkConnectionController {
     }
     /// Speaker tap for AEC reference (macOS 14.2+). Typed as Any to avoid availability annotation on stored property.
     var speakerTapCaptureStorage: Any?
+    /// Custom CoreAudio output engine. The SDK renders to the virtual output
+    /// device (TT_SOUNDDEVICE_ID_TEAMTALK_VIRTUAL); we pull the muxed playback PCM
+    /// and render it ourselves, so switching the output device never calls the
+    /// SDK's deadlock-prone TT_CloseSoundOutputDevice. See OutputAudioRenderEngine.
+    let outputRenderEngine = OutputAudioRenderEngine()
+    /// Remote user IDs we currently have per-user audio block events enabled for
+    /// (reconciled with channel membership; the local user is never included).
+    var perUserAudioEnabled: Set<Int32> = []
+    /// Set when channel membership changes; the message loop reconciles per-user
+    /// audio events on its next tick.
+    var perUserAudioNeedsRefresh = false
+    /// Coalesced session-publish state: the message poll is fast (for smooth
+    /// per-user audio), but the expensive full-tree `publishSessionLocked` is
+    /// throttled to ~old cadence so it doesn't rebuild every tick during the
+    /// connect flood (which slowed connecting).
+    var pendingPublishInvalidation: SessionPublishInvalidation = []
+    var lastSnapshotPublishAt: CFAbsoluteTime = 0
 
     init(preferencesStore: AppPreferencesStore) {
         self.preferencesStore = preferencesStore
@@ -333,7 +383,7 @@ final class TeamTalkConnectionController {
             return preferredNickname
         }
 
-        return "TTAccessible"
+        return "ttAccessible"
     }
 
     func clientVersion(for user: User) -> String {

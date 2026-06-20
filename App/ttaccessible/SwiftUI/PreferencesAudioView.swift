@@ -17,7 +17,7 @@ struct PreferencesAudioView: View {
     @State private var pushToTalkShortcutConfigured: Bool = KeyboardShortcuts.getShortcut(for: .pushToTalk) != nil
 
     var body: some View {
-        PreferencesPaneScrollView {
+        PreferencesPaneScrollView(accessibilityLabel: L10n.text("preferences.audio.title")) {
             VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.text("preferences.audio.outputDevice"))
