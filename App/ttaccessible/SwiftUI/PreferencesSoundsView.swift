@@ -22,6 +22,9 @@ struct PreferencesSoundsView: View {
                     )
                 )
                 .toggleStyle(.switch)
+                // Collapse the switch's label + control into one VoiceOver element
+                // (otherwise macOS exposes the label as a separate static-text stop).
+                .accessibilityElement(children: .combine)
 
                 HStack(spacing: 12) {
                     Picker(
@@ -99,6 +102,9 @@ struct PreferencesSoundsView: View {
                             )
                         )
                         .toggleStyle(.switch)
+                        // One VoiceOver element per sound (label + switch combined),
+                        // instead of a redundant static-text stop before each switch.
+                        .accessibilityElement(children: .combine)
                     }
                 }
             }
