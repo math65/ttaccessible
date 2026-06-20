@@ -125,7 +125,10 @@ final class ChannelMixerCoordinator: ObservableObject {
         guard let user = user(for: id) else { return nil }
         var parts = [user.displayName]
         parts.append(L10n.format("mixer.value.percent", Int(voicePercent(id).rounded())))
-        if user.isMuted { parts.append(L10n.text("mixer.toggle.muted")) }
+        // Use the mixer's own mute state (optimistic intent + voice/media), the same
+        // state the mute toggle reports — so the strip name reflects a mute applied
+        // here immediately, instead of only the SDK's voice-mute flag.
+        if isMuted(id) { parts.append(L10n.text("mixer.toggle.muted")) }
         return parts.joined(separator: ", ")
     }
 
