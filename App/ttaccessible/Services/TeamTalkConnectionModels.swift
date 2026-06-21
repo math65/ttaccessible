@@ -129,6 +129,8 @@ enum TeamTalkConnectionError: LocalizedError {
     case loginFailed(String)
     case incorrectChannelPassword(String)
     case internalError(String)
+    case webLoginNotConfigured
+    case webLoginFailed(String)
 
     var errorDescription: String? {
         switch self {
@@ -142,7 +144,9 @@ enum TeamTalkConnectionError: LocalizedError {
             return L10n.text("teamtalk.connection.error.connectionFailed")
         case .connectionTimeout:
             return L10n.text("teamtalk.connection.error.timeout")
-        case .loginFailed(let message), .incorrectChannelPassword(let message), .internalError(let message):
+        case .webLoginNotConfigured:
+            return L10n.text("teamtalk.connection.error.webLoginNotConfigured")
+        case .loginFailed(let message), .incorrectChannelPassword(let message), .internalError(let message), .webLoginFailed(let message):
             return message
         }
     }

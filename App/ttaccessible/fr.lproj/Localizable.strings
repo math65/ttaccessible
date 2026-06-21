@@ -83,6 +83,8 @@
 "savedServer.form.password" = "Mot de passe";
 "savedServer.form.initialChannelPath" = "Canal à rejoindre";
 "savedServer.form.initialChannelPassword" = "Mot de passe du canal";
+"savedServer.form.webLogin" = "Utiliser la connexion web BearWare";
+"savedServer.form.webLogin.help" = "Ce serveur utilisera votre compte BearWare pour se connecter. Configurez-le dans Préférences > Général.";
 "common.cancel" = "Annuler";
 "common.close" = "Fermer";
 "common.ok" = "OK";
@@ -101,6 +103,12 @@
 "teamtalk.connection.error.timeout" = "Le serveur n'a pas répondu dans le délai attendu.";
 "teamtalk.connection.error.loginFailed" = "Le serveur a refusé l'identification.";
 "teamtalk.connection.error.internal" = "Une erreur interne TeamTalk est survenue.";
+"teamtalk.connection.error.webLoginNotConfigured" = "Ce serveur utilise la connexion web BearWare, mais aucun compte BearWare n'est configuré. Configurez-le dans Préférences > Général.";
+"teamtalk.connection.error.webLoginFailed" = "La connexion web BearWare n'a pas pu aboutir.";
+"teamtalk.connection.error.webLoginServiceUnavailable" = "Le service de connexion BearWare est actuellement indisponible. Veuillez réessayer plus tard.";
+"bearware.error.network" = "Impossible de joindre le service de connexion BearWare.";
+"bearware.error.invalidResponse" = "Le service de connexion BearWare a renvoyé une réponse inattendue.";
+"bearware.error.rejected" = "L'identifiant ou le mot de passe BearWare est incorrect.";
 "connectedServer.identity.error.emptyNickname" = "Le pseudo ne peut pas être vide.";
 "connectedServer.window.title" = "Serveur connecté - %@";
 "connectedServer.sidebar.channels" = "Canaux et participants";
@@ -980,6 +988,15 @@
 "preferences.updates.autoCheck" = "Vérifier les mises à jour automatiquement";
 "preferences.updates.includeBeta" = "Inclure les versions bêta";
 "preferences.updates.includeBeta.help" = "Les versions bêta peuvent contenir des bugs. Désactivez pour ne recevoir que les versions stables.";
+
+"preferences.bearware.title" = "BearWare";
+"preferences.bearware.section" = "Connexion web BearWare";
+"preferences.bearware.username" = "Identifiant BearWare";
+"preferences.bearware.password" = "Mot de passe BearWare";
+"preferences.bearware.signIn" = "Se connecter";
+"preferences.bearware.signOut" = "Se déconnecter";
+"preferences.bearware.signedInAs" = "Connecté en tant que %@.";
+"preferences.bearware.help" = "Un compte BearWare gratuit (bearware.dk) vous permet de vous connecter aux serveurs qui prennent en charge la connexion web. Activez la connexion web serveur par serveur dans ses réglages.";
 
 "help.menu.contactDeveloper" = "Contacter le développeur…";
 "feedback.window.title" = "Contacter le développeur";

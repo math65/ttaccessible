@@ -13,12 +13,22 @@ ENTITLEMENTS="App/ttaccessible/ttaccessible.entitlements"
 
 NOTARIZE=0
 RELEASE=0
+BETA=0
 for arg in "$@"; do
     case "$arg" in
         --notarize) NOTARIZE=1 ;;
         --release)  NOTARIZE=1; RELEASE=1 ;;
+        # Publish to the Sparkle "beta" channel: the appcast item is tagged
+        # <sparkle:channel>beta</sparkle:channel> (only delivered to users who
+        # enabled "Include beta versions") and the GitHub release is marked as a
+        # prerelease. Use together with --release, e.g. ./build.sh --release --beta
+        --beta)     BETA=1 ;;
     esac
 done
+
+if [[ $BETA -eq 1 ]]; then
+    echo "==> Mode BETA : appcast taggé 'beta', release GitHub en prerelease"
+fi
 
 echo "==> Build $SCHEME ($CONFIGURATION)..."
 xcodebuild \
@@ -137,8 +147,17 @@ if [[ $NOTARIZE -eq 1 ]]; then
         cp "$DOCS_DIR/appcast.xml" "$APPCAST_STAGING/appcast.xml"
     fi
 
+    # Tag only the freshly-generated item with the beta channel. Existing
+    # entries preserved from the copied-in appcast keep their channel (none =
+    # stable), so stable users never see the beta build.
+    CHANNEL_ARGS=()
+    if [[ $BETA -eq 1 ]]; then
+        CHANNEL_ARGS+=(--channel beta)
+    fi
+
     "$SPARKLE_BIN/generate_appcast" \
         "$APPCAST_STAGING" \
+        "${CHANNEL_ARGS[@]}" \
         --download-url-prefix "https://github.com/math65/ttaccessible/releases/download/v${VERSION}/" \
         --link "https://github.com/math65/ttaccessible/releases/tag/v${VERSION}" \
         -o "$DOCS_DIR/appcast.xml"
@@ -174,13 +193,19 @@ if [[ $RELEASE -eq 1 ]]; then
         exit 1
     fi
 
+    PRERELEASE_ARGS=()
+    if [[ $BETA -eq 1 ]]; then
+        PRERELEASE_ARGS+=(--prerelease)
+    fi
+
     if gh release view "$TAG" &> /dev/null; then
         echo "⚠ Release $TAG existe déjà. Mise à jour de l'asset..."
         gh release upload "$TAG" "$ZIP_PATH" --clobber
     else
         gh release create "$TAG" "$ZIP_PATH" \
             --title "$TITLE" \
-            --notes-file "$NOTES_FILE"
+            --notes-file "$NOTES_FILE" \
+            "${PRERELEASE_ARGS[@]}"
         echo "✓ Release publiée : https://github.com/math65/ttaccessible/releases/tag/$TAG"
     fi
 

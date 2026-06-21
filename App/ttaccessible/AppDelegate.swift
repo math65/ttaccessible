@@ -1855,6 +1855,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             nickname: preferencesStore.preferences.defaultNickname,
             username: link.username,
             password: link.password,
+            useWebLogin: BearWareWebLogin.isWebLogin(link.username),
             initialChannelPath: link.channel,
             initialChannelPassword: link.channelPassword
         )
@@ -1870,6 +1871,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             encrypted: link.encrypted,
             nickname: preferencesStore.preferences.defaultNickname,
             username: link.username,
+            useWebLogin: BearWareWebLogin.isWebLogin(link.username),
             initialChannelPath: link.channel,
             initialChannelPassword: link.channelPassword
         )
@@ -1968,6 +1970,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             encrypted: payload.encrypted,
             nickname: nickname,
             username: payload.auth.username,
+            useWebLogin: BearWareWebLogin.isWebLogin(payload.auth.username),
             initialChannelPath: payload.join?.channelPath ?? "",
             initialChannelPassword: payload.join?.password ?? ""
         )

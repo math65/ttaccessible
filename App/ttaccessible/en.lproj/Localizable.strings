@@ -83,6 +83,8 @@
 "savedServer.form.password" = "Password";
 "savedServer.form.initialChannelPath" = "Channel to join";
 "savedServer.form.initialChannelPassword" = "Channel password";
+"savedServer.form.webLogin" = "Use BearWare web login";
+"savedServer.form.webLogin.help" = "This server will sign in with your BearWare account. Set it up in Preferences > General.";
 "common.cancel" = "Cancel";
 "common.close" = "Close";
 "common.ok" = "OK";
@@ -101,6 +103,12 @@
 "teamtalk.connection.error.timeout" = "The server did not respond within the expected time.";
 "teamtalk.connection.error.loginFailed" = "The server rejected the login.";
 "teamtalk.connection.error.internal" = "An internal TeamTalk error occurred.";
+"teamtalk.connection.error.webLoginNotConfigured" = "This server uses BearWare web login, but no BearWare account is set up. Configure it in Preferences > General.";
+"teamtalk.connection.error.webLoginFailed" = "The BearWare web login could not be completed.";
+"teamtalk.connection.error.webLoginServiceUnavailable" = "The BearWare login service is currently unavailable. Please try again later.";
+"bearware.error.network" = "Could not reach the BearWare login service.";
+"bearware.error.invalidResponse" = "The BearWare login service returned an unexpected response.";
+"bearware.error.rejected" = "The BearWare username or password is incorrect.";
 "connectedServer.identity.error.emptyNickname" = "The nickname cannot be empty.";
 "connectedServer.window.title" = "Connected Server: %@";
 "connectedServer.sidebar.channels" = "Channels and participants";
@@ -980,6 +988,15 @@
 "preferences.updates.autoCheck" = "Check for updates automatically";
 "preferences.updates.includeBeta" = "Include beta versions";
 "preferences.updates.includeBeta.help" = "Beta versions may contain bugs. Disable to receive only stable releases.";
+
+"preferences.bearware.title" = "BearWare";
+"preferences.bearware.section" = "BearWare web login";
+"preferences.bearware.username" = "BearWare username";
+"preferences.bearware.password" = "BearWare password";
+"preferences.bearware.signIn" = "Sign in";
+"preferences.bearware.signOut" = "Sign out";
+"preferences.bearware.signedInAs" = "Signed in as %@.";
+"preferences.bearware.help" = "A free BearWare account (bearware.dk) lets you log in to servers that support web login. Enable web login per server in its settings.";
 
 "help.menu.contactDeveloper" = "Contact the Developer…";
 "feedback.window.title" = "Contact the Developer";

@@ -306,7 +306,7 @@ final class TTFileService {
     }
 
     private func value(in element: XMLElement, named childName: String) -> String {
-        element.elements(forName: childName).first?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        element.childText(named: childName)
     }
 
     private func appendChild(named name: String, value: String, to parent: XMLElement) {

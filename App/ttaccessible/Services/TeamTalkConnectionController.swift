@@ -99,6 +99,8 @@ final class TeamTalkConnectionController {
     let preferencesStore: AppPreferencesStore
     let userVolumeStore = UserVolumeStore()
     let lastChannelStore = LastChannelStore()
+    let bearWareCredentialStore = BearWareCredentialStore()
+    let bearWareWebLoginClient = BearWareWebLoginClient()
 
 
     var audioDeviceChangeMonitor: AudioDeviceChangeMonitor?

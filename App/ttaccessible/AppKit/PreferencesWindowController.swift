@@ -13,6 +13,7 @@ final class PreferencesWindowController: NSWindowController {
     enum Pane: CaseIterable {
         case general
         case connection
+        case bearWare
         case audio
         case sounds
         case announcements
@@ -24,6 +25,8 @@ final class PreferencesWindowController: NSWindowController {
                 return L10n.text("preferences.general.title")
             case .connection:
                 return L10n.text("preferences.connection.title")
+            case .bearWare:
+                return L10n.text("preferences.bearware.title")
             case .audio:
                 return L10n.text("preferences.audio.title")
             case .sounds:
@@ -41,6 +44,8 @@ final class PreferencesWindowController: NSWindowController {
                 return "person"
             case .connection:
                 return "network"
+            case .bearWare:
+                return "globe"
             case .audio:
                 return "speaker.wave.2"
             case .sounds:
@@ -222,6 +227,8 @@ private final class PreferencesContainerViewController: NSViewController {
             return NSHostingController(
                 rootView: PreferencesConnectionView(store: connectionPreferencesStore)
             )
+        case .bearWare:
+            return NSHostingController(rootView: PreferencesBearWareView())
         case .audio:
             return NSHostingController(
                 rootView: PreferencesAudioView(store: audioPreferencesStore)

@@ -803,6 +803,10 @@ final class AudioPreferencesStore: ObservableObject {
         }
 
         state.isCatalogLoading = true
+        // Enumerate devices off the main thread (the connection controller hops to
+        // its serial queue and delivers back on main). A blocking `queue.sync` here
+        // froze the main runloop at launch when Preferences is preloaded. Our catalog
+        // now comes from CoreAudio directly, so the work delivered here is light.
         let apply: @MainActor (AudioDeviceCatalog) -> Void = { [weak self] catalog in
             guard let self else { return }
             self.state.catalog = catalog

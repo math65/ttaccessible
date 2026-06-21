@@ -371,9 +371,14 @@ extension TeamTalkConnectionController {
             switch message.nClientEvent {
             case CLIENTEVENT_CON_SUCCESS:
                 let nickname = effectiveNickname(for: record, override: options.nicknameOverride)
+                let (loginUsername, loginPassword) = try resolveLoginCredentialsLocked(
+                    instance: instance,
+                    record: record,
+                    password: password
+                )
                 loginCommandID = nickname.withCString { nicknamePointer in
-                    record.username.withCString { usernamePointer in
-                        password.withCString { passwordPointer in
+                    loginUsername.withCString { usernamePointer in
+                        loginPassword.withCString { passwordPointer in
                             clientName.withCString { clientNamePointer in
                                 TT_DoLoginEx(instance, nicknamePointer, usernamePointer, passwordPointer, clientNamePointer)
                             }
@@ -390,6 +395,9 @@ extension TeamTalkConnectionController {
 
             case CLIENTEVENT_CMD_ERROR:
                 if loginCommandID == -1 || message.nSource == loginCommandID {
+                    if message.clienterrormsg.nErrorNo == CMDERR_LOGINSERVICE_UNAVAILABLE.rawValue {
+                        throw TeamTalkConnectionError.webLoginFailed(L10n.text("teamtalk.connection.error.webLoginServiceUnavailable"))
+                    }
                     throw TeamTalkConnectionError.loginFailed(clientErrorMessage(from: message) ?? L10n.text("teamtalk.connection.error.loginFailed"))
                 }
 
@@ -408,6 +416,43 @@ extension TeamTalkConnectionController {
         }
 
         throw TeamTalkConnectionError.connectionTimeout
+    }
+
+    /// Resolves the username/password pair to pass to `TT_DoLoginEx`. For a
+    /// normal account this is the record's username and the stored password. For
+    /// a bearware web login it performs the bearware token handshake using the
+    /// server's `szAccessToken` and returns the bearware-confirmed username with
+    /// an empty password. Runs synchronously on the TeamTalk queue.
+    private func resolveLoginCredentialsLocked(
+        instance: UnsafeMutableRawPointer,
+        record: SavedServerRecord,
+        password: String
+    ) throws -> (username: String, password: String) {
+        guard record.useWebLogin else {
+            return (record.username, password)
+        }
+
+        guard let credential = bearWareCredentialStore.load(), credential.token.isEmpty == false else {
+            throw TeamTalkConnectionError.webLoginNotConfigured
+        }
+
+        var serverProperties = ServerProperties()
+        guard TT_GetServerProperties(instance, &serverProperties) != 0 else {
+            throw TeamTalkConnectionError.webLoginFailed(L10n.text("teamtalk.connection.error.webLoginFailed"))
+        }
+        let accessToken = ttString(from: serverProperties.szAccessToken)
+
+        do {
+            let confirmedUsername = try bearWareWebLoginClient.clientAuth(
+                username: credential.username,
+                token: credential.token,
+                accessToken: accessToken
+            )
+            let loginUsername = confirmedUsername.isEmpty ? record.username : confirmedUsername
+            return (loginUsername, "")
+        } catch {
+            throw TeamTalkConnectionError.webLoginFailed(error.localizedDescription)
+        }
     }
 
     // MARK: - Post-login options
