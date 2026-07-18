@@ -22,6 +22,10 @@ struct AppPreferences: Codable, Equatable {
     enum MicrophoneMode: String, Codable, CaseIterable {
         case alwaysOn
         case pushToTalk
+        /// Mute-gated with a momentary PTT override. ⌘⇧A toggles an always-on
+        /// gate; holding the PTT key transmits regardless, and releasing it
+        /// closes the gate (goes silent). See PushToTalkController.
+        case both
     }
 
     /// How per-user volume/stereo/pan adjustments are remembered (issue #24).
@@ -124,6 +128,9 @@ struct AppPreferences: Codable, Equatable {
         case includeBetaUpdates
         case microphoneMode
         case pushToTalkBeepEnabled
+        case pushToTalkKey
+        case pushToTalkGlobal
+        case muteHotkeyGlobal
         case videoPanelExpanded
         case userVolumeMemoryMode
         case deviceStreamLastDeviceUID
@@ -193,6 +200,13 @@ struct AppPreferences: Codable, Equatable {
     var includeBetaUpdates: Bool
     var microphoneMode: MicrophoneMode
     var pushToTalkBeepEnabled: Bool
+    /// The push-to-talk key/chord. `nil` means unset.
+    var pushToTalkKey: HotkeyBinding?
+    /// When true, the PTT key works even when ttaccessible is not the active app
+    /// (requires Input Monitoring permission).
+    var pushToTalkGlobal: Bool
+    /// When true, ⌘⇧A (mute / gate) works from any app (requires Input Monitoring).
+    var muteHotkeyGlobal: Bool
     var videoPanelExpanded: Bool
     var userVolumeMemoryMode: UserVolumeMemoryMode
     /// CoreAudio UID of the input device last streamed to a channel, so the
@@ -255,6 +269,9 @@ struct AppPreferences: Codable, Equatable {
         includeBetaUpdates: Bool = false,
         microphoneMode: MicrophoneMode = .alwaysOn,
         pushToTalkBeepEnabled: Bool = true,
+        pushToTalkKey: HotkeyBinding? = nil,
+        pushToTalkGlobal: Bool = true,
+        muteHotkeyGlobal: Bool = false,
         videoPanelExpanded: Bool = true,
         userVolumeMemoryMode: UserVolumeMemoryMode = .persistent,
         deviceStreamLastDeviceUID: String? = nil
@@ -315,6 +332,9 @@ struct AppPreferences: Codable, Equatable {
         self.includeBetaUpdates = includeBetaUpdates
         self.microphoneMode = microphoneMode
         self.pushToTalkBeepEnabled = pushToTalkBeepEnabled
+        self.pushToTalkKey = pushToTalkKey
+        self.pushToTalkGlobal = pushToTalkGlobal
+        self.muteHotkeyGlobal = muteHotkeyGlobal
         self.videoPanelExpanded = videoPanelExpanded
         self.userVolumeMemoryMode = userVolumeMemoryMode
         self.deviceStreamLastDeviceUID = deviceStreamLastDeviceUID
@@ -434,6 +454,9 @@ struct AppPreferences: Codable, Equatable {
         includeBetaUpdates = try container.decodeIfPresent(Bool.self, forKey: .includeBetaUpdates) ?? false
         microphoneMode = try container.decodeIfPresent(MicrophoneMode.self, forKey: .microphoneMode) ?? .alwaysOn
         pushToTalkBeepEnabled = try container.decodeIfPresent(Bool.self, forKey: .pushToTalkBeepEnabled) ?? true
+        pushToTalkKey = try container.decodeIfPresent(HotkeyBinding.self, forKey: .pushToTalkKey)
+        pushToTalkGlobal = try container.decodeIfPresent(Bool.self, forKey: .pushToTalkGlobal) ?? true
+        muteHotkeyGlobal = try container.decodeIfPresent(Bool.self, forKey: .muteHotkeyGlobal) ?? false
         videoPanelExpanded = try container.decodeIfPresent(Bool.self, forKey: .videoPanelExpanded) ?? true
         userVolumeMemoryMode = try container.decodeIfPresent(UserVolumeMemoryMode.self, forKey: .userVolumeMemoryMode) ?? .persistent
         deviceStreamLastDeviceUID = try container.decodeIfPresent(String.self, forKey: .deviceStreamLastDeviceUID)
@@ -497,6 +520,9 @@ struct AppPreferences: Codable, Equatable {
         try container.encode(includeBetaUpdates, forKey: .includeBetaUpdates)
         try container.encode(microphoneMode, forKey: .microphoneMode)
         try container.encode(pushToTalkBeepEnabled, forKey: .pushToTalkBeepEnabled)
+        try container.encodeIfPresent(pushToTalkKey, forKey: .pushToTalkKey)
+        try container.encode(pushToTalkGlobal, forKey: .pushToTalkGlobal)
+        try container.encode(muteHotkeyGlobal, forKey: .muteHotkeyGlobal)
         try container.encode(videoPanelExpanded, forKey: .videoPanelExpanded)
         try container.encode(userVolumeMemoryMode, forKey: .userVolumeMemoryMode)
         try container.encodeIfPresent(deviceStreamLastDeviceUID, forKey: .deviceStreamLastDeviceUID)

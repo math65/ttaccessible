@@ -141,6 +141,11 @@ final class TeamTalkConnectionController {
     var appliedAdvancedInputAudio: AdvancedInputAudioPreferences?
     var voiceTransmissionEnabled = false
     var pushToTalkPressed = false
+    /// "Both" mode only: the always-on gate toggled by ⌘⇧A. The mic engine stays
+    /// hot (voiceTransmissionEnabled) the whole time so PTT is instant; this
+    /// lightweight flag decides whether captured audio is transmitted when PTT
+    /// is not held. Releasing PTT closes it (see setPushToTalkPressed).
+    var bothGateOpen = false
     var pushToTalkShortcutResolver: (() -> Bool)?
     var lastAudioWarningMessage: String?
     var masterMuted = false

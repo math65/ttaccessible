@@ -357,6 +357,18 @@ final class AppPreferencesStore: ObservableObject {
         mutate { $0.pushToTalkBeepEnabled = enabled }
     }
 
+    func mutatePushToTalkKey(_ binding: HotkeyBinding?) {
+        mutate { $0.pushToTalkKey = binding }
+    }
+
+    func mutatePushToTalkGlobal(_ global: Bool) {
+        mutate { $0.pushToTalkGlobal = global }
+    }
+
+    func mutateMuteHotkeyGlobal(_ global: Bool) {
+        mutate { $0.muteHotkeyGlobal = global }
+    }
+
     func mutateUserVolumeMemoryMode(_ mode: AppPreferences.UserVolumeMemoryMode) {
         mutate { $0.userVolumeMemoryMode = mode }
     }
@@ -576,6 +588,9 @@ final class AudioPreferencesStore: ObservableObject {
         var advancedErrorMessage: String?
         var microphoneMode: AppPreferences.MicrophoneMode
         var pushToTalkBeepEnabled: Bool
+        var pushToTalkKey: HotkeyBinding?
+        var pushToTalkGlobal: Bool
+        var muteHotkeyGlobal: Bool
     }
 
     @Published private(set) var state: State
@@ -630,7 +645,10 @@ final class AudioPreferencesStore: ObservableObject {
             advancedFeedbackMessage: advancedSettingsStore.feedbackMessage,
             advancedErrorMessage: advancedSettingsStore.lastErrorMessage,
             microphoneMode: rootStore.preferences.microphoneMode,
-            pushToTalkBeepEnabled: rootStore.preferences.pushToTalkBeepEnabled
+            pushToTalkBeepEnabled: rootStore.preferences.pushToTalkBeepEnabled,
+            pushToTalkKey: rootStore.preferences.pushToTalkKey,
+            pushToTalkGlobal: rootStore.preferences.pushToTalkGlobal,
+            muteHotkeyGlobal: rootStore.preferences.muteHotkeyGlobal
         )
 
         rootStore.$preferences
@@ -640,10 +658,16 @@ final class AudioPreferencesStore: ObservableObject {
                 let output = preferences.preferredOutputDevice
                 let mode = preferences.microphoneMode
                 let beep = preferences.pushToTalkBeepEnabled
+                let pttKey = preferences.pushToTalkKey
+                let pttGlobal = preferences.pushToTalkGlobal
+                let muteGlobal = preferences.muteHotkeyGlobal
                 if self.state.preferredInputDevice != input { self.state.preferredInputDevice = input }
                 if self.state.preferredOutputDevice != output { self.state.preferredOutputDevice = output }
                 if self.state.microphoneMode != mode { self.state.microphoneMode = mode }
                 if self.state.pushToTalkBeepEnabled != beep { self.state.pushToTalkBeepEnabled = beep }
+                if self.state.pushToTalkKey != pttKey { self.state.pushToTalkKey = pttKey }
+                if self.state.pushToTalkGlobal != pttGlobal { self.state.pushToTalkGlobal = pttGlobal }
+                if self.state.muteHotkeyGlobal != muteGlobal { self.state.muteHotkeyGlobal = muteGlobal }
             }
             .store(in: &cancellables)
 
@@ -772,6 +796,18 @@ final class AudioPreferencesStore: ObservableObject {
 
     func updatePushToTalkBeepEnabled(_ enabled: Bool) {
         rootStore.mutatePushToTalkBeepEnabled(enabled)
+    }
+
+    func updatePushToTalkKey(_ binding: HotkeyBinding?) {
+        rootStore.mutatePushToTalkKey(binding)
+    }
+
+    func updatePushToTalkGlobal(_ global: Bool) {
+        rootStore.mutatePushToTalkGlobal(global)
+    }
+
+    func updateMuteHotkeyGlobal(_ global: Bool) {
+        rootStore.mutateMuteHotkeyGlobal(global)
     }
 
     func updatePreset(_ preset: InputChannelPreset) {

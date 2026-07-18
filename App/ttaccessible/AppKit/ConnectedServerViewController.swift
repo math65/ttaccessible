@@ -1374,6 +1374,42 @@ final class ConnectedServerViewController: NSViewController {
     }
 
     func toggleMicrophone(announceStatus: Bool) {
+        // In "both" mode ⌘⇧A toggles the always-on gate (lightweight) instead of
+        // arming/disarming the mic engine — the engine stays hot for instant PTT.
+        if connectionController.currentMicrophoneMode == .both {
+            let willOpen = session.voiceTransmissionEnabled == false
+            let toggleGate: () -> Void = { [weak self] in
+                guard let self else { return }
+                self.connectionController.toggleBothModeGate { [weak self] result in
+                    guard let self else { return }
+                    switch result {
+                    case .success:
+                        if announceStatus {
+                            self.announce(willOpen
+                                ? L10n.text("connectedServer.audio.voiceEnabled")
+                                : L10n.text("connectedServer.audio.voiceDisabled"))
+                        }
+                    case .failure(let error):
+                        self.presentActionError(error.localizedDescription)
+                    }
+                }
+            }
+            // Opening the gate arms the mic engine, which needs microphone access.
+            guard willOpen else {
+                toggleGate()
+                return
+            }
+            connectionController.requestMicrophoneAccess { [weak self] granted in
+                guard let self else { return }
+                guard granted else {
+                    self.presentActionError(L10n.text("connectedServer.audio.error.microphonePermissionDenied"))
+                    return
+                }
+                toggleGate()
+            }
+            return
+        }
+
         if session.voiceTransmissionEnabled {
             connectionController.deactivateVoiceTransmission { [weak self] result in
                 guard let self else {

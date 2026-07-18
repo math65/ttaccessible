@@ -3,7 +3,6 @@
 //  ttaccessible
 
 import AppKit
-import KeyboardShortcuts
 import SwiftUI
 
 struct PreferencesAudioView: View {
@@ -14,7 +13,6 @@ struct PreferencesAudioView: View {
 
     @State private var selectedInputID = "__system_default__"
     @State private var selectedOutputID = "__system_default__"
-    @State private var pushToTalkShortcutConfigured: Bool = KeyboardShortcuts.getShortcut(for: .pushToTalk) != nil
 
     var body: some View {
         PreferencesPaneScrollView(accessibilityLabel: L10n.text("preferences.audio.title")) {
@@ -203,6 +201,14 @@ struct PreferencesAudioView: View {
         }
     }
 
+    private var usesPushToTalkKey: Bool {
+        store.state.microphoneMode == .pushToTalk || store.state.microphoneMode == .both
+    }
+
+    private var pushToTalkKeyConfigured: Bool {
+        store.state.pushToTalkKey?.isValid ?? false
+    }
+
     @ViewBuilder
     private var pushToTalkSection: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -224,26 +230,43 @@ struct PreferencesAudioView: View {
                         .tag(AppPreferences.MicrophoneMode.alwaysOn)
                     Text(L10n.text("preferences.audio.microphoneMode.pushToTalk"))
                         .tag(AppPreferences.MicrophoneMode.pushToTalk)
+                    Text(L10n.text("preferences.audio.microphoneMode.both"))
+                        .tag(AppPreferences.MicrophoneMode.both)
                 }
                 .labelsHidden()
-                .pickerStyle(.radioGroup)
                 .accessibilityLabel(L10n.text("preferences.audio.microphoneMode.label"))
             }
 
-            if store.state.microphoneMode == .pushToTalk {
+            if store.state.microphoneMode == .both {
+                Text(L10n.text("preferences.audio.microphoneMode.both.help"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if usesPushToTalkKey {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.text("preferences.audio.pushToTalk.key.label"))
                         .accessibilityHidden(true)
-                    KeyboardShortcuts.Recorder(for: .pushToTalk)
-                        .accessibilityLabel(L10n.text("preferences.audio.pushToTalk.key.label"))
+                    PushToTalkKeyRecorder(store: store)
                 }
 
-                if !pushToTalkShortcutConfigured {
+                if pushToTalkKeyConfigured == false {
                     Text(L10n.text("preferences.audio.pushToTalk.warning.noShortcut"))
                         .font(.caption)
                         .foregroundStyle(.orange)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+
+                Toggle(isOn: Binding(
+                    get: { store.state.pushToTalkGlobal },
+                    set: { store.updatePushToTalkGlobal($0) }
+                )) {
+                    Text(L10n.text("preferences.audio.pushToTalk.global.label"))
+                        .accessibilityHidden(true)
+                }
+                .toggleStyle(.switch)
+                .accessibilityLabel(L10n.text("preferences.audio.pushToTalk.global.label"))
 
                 Toggle(isOn: Binding(
                     get: { store.state.pushToTalkBeepEnabled },
@@ -255,11 +278,24 @@ struct PreferencesAudioView: View {
                 .toggleStyle(.switch)
                 .accessibilityLabel(L10n.text("preferences.audio.pushToTalk.beep.label"))
             }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
-            let configured = KeyboardShortcuts.getShortcut(for: .pushToTalk) != nil
-            if configured != pushToTalkShortcutConfigured {
-                pushToTalkShortcutConfigured = configured
+
+            Divider()
+
+            Toggle(isOn: Binding(
+                get: { store.state.muteHotkeyGlobal },
+                set: { store.updateMuteHotkeyGlobal($0) }
+            )) {
+                Text(L10n.text("preferences.audio.muteHotkey.global.label"))
+                    .accessibilityHidden(true)
+            }
+            .toggleStyle(.switch)
+            .accessibilityLabel(L10n.text("preferences.audio.muteHotkey.global.label"))
+
+            if store.state.pushToTalkGlobal || store.state.muteHotkeyGlobal {
+                Text(L10n.text("preferences.audio.hotkey.global.help"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
