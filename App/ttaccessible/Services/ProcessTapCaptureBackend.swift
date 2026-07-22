@@ -18,6 +18,7 @@
 import AppKit
 import AudioToolbox
 import CoreAudio
+import Darwin
 import Foundation
 
 @available(macOS 14.2, *)
@@ -134,9 +135,37 @@ final class ProcessTapCaptureBackend: DeviceStreamCaptureBackend {
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
+    /// Maps a helper process to the app the user perceives as playing its
+    /// audio. Finder/QuickLook is the canonical case: Finder never plays audio
+    /// itself — previews render in QuickLookUIService/WebKit.GPU helpers whose
+    /// bundle IDs share nothing with com.apple.finder, but whose RESPONSIBLE
+    /// process is Finder (the same attribution TCC uses). Private-but-stable
+    /// libsystem call, resolved via dlsym so a future removal degrades to
+    /// prefix-only matching instead of failing at launch.
+    private static let responsiblePID: (@convention(c) (pid_t) -> pid_t)? = {
+        guard let symbol = dlsym(UnsafeMutableRawPointer(bitPattern: -2),  // RTLD_DEFAULT
+                                 "responsibility_get_pid_responsible_for_pid") else { return nil }
+        return unsafeBitCast(symbol, to: (@convention(c) (pid_t) -> pid_t).self)
+    }()
+
     private func matchedProcesses() -> [AudioProcessInfo] {
-        Self.audioProcesses().filter { process in
-            selection.bundleIDPrefixes.contains { process.bundleID.hasPrefix($0) }
+        let prefixes = selection.bundleIDPrefixes
+        // Running apps the selection denotes — helpers attribute to these
+        // via responsible-pid.
+        let targetPIDs = Set(
+            NSWorkspace.shared.runningApplications
+                .filter { app in
+                    guard let bundleID = app.bundleIdentifier else { return false }
+                    return prefixes.contains { bundleID.hasPrefix($0) }
+                }
+                .map(\.processIdentifier)
+        )
+        return Self.audioProcesses().filter { process in
+            if prefixes.contains(where: { process.bundleID.hasPrefix($0) }) { return true }
+            if targetPIDs.contains(process.pid) { return true }
+            guard targetPIDs.isEmpty == false, let responsiblePID = Self.responsiblePID else { return false }
+            let responsible = responsiblePID(process.pid)
+            return responsible > 0 && targetPIDs.contains(responsible)
         }
     }
 
@@ -156,10 +185,16 @@ final class ProcessTapCaptureBackend: DeviceStreamCaptureBackend {
             resampleScratch = [Int16](repeating: 0, count: worstCaseOutputFrames * AudioDeviceStreamSource.outputChannels)
 
             let matched = matchedProcesses()
-            // Diagnostic dump: which HAL processes exist and which matched —
-            // this is how the VoiceOver process set gets verified/refined live.
+            // Diagnostic dump: which HAL processes exist, who they're
+            // responsible to, and which matched — how the VoiceOver process
+            // set and helper attribution get verified/refined live.
             for process in Self.audioProcesses() {
-                AudioLogger.log("process tap: HAL process pid=%d bundle=%@", Int(process.pid), process.bundleID)
+                let responsible = Self.responsiblePID?(process.pid) ?? -1
+                let responsibleBundle = responsible > 0
+                    ? NSRunningApplication(processIdentifier: responsible)?.bundleIdentifier ?? "?"
+                    : "?"
+                AudioLogger.log("process tap: HAL process pid=%d bundle=%@ responsible=%d(%@)",
+                                Int(process.pid), process.bundleID, Int(responsible), responsibleBundle)
             }
             if matched.isEmpty {
                 // Not an error: the target just hasn't registered audio yet
