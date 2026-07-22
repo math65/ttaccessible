@@ -439,7 +439,8 @@
 "preferences.audio.pushToTalk.key.recordHint" = "Activez, puis appuyez sur la touche à maintenir pour le push-to-talk. N'importe quelle touche convient, même une seule touche. Vous pouvez aussi utiliser une combinaison de touches de modification seule, comme Commande-Contrôle : appuyez puis relâchez-la. Appuyez sur Supprimer pour effacer.";
 "preferences.audio.pushToTalk.beep.label" = "Jouer un son au début et à la fin de la transmission";
 "preferences.audio.pushToTalk.global.label" = "Le push-to-talk fonctionne même quand une autre app est au premier plan";
-"preferences.audio.muteHotkey.global.label" = "⌘⇧A fonctionne même quand une autre app est au premier plan";
+"preferences.audio.muteHotkey.global.label" = "Le raccourci d'activation du microphone fonctionne même quand une autre app est au premier plan";
+"preferences.audio.muteHotkey.key.label" = "Touche globale d'activation du microphone";
 "preferences.audio.hotkey.global.help" = "Le fonctionnement depuis une autre app utilise l'autorisation « Surveillance des saisies » — macOS la demande la première fois. Remarque : tant que ttaccessible est en bac à sable, le raccourci est détecté mais atteint quand même l'app au premier plan (il ne peut pas être intercepté) ; choisissez donc une touche qui ne perturbera pas les autres apps.";
 "preferences.audio.pushToTalk.warning.noShortcut" = "Aucun raccourci configuré — le push-to-talk est inactif et le microphone reste ouvert comme en mode « toujours actif ». Activez le bouton ci-dessus pour définir une touche.";
 "preferences.audio.volumeMemory.section" = "Mémorisation des volumes par utilisateur";

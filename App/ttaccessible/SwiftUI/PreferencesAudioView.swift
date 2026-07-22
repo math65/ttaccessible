@@ -291,6 +291,20 @@ struct PreferencesAudioView: View {
             .toggleStyle(.switch)
             .accessibilityLabel(L10n.text("preferences.audio.muteHotkey.global.label"))
 
+            if store.state.muteHotkeyGlobal {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(L10n.text("preferences.audio.muteHotkey.key.label"))
+                        .accessibilityHidden(true)
+                    HotkeyRecorderButton(
+                        value: store.state.muteHotkeyBinding,
+                        accessibilityLabelKey: "preferences.audio.muteHotkey.key.label",
+                        emptyValueText: HotkeyBinding.defaultMuteHotkey().displayString
+                    ) { binding in
+                        store.updateMuteHotkeyBinding(binding)
+                    }
+                }
+            }
+
             if store.state.pushToTalkGlobal || store.state.muteHotkeyGlobal {
                 Text(L10n.text("preferences.audio.hotkey.global.help"))
                     .font(.caption)

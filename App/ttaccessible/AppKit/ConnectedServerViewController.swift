@@ -1377,15 +1377,23 @@ final class ConnectedServerViewController: NSViewController {
         // In "both" mode ⌘⇧A toggles the always-on gate (lightweight) instead of
         // arming/disarming the mic engine — the engine stays hot for instant PTT.
         if connectionController.currentMicrophoneMode == .both {
-            let willOpen = session.voiceTransmissionEnabled == false
-            let toggleGate: () -> Void = { [weak self] in
+            // Opening the gate can arm the mic engine, which needs microphone
+            // access — request it unconditionally: when the mic is already
+            // authorized (any armed state) this returns immediately, and the
+            // authoritative open/closed result comes back from the toggle
+            // itself rather than a possibly-stale main-thread snapshot.
+            connectionController.requestMicrophoneAccess { [weak self] granted in
                 guard let self else { return }
+                guard granted else {
+                    self.presentActionError(L10n.text("connectedServer.audio.error.microphonePermissionDenied"))
+                    return
+                }
                 self.connectionController.toggleBothModeGate { [weak self] result in
                     guard let self else { return }
                     switch result {
-                    case .success:
+                    case .success(let gateNowOpen):
                         if announceStatus {
-                            self.announce(willOpen
+                            self.announce(gateNowOpen
                                 ? L10n.text("connectedServer.audio.voiceEnabled")
                                 : L10n.text("connectedServer.audio.voiceDisabled"))
                         }
@@ -1393,19 +1401,6 @@ final class ConnectedServerViewController: NSViewController {
                         self.presentActionError(error.localizedDescription)
                     }
                 }
-            }
-            // Opening the gate arms the mic engine, which needs microphone access.
-            guard willOpen else {
-                toggleGate()
-                return
-            }
-            connectionController.requestMicrophoneAccess { [weak self] granted in
-                guard let self else { return }
-                guard granted else {
-                    self.presentActionError(L10n.text("connectedServer.audio.error.microphonePermissionDenied"))
-                    return
-                }
-                toggleGate()
             }
             return
         }

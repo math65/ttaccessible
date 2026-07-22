@@ -53,12 +53,9 @@ final class HotkeyMonitor {
     /// for the mute chord, whose focused case is handled by the menu shortcut.
     private var globalOnlyWhenInactive = false
     private var wantsReleaseEvents = true
-    /// Bundle IDs of apps for which the global hotkey is ignored while they are
-    /// frontmost (e.g. Finder, where ⌘⇧A means "Go to Applications"). Because the
-    /// sandbox prevents swallowing, this lets the other app own the keystroke.
-    private var ignoredFrontmostBundleIDs: Set<String> = []
 
     private var localMonitor: Any?
+    private var resignActiveObserver: Any?
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var isPressed = false
@@ -71,15 +68,13 @@ final class HotkeyMonitor {
         binding: HotkeyBinding?,
         scope: Scope,
         globalOnlyWhenInactive: Bool = false,
-        wantsReleaseEvents: Bool = true,
-        ignoredFrontmostBundleIDs: Set<String> = []
+        wantsReleaseEvents: Bool = true
     ) {
         stop()
         self.binding = binding
         self.scope = scope
         self.globalOnlyWhenInactive = globalOnlyWhenInactive
         self.wantsReleaseEvents = wantsReleaseEvents
-        self.ignoredFrontmostBundleIDs = ignoredFrontmostBundleIDs
 
         guard let binding, binding.isValid else { return }
         switch scope {
@@ -95,12 +90,20 @@ final class HotkeyMonitor {
             NSEvent.removeMonitor(localMonitor)
             self.localMonitor = nil
         }
+        if let resignActiveObserver {
+            NotificationCenter.default.removeObserver(resignActiveObserver)
+            self.resignActiveObserver = nil
+        }
         if let runLoopSource {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
             self.runLoopSource = nil
         }
         if let eventTap {
             CGEvent.tapEnable(tap: eventTap, enable: false)
+            // tapEnable(false) + dropping the reference doesn't release the
+            // mach port's receive right — invalidate explicitly so repeated
+            // reconfigure cycles don't leak ports.
+            CFMachPortInvalidate(eventTap)
             self.eventTap = nil
         }
         isAwaitingGlobalPermission = false
@@ -162,21 +165,25 @@ final class HotkeyMonitor {
             if let eventTap { CGEvent.tapEnable(tap: eventTap, enable: true) }
             return
         }
-        // Let the in-app menu shortcut handle the focused case for the mute chord.
-        if globalOnlyWhenInactive, NSApp.isActive { return }
         guard let binding else { return }
+        // The inactive-only guard (mute chord: the in-app menu shortcut owns
+        // the focused case) suppresses PRESSES only. Releases always run —
+        // if the app becomes active between down and up, eating the keyUp
+        // would leave isPressed stuck and silently swallow the next toggle.
+        let suppressPress = globalOnlyWhenInactive && NSApp.isActive
 
         let mods = Self.modifierFlags(from: event.flags)
         if binding.isModifierOnly {
-            updateChord(active: mods, target: binding.modifiers)
+            let chordActive = mods == binding.modifiers
+            if chordActive, suppressPress { return }
+            setPressed(chordActive)
             return
         }
         let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
         switch type {
         case .keyDown:
             let autorepeat = event.getIntegerValueField(.keyboardEventAutorepeat) != 0
-            guard keyCode == binding.keyCode, mods == binding.modifiers else { return }
-            if isFrontmostAppIgnored() { return }
+            guard keyCode == binding.keyCode, mods == binding.modifiers, suppressPress == false else { return }
             if autorepeat == false { setPressed(true) }
         case .keyUp:
             guard keyCode == binding.keyCode else { return }
@@ -184,15 +191,6 @@ final class HotkeyMonitor {
         default:
             break
         }
-    }
-
-    /// Whether the current frontmost app is on the ignore list — used to let e.g.
-    /// Finder keep ⌘⇧A instead of toggling the mic.
-    private func isFrontmostAppIgnored() -> Bool {
-        guard ignoredFrontmostBundleIDs.isEmpty == false,
-              let bundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
-        else { return false }
-        return ignoredFrontmostBundleIDs.contains(bundleID)
     }
 
     // MARK: - Local (app-focused) via NSEvent
@@ -204,6 +202,16 @@ final class HotkeyMonitor {
             // Swallow a matched key locally too, so it doesn't type into a field.
             return self.handleNSEvent(event) ? nil : event
         }
+        // A local monitor can't see the keyUp once the app deactivates
+        // (Cmd-Tab mid-hold) — the release would be lost and the mic would
+        // keep transmitting. Treat losing active status as a release.
+        resignActiveObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didResignActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.setPressed(false)
+        }
         AudioLogger.log("[Hotkey] app-focused monitor active for %@", binding.displayString)
     }
 
@@ -212,7 +220,7 @@ final class HotkeyMonitor {
         guard let binding else { return false }
         let mods = event.modifierFlags
             .intersection(.deviceIndependentFlagsMask)
-            .subtracting([.function, .capsLock])
+            .subtracting([.function, .capsLock, .numericPad])
         if binding.isModifierOnly {
             updateChord(active: mods, target: binding.modifiers)
             return false
@@ -220,15 +228,34 @@ final class HotkeyMonitor {
         switch event.type {
         case .keyDown:
             guard Int(event.keyCode) == binding.keyCode, mods == binding.modifiers else { return false }
+            // A bare printable key (no modifiers) must keep typing into a
+            // focused text field — the field wins over push-to-talk there.
+            if binding.modifiers.isEmpty, Self.isPrintable(event), Self.isTextInputFocused() {
+                return false
+            }
             if event.isARepeat == false { setPressed(true) }
             return true
         case .keyUp:
-            guard Int(event.keyCode) == binding.keyCode else { return false }
+            // Only swallow the keyUp of a press WE matched — an unmatched
+            // down (typed into a field, different modifiers) keeps its up.
+            guard Int(event.keyCode) == binding.keyCode, isPressed else { return false }
             setPressed(false)
             return true
         default:
             return false
         }
+    }
+
+    /// Whether the event would insert a visible character if left alone
+    /// (excludes function/navigation keys, which map into the F700 range).
+    private static func isPrintable(_ event: NSEvent) -> Bool {
+        guard let scalar = event.charactersIgnoringModifiers?.unicodeScalars.first else { return false }
+        return scalar.value >= 0x20 && scalar.value != 0x7F
+            && (scalar.value < 0xF700 || scalar.value > 0xF8FF)
+    }
+
+    private static func isTextInputFocused() -> Bool {
+        NSApp.keyWindow?.firstResponder is NSTextView
     }
 
     // MARK: - Shared

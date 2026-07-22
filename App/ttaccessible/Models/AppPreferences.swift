@@ -131,6 +131,8 @@ struct AppPreferences: Codable, Equatable {
         case pushToTalkKey
         case pushToTalkGlobal
         case muteHotkeyGlobal
+        case muteHotkeyBinding
+        case didMigrateLegacyPushToTalkKey
         case videoPanelExpanded
         case userVolumeMemoryMode
         case deviceStreamLastDeviceUID
@@ -207,6 +209,14 @@ struct AppPreferences: Codable, Equatable {
     var pushToTalkGlobal: Bool
     /// When true, ⌘⇧A (mute / gate) works from any app (requires Input Monitoring).
     var muteHotkeyGlobal: Bool
+    /// Custom binding for the GLOBAL mic-toggle hotkey (nil = the default,
+    /// ⌘⇧ + the key that types "A" on the current layout). The in-app case is
+    /// always the ⌘⇧A menu shortcut; this binding only drives the global
+    /// listen-only tap used while another app is frontmost.
+    var muteHotkeyBinding: HotkeyBinding?
+    /// One-time migration marker: the old KeyboardShortcuts library's stored
+    /// push-to-talk key has been imported (or found absent).
+    var didMigrateLegacyPushToTalkKey: Bool
     var videoPanelExpanded: Bool
     var userVolumeMemoryMode: UserVolumeMemoryMode
     /// CoreAudio UID of the input device last streamed to a channel, so the
@@ -272,6 +282,8 @@ struct AppPreferences: Codable, Equatable {
         pushToTalkKey: HotkeyBinding? = nil,
         pushToTalkGlobal: Bool = true,
         muteHotkeyGlobal: Bool = false,
+        muteHotkeyBinding: HotkeyBinding? = nil,
+        didMigrateLegacyPushToTalkKey: Bool = false,
         videoPanelExpanded: Bool = true,
         userVolumeMemoryMode: UserVolumeMemoryMode = .persistent,
         deviceStreamLastDeviceUID: String? = nil
@@ -335,6 +347,8 @@ struct AppPreferences: Codable, Equatable {
         self.pushToTalkKey = pushToTalkKey
         self.pushToTalkGlobal = pushToTalkGlobal
         self.muteHotkeyGlobal = muteHotkeyGlobal
+        self.muteHotkeyBinding = muteHotkeyBinding
+        self.didMigrateLegacyPushToTalkKey = didMigrateLegacyPushToTalkKey
         self.videoPanelExpanded = videoPanelExpanded
         self.userVolumeMemoryMode = userVolumeMemoryMode
         self.deviceStreamLastDeviceUID = deviceStreamLastDeviceUID
@@ -457,6 +471,8 @@ struct AppPreferences: Codable, Equatable {
         pushToTalkKey = try container.decodeIfPresent(HotkeyBinding.self, forKey: .pushToTalkKey)
         pushToTalkGlobal = try container.decodeIfPresent(Bool.self, forKey: .pushToTalkGlobal) ?? true
         muteHotkeyGlobal = try container.decodeIfPresent(Bool.self, forKey: .muteHotkeyGlobal) ?? false
+        muteHotkeyBinding = try container.decodeIfPresent(HotkeyBinding.self, forKey: .muteHotkeyBinding)
+        didMigrateLegacyPushToTalkKey = try container.decodeIfPresent(Bool.self, forKey: .didMigrateLegacyPushToTalkKey) ?? false
         videoPanelExpanded = try container.decodeIfPresent(Bool.self, forKey: .videoPanelExpanded) ?? true
         userVolumeMemoryMode = try container.decodeIfPresent(UserVolumeMemoryMode.self, forKey: .userVolumeMemoryMode) ?? .persistent
         deviceStreamLastDeviceUID = try container.decodeIfPresent(String.self, forKey: .deviceStreamLastDeviceUID)
@@ -523,6 +539,8 @@ struct AppPreferences: Codable, Equatable {
         try container.encodeIfPresent(pushToTalkKey, forKey: .pushToTalkKey)
         try container.encode(pushToTalkGlobal, forKey: .pushToTalkGlobal)
         try container.encode(muteHotkeyGlobal, forKey: .muteHotkeyGlobal)
+        try container.encodeIfPresent(muteHotkeyBinding, forKey: .muteHotkeyBinding)
+        try container.encode(didMigrateLegacyPushToTalkKey, forKey: .didMigrateLegacyPushToTalkKey)
         try container.encode(videoPanelExpanded, forKey: .videoPanelExpanded)
         try container.encode(userVolumeMemoryMode, forKey: .userVolumeMemoryMode)
         try container.encodeIfPresent(deviceStreamLastDeviceUID, forKey: .deviceStreamLastDeviceUID)

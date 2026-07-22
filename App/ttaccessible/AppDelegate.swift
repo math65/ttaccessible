@@ -114,7 +114,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var updaterAutoCheckCancellable: AnyCancellable?
     private var nicknameCancellable: AnyCancellable?
     private var userMenuVisibilityCancellable: AnyCancellable?
-    private var pushToTalkModeCancellable: AnyCancellable?
     private var hotkeyPrefsCancellable: AnyCancellable?
     private let pushToTalkMonitor = HotkeyMonitor()
     private let muteHotkeyMonitor = HotkeyMonitor()
@@ -224,12 +223,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let key: HotkeyBinding?
         let pushToTalkGlobal: Bool
         let muteHotkeyGlobal: Bool
+        let muteHotkeyBinding: HotkeyBinding?
 
         init(preferences: AppPreferences) {
             mode = preferences.microphoneMode
             key = preferences.pushToTalkKey
             pushToTalkGlobal = preferences.pushToTalkGlobal
             muteHotkeyGlobal = preferences.muteHotkeyGlobal
+            muteHotkeyBinding = preferences.muteHotkeyBinding
         }
     }
 
@@ -237,10 +238,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Lets the audio insert path treat PTT as inactive when no key is
         // configured — otherwise pushToTalkPressed never flips and the mic
         // stays muted forever in push-to-talk mode.
-        connectionController.pushToTalkShortcutResolver = { [weak self] in
-            self?.preferencesStore.preferences.pushToTalkKey?.isValid ?? false
-        }
-
         pushToTalkMonitor.onPress = { [weak self] in self?.handlePushToTalkPress() }
         pushToTalkMonitor.onRelease = { [weak self] in self?.handlePushToTalkRelease() }
         // The global ⌘⇧A tap fires only while another app is focused (the menu
@@ -262,17 +259,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .sink { [weak self] prefs in
                 self?.configureHotkeyMonitors(with: prefs)
             }
-
-        // Reset transmit state when the mode toggles, so toggling Push-to-talk
-        // off doesn't leave the gate stuck open from a previous press — and arm
-        // the engine when switching into "both".
-        pushToTalkModeCancellable = preferencesStore.$preferences
-            .map(\.microphoneMode)
-            .removeDuplicates()
-            .sink { [weak self] _ in
-                self?.connectionController.setPushToTalkPressed(false)
-                self?.connectionController.handleMicrophoneModeChanged()
-            }
     }
 
     /// Installs/updates the PTT and mute hotkey monitors from current prefs.
@@ -286,6 +272,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         prefs.pushToTalkGlobal ? 1 : 0,
                         prefs.muteHotkeyGlobal ? 1 : 0)
 
+        // Push the queue-side caches + normalize transmit state on mode
+        // changes (the controller must never read the @Published prefs from
+        // its own queue).
+        connectionController.applyMicrophoneHotkeySettings(
+            mode: prefs.microphoneMode,
+            pushToTalkKeyConfigured: prefs.pushToTalkKey?.isValid ?? false
+        )
+
         let pttActive = prefs.microphoneMode == .pushToTalk || prefs.microphoneMode == .both
         if pttActive, let key = prefs.pushToTalkKey, key.isValid {
             pushToTalkMonitor.configure(
@@ -297,14 +291,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         if prefs.muteHotkeyGlobal {
-            // ⌘⇧A — keyCode 0 is ANSI 'a'. Exempt Finder, where ⌘⇧A means
-            // "Go to Applications folder" (we can't swallow it while sandboxed).
+            // User-configurable global mic-toggle binding; the default is
+            // ⌘⇧ + whatever key TYPES "a" on the current layout (key codes
+            // are positional — hardcoding 0 made ⌘⇧Q toggle the mic on
+            // AZERTY). A user whose chord collides with another app's
+            // shortcut (the listen-only tap can't swallow) picks a
+            // different binding instead of us keeping per-app ignore lists.
             muteHotkeyMonitor.configure(
-                binding: HotkeyBinding(keyCode: 0, modifiers: [.command, .shift], keyLabel: "A"),
+                binding: prefs.muteHotkeyBinding ?? HotkeyBinding.defaultMuteHotkey(),
                 scope: .global,
                 globalOnlyWhenInactive: true,
-                wantsReleaseEvents: false,
-                ignoredFrontmostBundleIDs: ["com.apple.finder"]
+                wantsReleaseEvents: false
             )
         } else {
             muteHotkeyMonitor.stop()

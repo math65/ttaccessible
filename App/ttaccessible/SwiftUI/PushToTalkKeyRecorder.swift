@@ -120,8 +120,17 @@ final class KeyCaptureSession: ObservableObject {
     }
 }
 
-struct PushToTalkKeyRecorder: View {
-    @ObservedObject var store: AudioPreferencesStore
+/// Generic accessible hotkey field: presents as a plain button, records the
+/// next key press / modifier chord into a HotkeyBinding. Used for both the
+/// push-to-talk key and the global mic-toggle binding.
+struct HotkeyRecorderButton: View {
+    let value: HotkeyBinding?
+    /// Localization key for the field's accessibility label.
+    let accessibilityLabelKey: String
+    /// Shown when no binding is set (e.g. "Not set", or the default chord).
+    let emptyValueText: String
+    let onCommit: (HotkeyBinding?) -> Void
+
     @StateObject private var session = KeyCaptureSession()
 
     var body: some View {
@@ -130,14 +139,14 @@ struct PushToTalkKeyRecorder: View {
                 session.cancel()
             } else {
                 session.begin { binding in
-                    store.updatePushToTalkKey(binding)
+                    onCommit(binding)
                 }
             }
         } label: {
             Text(buttonTitle)
                 .frame(minWidth: 140)
         }
-        .accessibilityLabel(L10n.text("preferences.audio.pushToTalk.key.label"))
+        .accessibilityLabel(L10n.text(accessibilityLabelKey))
         .accessibilityValue(valueText)
         .accessibilityHint(L10n.text("preferences.audio.pushToTalk.key.recordHint"))
         .onDisappear {
@@ -150,9 +159,23 @@ struct PushToTalkKeyRecorder: View {
     }
 
     private var valueText: String {
-        if let key = store.state.pushToTalkKey, key.isValid {
-            return key.displayString
+        if let value, value.isValid {
+            return value.displayString
         }
-        return L10n.text("preferences.audio.pushToTalk.key.notSet")
+        return emptyValueText
+    }
+}
+
+struct PushToTalkKeyRecorder: View {
+    @ObservedObject var store: AudioPreferencesStore
+
+    var body: some View {
+        HotkeyRecorderButton(
+            value: store.state.pushToTalkKey,
+            accessibilityLabelKey: "preferences.audio.pushToTalk.key.label",
+            emptyValueText: L10n.text("preferences.audio.pushToTalk.key.notSet")
+        ) { binding in
+            store.updatePushToTalkKey(binding)
+        }
     }
 }

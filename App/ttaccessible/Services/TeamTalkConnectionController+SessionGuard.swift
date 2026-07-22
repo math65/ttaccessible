@@ -26,7 +26,7 @@ extension TeamTalkConnectionController {
         publishDisconnected(message: L10n.text("connectedServer.disconnect.connectionLost"))
     }
 
-    func finishOnMain(_ result: Result<Void, Error>, completion: @escaping (Result<Void, Error>) -> Void) {
+    func finishOnMain<Success>(_ result: Result<Success, Error>, completion: @escaping (Result<Success, Error>) -> Void) {
         DispatchQueue.main.async {
             completion(result)
         }

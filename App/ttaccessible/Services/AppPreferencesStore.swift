@@ -37,6 +37,10 @@ final class AppPreferencesStore: ObservableObject {
         // selected device survives restarts / hot-plug. Runs before the
         // SoundPlayer setup below so it picks up the upgraded output ID.
         migrateAudioDevicePreferencesToStableUIDs()
+        // One-time import of the push-to-talk key the removed KeyboardShortcuts
+        // library stored: without it a configured PTT silently degrades to
+        // always-on transmission after the update.
+        migrateLegacyPushToTalkKeyIfNeeded()
         SoundPlayer.shared.isEnabled = preferences.soundNotificationsEnabled
         SoundPlayer.shared.setGains(effectsDB: preferences.soundEffectsGainDB, masterDB: preferences.outputGainDB)
         SoundPlayer.shared.loadPack(preferences.soundPack)
@@ -369,6 +373,50 @@ final class AppPreferencesStore: ObservableObject {
         mutate { $0.muteHotkeyGlobal = global }
     }
 
+    func mutateMuteHotkeyBinding(_ binding: HotkeyBinding?) {
+        mutate { $0.muteHotkeyBinding = binding }
+    }
+
+    /// One-time import of the KeyboardShortcuts library's stored push-to-talk
+    /// key ("KeyboardShortcuts_pushToTalk", a JSON blob of carbon key code +
+    /// carbon modifiers). Runs once ever — the marker is set even when there
+    /// is nothing to import, so a user who later clears their PTT key isn't
+    /// re-migrated on every launch.
+    private func migrateLegacyPushToTalkKeyIfNeeded() {
+        guard preferences.didMigrateLegacyPushToTalkKey == false else { return }
+        preferences.didMigrateLegacyPushToTalkKey = true
+        defer { persist(preferences) }
+
+        guard preferences.pushToTalkKey == nil else { return }
+        let legacyKey = "KeyboardShortcuts_pushToTalk"
+        let json: Data?
+        if let data = userDefaults.data(forKey: legacyKey) {
+            json = data
+        } else if let string = userDefaults.string(forKey: legacyKey) {
+            json = string.data(using: .utf8)
+        } else {
+            json = nil
+        }
+        guard let json,
+              let object = try? JSONSerialization.jsonObject(with: json) as? [String: Any],
+              let carbonKeyCode = object["carbonKeyCode"] as? Int else {
+            return
+        }
+        let carbonModifiers = object["carbonModifiers"] as? Int ?? 0
+        var modifiers: NSEvent.ModifierFlags = []
+        if carbonModifiers & 0x0100 != 0 { modifiers.insert(.command) }   // cmdKey
+        if carbonModifiers & 0x0200 != 0 { modifiers.insert(.shift) }     // shiftKey
+        if carbonModifiers & 0x0800 != 0 { modifiers.insert(.option) }    // optionKey
+        if carbonModifiers & 0x1000 != 0 { modifiers.insert(.control) }   // controlKey
+        preferences.pushToTalkKey = HotkeyBinding(
+            keyCode: carbonKeyCode,
+            modifiers: modifiers,
+            keyLabel: KeyCodeResolver.label(forKeyCode: carbonKeyCode)
+        )
+        AudioLogger.log("[Hotkey] migrated legacy push-to-talk key: %@",
+                        preferences.pushToTalkKey?.displayString ?? "?")
+    }
+
     func mutateUserVolumeMemoryMode(_ mode: AppPreferences.UserVolumeMemoryMode) {
         mutate { $0.userVolumeMemoryMode = mode }
     }
@@ -591,6 +639,7 @@ final class AudioPreferencesStore: ObservableObject {
         var pushToTalkKey: HotkeyBinding?
         var pushToTalkGlobal: Bool
         var muteHotkeyGlobal: Bool
+        var muteHotkeyBinding: HotkeyBinding?
     }
 
     @Published private(set) var state: State
@@ -648,7 +697,8 @@ final class AudioPreferencesStore: ObservableObject {
             pushToTalkBeepEnabled: rootStore.preferences.pushToTalkBeepEnabled,
             pushToTalkKey: rootStore.preferences.pushToTalkKey,
             pushToTalkGlobal: rootStore.preferences.pushToTalkGlobal,
-            muteHotkeyGlobal: rootStore.preferences.muteHotkeyGlobal
+            muteHotkeyGlobal: rootStore.preferences.muteHotkeyGlobal,
+            muteHotkeyBinding: rootStore.preferences.muteHotkeyBinding
         )
 
         rootStore.$preferences
@@ -661,6 +711,7 @@ final class AudioPreferencesStore: ObservableObject {
                 let pttKey = preferences.pushToTalkKey
                 let pttGlobal = preferences.pushToTalkGlobal
                 let muteGlobal = preferences.muteHotkeyGlobal
+                let muteBinding = preferences.muteHotkeyBinding
                 if self.state.preferredInputDevice != input { self.state.preferredInputDevice = input }
                 if self.state.preferredOutputDevice != output { self.state.preferredOutputDevice = output }
                 if self.state.microphoneMode != mode { self.state.microphoneMode = mode }
@@ -668,6 +719,7 @@ final class AudioPreferencesStore: ObservableObject {
                 if self.state.pushToTalkKey != pttKey { self.state.pushToTalkKey = pttKey }
                 if self.state.pushToTalkGlobal != pttGlobal { self.state.pushToTalkGlobal = pttGlobal }
                 if self.state.muteHotkeyGlobal != muteGlobal { self.state.muteHotkeyGlobal = muteGlobal }
+                if self.state.muteHotkeyBinding != muteBinding { self.state.muteHotkeyBinding = muteBinding }
             }
             .store(in: &cancellables)
 
@@ -808,6 +860,10 @@ final class AudioPreferencesStore: ObservableObject {
 
     func updateMuteHotkeyGlobal(_ global: Bool) {
         rootStore.mutateMuteHotkeyGlobal(global)
+    }
+
+    func updateMuteHotkeyBinding(_ binding: HotkeyBinding?) {
+        rootStore.mutateMuteHotkeyBinding(binding)
     }
 
     func updatePreset(_ preset: InputChannelPreset) {
