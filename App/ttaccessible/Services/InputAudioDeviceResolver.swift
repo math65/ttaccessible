@@ -303,6 +303,25 @@ enum InputAudioDeviceResolver {
             return nil
         }
 
+        // System-plumbing aggregates are not user-facing inputs: coreaudiod
+        // spawns "CADefaultDeviceAggregate-<pid>-<n>" when a process (including
+        // us, via the tap/AEC infrastructure) wraps the default device, and
+        // hidden devices ask not to be listed. Neither belongs in a picker.
+        if name.hasPrefix("CADefaultDeviceAggregate") || uid.hasPrefix("CADefaultDeviceAggregate") {
+            return nil
+        }
+        var hiddenAddress = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyIsHidden,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var isHidden: UInt32 = 0
+        var hiddenSize = UInt32(MemoryLayout<UInt32>.size)
+        if AudioObjectGetPropertyData(objectID, &hiddenAddress, 0, nil, &hiddenSize, &isHidden) == noErr,
+           isHidden != 0 {
+            return nil
+        }
+
         let sampleRate = doubleProperty(
             objectID: objectID,
             selector: kAudioDevicePropertyNominalSampleRate,

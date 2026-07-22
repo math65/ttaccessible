@@ -236,6 +236,13 @@ final class TeamTalkConnectionController {
     /// loop so a slow tick (heavy publish in a crowded channel) can never starve
     /// the mix sources. See AudioBlockPump.
     let audioBlockPump = AudioBlockPump()
+    /// Voice↔stream sync (always on while a live-capture media stream runs):
+    /// measures the media path's sender-side latency from our own stream's
+    /// local playback blocks and delays outgoing voice to match, so a user
+    /// singing over their streamed instrument arrives in time at receivers.
+    /// See VoiceSyncDelayLine.swift.
+    let voiceSyncEstimator = MediaSyncEstimator()
+    lazy var voiceSyncDelayLine = VoiceSyncDelayLine(queue: queue)
     /// Remote user IDs we currently have per-user audio block events enabled for
     /// (reconciled with channel membership; the local user is never included).
     var perUserAudioEnabled: Set<Int32> = []
@@ -256,6 +263,11 @@ final class TeamTalkConnectionController {
         self.preferencesStore = preferencesStore
         queue.setSpecific(key: queueKey, value: ())
         userVolumeStore.setMemoryMode(preferencesStore.preferences.userVolumeMemoryMode)
+        audioBlockPump.mediaSyncEstimator = voiceSyncEstimator
+        voiceSyncDelayLine.insertHandler = { [weak self] chunk in
+            // Runs on the controller queue (the delay line's timer lives there).
+            self?.performVoiceInsertLocked(chunk) ?? true
+        }
     }
 
     /// Push the per-user volume memory mode (off / session / persistent) to the store.

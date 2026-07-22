@@ -128,34 +128,72 @@ extension TeamTalkConnectionController {
         }
     }
 
-    /// Stream a live audio input device to the channel. The device is captured
-    /// locally and served as an endless WAV on a loopback URL, which the SDK
-    /// broadcasts exactly like a URL stream — the source paces itself and pads
-    /// silence, so a quiet or unplugged device never ends the broadcast.
+    /// Stream a live audio input device to the channel (see
+    /// `startStreamingCaptureSource` — kept as the original entry point).
     func startStreamingAudioDevice(
         deviceUID: String,
         monitorEnabled: Bool,
         completion: @escaping (Result<Void, Error>) -> Void
     ) {
-        // Enumerate + open the capture device OFF the controller queue. Device
-        // enumeration and the loopback server's readiness wait (up to 5s) must
-        // not block the SDK's serial event loop.
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self else { return }
-
             guard let device = InputAudioDeviceResolver.availableInputDevices()
                 .first(where: { $0.uid == deviceUID }) else {
-                self.finishOnMain(
+                self?.finishOnMain(
                     .failure(TeamTalkConnectionError.internalError(L10n.text("mediaStream.device.error.deviceUnavailable"))),
                     completion: completion
                 )
                 return
             }
+            self?.startStreamingCaptureSource(
+                spec: .inputDevice(device),
+                monitorEnabled: monitorEnabled,
+                completion: completion
+            )
+        }
+    }
 
-            let source = AudioDeviceStreamSource(device: device)
+    /// Stream a live capture source (input device, an application's audio, or
+    /// VoiceOver's audio) to the channel. The source is captured locally and
+    /// served as endless Ogg Opus on a loopback URL, which the SDK broadcasts
+    /// exactly like a URL stream — the source paces itself and pads silence,
+    /// so a quiet source never ends the broadcast.
+    func startStreamingCaptureSource(
+        spec: DeviceStreamCaptureSpec,
+        monitorEnabled: Bool,
+        muteSourceOutput: Bool = false,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        // Open the capture OFF the controller queue: capture setup and the
+        // loopback server's readiness wait (up to 5s) must not block the SDK's
+        // serial event loop.
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self else { return }
+
+            let source = AudioDeviceStreamSource(spec: spec, muteSourceOutput: muteSourceOutput)
             let url: URL
             do {
                 url = try source.start()
+            } catch AudioDeviceStreamSourceError.sourceUnsupportedOnThisOS {
+                self.finishOnMain(
+                    .failure(TeamTalkConnectionError.internalError(L10n.text("mediaStream.device.error.sourceUnsupportedOS"))),
+                    completion: completion
+                )
+                return
+            } catch AudioDeviceStreamSourceError.deviceUnavailable {
+                // For process sources "unavailable" means no capturable
+                // process matched (app quit, VoiceOver off) — say that, not
+                // "device unplugged".
+                let messageKey: String
+                if case .processes = spec {
+                    messageKey = "mediaStream.device.error.processSourceUnavailable"
+                } else {
+                    messageKey = "mediaStream.device.error.deviceUnavailable"
+                }
+                self.finishOnMain(
+                    .failure(TeamTalkConnectionError.internalError(L10n.text(messageKey))),
+                    completion: completion
+                )
+                return
             } catch {
                 self.finishOnMain(
                     .failure(TeamTalkConnectionError.internalError(L10n.text("mediaStream.device.error.startFailed"))),
@@ -200,12 +238,15 @@ extension TeamTalkConnectionController {
                 self.deviceStreamSource = source
             self.deviceStreamMonitorEnabled = monitorEnabled
             self.mediaStreamingActive = true
-            // Subscribe to our own media stream only if the user opted in.
+            // Subscribe to our own media stream (playback when the user opted
+            // in, measure-only otherwise — voice sync needs the blocks).
             self.refreshLocalMediaAudioEventLocked(instance: instance)
+            // Fresh stream: measure the media path's latency from scratch.
+            self.voiceSyncEstimator.beginSession(clock: source.syncClock, preservingSnap: false)
             self.mediaStreamingPath = url.absoluteString
             self.mediaStreamingStartedHistoryLogged = false
             self.mediaStreamingSeekedWhilePaused = false
-            self.mediaStreamingFileName = device.name
+            self.mediaStreamingFileName = spec.displayName
             self.mediaStreamingSecurityScopedURL = nil
             // Endless live stream: duration stays 0 so the seek UI remains inert.
             self.mediaStreamingDurationMSec = 0
@@ -254,6 +295,14 @@ extension TeamTalkConnectionController {
     }
 
     func finalizeMediaStreamingLocked(instance: UnsafeMutableRawPointer, reason: MediaStreamingFinalizeReason) {
+        // End voice sync: drop queued voice outright so speech is LIVE again
+        // the moment the stream stops. This is symmetric, not lossy: the
+        // stream's own last ~half second (operating buffer + FFmpeg standing
+        // latency) dies unsent in the pipeline too, so the delayed voice tail
+        // has no stream audio left to align with — and a continuously-open
+        // mic would otherwise carry the stale delay indefinitely.
+        voiceSyncEstimator.endSession()
+        voiceSyncDelayLine.clear()
         deviceStreamSource?.stop()
         deviceStreamSource = nil
         deviceStreamMonitorEnabled = false
@@ -436,7 +485,7 @@ extension TeamTalkConnectionController {
     /// (or stops), which is the "device stream breaks on channel switch" bug.
     func restartMediaStreamForChannelChangeLocked(instance: UnsafeMutableRawPointer) {
         guard mediaStreamingActive, mediaStreamingPath != nil else { return }
-        if deviceStreamSource != nil {
+        if let deviceStreamSource {
             // Live device stream: restart to the new channel, never SDK-paused —
             // the mute/pause state lives in the capture source and persists across
             // the restart (same AudioDeviceStreamSource, same loopback URL). The
@@ -445,6 +494,10 @@ extension TeamTalkConnectionController {
             let wasPaused = mediaStreamingPaused
             _ = restartMediaStreamLocked(instance: instance, offsetMSec: 0, paused: false)
             mediaStreamingPaused = wasPaused
+            // The SDK re-opened the loopback URL → new connection, media
+            // timeline restarted. Re-measure the sync delay, holding the
+            // previous snap as provisional so voice stays roughly aligned.
+            voiceSyncEstimator.beginSession(clock: deviceStreamSource.syncClock, preservingSnap: true)
         } else {
             let offset = currentMediaStreamingElapsedMSecLocked()
             _ = restartMediaStreamLocked(instance: instance, offsetMSec: offset, paused: mediaStreamingPaused)

@@ -952,6 +952,8 @@ extension TeamTalkConnectionController {
             reusableInstance = instance
         }
 
+        voiceSyncEstimator.endSession()
+        voiceSyncDelayLine.clear()
         deviceStreamSource?.stop()
         deviceStreamSource = nil
         deviceStreamMonitorEnabled = false

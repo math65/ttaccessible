@@ -365,6 +365,17 @@ final class AppPreferencesStore: ObservableObject {
         mutate { $0.deviceStreamLastDeviceUID = uid }
     }
 
+    /// Remember the last streamed capture source; devices also keep the legacy
+    /// UID key in sync so older builds retain their preselection.
+    func mutateDeviceStreamLastSource(_ spec: DeviceStreamCaptureSpec) {
+        mutate { preferences in
+            preferences.deviceStreamLastSource = spec.persistenceToken
+            if case .inputDevice(let device) = spec {
+                preferences.deviceStreamLastDeviceUID = device.uid
+            }
+        }
+    }
+
     func updateDisabledSoundEvents(_ disabled: Set<NotificationSound>) {
         mutate { $0.disabledSoundEvents = disabled }
         SoundPlayer.shared.disabledSounds = disabled

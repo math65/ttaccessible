@@ -663,20 +663,30 @@ extension TeamTalkConnectionController {
         // Device streams self-monitor only when the user opted in (the source is
         // usually audible locally already — hearing it back would be an echo).
         let monitorAllowed = deviceStreamSource == nil || deviceStreamMonitorEnabled
-        let shouldEnable = outputAudioReady && mediaStreamingActive && monitorAllowed
+        // Voice sync measures the media path's latency from our own stream's
+        // local playback blocks, so live-capture streams keep the subscription
+        // even with monitor off — drained measure-only, never rendered.
+        let measurementNeeded = deviceStreamSource != nil
+        let shouldEnable = outputAudioReady && mediaStreamingActive && (monitorAllowed || measurementNeeded)
+        // Push the mode even when the enable state is unchanged: the same
+        // enabled subscription can flip between monitor and measure-only. The
+        // pump drains this stream and removes its mix source on leaving
+        // monitor (ordered after its final enqueue).
+        let mode: AudioBlockPump.LocalMediaMode = shouldEnable
+            ? (monitorAllowed ? .monitor : .measureOnly)
+            : .off
+        audioBlockPump.setLocalMediaMode(mode)
         guard shouldEnable != localMediaAudioEnabled else { return }
         let media = UInt32(STREAMTYPE_MEDIAFILE_AUDIO.rawValue)
         if shouldEnable {
             TT_EnableAudioBlockEvent(instance, TT_LOCAL_USERID, media, 1)
-            AudioLogger.log("local media: subscribed to own media stream for local playback")
+            AudioLogger.log("local media: subscribed to own media stream (%@)",
+                            monitorAllowed ? "playback" : "sync measurement")
         } else {
             TT_EnableAudioBlockEvent(instance, TT_LOCAL_USERID, media, 0)
             AudioLogger.log("local media: unsubscribed from own media stream")
         }
         localMediaAudioEnabled = shouldEnable
-        // The pump drains this stream and removes its mix source on disable
-        // (ordered after its final enqueue).
-        audioBlockPump.setLocalMediaEnabled(shouldEnable)
     }
 
     /// Reconcile per-user audio block events with the users currently in our
@@ -778,6 +788,10 @@ extension TeamTalkConnectionController {
         TT_EnableAudioBlockEvent(instance, TT_MUXED_USERID, UInt32(STREAMTYPE_VOICE.rawValue), 0)
         advancedMicrophoneEngine.stop()
         outputRenderEngine.removeUser(localMonitorEngineKey)
+        // Queued voice-sync chunks belong to the input session being torn down
+        // (mic stop, preset change, explicit voice-disable) — drop them before
+        // the flush below ends the SDK's input session.
+        voiceSyncDelayLine.clear()
         _ = TT_InsertAudioBlock(instance, nil)
         inputAudioReady = false
         advancedMicrophoneTargetFormat = nil
@@ -872,8 +886,82 @@ extension TeamTalkConnectionController {
             return
         }
 
-        chunk.samples.withUnsafeBufferPointer { buffer in
-            guard let baseAddress = buffer.baseAddress else { return }
+        // Local monitor at CAPTURE time — it must stay live even when the
+        // transmit below is voice-sync-delayed. Feed the same processed mic
+        // audio we're transmitting straight into the output mixer — local, no
+        // SDK round-trip. Drives both "hear myself" and the connected-mode
+        // Audio-preferences mic preview (one shared source key, so enabling
+        // both never doubles the audio).
+        if hearMyselfEnabled || previewMonitorEnabled {
+            outputRenderEngine.enqueueUser(
+                localMonitorEngineKey,
+                pcm: chunk.samples,
+                frames: Int(chunk.sampleCount),
+                channels: Int(chunk.channels),
+                sampleRate: Double(chunk.sampleRate),
+                profile: .lowLatency
+            )
+        }
+
+        // Voice↔stream sync: while a live-capture media stream runs, outgoing
+        // voice is delayed by the stream's measured sender-side latency so
+        // both arrive in time at receivers. The gate above was evaluated at
+        // capture time — the delayed chunk carries what the user was actually
+        // doing when the audio happened (PTT tails ride out after release).
+        let chunkIsSilent = Self.chunkIsSilent(chunk)
+        let delaySeconds = voiceSyncDelaySecondsLocked(chunkIsSilent: chunkIsSilent)
+        if delaySeconds > 0 || voiceSyncDelayLine.isEmpty == false {
+            voiceSyncDelayLine.enqueue(chunk, delaySeconds: delaySeconds, isSilent: chunkIsSilent)
+        } else {
+            _ = performVoiceInsertLocked(chunk)
+        }
+    }
+
+    /// The current voice-sync delay: 0 unless a live-capture media stream is
+    /// active; then the measured media latency plus the manual trim
+    /// preference. While the estimator is still measuring, voice runs LIVE
+    /// (no blind fallback): an early too-large delay can never fully unwind
+    /// under a continuously-open mic, so the snap ~2 s in is the first delay
+    /// applied. The fallback covers only the no-measurement case (no output
+    /// engine running).
+    func voiceSyncDelaySecondsLocked(chunkIsSilent: Bool) -> Double {
+        guard deviceStreamSource != nil, mediaStreamingActive else { return 0 }
+        // Watchdog re-snaps apply between phrases — FIFO empty, or the
+        // current chunk is silence (an always-on mic never empties the FIFO,
+        // so inter-phrase silence is the safe adjustment point).
+        if voiceSyncDelayLine.isEmpty || chunkIsSilent {
+            voiceSyncEstimator.adoptPendingResnapIfAny()
+        }
+        let measured: Double
+        if let snapped = voiceSyncEstimator.snappedDelaySeconds {
+            measured = snapped
+        } else if voiceSyncEstimator.isMeasuring {
+            measured = 0
+        } else {
+            measured = MediaSyncEstimator.fallbackDelaySeconds
+        }
+        guard measured > 0 else { return 0 }
+        let trim = Double(preferencesStore.preferences.deviceStreamVoiceSyncTrimMSec) / 1000
+        return max(0, measured + trim)
+    }
+
+    /// Peak-level silence check for the sync delay line's shrink logic
+    /// (~-36 dBFS threshold; the mic engine's processed output is near-zero
+    /// between phrases).
+    private static func chunkIsSilent(_ chunk: AdvancedMicrophoneAudioChunk) -> Bool {
+        chunk.samples.allSatisfy { $0 > -512 && $0 < 512 }
+    }
+
+    /// The actual SDK voice insert (direct, or deferred via the delay line).
+    /// Returns false only for a full SDK queue — the delay line keeps the
+    /// chunk and retries; any other blocker consumes the chunk.
+    @discardableResult
+    func performVoiceInsertLocked(_ chunk: AdvancedMicrophoneAudioChunk) -> Bool {
+        // Re-checked at drain time: the channel may have been left while
+        // chunks were queued — those drop, they don't retry.
+        guard let instance, TT_GetMyChannelID(instance) > 0 else { return true }
+        return chunk.samples.withUnsafeBufferPointer { buffer -> Bool in
+            guard let baseAddress = buffer.baseAddress else { return true }
             var audioBlock = AudioBlock()
             audioBlock.nStreamID = chunk.streamID
             audioBlock.nSampleRate = chunk.sampleRate
@@ -890,23 +978,7 @@ extension TeamTalkConnectionController {
             if accepted == false {
                 AudioLogger.log("TT_InsertAudioBlock: queue full, audio block dropped")
             }
-
-            // Local monitor: feed the same processed mic audio we're transmitting
-            // straight into the output mixer — local, no SDK round-trip. Drives both
-            // "hear myself" and the connected-mode Audio-preferences mic preview
-            // (one shared source key, so enabling both never doubles the audio).
-            if hearMyselfEnabled || previewMonitorEnabled {
-                let pcm = Array(UnsafeBufferPointer(start: baseAddress,
-                                                    count: Int(chunk.sampleCount) * Int(chunk.channels)))
-                outputRenderEngine.enqueueUser(
-                    localMonitorEngineKey,
-                    pcm: pcm,
-                    frames: Int(chunk.sampleCount),
-                    channels: Int(chunk.channels),
-                    sampleRate: Double(chunk.sampleRate),
-                    profile: .lowLatency
-                )
-            }
+            return accepted
         }
     }
 
