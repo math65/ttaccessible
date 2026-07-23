@@ -31,6 +31,7 @@ final class ConnectedServerViewController: NSViewController {
     let connectionController: TeamTalkConnectionController
     let menuState: SavedServersMenuState
     unowned let appDelegate: AppDelegate
+    let passwordStore: ServerPasswordStore
     let outlineView = ConnectedServerOutlineView(frame: .zero)
     let chatTableView = ChatTableView(frame: .zero)
     let historyTableView = NSTableView(frame: .zero)
@@ -96,13 +97,15 @@ final class ConnectedServerViewController: NSViewController {
         preferencesStore: AppPreferencesStore,
         connectionController: TeamTalkConnectionController,
         menuState: SavedServersMenuState,
-        appDelegate: AppDelegate
+        appDelegate: AppDelegate,
+        passwordStore: ServerPasswordStore
     ) {
         self.session = session
         self.preferencesStore = preferencesStore
         self.connectionController = connectionController
         self.menuState = menuState
         self.appDelegate = appDelegate
+        self.passwordStore = passwordStore
         super.init(nibName: nil, bundle: nil)
         embeddedMediaStreamingControls.actions = self
         collapsibleVideoPanel.delegate = self

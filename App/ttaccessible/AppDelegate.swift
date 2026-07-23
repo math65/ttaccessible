@@ -448,7 +448,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 preferencesStore: preferencesStore,
                 connectionController: connectionController,
                 menuState: menuState,
-                appDelegate: self
+                appDelegate: self,
+                passwordStore: passwordStore
             )
             connectedServerViewController = viewController
             savedServersViewController = nil

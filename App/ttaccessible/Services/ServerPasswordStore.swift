@@ -18,9 +18,16 @@ final class ServerPasswordStore {
     private struct Credentials: Codable {
         var server: String?
         var channel: String?
+        /// Passwords for individual password-protected channels, keyed by the
+        /// channel's full path (root-to-leaf names). Persisted so a channel joined
+        /// once doesn't prompt again after quitting or leaving/rejoining the server.
+        /// Optional + decodeIfPresent keeps old keychain items readable.
+        var channels: [String: String]?
 
         var isEmpty: Bool {
-            (server?.isEmpty ?? true) && (channel?.isEmpty ?? true)
+            (server?.isEmpty ?? true)
+                && (channel?.isEmpty ?? true)
+                && (channels?.isEmpty ?? true)
         }
     }
 
@@ -120,6 +127,27 @@ final class ServerPasswordStore {
     func deleteChannelPassword(for id: UUID) throws {
         var credentials = loadCredentialsForUpdate(for: id)
         credentials.channel = nil
+        // Also drop every per-channel password so removing a server leaves no
+        // orphaned channel secrets in the keychain.
+        credentials.channels = nil
+        try writeCredentials(credentials, for: id)
+    }
+
+    /// Per-channel password persistence, keyed by the channel's full path.
+
+    func channelPassword(for id: UUID, channelPath: String) throws -> String? {
+        nonEmpty(try loadCredentials(for: id).channels?[channelPath])
+    }
+
+    func setChannelPassword(_ password: String?, for id: UUID, channelPath: String) throws {
+        var credentials = loadCredentialsForUpdate(for: id)
+        var map = credentials.channels ?? [:]
+        if let password = nonEmpty(password) {
+            map[channelPath] = password
+        } else {
+            map.removeValue(forKey: channelPath)
+        }
+        credentials.channels = map.isEmpty ? nil : map
         try writeCredentials(credentials, for: id)
     }
 
