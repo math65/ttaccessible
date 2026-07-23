@@ -256,10 +256,15 @@ extension TeamTalkConnectionController {
                     self.voiceTransmissionEnabled = false
                 }
             case .pushToTalk:
-                // Armed state carries over; transmission is now gated by the
-                // key (pushToTalkPressed was just reset, so the mic is silent
-                // until an actual press).
-                break
+                // An armed state carries over only if the user-facing gate was
+                // open. Engine hot but user-muted (both-mode gate closed) must
+                // tear down like the always-on case: with no PTT key configured
+                // this mode falls back to always-transmit, so leaving the
+                // engine armed would open the mic without user action.
+                if wasGateOpen == false, self.voiceTransmissionEnabled {
+                    self.stopAdvancedMicrophoneInputLocked(instance: instance, reason: "mode change to push-to-talk while muted")
+                    self.voiceTransmissionEnabled = false
+                }
             case .both:
                 // Arm hot with the gate closed (silent) for instant PTT.
                 self.armBothModeEngineIfNeededLocked(instance: instance)
