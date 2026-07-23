@@ -141,7 +141,16 @@ final class TeamTalkConnectionController {
     var appliedAdvancedInputAudio: AdvancedInputAudioPreferences?
     var voiceTransmissionEnabled = false
     var pushToTalkPressed = false
-    var pushToTalkShortcutResolver: (() -> Bool)?
+    /// Queue-side caches of the hotkey-relevant preferences: the per-chunk
+    /// transmit gate must not read the @Published preferences struct across
+    /// threads. Seeded at init, updated via applyMicrophoneHotkeySettings.
+    var cachedMicrophoneMode: AppPreferences.MicrophoneMode = .alwaysOn
+    var cachedPushToTalkKeyConfigured = false
+    /// "Both" mode only: the always-on gate toggled by ⌘⇧A. The mic engine stays
+    /// hot (voiceTransmissionEnabled) the whole time so PTT is instant; this
+    /// lightweight flag decides whether captured audio is transmitted when PTT
+    /// is not held. Releasing PTT closes it (see setPushToTalkPressed).
+    var bothGateOpen = false
     var lastAudioWarningMessage: String?
     var masterMuted = false
     var hearMyselfEnabled = false
@@ -256,6 +265,10 @@ final class TeamTalkConnectionController {
         self.preferencesStore = preferencesStore
         queue.setSpecific(key: queueKey, value: ())
         userVolumeStore.setMemoryMode(preferencesStore.preferences.userVolumeMemoryMode)
+        // Seed the queue-side hotkey caches before any queue work runs; the
+        // preferences sink keeps them current afterward.
+        cachedMicrophoneMode = preferencesStore.preferences.microphoneMode
+        cachedPushToTalkKeyConfigured = preferencesStore.preferences.pushToTalkKey?.isValid ?? false
     }
 
     /// Push the per-user volume memory mode (off / session / persistent) to the store.

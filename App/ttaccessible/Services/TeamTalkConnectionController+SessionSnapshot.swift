@@ -25,7 +25,7 @@ extension TeamTalkConnectionController {
             userAudioStates: Dictionary(
                 uniqueKeysWithValues: users.map { user in
                     let isTalking = user.nUserID == TT_GetMyUserID(instance)
-                        ? voiceTransmissionEnabled
+                        ? isEffectivelyTransmittingLocked
                         : (user.uUserState & UInt32(USERSTATE_VOICE.rawValue)) != 0
                     let isMuted = (user.uUserState & UInt32(USERSTATE_MUTE_VOICE.rawValue)) != 0
                     let isMediaFileMuted = (user.uUserState & UInt32(USERSTATE_MUTE_MEDIAFILE.rawValue)) != 0
@@ -42,7 +42,7 @@ extension TeamTalkConnectionController {
                     )
                 }
             ),
-            voiceTransmissionEnabled: voiceTransmissionEnabled,
+            voiceTransmissionEnabled: microphoneGateOpenLocked,
             audioStatusText: makeAudioStatusText(),
             inputAudioReady: inputAudioReady,
             outputAudioReady: outputAudioReady
@@ -206,7 +206,7 @@ extension TeamTalkConnectionController {
                     isAdministrator: (user.uUserType & UInt32(USERTYPE_ADMIN.rawValue)) != 0,
                     isChannelOperator: TT_IsChannelOperator(instance, user.nUserID, user.nChannelID) != 0,
                     isTalking: user.nUserID == currentUserID
-                        ? voiceTransmissionEnabled
+                        ? isEffectivelyTransmittingLocked
                         : (user.uUserState & UInt32(USERSTATE_VOICE.rawValue)) != 0,
                     isMuted: (user.uUserState & UInt32(USERSTATE_MUTE_VOICE.rawValue)) != 0,
                     isMediaFileMuted: (user.uUserState & UInt32(USERSTATE_MUTE_MEDIAFILE.rawValue)) != 0,
@@ -336,7 +336,7 @@ extension TeamTalkConnectionController {
                 : (previousSnapshot?.activeTransfers ?? Array(activeTransferProgress.values)),
             outputAudioReady: outputAudioReady,
             inputAudioReady: inputAudioReady,
-            voiceTransmissionEnabled: voiceTransmissionEnabled,
+            voiceTransmissionEnabled: microphoneGateOpenLocked,
             canSendBroadcast: canSendBroadcast,
             isNicknameLocked: isNicknameLocked,
             isStatusLocked: isStatusLocked,

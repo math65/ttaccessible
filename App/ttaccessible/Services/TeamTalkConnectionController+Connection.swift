@@ -840,23 +840,8 @@ extension TeamTalkConnectionController {
                                 SoundPlayer.shared.play(.newUser)
                             }
                         }
-                        if message.user.nUserID == currentUserID,
-                           !voiceTransmissionEnabled,
-                           preferencesStore.preferences.lastVoiceTransmissionEnabled,
-                           AVCaptureDevice.authorizationStatus(for: .audio) == .authorized {
-                            do {
-                                try ensureAdvancedMicrophoneInputReadyLocked(instance: instance)
-                                voiceTransmissionEnabled = true
-                                SoundPlayer.shared.play(.voxMeEnable)
-                                if let connectedRecord {
-                                    publishSessionLocked(instance: instance, record: connectedRecord)
-                                }
-                            } catch {
-                                AudioLogger.log(
-                                    "auto-restore mic on join failed: %@",
-                                    error.localizedDescription
-                                )
-                            }
+                        if message.user.nUserID == currentUserID {
+                            armMicrophoneEngineOnJoinLocked(instance: instance)
                         }
                         if message.user.nUserID == currentUserID {
                             restartMediaStreamForChannelChangeLocked(instance: instance)
@@ -1154,20 +1139,7 @@ extension TeamTalkConnectionController {
                             appendUserJoinedChannelHistoryLocked(message.user, currentUserID: currentUserID, instance: instance)
                         }
                         if message.user.nUserID == currentUserID {
-                            if !voiceTransmissionEnabled,
-                               preferencesStore.preferences.lastVoiceTransmissionEnabled,
-                               AVCaptureDevice.authorizationStatus(for: .audio) == .authorized {
-                                do {
-                                    try ensureAdvancedMicrophoneInputReadyLocked(instance: instance)
-                                    voiceTransmissionEnabled = true
-                                    SoundPlayer.shared.play(.voxMeEnable)
-                                } catch {
-                                    AudioLogger.log(
-                                        "auto-restore mic on channel join failed: %@",
-                                        error.localizedDescription
-                                    )
-                                }
-                            }
+                            armMicrophoneEngineOnJoinLocked(instance: instance)
                             restartMediaStreamForChannelChangeLocked(instance: instance)
                             if recordingMuxedActive {
                                 restartMuxedRecordingForChannelChange()
