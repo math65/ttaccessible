@@ -10,8 +10,17 @@
 //  on update. Keychain items need no migration: their ACLs bind to the app's
 //  code signature, not the sandbox.
 //
-//  Never clobbers: each item is copied only when it doesn't already exist at
-//  the destination, so a user who ran unsandboxed first (fresh data) keeps it.
+//  Preferences are migrated THROUGH the UserDefaults API, key by key, never
+//  by copying plist files into ~/Library/Preferences: cfprefsd owns that
+//  directory and serves domains from its own cache — a file copied behind its
+//  back is ignored and then overwritten the first time the app writes a
+//  default (which is how the first version of this migration lost the data it
+//  had just copied).
+//
+//  Container values WIN over whatever is already in the unsandboxed domain:
+//  the migration runs exactly once, at first unsandboxed launch, when the
+//  real domain holds nothing but framework noise or debris from a fresh
+//  launch — while the container holds the user's actual data.
 //
 
 import Foundation
@@ -19,9 +28,12 @@ import Foundation
 enum SandboxContainerMigration {
 
     private static let bundleIdentifier = "com.math65.ttaccessible"
+    /// v2: the v1 marker was written by the plist-file-copy version whose
+    /// preference import silently failed (see header) — a fresh marker lets
+    /// the corrected migration run again for anyone who launched v1.
+    private static let markerName = ".sandbox-container-migrated-v2"
 
-    /// Runs at process start, before any UserDefaults access (the first read
-    /// caches the domain, so preference plists must be in place first).
+    /// Runs at process start, before any store reads its preferences.
     /// No-op when the process is still sandboxed, when there is no container,
     /// or when the migration already ran.
     static func migrateIfNeeded() {
@@ -40,43 +52,11 @@ enum SandboxContainerMigration {
         let supportRoot = home
             .appendingPathComponent("Library/Application Support", isDirectory: true)
             .appendingPathComponent("ttaccessible", isDirectory: true)
-        let marker = supportRoot.appendingPathComponent(".sandbox-container-migrated")
+        let marker = supportRoot.appendingPathComponent(markerName)
         guard fileManager.fileExists(atPath: marker.path) == false else { return }
 
-        var copied = 0
-
-        // 1. Preference plists: the standard domain, the default-profile suite
-        // and every custom profile suite all share the bundle-id prefix.
-        let sourcePrefs = containerData.appendingPathComponent("Library/Preferences", isDirectory: true)
-        let destinationPrefs = home.appendingPathComponent("Library/Preferences", isDirectory: true)
-        for name in (try? fileManager.contentsOfDirectory(atPath: sourcePrefs.path)) ?? []
-        where name.hasPrefix(bundleIdentifier) && name.hasSuffix(".plist") {
-            let destination = destinationPrefs.appendingPathComponent(name)
-            guard fileManager.fileExists(atPath: destination.path) == false else { continue }
-            do {
-                try fileManager.copyItem(at: sourcePrefs.appendingPathComponent(name), to: destination)
-                copied += 1
-            } catch {
-                NSLog("SandboxContainerMigration: preferences copy failed for %@ — %@", name, error.localizedDescription)
-            }
-        }
-
-        // 2. Application Support payload (saved-server registry files, chat
-        // history, profiles, custom sound packs). The container's Application
-        // Support holds only this app's data, so copy every top-level entry
-        // that doesn't already exist outside.
-        let sourceSupport = containerData.appendingPathComponent("Library/Application Support", isDirectory: true)
-        let destinationSupport = home.appendingPathComponent("Library/Application Support", isDirectory: true)
-        for name in (try? fileManager.contentsOfDirectory(atPath: sourceSupport.path)) ?? [] {
-            let destination = destinationSupport.appendingPathComponent(name)
-            guard fileManager.fileExists(atPath: destination.path) == false else { continue }
-            do {
-                try fileManager.copyItem(at: sourceSupport.appendingPathComponent(name), to: destination)
-                copied += 1
-            } catch {
-                NSLog("SandboxContainerMigration: support copy failed for %@ — %@", name, error.localizedDescription)
-            }
-        }
+        migratePreferences(containerData: containerData)
+        migrateApplicationSupport(containerData: containerData, home: home, fileManager: fileManager)
 
         do {
             try fileManager.createDirectory(at: supportRoot, withIntermediateDirectories: true)
@@ -84,6 +64,79 @@ enum SandboxContainerMigration {
         } catch {
             NSLog("SandboxContainerMigration: marker write failed — %@", error.localizedDescription)
         }
-        NSLog("SandboxContainerMigration: imported %d item(s) from the sandbox container", copied)
+    }
+
+    /// Reads each of the app's preference domains straight from the container
+    /// plists (plain file reads — cfprefsd doesn't serve the container to an
+    /// unsandboxed process) and replays every key through UserDefaults, so the
+    /// real domains are populated with cfprefsd fully in the loop.
+    private static func migratePreferences(containerData: URL) {
+        let sourcePrefs = containerData.appendingPathComponent("Library/Preferences", isDirectory: true)
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: sourcePrefs.path)) ?? []
+        for name in names where name.hasPrefix(bundleIdentifier) && name.hasSuffix(".plist") {
+            let domain = String(name.dropLast(".plist".count))
+            guard let contents = NSDictionary(contentsOf: sourcePrefs.appendingPathComponent(name)) as? [String: Any],
+                  contents.isEmpty == false else { continue }
+
+            let defaults: UserDefaults?
+            if domain == bundleIdentifier {
+                defaults = .standard
+            } else {
+                defaults = UserDefaults(suiteName: domain)
+            }
+            guard let defaults else {
+                NSLog("SandboxContainerMigration: could not open defaults domain %@", domain)
+                continue
+            }
+            for (key, value) in contents {
+                defaults.set(value, forKey: key)
+            }
+            NSLog("SandboxContainerMigration: imported %d preference key(s) into %@", contents.count, domain)
+        }
+    }
+
+    /// Copies the container's Application Support payload (chat history,
+    /// profiles, custom sound packs). Merges one level deep so a directory
+    /// the app already recreated (e.g. ttaccessible/instance-locks) doesn't
+    /// block the rest of its children; symlinks (AddressBook, iCloud, …
+    /// system links inside containers) are skipped. Existing destination
+    /// files are never overwritten.
+    private static func migrateApplicationSupport(containerData: URL, home: URL, fileManager: FileManager) {
+        let source = containerData.appendingPathComponent("Library/Application Support", isDirectory: true)
+        let destination = home.appendingPathComponent("Library/Application Support", isDirectory: true)
+        mergeCopy(from: source, to: destination, depth: 3, fileManager: fileManager)
+    }
+
+    private static func mergeCopy(from source: URL, to destination: URL, depth: Int, fileManager: FileManager) {
+        let names = (try? fileManager.contentsOfDirectory(atPath: source.path)) ?? []
+        for name in names {
+            let sourceItem = source.appendingPathComponent(name)
+            let destinationItem = destination.appendingPathComponent(name)
+
+            // Skip symlinks — containers hold system links (AddressBook, iCloud…)
+            // that must not be replicated outside.
+            if let attributes = try? fileManager.attributesOfItem(atPath: sourceItem.path),
+               attributes[.type] as? FileAttributeType == .typeSymbolicLink {
+                continue
+            }
+
+            var isDirectory: ObjCBool = false
+            let destinationExists = fileManager.fileExists(atPath: destinationItem.path, isDirectory: &isDirectory)
+            if destinationExists == false {
+                do {
+                    try fileManager.createDirectory(at: destination, withIntermediateDirectories: true)
+                    try fileManager.copyItem(at: sourceItem, to: destinationItem)
+                } catch {
+                    NSLog("SandboxContainerMigration: copy failed for %@ — %@", name, error.localizedDescription)
+                }
+                continue
+            }
+            // Destination exists: recurse into directories (up to depth) so an
+            // already-recreated folder doesn't block missing children; leave
+            // existing files alone.
+            if isDirectory.boolValue, depth > 1 {
+                mergeCopy(from: sourceItem, to: destinationItem, depth: depth - 1, fileManager: fileManager)
+            }
+        }
     }
 }
