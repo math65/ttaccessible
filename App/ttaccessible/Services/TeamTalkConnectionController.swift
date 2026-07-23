@@ -146,6 +146,12 @@ final class TeamTalkConnectionController {
     var reconnectPassword: String?
     var reconnectOptions = TeamTalkConnectOptions()
     var lastChannelID: Int32 = 0
+    /// Path + password of the channel we were in when the connection dropped.
+    /// The PATH is what we rejoin by on reconnect: a full server restart
+    /// reassigns numeric channel IDs, so `lastChannelID` can point at the wrong
+    /// channel (or nothing), but the path is stable.
+    var lastChannelPath: String = ""
+    var lastChannelPassword: String = ""
     var isRestartingSoundSystem = false
     var suppressDeviceChangeUntil = Date.distantPast
     var audioHardwareChangeWorkItem: DispatchWorkItem?
