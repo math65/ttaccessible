@@ -7,13 +7,17 @@
 //  key+modifier combos, AND pure-modifier chords (⌘⌃), each either app-focused
 //  or global.
 //
-//  Global scope uses a listen-only CGEventTap (.cgSessionEventTap, .listenOnly)
-//  gated by Input Monitoring — available to sandboxed / App Store apps. It
-//  DETECTS the hotkey system-wide but cannot SWALLOW it: a consuming (.defaultTap)
-//  tap needs Accessibility, which the App Sandbox blocks. So a global hotkey is
-//  seen by the app AND still reaches the frontmost app. (Carbon RegisterEventHotKey
-//  was tried and rejected — it doesn't swallow either, and can't do bare keys /
-//  modifier-only chords.) True global swallowing would require un-sandboxing.
+//  Global scope uses a CGEventTap (.cgSessionEventTap). With the Accessibility
+//  privilege granted the tap is CONSUMING (.defaultTap): a matched hotkey is
+//  swallowed system-wide, so it never double-fires in the frontmost app
+//  (Accessibility is grantable now that the app is not sandboxed — the App
+//  Sandbox used to block it, which forced a listen-only tap that could detect
+//  but not swallow). Until the user grants Accessibility, the tap falls back
+//  to listen-only via Input Monitoring: the hotkey works but still reaches
+//  the frontmost app. Pure-modifier chords are never consumed — suppressing
+//  flagsChanged would corrupt modifier state everywhere. (Carbon
+//  RegisterEventHotKey was tried and rejected — it doesn't swallow either,
+//  and can't do bare keys / modifier-only chords.)
 //
 //  App-focused (local) scope uses an NSEvent local monitor (no permission), and
 //  CAN swallow the matched key — local monitors consume events destined for our
@@ -59,10 +63,23 @@ final class HotkeyMonitor {
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var isPressed = false
+    /// Whether the installed global tap is consuming (.defaultTap under
+    /// Accessibility) rather than listen-only.
+    private(set) var installedConsuming = false
+    /// Whether we consumed the matching keyDown — its keyUp must then be
+    /// consumed too (and passed through when the down was passed through).
+    private var consumedDown = false
 
     /// Set when the global tap couldn't be created because Input Monitoring is
     /// not yet granted — the caller reconfigures after a grant.
     private(set) var isAwaitingGlobalPermission = false
+
+    /// True when a listen-only global tap could be upgraded to a consuming one
+    /// (the user granted Accessibility after it was installed) — the caller
+    /// reconfigures to pick the grant up.
+    var canUpgradeToConsuming: Bool {
+        scope == .global && eventTap != nil && installedConsuming == false && AXIsProcessTrusted()
+    }
 
     func configure(
         binding: HotkeyBinding?,
@@ -107,6 +124,8 @@ final class HotkeyMonitor {
             self.eventTap = nil
         }
         isAwaitingGlobalPermission = false
+        installedConsuming = false
+        consumedDown = false
         if isPressed {
             isPressed = false
             onRelease?()
@@ -132,17 +151,19 @@ final class HotkeyMonitor {
         let callback: CGEventTapCallBack = { _, type, event, userInfo in
             guard let userInfo else { return Unmanaged.passUnretained(event) }
             let monitor = Unmanaged<HotkeyMonitor>.fromOpaque(userInfo).takeUnretainedValue()
-            monitor.handleTapEvent(type: type, event: event)
-            return Unmanaged.passUnretained(event)  // observe; can't consume while sandboxed
+            let consumed = monitor.handleTapEvent(type: type, event: event)
+            // Returning nil swallows the event (no-op on a listen-only tap).
+            return consumed ? nil : Unmanaged.passUnretained(event)
         }
 
-        // Listen-only: a consuming (.defaultTap) tap needs Accessibility, which
-        // the App Sandbox blocks. Input Monitoring only grants observation, so a
-        // global hotkey is detected but still reaches the frontmost app.
+        // Consuming tap when Accessibility is granted (swallows the hotkey
+        // system-wide); listen-only via Input Monitoring otherwise — detected,
+        // but the frontmost app still receives the keystroke.
+        let canConsume = AXIsProcessTrusted()
         guard let tap = CGEvent.tapCreate(
             tap: .cgSessionEventTap,
             place: .headInsertEventTap,
-            options: .listenOnly,
+            options: canConsume ? .defaultTap : .listenOnly,
             eventsOfInterest: mask,
             callback: callback,
             userInfo: Unmanaged.passUnretained(self).toOpaque()
@@ -152,20 +173,25 @@ final class HotkeyMonitor {
             return
         }
 
+        installedConsuming = canConsume
         eventTap = tap
         let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
         runLoopSource = source
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
-        AudioLogger.log("[Hotkey] global tap ACTIVE for %@", binding.displayString)
+        AudioLogger.log("[Hotkey] global tap ACTIVE for %@ (%@)",
+                        binding.displayString, canConsume ? "consuming" : "listen-only")
     }
 
-    private func handleTapEvent(type: CGEventType, event: CGEvent) {
+    /// Returns true when the event should be CONSUMED (matched key on a
+    /// consuming tap — swallowed system-wide so it can't double-fire in the
+    /// frontmost app). Pure-modifier chords are never consumed.
+    private func handleTapEvent(type: CGEventType, event: CGEvent) -> Bool {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             if let eventTap { CGEvent.tapEnable(tap: eventTap, enable: true) }
-            return
+            return false
         }
-        guard let binding else { return }
+        guard let binding else { return false }
         // The inactive-only guard (mute chord: the in-app menu shortcut owns
         // the focused case) suppresses PRESSES only. Releases always run —
         // if the app becomes active between down and up, eating the keyUp
@@ -175,21 +201,28 @@ final class HotkeyMonitor {
         let mods = Self.modifierFlags(from: event.flags)
         if binding.isModifierOnly {
             let chordActive = mods == binding.modifiers
-            if chordActive, suppressPress { return }
+            if chordActive, suppressPress { return false }
             setPressed(chordActive)
-            return
+            return false
         }
         let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
         switch type {
         case .keyDown:
             let autorepeat = event.getIntegerValueField(.keyboardEventAutorepeat) != 0
-            guard keyCode == binding.keyCode, mods == binding.modifiers, suppressPress == false else { return }
+            guard keyCode == binding.keyCode, mods == binding.modifiers, suppressPress == false else { return false }
             if autorepeat == false { setPressed(true) }
+            consumedDown = installedConsuming
+            return installedConsuming  // swallow repeats of the held hotkey too
         case .keyUp:
-            guard keyCode == binding.keyCode else { return }
+            guard keyCode == binding.keyCode else { return false }
             setPressed(false)
+            // Mirror the down: a consumed press must not leak a stray keyUp,
+            // a passed-through press keeps its keyUp.
+            let consume = consumedDown
+            consumedDown = false
+            return consume
         default:
-            break
+            return false
         }
     }
 

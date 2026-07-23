@@ -13,6 +13,13 @@ struct ttaccessibleApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var menuState = SavedServersMenuState.shared
 
+    init() {
+        // Must run before AppDelegate/stores construct: the first UserDefaults
+        // read caches the (empty) unsandboxed domain, so the old container's
+        // data has to be in place beforehand.
+        SandboxContainerMigration.migrateIfNeeded()
+    }
+
     var body: some Scene {
         Settings {
             EmptyView()

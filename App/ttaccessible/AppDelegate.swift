@@ -117,6 +117,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotkeyPrefsCancellable: AnyCancellable?
     private let pushToTalkMonitor = HotkeyMonitor()
     private let muteHotkeyMonitor = HotkeyMonitor()
+    /// One Accessibility prompt per launch (the grant lets the global taps
+    /// consume the hotkey instead of letting it double-fire in other apps).
+    private var didPromptForAccessibility = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         ProfileInstanceLock.acquire(for: ProfileContext.current)
@@ -282,6 +285,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
 
         let pttActive = prefs.microphoneMode == .pushToTalk || prefs.microphoneMode == .both
+
+        // With Accessibility granted the global taps CONSUME the hotkey
+        // (swallowed system-wide instead of double-firing in the frontmost
+        // app). Prompt once per launch when a global hotkey is in use.
+        let wantsGlobalHotkey = (pttActive && prefs.pushToTalkGlobal && prefs.pushToTalkKey?.isValid == true)
+            || prefs.muteHotkeyGlobal
+        if wantsGlobalHotkey, didPromptForAccessibility == false, AXIsProcessTrusted() == false {
+            didPromptForAccessibility = true
+            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+            AXIsProcessTrustedWithOptions(options)
+        }
         if pttActive, let key = prefs.pushToTalkKey, key.isValid {
             pushToTalkMonitor.configure(
                 binding: key,
@@ -490,7 +504,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         // If a global monitor was waiting on Input Monitoring permission, the
         // user may have just granted it in System Settings — retry now.
-        if pushToTalkMonitor.isAwaitingGlobalPermission || muteHotkeyMonitor.isAwaitingGlobalPermission {
+        if pushToTalkMonitor.isAwaitingGlobalPermission || muteHotkeyMonitor.isAwaitingGlobalPermission
+            || pushToTalkMonitor.canUpgradeToConsuming || muteHotkeyMonitor.canUpgradeToConsuming {
             configureHotkeyMonitors(with: preferencesStore.preferences)
         }
     }
