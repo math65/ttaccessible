@@ -404,6 +404,69 @@ extension ConnectedServerViewController {
         }
     }
 
+    /// The channel targeted by "Move all in channel": either the selected
+    /// channel row, or the channel containing the selected user row. Lets the
+    /// bulk-move work whether the admin right-clicks a channel or a person in it.
+    func bulkMoveTargetChannel() -> ConnectedServerChannel? {
+        switch selectedNode {
+        case .channel(let channel):
+            return channel
+        case .user(let user):
+            return session.findChannelByID(user.channelID)
+        case nil:
+            return nil
+        }
+    }
+
+    /// Move everyone in the selected channel to another channel, via the
+    /// accessible checklist sheet (users start pre-checked; the admin can
+    /// deselect any before confirming).
+    @objc func moveChannelUsersAction(_ sender: Any? = nil) {
+        guard let channel = bulkMoveTargetChannel() else { return }
+        presentMoveUsers(
+            candidates: channel.users,
+            excludingChannelID: channel.id,
+            headerText: L10n.format("moveUsers.header", channel.name),
+            presentingWindow: view.window
+        )
+    }
+
+    /// Present the accessible bulk-move checklist for the given candidate users.
+    /// All candidates start selected; the destination list is every channel
+    /// except `excludingChannelID`.
+    func presentMoveUsers(candidates: [ConnectedServerUser],
+                          excludingChannelID: Int32,
+                          headerText: String,
+                          presentingWindow window: NSWindow?) {
+        guard !candidates.isEmpty else {
+            announce(L10n.text("moveUsers.noneAvailable"))
+            return
+        }
+        let channels = flatChannels(from: session.rootChannels).filter { $0.id != excludingChannelID }
+        guard !channels.isEmpty else {
+            announce(L10n.text("connectedServer.move.noChannel"))
+            return
+        }
+
+        let vc = MoveUsersViewController(
+            candidates: candidates,
+            preselected: Set(candidates.map(\.id)),
+            channels: channels,
+            headerText: headerText
+        )
+        vc.onMove = { [weak self] userIDs, targetChannelID in
+            guard let self else { return }
+            for userID in userIDs {
+                self.connectionController.moveUser(userID: userID, toChannelID: targetChannelID) { [weak self] result in
+                    if case .failure(let error) = result {
+                        self?.presentError(error)
+                    }
+                }
+            }
+        }
+        (window?.contentViewController ?? self).presentAsSheet(vc)
+    }
+
     func selectedUserNodes() -> [ConnectedServerUser] {
         outlineView.selectedRowIndexes.compactMap { row in
             guard case .user(let user) = outlineView.item(atRow: row) as? ServerTreeNode else { return nil }

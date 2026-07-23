@@ -669,6 +669,7 @@
 "connectedServer.menu.unmuteMediaFile" = "Unmute media stream locally";
 "connectedServer.menu.kickUser" = "Kick from channel";
 "connectedServer.menu.moveUser" = "Move to a channel…";
+"connectedServer.menu.moveChannelUsers" = "Move all in channel…";
 "connectedServer.kick.title" = "Kick %@?";
 "connectedServer.kick.message" = "The user will be removed from their current channel.";
 "connectedServer.kick.confirm" = "Kick";
@@ -677,7 +678,18 @@
 "connectedServer.move.confirm" = "Move";
 "connectedServer.move.noChannel" = "No other channel available";
 
+// Bulk move users sheet
+"moveUsers.header" = "Select users to move from “%@”";
+"moveUsers.usersList" = "Users";
+"moveUsers.targetChannel" = "Move to channel:";
+"moveUsers.selectAll" = "Select All";
+"moveUsers.deselectAll" = "Deselect All";
+"moveUsers.confirm" = "Move";
+"moveUsers.noneSelected" = "No users selected";
+"moveUsers.noneAvailable" = "No users to move";
+
 // VoiceOver custom actions
+"connectedServer.voAction.moveChannelUsers" = "Move everyone here to another channel";
 "connectedServer.voAction.join" = "Join";
 "connectedServer.voAction.leave" = "Leave";
 "connectedServer.voAction.privateMessage" = "Send Private Message";

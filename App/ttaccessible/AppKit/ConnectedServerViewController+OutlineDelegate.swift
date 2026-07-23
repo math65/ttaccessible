@@ -144,11 +144,18 @@ extension ConnectedServerViewController: NSOutlineViewDelegate {
             let joinActionName = channel.isCurrentChannel
                 ? L10n.text("connectedServer.voAction.leave")
                 : L10n.text("connectedServer.voAction.join")
-            textField.setAccessibilityCustomActions([
+            var channelActions: [NSAccessibilityCustomAction] = [
                 NSAccessibilityCustomAction(name: joinActionName) { [weak self] in
                     self?.performDefaultAction(); return true
                 }
-            ])
+            ]
+            let me = session.currentUser
+            if (me?.isAdministrator == true || me?.isChannelOperator == true), !channel.users.isEmpty {
+                channelActions.append(NSAccessibilityCustomAction(name: L10n.text("connectedServer.voAction.moveChannelUsers")) { [weak self] in
+                    self?.moveChannelUsersAction(nil); return true
+                })
+            }
+            textField.setAccessibilityCustomActions(channelActions)
         case .user(let user):
             textField.font = user.isTalking
                 ? .boldSystemFont(ofSize: NSFont.systemFontSize)
