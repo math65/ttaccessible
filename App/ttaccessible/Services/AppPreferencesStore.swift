@@ -31,6 +31,7 @@ final class AppPreferencesStore: ObservableObject {
         } else {
             preferences = AppPreferences()
         }
+        L10n.configure(languagePreference: preferences.languagePreference)
         // One-time upgrade of device prefs persisted with the old unstable SDK
         // identifier ("legacy:<nDeviceID>") to the stable CoreAudio UID, so the
         // picker, the binding layer, and the saved preference all agree and the
@@ -162,6 +163,15 @@ final class AppPreferencesStore: ObservableObject {
 
     func updateIncludeBetaUpdates(_ enabled: Bool) {
         mutate { $0.includeBetaUpdates = enabled }
+    }
+
+    func updateLanguagePreference(_ languagePreference: AppLanguagePreference) {
+        L10n.configure(languagePreference: languagePreference)
+        mutate { $0.languagePreference = languagePreference }
+    }
+
+    func markInitialLanguageChosen() {
+        mutate { $0.hasChosenInitialLanguage = true }
     }
 
     func updateLastRecordingWasActive(_ active: Bool) {

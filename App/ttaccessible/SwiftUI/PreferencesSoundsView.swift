@@ -111,7 +111,7 @@ struct PreferencesSoundsView: View {
                                 .accessibilityHidden(true)
                         }
                         .toggleStyle(.switch)
-                        .accessibilityLabel(L10n.text(sound.localizationKey))
+                        //.accessibilityLabel(L10n.text(sound.localizationKey))
                     }
                 }
             }

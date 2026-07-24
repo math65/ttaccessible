@@ -371,6 +371,13 @@
 "preferences.connection.autoAwayStatusMessage" = "Message d'absence";
 "preferences.general.relativeTimestamps" = "Utiliser des horodatages relatifs (ex. \"il y a 2 min\")";
 "preferences.general.autoDetectImport" = "Utiliser la détection automatique du fichier TeamTalk lors de l'import";
+"preferences.general.language.label" = "Langue";
+"preferences.general.language.system" = "Langue du système";
+"preferences.general.language.english" = "Anglais";
+"preferences.general.language.french" = "Français";
+"preferences.general.language.help" = "L'application continue d'utiliser la langue du système sauf si vous en choisissez une autre. Redémarrez ttaccessible pour appliquer le changement partout.";
+"firstLaunch.language.title" = "Choisissez votre langue";
+"firstLaunch.language.message" = "Quelle langue souhaitez-vous utiliser pour ttaccessible ? Vous pourrez modifier ce choix plus tard dans les Préférences.";
 "preferences.general.autoJoinRootChannel" = "Rejoindre automatiquement le canal principal à la connexion";
 "preferences.general.autoReconnect" = "Reconnexion automatique en cas de perte de connexion";
 "preferences.general.rejoinLastChannelOnReconnect" = "Rejoindre automatiquement le dernier canal après une reconnexion";

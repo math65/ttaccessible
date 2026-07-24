@@ -140,6 +140,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.connectionController.handleDebouncedAudioHardwareChange(selector: selector)
         }
         requestNotificationPermission()
+        promptInitialLanguageIfNeeded()
         showSavedServersWindow()
         connectToLastServerOnLaunchIfEnabled()
         DispatchQueue.main.async { [weak self] in
@@ -806,6 +807,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case nil:
             return
         }
+    }
+
+    private func promptInitialLanguageIfNeeded() {
+        guard preferencesStore.preferences.hasChosenInitialLanguage == false else {
+            return
+        }
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = L10n.text("firstLaunch.language.title")
+        alert.informativeText = L10n.text("firstLaunch.language.message")
+        alert.addButton(withTitle: L10n.text("common.ok"))
+
+        let popUp = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 260, height: 26), pullsDown: false)
+        for languagePreference in AppLanguagePreference.allCases {
+            popUp.addItem(withTitle: L10n.text(languagePreference.localizationKey))
+            popUp.lastItem?.representedObject = languagePreference
+        }
+        popUp.selectItem(withTitle: L10n.text(AppLanguagePreference.system.localizationKey))
+        popUp.setAccessibilityLabel(L10n.text("preferences.general.language.label"))
+        alert.accessoryView = popUp
+        alert.window.initialFirstResponder = popUp
+
+        alert.runModal()
+        let chosenLanguage = popUp.selectedItem?.representedObject as? AppLanguagePreference ?? .system
+        preferencesStore.updateLanguagePreference(chosenLanguage)
+        preferencesStore.markInitialLanguageChosen()
     }
 
     private func promptServerListExportMode() -> ServerListExportMode? {
