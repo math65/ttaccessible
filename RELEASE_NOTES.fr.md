@@ -1,3 +1,32 @@
+## v1.9.0 (build 44) — 24 juillet 2026
+
+Cette version remet complètement à plat le push-to-talk : n'importe quelle touche peut servir à parler, elle fonctionne même quand vous êtes occupé dans une autre application, et un nouveau mode permet de combiner la coupure du micro avec le push-to-talk. Vous pouvez aussi choisir la langue de l'application, sans dépendre de celle de votre Mac.
+
+### En bref
+- **Le push-to-talk a été refait.** N'importe quelle touche convient : une touche seule, ou une combinaison de touches de modification.
+- **Votre touche pour parler et le raccourci de coupure du micro fonctionnent depuis n'importe quelle application**, et plus seulement quand tt-Accessible est au premier plan.
+- **Choisissez la langue de l'application** — français ou anglais — sans suivre celle de votre Mac.
+
+### Push-to-talk
+- **N'importe quelle touche peut servir à parler** : une touche seule, ou une combinaison de touches de modification comme Commande-Contrôle (appuyez dessus, puis relâchez). Tout tient en un bouton : activez-le, puis appuyez sur la touche voulue.
+- **Le champ de saisie de la touche est enfin accessible.** C'est un vrai bouton, annoncé par VoiceOver, et l'enregistrement d'une touche ne se laisse plus perturber par les touches Contrôle-Option de VoiceOver lui-même.
+- **Nouveau mode de microphone : « Les deux ».** ⌘⇧A coupe et réactive le micro, comme avant. En plus de ça, maintenir votre touche de push-to-talk vous permet de parler même micro coupé, et la relâcher vous remet en silence. À choisir dans Préférences › Audio.
+- **Un son facultatif au début et à la fin de la transmission**, pour entendre que votre touche a bien été prise en compte.
+- **Les raccourcis peuvent fonctionner pendant que vous êtes dans une autre application.** À activer séparément pour le push-to-talk et pour ⌘⇧A. macOS demande l'autorisation « Surveillance des saisies » la première fois.
+- Bon à savoir : la touche continue d'arriver jusqu'à l'application où vous travaillez — tt-Accessible la voit passer, mais ne peut pas la garder pour lui. Préférez donc une combinaison de touches de modification seules, comme Commande-Contrôle, ou une touche de fonction entre F13 et F19 : ni l'une ni l'autre n'écrit quoi que ce soit. Évitez les lettres seules.
+- **⌘⇧A ne se déclenche plus lorsque le Finder est au premier plan.**
+- La touche de push-to-talk que vous utilisiez déjà est reprise automatiquement.
+
+### Langue
+- **Préférences › Général propose désormais un réglage Langue** : langue du système, anglais ou français. Redémarrez l'application pour l'appliquer partout.
+- **Au tout premier lancement, l'application vous demande la langue que vous souhaitez.**
+
+### Remerciements
+Le push-to-talk a été conçu et développé par **Rocco Fiorentino**. Le réglage de langue nous vient de **Gruia Chiscop**. Merci à eux deux — et à toutes les personnes qui continuent d'envoyer leurs retours.
+
+### Téléchargement
+[ttaccessible-1.9.0-44.zip](https://github.com/math65/ttaccessible/releases/download/v1.9.0/ttaccessible-1.9.0-44.zip)
+
 ## v1.8.0 (build 43) — 22 juillet 2026
 
 Cette version permet de diffuser un périphérique audio en direct dans un canal, rétablit la prise en charge de macOS 12 (Monterey) et corrige le son qui disparaissait dans les canaux « enregistrement interdit » — avec, en prime, des améliorations de la table de mixage et de l'enregistrement.
