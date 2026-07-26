@@ -627,6 +627,8 @@
 "mediaStream.device.source.voiceOver" = "VoiceOver";
 "mediaStream.device.source.applicationMenu" = "Application";
 "mediaStream.device.source.chooseApplication" = "Sélectionner une application…";
+"mediaStream.device.group.devices" = "Périphériques d'entrée";
+"mediaStream.device.group.applications" = "Applications";
 "mediaStream.device.error.sourceUnsupportedOS" = "La diffusion de l'audio d'une application ou de VoiceOver nécessite macOS 13 ou version ultérieure.";
 "mediaStream.device.error.processSourceUnavailable" = "La source sélectionnée n'a aucun audio à capturer pour le moment. Vérifiez qu'elle est en cours d'exécution et réessayez.";
 "history.mediaStreamingStarted" = "Diffusion du média : %@";

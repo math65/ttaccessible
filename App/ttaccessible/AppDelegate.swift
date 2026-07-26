@@ -1681,102 +1681,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             errorAlert.runModal()
             return
         }
+        guard let host = savedServersWindowController?.window?.contentViewController else { return }
+        // Source discovery is asynchronous, so the "already streaming" guard in
+        // startStreamingMediaFromDevice was checked at keystroke time, not here:
+        // two quick ⌘⌥A presses each finished discovery and each presented a
+        // sheet, stacking them.
+        guard host.presentedViewControllers?.contains(where: { $0 is MediaStreamSourceViewController }) != true,
+              menuState.isMediaStreamingActive == false else { return }
 
-        let alert = NSAlert()
-        alert.messageText = L10n.text("mediaStream.device.prompt.title")
-        alert.informativeText = L10n.text("mediaStream.device.prompt.message")
-        alert.addButton(withTitle: L10n.text("mediaStream.device.prompt.start"))
-        alert.addButton(withTitle: L10n.text("common.cancel"))
-
-        // A stock pop-up button — see DeviceStreamSourceButton for why the
-        // hand-built menu had to go. VoiceOver gets role, value and arrow-key
-        // stepping from AppKit; nothing is layered on top.
-        let sourceButton = DeviceStreamSourceButton(frame: NSRect(x: 0, y: 32, width: 320, height: 26),
-                                                    pullsDown: false)
-        sourceButton.setAccessibilityLabel(L10n.text("mediaStream.device.prompt.sourceLabel"))
         // The browse-for-any-app entry needs the tap backend's wait-and-attach
         // behavior (14.2+); the SCK tier can only capture running apps.
         let allowsApplicationBrowsing: Bool
         if #available(macOS 14.2, *) { allowsApplicationBrowsing = true } else { allowsApplicationBrowsing = false }
-        let picker = DeviceStreamSourcePicker(
-            button: sourceButton,
+
+        let controller = MediaStreamSourceViewController(
             devices: devices,
             applicationSources: applicationSources,
             voiceOverAvailable: voiceOverAvailable,
-            allowsApplicationBrowsing: allowsApplicationBrowsing
-        )
-
-        let lastSourceToken = preferencesStore.preferences.deviceStreamLastSource
-            ?? preferencesStore.preferences.deviceStreamLastDeviceUID.map { "device:\($0)" }
-        picker.preselect(
-            token: lastSourceToken,
+            allowsApplicationBrowsing: allowsApplicationBrowsing,
+            preselectedToken: preferencesStore.preferences.deviceStreamLastSource
+                ?? preferencesStore.preferences.deviceStreamLastDeviceUID.map { "device:\($0)" },
             fallbackDeviceUID: InputAudioDeviceResolver.defaultInputDeviceUID()
         )
-
-        // Off by default on purpose: the source is usually audible locally
-        // already, and hearing it back a second time reads as an echo.
-        let monitorCheckbox = NSButton(
-            checkboxWithTitle: L10n.text("mediaStream.device.prompt.monitor"),
-            target: nil,
-            action: nil
-        )
-        monitorCheckbox.state = .off
-
-        // Mute-while-streaming (process taps only, macOS 14.2+): silence the
-        // captured app/VoiceOver on this Mac so only the channel hears it.
-        // Deliberately never persisted and off by default — accidentally-muted
-        // VoiceOver would be catastrophic for a VO user.
-        var muteSourceCheckbox: NSButton?
-        var accessoryHeight: CGFloat = 62
-        if #available(macOS 14.2, *) {
-            let checkbox = NSButton(
-                checkboxWithTitle: L10n.text("mediaStream.device.prompt.muteSource"),
-                target: nil,
-                action: nil
-            )
-            checkbox.state = .off
-            muteSourceCheckbox = checkbox
-            accessoryHeight = 86
-            sourceButton.frame = NSRect(x: 0, y: 56, width: 320, height: 26)
-            monitorCheckbox.frame = NSRect(x: 0, y: 28, width: 320, height: 24)
-            checkbox.frame = NSRect(x: 0, y: 2, width: 320, height: 24)
-            picker.onSelectionChanged = { spec in
-                let isProcessSource: Bool
-                if case .processes = spec { isProcessSource = true } else { isProcessSource = false }
-                checkbox.isEnabled = isProcessSource
-                if isProcessSource == false { checkbox.state = .off }
-            }
-            picker.onSelectionChanged?(picker.selectedSpec)
-        } else {
-            monitorCheckbox.frame = NSRect(x: 0, y: 0, width: 320, height: 24)
-        }
-
-        let accessory = NSView(frame: NSRect(x: 0, y: 0, width: 320, height: accessoryHeight))
-        accessory.addSubview(sourceButton)
-        accessory.addSubview(monitorCheckbox)
-        if let muteSourceCheckbox { accessory.addSubview(muteSourceCheckbox) }
-        alert.accessoryView = accessory
-        alert.window.initialFirstResponder = sourceButton
-
-        // Presented APP-MODALLY, not as a sheet — this is load-bearing for VoiceOver.
-        //
-        // A submenu popped from a control inside an NSAlert *sheet* cannot be entered
-        // with VoiceOver: the submenu is announced as a group, opens, and is torn down
-        // within a millisecond, dropping focus back to the dialog. Instrumenting the
-        // menu delegate showed it closing in the same millisecond it opened whenever a
-        // flagsChanged event (VoiceOver's own Ctrl+Option) was in flight, and surviving
-        // only when NSApp.currentEvent was nil — hence the intermittency. Running the
-        // alert app-modally fixes it outright, with the menu, the items and the control
-        // all unchanged. Do not move this back to beginSheetModal(for:).
-        let response = alert.runModal()
-        // `picker` is referenced here so it (the menu items' target) outlives the dialog.
-        _ = picker
-        if response == .alertFirstButtonReturn, let spec = picker.selectedSpec {
-            preferencesStore.mutateDeviceStreamLastSource(spec)
-            connectionController.startStreamingCaptureSource(
+        controller.onStream = { [weak self] spec, monitorEnabled, muteSourceOutput in
+            guard let self else { return }
+            self.preferencesStore.mutateDeviceStreamLastSource(spec)
+            self.connectionController.startStreamingCaptureSource(
                 spec: spec,
-                monitorEnabled: monitorCheckbox.state == .on,
-                muteSourceOutput: muteSourceCheckbox?.state == .on
+                monitorEnabled: monitorEnabled,
+                muteSourceOutput: muteSourceOutput
             ) { [weak self] result in
                 DispatchQueue.main.async {
                     switch result {
@@ -1784,12 +1717,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         break
                     case .failure(let error):
                         self?.announceWithVoiceOver(L10n.text("mediaStream.announced.error"))
-                        let alert = NSAlert(error: error)
-                        alert.runModal()
+                        NSAlert(error: error).runModal()
                     }
                 }
             }
         }
+        host.presentAsSheet(controller)
     }
 
     func toggleMasterMute() {
@@ -2680,181 +2613,3 @@ private extension AppDelegate {
 /// "pop up button group" and the submenu items can't be chosen.) Retained by
 /// the sheet-completion closure (menu-item targets are weak).
 
-/// The visible source control: a stock `NSPopUpButton`.
-///
-/// It used to be an `NSButton` popping a hand-built `NSMenu`, with the picker
-/// accessibility ported from Mixer layered on top. That could not work here:
-/// the dialog is presented app-modally (see `promptMediaStreamDevice`), and in a
-/// modal session AppKit never delivers an `NSMenuItem`'s action — not to the
-/// picker, and not to a relay inside the modal window either. The menu opened,
-/// highlighted and dismissed perfectly while the selection was silently
-/// discarded, so NO source could be chosen. Verified on macOS 26.5, Debug and
-/// Release alike, mouse and keyboard alike.
-///
-/// A pop-up button does not depend on that dispatch: AppKit maintains its
-/// selection itself and sends a normal CONTROL action, which a modal session
-/// delivers fine. The single-user move dialog has used exactly this shape
-/// inside an `NSAlert` all along.
-///
-/// It also comes with the right VoiceOver behaviour for free — pop-up-button
-/// role, the selected title as its value, and arrow-key stepping through the
-/// options — which is what Mixer's `VirtualPickerController` was reproducing by
-/// hand. Nothing is layered on top: a stock control is what VoiceOver users
-/// already know.
-private typealias DeviceStreamSourceButton = NSPopUpButton
-
-private final class DeviceStreamSourcePicker: NSObject {
-    private let button: DeviceStreamSourceButton
-    private let devices: [InputAudioDeviceInfo]
-    private let applicationSources: [DeviceStreamCaptureSpec]
-    private let voiceOverAvailable: Bool
-    private let allowsApplicationBrowsing: Bool
-    /// An application picked via browse that isn't in the running list — kept
-    /// so it stays visible (and checkable) in the menu.
-    private var browsedApplication: DeviceStreamCaptureSpec?
-
-    private(set) var selectedSpec: DeviceStreamCaptureSpec?
-    /// Fired whenever the selected source changes (dialog uses it to enable
-    /// the process-source-only mute checkbox).
-    var onSelectionChanged: ((DeviceStreamCaptureSpec?) -> Void)?
-
-    init(
-        button: DeviceStreamSourceButton,
-        devices: [InputAudioDeviceInfo],
-        applicationSources: [DeviceStreamCaptureSpec],
-        voiceOverAvailable: Bool,
-        allowsApplicationBrowsing: Bool
-    ) {
-        self.button = button
-        self.devices = devices
-        self.applicationSources = applicationSources
-        self.voiceOverAvailable = voiceOverAvailable
-        self.allowsApplicationBrowsing = allowsApplicationBrowsing
-        super.init()
-        button.target = self
-        button.action = #selector(sourceSelectionChanged(_:))
-        button.autoenablesItems = false
-        rebuildMenu()
-    }
-
-    /// Rebuilds the pop-up's flat option list. Flat on purpose: the applications
-    /// used to sit in a submenu, and a submenu inside this dialog was never
-    /// VoiceOver-navigable — it announced a group and dropped focus. With every
-    /// source at the top level, arrow keys reach all of them, which is what the
-    /// ported picker machinery was working around.
-    private func rebuildMenu() {
-        let specs = orderedSpecs
-        button.removeAllItems()
-        for spec in specs {
-            button.addItem(withTitle: spec.displayName)
-            button.lastItem?.representedObject = spec
-        }
-        if allowsApplicationBrowsing {
-            button.menu?.addItem(.separator())
-            let browse = NSMenuItem(title: L10n.text("mediaStream.device.source.chooseApplication"),
-                                    action: nil, keyEquivalent: "")
-            browse.tag = Self.browseItemTag
-            button.menu?.addItem(browse)
-        }
-        if let selectedSpec, let index = specs.firstIndex(of: selectedSpec) {
-            button.selectItem(at: index)
-        }
-    }
-
-    private static let browseItemTag = 9_001
-
-    @objc private func sourceSelectionChanged(_ sender: NSPopUpButton) {
-        guard let item = sender.selectedItem else { return }
-        if item.tag == Self.browseItemTag {
-            // Not a source: restore the current selection, then browse.
-            if let selectedSpec, let index = orderedSpecs.firstIndex(of: selectedSpec) {
-                button.selectItem(at: index)
-            }
-            browseForApplicationFromMenu()
-            return
-        }
-        guard let spec = item.representedObject as? DeviceStreamCaptureSpec else { return }
-        applySelection(spec)
-    }
-
-    func preselect(token: String?, fallbackDeviceUID: String?) {
-        if let token {
-            if token == DeviceStreamCaptureSpec.voiceOverPersistenceToken, voiceOverAvailable {
-                applySelection(.voiceOver())
-                return
-            }
-            if token.hasPrefix("app:"),
-               let source = applicationSources.first(where: { $0.persistenceToken == token }) {
-                applySelection(source)
-                return
-            }
-            if token.hasPrefix("device:") {
-                let uid = String(token.dropFirst("device:".count))
-                if let device = devices.first(where: { $0.uid == uid }) {
-                    applySelection(.inputDevice(device))
-                    return
-                }
-            }
-        }
-        if let fallbackDeviceUID, let device = devices.first(where: { $0.uid == fallbackDeviceUID }) {
-            applySelection(.inputDevice(device))
-        } else if let firstDevice = devices.first {
-            applySelection(.inputDevice(firstDevice))
-        } else if voiceOverAvailable {
-            applySelection(.voiceOver())
-        }
-    }
-
-    /// Every selectable source, flat, in menu order. The browse action is not a
-    /// source, so it is supplied separately as an extra menu item.
-    var orderedSpecs: [DeviceStreamCaptureSpec] {
-        var specs = devices.map { DeviceStreamCaptureSpec.inputDevice($0) }
-        if voiceOverAvailable { specs.append(.voiceOver()) }
-        specs.append(contentsOf: applicationSources)
-        if let browsedApplication, specs.contains(browsedApplication) == false {
-            specs.append(browsedApplication)
-        }
-        return specs
-    }
-
-    var selectedIndex: Int? {
-        guard let selectedSpec else { return nil }
-        return orderedSpecs.firstIndex(of: selectedSpec)
-    }
-
-    func selectSource(at index: Int) {
-        let specs = orderedSpecs
-        guard specs.indices.contains(index) else { return }
-        applySelection(specs[index])
-    }
-
-    var canBrowseForApplication: Bool { allowsApplicationBrowsing }
-
-    private func applySelection(_ spec: DeviceStreamCaptureSpec) {
-        selectedSpec = spec
-        if let index = orderedSpecs.firstIndex(of: spec) {
-            button.selectItem(at: index)
-        }
-        onSelectionChanged?(spec)
-    }
-
-    /// "Select Application…": browse for any installed .app (running or not —
-    /// the tap backend waits for it) and use its bundle identifier.
-    func browseForApplicationFromMenu() {
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [.applicationBundle]
-        panel.directoryURL = URL(fileURLWithPath: "/Applications", isDirectory: true)
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        guard let bundleID = Bundle(url: url)?.bundleIdentifier, bundleID.isEmpty == false else {
-            NSSound.beep()
-            return
-        }
-        let name = FileManager.default.displayName(atPath: url.path)
-        let spec = DeviceStreamCaptureSpec.application(bundleID: bundleID, displayName: name)
-        browsedApplication = spec
-        applySelection(spec)
-    }
-}
