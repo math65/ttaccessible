@@ -39,6 +39,7 @@ extension TeamTalkConnectionController {
                 }
                 self.instance = instance
                 self.connectedRecord = record
+                self.refreshSavedChannelPasswordIDsLocked(instance: instance)
                 self.autoJoinAfterLoginLocked(instance: instance, options: options)
                 try self.applyPostLoginOptionsLocked(instance: instance, options: options)
                 self.applyDefaultSubscriptionPreferencesLocked(instance: instance, preferences: self.preferencesStore.preferences)
@@ -158,6 +159,7 @@ extension TeamTalkConnectionController {
             try ensureOutputAudioReadyLocked(instance: instance)
             self.instance = instance
             self.connectedRecord = record
+            refreshSavedChannelPasswordIDsLocked(instance: instance)
 
             // Rejoindre le dernier canal si possible
             let shouldRejoinLastChannel = preferencesStore.preferences.rejoinLastChannelOnReconnect
@@ -784,6 +786,8 @@ extension TeamTalkConnectionController {
 
     func destroyLocked() {
         stopPollingLocked()
+        // Channel IDs only mean anything for a live connection.
+        clearSavedChannelPasswordIDs()
 
         if let instance {
             cleanupVideoLocked()

@@ -1090,12 +1090,21 @@ final class ConnectedServerViewController: NSViewController {
         }()
         switch menuItem.action {
         case #selector(forgetChannelPasswordAction):
-            // Deliberately does NOT consult the store: resolving a saved
-            // password means keychain I/O on the controller's serial queue with
-            // the main thread waiting on it, and menu validation is far too hot
-            // a path for that. Forgetting nothing is harmless.
-            guard case .channel(let channel)? = selectedNode else { return false }
-            return channel.isPasswordProtected
+            // Shown only when there really is a saved password to forget, and
+            // hidden rather than dimmed otherwise — a permanently disabled item
+            // is just one more thing to arrow past under VoiceOver.
+            //
+            // hasSavedChannelPassword reads an in-memory mirror behind a lock:
+            // menu validation runs every time a menu opens, so it must not do
+            // keychain I/O or hop onto the controller's serial queue.
+            guard case .channel(let channel)? = selectedNode,
+                  channel.isPasswordProtected,
+                  connectionController.hasSavedChannelPassword(forChannelID: channel.id) else {
+                menuItem.isHidden = true
+                return false
+            }
+            menuItem.isHidden = false
+            return true
         case #selector(toggleMuteUserAction):
             let muted = selectedUser.map { localMuteState[$0.id] ?? $0.isMuted } == true
             menuItem.title = muted ? L10n.text("connectedServer.menu.unmuteUser") : L10n.text("connectedServer.menu.muteUser")
