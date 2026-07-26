@@ -102,8 +102,10 @@ static inline void ttac_mix_clamp(int16_t *out, const int32_t *acc, int count) {
 /// - planes: `devCh` non-null plane pointers (caller has already null-checked).
 /// - framesAvailable: frames actually pulled from the ring; the remainder up
 ///   to `frameCount` is filled with silence (gain smoothing still advances).
-/// - devCh == 1 downmixes L/R by average; devCh >= 2 maps L->0, R->1 and
-///   silences the extra channels.
+/// - leftPlane / rightPlane: which physical channels the mix lands on (see
+///   OutputChannelSelection). `rightPlane < 0` downmixes L/R by average onto
+///   `leftPlane` alone. Every other plane is silenced. Out-of-range indices
+///   fall back to 0/1 — a bad mapping must never render into foreign memory.
 /// Returns the smoothed gain after `frameCount` frames.
 static inline float ttac_render_planes(float *const *planes,
                                        int devCh,
@@ -112,13 +114,21 @@ static inline float ttac_render_planes(float *const *planes,
                                        int frameCount,
                                        float gain,
                                        float gainTarget,
-                                       float smoothCoeff) {
+                                       float smoothCoeff,
+                                       int leftPlane,
+                                       int rightPlane) {
     const float invScale = 1.0f / 32768.0f;
-    for (int ch = 2; ch < devCh; ch++) {
+    if (leftPlane < 0 || leftPlane >= devCh) leftPlane = 0;
+    if (rightPlane >= devCh) rightPlane = (devCh >= 2) ? 1 : -1;
+    if (rightPlane == leftPlane) rightPlane = -1;
+    if (devCh < 2) rightPlane = -1;
+
+    for (int ch = 0; ch < devCh; ch++) {
+        if (ch == leftPlane || ch == rightPlane) continue;
         memset(planes[ch], 0, (size_t)frameCount * sizeof(float));
     }
-    if (devCh == 1) {
-        float *mono = planes[0];
+    if (rightPlane < 0) {
+        float *mono = planes[leftPlane];
         for (int f = 0; f < framesAvailable; f++) {
             gain += (gainTarget - gain) * smoothCoeff;
             const int32_t sum = ((int32_t)pull[f * 2] + (int32_t)pull[f * 2 + 1]) / 2;
@@ -129,8 +139,8 @@ static inline float ttac_render_planes(float *const *planes,
                    (size_t)(frameCount - framesAvailable) * sizeof(float));
         }
     } else {
-        float *left = planes[0];
-        float *right = planes[1];
+        float *left = planes[leftPlane];
+        float *right = planes[rightPlane];
         for (int f = 0; f < framesAvailable; f++) {
             gain += (gainTarget - gain) * smoothCoeff;
             const float g = invScale * gain;
