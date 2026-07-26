@@ -7,7 +7,6 @@
 
 import AppKit
 import Combine
-import KeyboardShortcuts
 import UserNotifications
 import UniformTypeIdentifiers
 import Sparkle
@@ -68,7 +67,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let macOSTextToSpeechAnnouncementService = MacOSTextToSpeechAnnouncementService()
     private let menuState = SavedServersMenuState.shared
     private let audioDeviceChangeMonitor = AudioDeviceChangeMonitor()
-    private lazy var connectionController = TeamTalkConnectionController(preferencesStore: preferencesStore)
+    private lazy var connectionController = TeamTalkConnectionController(preferencesStore: preferencesStore, passwordStore: passwordStore)
     private lazy var advancedMicrophoneSettingsStore = AdvancedMicrophoneSettingsStore(
         preferencesStore: preferencesStore,
         connectionController: connectionController
@@ -115,7 +114,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var updaterAutoCheckCancellable: AnyCancellable?
     private var nicknameCancellable: AnyCancellable?
     private var userMenuVisibilityCancellable: AnyCancellable?
-    private var pushToTalkModeCancellable: AnyCancellable?
+    private var hotkeyPrefsCancellable: AnyCancellable?
+    private let pushToTalkMonitor = HotkeyMonitor()
+    private let muteHotkeyMonitor = HotkeyMonitor()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         ProfileInstanceLock.acquire(for: ProfileContext.current)
@@ -139,6 +140,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.connectionController.handleDebouncedAudioHardwareChange(selector: selector)
         }
         requestNotificationPermission()
+        promptInitialLanguageIfNeeded()
         showSavedServersWindow()
         connectToLastServerOnLaunchIfEnabled()
         DispatchQueue.main.async { [weak self] in
@@ -215,35 +217,96 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
     }
 
+    /// The subset of preferences that affect hotkey monitor configuration, so we
+    /// only reconfigure the monitors when one of these actually changes.
+    private struct HotkeyPrefsKey: Equatable {
+        let mode: AppPreferences.MicrophoneMode
+        let key: HotkeyBinding?
+        let pushToTalkGlobal: Bool
+        let muteHotkeyGlobal: Bool
+        let muteHotkeyBinding: HotkeyBinding?
+
+        init(preferences: AppPreferences) {
+            mode = preferences.microphoneMode
+            key = preferences.pushToTalkKey
+            pushToTalkGlobal = preferences.pushToTalkGlobal
+            muteHotkeyGlobal = preferences.muteHotkeyGlobal
+            muteHotkeyBinding = preferences.muteHotkeyBinding
+        }
+    }
+
     private func configurePushToTalkObservers() {
-        // Lets the audio insert path treat PTT as inactive when no global
-        // shortcut is configured — otherwise pushToTalkPressed never flips
-        // and the mic stays muted forever.
-        connectionController.pushToTalkShortcutResolver = {
-            KeyboardShortcuts.getShortcut(for: .pushToTalk) != nil
+        // Lets the audio insert path treat PTT as inactive when no key is
+        // configured — otherwise pushToTalkPressed never flips and the mic
+        // stays muted forever in push-to-talk mode.
+        pushToTalkMonitor.onPress = { [weak self] in self?.handlePushToTalkPress() }
+        pushToTalkMonitor.onRelease = { [weak self] in self?.handlePushToTalkRelease() }
+        // The global ⌘⇧A tap fires only while another app is focused (the menu
+        // shortcut covers the focused case), so it mirrors the menu action —
+        // without restoring/focusing our window, which would steal focus.
+        muteHotkeyMonitor.onPress = { [weak self] in
+            guard let self, self.menuState.mode == .connectedServer else { return }
+            self.connectedServerViewController?.performToggleMicrophoneShortcut(announceStatus: true)
         }
 
-        // Static handlers registered once for the lifetime of the app — the
-        // library only fires them while a shortcut is configured for the
-        // .pushToTalk name. Mode gating (always-on vs PTT) happens in the
-        // audio insert path; we still want the press/release effects for the
-        // beep + announcement either way (cheap and harmless if mode is
-        // .alwaysOn — the user wouldn't have set a shortcut in that case).
-        KeyboardShortcuts.onKeyDown(for: .pushToTalk) { [weak self] in
-            self?.handlePushToTalkPress()
-        }
-        KeyboardShortcuts.onKeyUp(for: .pushToTalk) { [weak self] in
-            self?.handlePushToTalkRelease()
-        }
+        configureHotkeyMonitors(with: preferencesStore.preferences)
 
-        // Reset transmit state when the mode toggles, so toggling Push-to-talk
-        // off doesn't leave the gate stuck open from a previous press.
-        pushToTalkModeCancellable = preferencesStore.$preferences
-            .map(\.microphoneMode)
-            .removeDuplicates()
-            .sink { [weak self] _ in
-                self?.connectionController.setPushToTalkPressed(false)
+        // Reconfigure the monitors whenever the mode, key, or scope changes.
+        // NOTE: @Published fires in willSet, so the sink must use the value the
+        // publisher delivers — reading preferencesStore.preferences here would
+        // return the OLD value and reconfigure with stale settings.
+        hotkeyPrefsCancellable = preferencesStore.$preferences
+            .removeDuplicates { HotkeyPrefsKey(preferences: $0) == HotkeyPrefsKey(preferences: $1) }
+            .sink { [weak self] prefs in
+                self?.configureHotkeyMonitors(with: prefs)
             }
+    }
+
+    /// Installs/updates the PTT and mute hotkey monitors from current prefs.
+    /// The PTT monitor is only active in push-to-talk / both modes, so it never
+    /// captures the key in always-transmit mode. Global scope uses a listen-only
+    /// CGEventTap (Input Monitoring) which observes without stealing the key.
+    private func configureHotkeyMonitors(with prefs: AppPreferences) {
+        AudioLogger.log("[Hotkey] configure mode=%@ key=%@ pttGlobal=%d muteGlobal=%d",
+                        String(describing: prefs.microphoneMode),
+                        prefs.pushToTalkKey?.displayString ?? "nil",
+                        prefs.pushToTalkGlobal ? 1 : 0,
+                        prefs.muteHotkeyGlobal ? 1 : 0)
+
+        // Push the queue-side caches + normalize transmit state on mode
+        // changes (the controller must never read the @Published prefs from
+        // its own queue).
+        connectionController.applyMicrophoneHotkeySettings(
+            mode: prefs.microphoneMode,
+            pushToTalkKeyConfigured: prefs.pushToTalkKey?.isValid ?? false
+        )
+
+        let pttActive = prefs.microphoneMode == .pushToTalk || prefs.microphoneMode == .both
+        if pttActive, let key = prefs.pushToTalkKey, key.isValid {
+            pushToTalkMonitor.configure(
+                binding: key,
+                scope: prefs.pushToTalkGlobal ? .global : .local
+            )
+        } else {
+            pushToTalkMonitor.stop()
+        }
+
+        if prefs.muteHotkeyGlobal {
+            // User-configurable global mic-toggle binding; the default is
+            // ⌘⇧ + whatever key TYPES "a" on the current layout (key codes
+            // are positional — hardcoding 0 made ⌘⇧Q toggle the mic on
+            // AZERTY). A user whose chord collides with another app's
+            // shortcut (the listen-only tap can't swallow) picks a
+            // different binding instead of us keeping per-app ignore lists.
+            muteHotkeyMonitor.configure(
+                binding: prefs.muteHotkeyBinding ?? HotkeyBinding.defaultMuteHotkey(),
+                scope: .global,
+                globalOnlyWhenInactive: true,
+                wantsReleaseEvents: false
+            )
+        } else {
+            muteHotkeyMonitor.stop()
+        }
     }
 
     private func handlePushToTalkPress() {
@@ -424,6 +487,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidBecomeActive(_ notification: Notification) {
         if NSApp.windows.contains(where: { $0.isVisible }) == false {
             restoreMainWindow()
+        }
+        // If a global monitor was waiting on Input Monitoring permission, the
+        // user may have just granted it in System Settings — retry now.
+        if pushToTalkMonitor.isAwaitingGlobalPermission || muteHotkeyMonitor.isAwaitingGlobalPermission {
+            configureHotkeyMonitors(with: preferencesStore.preferences)
         }
     }
 
@@ -741,6 +809,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func promptInitialLanguageIfNeeded() {
+        guard preferencesStore.preferences.hasChosenInitialLanguage == false else {
+            return
+        }
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = L10n.text("firstLaunch.language.title")
+        alert.informativeText = L10n.text("firstLaunch.language.message")
+        alert.addButton(withTitle: L10n.text("common.ok"))
+
+        let popUp = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 260, height: 26), pullsDown: false)
+        for languagePreference in AppLanguagePreference.allCases {
+            popUp.addItem(withTitle: L10n.text(languagePreference.localizationKey))
+            popUp.lastItem?.representedObject = languagePreference
+        }
+        popUp.selectItem(withTitle: L10n.text(AppLanguagePreference.system.localizationKey))
+        popUp.setAccessibilityLabel(L10n.text("preferences.general.language.label"))
+        alert.accessoryView = popUp
+        alert.window.initialFirstResponder = popUp
+
+        alert.runModal()
+        let chosenLanguage = popUp.selectedItem?.representedObject as? AppLanguagePreference ?? .system
+        preferencesStore.updateLanguagePreference(chosenLanguage)
+        preferencesStore.markInitialLanguageChosen()
+    }
+
     private func promptServerListExportMode() -> ServerListExportMode? {
         let alert = NSAlert()
         alert.alertStyle = .informational
@@ -974,7 +1068,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             channelContext = ServerExportChannelContext(
                 name: channel.name,
                 path: "/" + channel.pathComponents.joined(separator: "/"),
-                password: connectionController.passwordForChannel(session.currentChannelID)
+                password: connectionController.knownChannelPassword(forChannelID: session.currentChannelID)
             )
         } else {
             channelContext = nil

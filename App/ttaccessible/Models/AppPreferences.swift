@@ -22,6 +22,10 @@ struct AppPreferences: Codable, Equatable {
     enum MicrophoneMode: String, Codable, CaseIterable {
         case alwaysOn
         case pushToTalk
+        /// Mute-gated with a momentary PTT override. ⌘⇧A toggles an always-on
+        /// gate; holding the PTT key transmits regardless, and releasing it
+        /// closes the gate (goes silent). See PushToTalkController.
+        case both
     }
 
     /// How per-user volume/stereo/pan adjustments are remembered (issue #24).
@@ -124,11 +128,18 @@ struct AppPreferences: Codable, Equatable {
         case includeBetaUpdates
         case microphoneMode
         case pushToTalkBeepEnabled
+        case pushToTalkKey
+        case pushToTalkGlobal
+        case muteHotkeyGlobal
+        case muteHotkeyBinding
+        case didMigrateLegacyPushToTalkKey
         case videoPanelExpanded
         case userVolumeMemoryMode
         case deviceStreamLastDeviceUID
         case deviceStreamLastSource
         case deviceStreamVoiceSyncTrimMSec
+        case languagePreference
+        case hasChosenInitialLanguage
     }
 
     var defaultNickname: String
@@ -195,6 +206,21 @@ struct AppPreferences: Codable, Equatable {
     var includeBetaUpdates: Bool
     var microphoneMode: MicrophoneMode
     var pushToTalkBeepEnabled: Bool
+    /// The push-to-talk key/chord. `nil` means unset.
+    var pushToTalkKey: HotkeyBinding?
+    /// When true, the PTT key works even when ttaccessible is not the active app
+    /// (requires Input Monitoring permission).
+    var pushToTalkGlobal: Bool
+    /// When true, ⌘⇧A (mute / gate) works from any app (requires Input Monitoring).
+    var muteHotkeyGlobal: Bool
+    /// Custom binding for the GLOBAL mic-toggle hotkey (nil = the default,
+    /// ⌘⇧ + the key that types "A" on the current layout). The in-app case is
+    /// always the ⌘⇧A menu shortcut; this binding only drives the global
+    /// listen-only tap used while another app is frontmost.
+    var muteHotkeyBinding: HotkeyBinding?
+    /// One-time migration marker: the old KeyboardShortcuts library's stored
+    /// push-to-talk key has been imported (or found absent).
+    var didMigrateLegacyPushToTalkKey: Bool
     var videoPanelExpanded: Bool
     var userVolumeMemoryMode: UserVolumeMemoryMode
     /// CoreAudio UID of the input device last streamed to a channel, so the
@@ -208,6 +234,8 @@ struct AppPreferences: Codable, Equatable {
     /// live-capture stream runs. No UI — an escape hatch to absorb the voice
     /// path's own capture latency on unusual setups.
     var deviceStreamVoiceSyncTrimMSec: Int
+    var languagePreference: AppLanguagePreference
+    var hasChosenInitialLanguage: Bool
     init(
         defaultNickname: String = AppPreferences.defaultNicknameFromAccount(),
         defaultStatusMessage: String = "",
@@ -265,11 +293,18 @@ struct AppPreferences: Codable, Equatable {
         includeBetaUpdates: Bool = false,
         microphoneMode: MicrophoneMode = .alwaysOn,
         pushToTalkBeepEnabled: Bool = true,
+        pushToTalkKey: HotkeyBinding? = nil,
+        pushToTalkGlobal: Bool = true,
+        muteHotkeyGlobal: Bool = false,
+        muteHotkeyBinding: HotkeyBinding? = nil,
+        didMigrateLegacyPushToTalkKey: Bool = false,
         videoPanelExpanded: Bool = true,
         userVolumeMemoryMode: UserVolumeMemoryMode = .persistent,
         deviceStreamLastDeviceUID: String? = nil,
         deviceStreamLastSource: String? = nil,
-        deviceStreamVoiceSyncTrimMSec: Int = 0
+        deviceStreamVoiceSyncTrimMSec: Int = 0,
+        languagePreference: AppLanguagePreference = .system,
+        hasChosenInitialLanguage: Bool = false
     ) {
         self.defaultNickname = defaultNickname
         self.defaultStatusMessage = defaultStatusMessage
@@ -327,11 +362,18 @@ struct AppPreferences: Codable, Equatable {
         self.includeBetaUpdates = includeBetaUpdates
         self.microphoneMode = microphoneMode
         self.pushToTalkBeepEnabled = pushToTalkBeepEnabled
+        self.pushToTalkKey = pushToTalkKey
+        self.pushToTalkGlobal = pushToTalkGlobal
+        self.muteHotkeyGlobal = muteHotkeyGlobal
+        self.muteHotkeyBinding = muteHotkeyBinding
+        self.didMigrateLegacyPushToTalkKey = didMigrateLegacyPushToTalkKey
         self.videoPanelExpanded = videoPanelExpanded
         self.userVolumeMemoryMode = userVolumeMemoryMode
         self.deviceStreamLastDeviceUID = deviceStreamLastDeviceUID
         self.deviceStreamLastSource = deviceStreamLastSource
         self.deviceStreamVoiceSyncTrimMSec = deviceStreamVoiceSyncTrimMSec
+        self.languagePreference = languagePreference
+        self.hasChosenInitialLanguage = hasChosenInitialLanguage
     }
 
     nonisolated static func clampGainDB(_ value: Double) -> Double {
@@ -448,11 +490,18 @@ struct AppPreferences: Codable, Equatable {
         includeBetaUpdates = try container.decodeIfPresent(Bool.self, forKey: .includeBetaUpdates) ?? false
         microphoneMode = try container.decodeIfPresent(MicrophoneMode.self, forKey: .microphoneMode) ?? .alwaysOn
         pushToTalkBeepEnabled = try container.decodeIfPresent(Bool.self, forKey: .pushToTalkBeepEnabled) ?? true
+        pushToTalkKey = try container.decodeIfPresent(HotkeyBinding.self, forKey: .pushToTalkKey)
+        pushToTalkGlobal = try container.decodeIfPresent(Bool.self, forKey: .pushToTalkGlobal) ?? true
+        muteHotkeyGlobal = try container.decodeIfPresent(Bool.self, forKey: .muteHotkeyGlobal) ?? false
+        muteHotkeyBinding = try container.decodeIfPresent(HotkeyBinding.self, forKey: .muteHotkeyBinding)
+        didMigrateLegacyPushToTalkKey = try container.decodeIfPresent(Bool.self, forKey: .didMigrateLegacyPushToTalkKey) ?? false
         videoPanelExpanded = try container.decodeIfPresent(Bool.self, forKey: .videoPanelExpanded) ?? true
         userVolumeMemoryMode = try container.decodeIfPresent(UserVolumeMemoryMode.self, forKey: .userVolumeMemoryMode) ?? .persistent
         deviceStreamLastDeviceUID = try container.decodeIfPresent(String.self, forKey: .deviceStreamLastDeviceUID)
         deviceStreamLastSource = try container.decodeIfPresent(String.self, forKey: .deviceStreamLastSource)
         deviceStreamVoiceSyncTrimMSec = try container.decodeIfPresent(Int.self, forKey: .deviceStreamVoiceSyncTrimMSec) ?? 0
+        languagePreference = try container.decodeIfPresent(AppLanguagePreference.self, forKey: .languagePreference) ?? .system
+        hasChosenInitialLanguage = try container.decodeIfPresent(Bool.self, forKey: .hasChosenInitialLanguage) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -513,11 +562,18 @@ struct AppPreferences: Codable, Equatable {
         try container.encode(includeBetaUpdates, forKey: .includeBetaUpdates)
         try container.encode(microphoneMode, forKey: .microphoneMode)
         try container.encode(pushToTalkBeepEnabled, forKey: .pushToTalkBeepEnabled)
+        try container.encodeIfPresent(pushToTalkKey, forKey: .pushToTalkKey)
+        try container.encode(pushToTalkGlobal, forKey: .pushToTalkGlobal)
+        try container.encode(muteHotkeyGlobal, forKey: .muteHotkeyGlobal)
+        try container.encodeIfPresent(muteHotkeyBinding, forKey: .muteHotkeyBinding)
+        try container.encode(didMigrateLegacyPushToTalkKey, forKey: .didMigrateLegacyPushToTalkKey)
         try container.encode(videoPanelExpanded, forKey: .videoPanelExpanded)
         try container.encode(userVolumeMemoryMode, forKey: .userVolumeMemoryMode)
         try container.encodeIfPresent(deviceStreamLastDeviceUID, forKey: .deviceStreamLastDeviceUID)
         try container.encodeIfPresent(deviceStreamLastSource, forKey: .deviceStreamLastSource)
         try container.encode(deviceStreamVoiceSyncTrimMSec, forKey: .deviceStreamVoiceSyncTrimMSec)
+        try container.encode(languagePreference, forKey: .languagePreference)
+        try container.encode(hasChosenInitialLanguage, forKey: .hasChosenInitialLanguage)
     }
 
     func isSubscriptionEnabledByDefault(_ option: UserSubscriptionOption) -> Bool {

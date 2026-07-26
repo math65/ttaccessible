@@ -256,7 +256,7 @@ final class ConnectedServerViewController: NSViewController {
             case .success:
                 self.announce(L10n.text("connectedServer.identity.nickname.updated"))
             case .failure(let error):
-                self.presentActionError(error.localizedDescription)
+                self.presentActionError(error)
             }
         }
     }
@@ -333,14 +333,14 @@ final class ConnectedServerViewController: NSViewController {
                         case .success:
                             self.announce(L10n.text("connectedServer.identity.status.updated"))
                         case .failure(let error):
-                            self.presentActionError(error.localizedDescription)
+                            self.presentActionError(error)
                         }
                     }
                 } else {
                     self.announce(L10n.text("connectedServer.identity.status.updated"))
                 }
             case .failure(let error):
-                self.presentActionError(error.localizedDescription)
+                self.presentActionError(error)
             }
         }
     }
@@ -808,7 +808,8 @@ final class ConnectedServerViewController: NSViewController {
                 isCurrentChannel: channel.isCurrentChannel,
                 pathComponents: channel.pathComponents,
                 children: updatedChildren,
-                users: updatedUsers
+                users: updatedUsers,
+                canMoveUsersOut: channel.canMoveUsersOut
             )
         }
     }
@@ -947,7 +948,7 @@ final class ConnectedServerViewController: NSViewController {
 
             self.connectionController.sendBroadcastMessage(message) { [weak self] result in
                 if case .failure(let error) = result {
-                    self?.presentActionError(error.localizedDescription)
+                    self?.presentActionError(error)
                 }
             }
         }
@@ -1099,6 +1100,14 @@ final class ConnectedServerViewController: NSViewController {
         moveItem.target = self
         menu.addItem(moveItem)
 
+        let moveChannelUsersItem = NSMenuItem(
+            title: L10n.text("connectedServer.menu.moveChannelUsers"),
+            action: #selector(moveChannelUsersAction),
+            keyEquivalent: ""
+        )
+        moveChannelUsersItem.target = self
+        menu.addItem(moveChannelUsersItem)
+
         menu.addItem(.separator())
 
         let createItem = NSMenuItem(
@@ -1125,10 +1134,37 @@ final class ConnectedServerViewController: NSViewController {
         deleteItem.target = self
         menu.addItem(deleteItem)
 
+        // Saving a channel password is automatic on a successful join, which
+        // includes a one-off visit to a protected channel. This is the way back
+        // out — otherwise the only way to drop a saved channel secret is to
+        // delete the whole saved server.
+        let forgetPasswordItem = NSMenuItem(
+            title: L10n.text("connectedServer.menu.forgetChannelPassword"),
+            action: #selector(forgetChannelPasswordAction),
+            keyEquivalent: ""
+        )
+        forgetPasswordItem.target = self
+        menu.addItem(forgetPasswordItem)
+
         return menu
     }
 
     // MARK: - User Actions (see ConnectedServerViewController+UserActions.swift)
+
+    /// Swallow the "dropped, but reconnecting" error. Any command in flight
+    /// when the connection drops unwinds with it, and the UI is already showing
+    /// the reconnecting state — a modal alert (and its VoiceOver announcement)
+    /// on top of that is noise, and there can be one per in-flight command.
+    ///
+    /// Note this override only covers the handful of call sites that hand an
+    /// `Error` to `NSResponder`; almost every command failure in this screen
+    /// goes through `presentActionError(_:)` instead, which has the same guard.
+    override func presentError(_ error: Error) -> Bool {
+        if TeamTalkConnectionError.isReconnectingDrop(error) {
+            return false
+        }
+        return super.presentError(error)
+    }
 
     @objc func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         let isUser = { if case .user? = self.selectedNode { return true }; return false }()
@@ -1139,6 +1175,22 @@ final class ConnectedServerViewController: NSViewController {
             return me.isAdministrator || me.isChannelOperator
         }()
         switch menuItem.action {
+        case #selector(forgetChannelPasswordAction):
+            // Shown only when there really is a saved password to forget, and
+            // hidden rather than dimmed otherwise — a permanently disabled item
+            // is just one more thing to arrow past under VoiceOver.
+            //
+            // hasSavedChannelPassword reads an in-memory mirror behind a lock:
+            // menu validation runs every time a menu opens, so it must not do
+            // keychain I/O or hop onto the controller's serial queue.
+            guard case .channel(let channel)? = selectedNode,
+                  channel.isPasswordProtected,
+                  connectionController.hasSavedChannelPassword(forChannelID: channel.id) else {
+                menuItem.isHidden = true
+                return false
+            }
+            menuItem.isHidden = false
+            return true
         case #selector(toggleMuteUserAction):
             let muted = selectedUser.map { localMuteState[$0.id] ?? $0.isMuted } == true
             menuItem.title = muted ? L10n.text("connectedServer.menu.unmuteUser") : L10n.text("connectedServer.menu.muteUser")
@@ -1166,6 +1218,14 @@ final class ConnectedServerViewController: NSViewController {
             guard !selectedUsers.isEmpty else { return false }
             let hasOthers = selectedUsers.contains { !$0.isCurrentUser }
             return !hasOthers || canModerate
+        case #selector(moveChannelUsersAction):
+            // Bulk-move a channel's occupants. Works whether a channel row or a
+            // user row is selected (resolves to the user's channel), as long as
+            // that channel has users and we may move people out of THAT channel
+            // — `canModerate` is target-blind and would offer the action on
+            // channels the server rejects.
+            guard let channel = bulkMoveTargetChannel(), !channel.users.isEmpty else { return false }
+            return canMoveUsers(from: channel)
         default:
             return true
         }
@@ -1201,7 +1261,7 @@ final class ConnectedServerViewController: NSViewController {
                 case .success:
                     self?.announce(L10n.text("serverProperties.announced.updated"))
                 case .failure(let error):
-                    self?.presentActionError(error.localizedDescription)
+                    self?.presentActionError(error)
                 }
             }
         }
@@ -1339,6 +1399,16 @@ final class ConnectedServerViewController: NSViewController {
         announce(message)
     }
 
+    /// Error-taking overload: this is the one command failures should use, so a
+    /// drop that armed a reconnect stays silent. Reporting it would stack a
+    /// modal alert per in-flight command on top of the "reconnecting…" state —
+    /// and the message alone can't be filtered, since it is identical to a
+    /// genuine connection failure.
+    func presentActionError(_ error: Error) {
+        guard !TeamTalkConnectionError.isReconnectingDrop(error) else { return }
+        presentActionError(error)
+    }
+
     @objc
     func sendCurrentMessage(_ sender: Any? = nil) {
         let message = messageField.stringValue
@@ -1361,7 +1431,7 @@ final class ConnectedServerViewController: NSViewController {
                 }
                 self.announce(L10n.text("connectedServer.chat.sent"))
             case .failure(let error):
-                self.presentActionError(error.localizedDescription)
+                self.presentActionError(error)
             }
         }
     }
@@ -1374,6 +1444,37 @@ final class ConnectedServerViewController: NSViewController {
     }
 
     func toggleMicrophone(announceStatus: Bool) {
+        // In "both" mode ⌘⇧A toggles the always-on gate (lightweight) instead of
+        // arming/disarming the mic engine — the engine stays hot for instant PTT.
+        if connectionController.currentMicrophoneMode == .both {
+            // Opening the gate can arm the mic engine, which needs microphone
+            // access — request it unconditionally: when the mic is already
+            // authorized (any armed state) this returns immediately, and the
+            // authoritative open/closed result comes back from the toggle
+            // itself rather than a possibly-stale main-thread snapshot.
+            connectionController.requestMicrophoneAccess { [weak self] granted in
+                guard let self else { return }
+                guard granted else {
+                    self.presentActionError(L10n.text("connectedServer.audio.error.microphonePermissionDenied"))
+                    return
+                }
+                self.connectionController.toggleBothModeGate { [weak self] result in
+                    guard let self else { return }
+                    switch result {
+                    case .success(let gateNowOpen):
+                        if announceStatus {
+                            self.announce(gateNowOpen
+                                ? L10n.text("connectedServer.audio.voiceEnabled")
+                                : L10n.text("connectedServer.audio.voiceDisabled"))
+                        }
+                    case .failure(let error):
+                        self.presentActionError(error.localizedDescription)
+                    }
+                }
+            }
+            return
+        }
+
         if session.voiceTransmissionEnabled {
             connectionController.deactivateVoiceTransmission { [weak self] result in
                 guard let self else {
@@ -1386,7 +1487,7 @@ final class ConnectedServerViewController: NSViewController {
                         self.announce(L10n.text("connectedServer.audio.voiceDisabled"))
                     }
                 case .failure(let error):
-                    self.presentActionError(error.localizedDescription)
+                    self.presentActionError(error)
                 }
             }
             return
@@ -1412,7 +1513,7 @@ final class ConnectedServerViewController: NSViewController {
                         self.announce(L10n.text("connectedServer.audio.voiceEnabled"))
                     }
                 case .failure(let error):
-                    self.presentActionError(error.localizedDescription)
+                    self.presentActionError(error)
                 }
             }
         }

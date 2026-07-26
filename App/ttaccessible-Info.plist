@@ -4,8 +4,8 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
-	<key>LSApplicationCategoryType</key>
-	<string>public.app-category.social-networking</string>
+	<key>CFBundleDisplayName</key>
+	<string>tt-Accessible</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -21,6 +21,55 @@
 			</array>
 		</dict>
 	</array>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>tt-Accessible</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>TeamTalk Server Link</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>tt</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.social-networking</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>tt-Accessible can optionally control VoiceOver to read incoming messages while the app is in the background.</string>
+	<key>NSAudioCaptureUsageDescription</key>
+	<string>tt-Accessible can capture audio from other applications to stream it to TeamTalk channels.</string>
+	<key>NSHumanReadableCopyright</key>
+	<string></string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>tt-Accessible uses the microphone to talk in TeamTalk channels.</string>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>tt-Accessible can capture audio from specific applications to stream it to TeamTalk channels.</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUEnableDownloaderService</key>
+	<true/>
+	<key>SUEnableInstallerLauncherService</key>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>https://math65.github.io/ttaccessible/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>DSDUNhrNE0tBI9oT++xFgxQW4Hs6/8SyiNNDTXfj/to=</string>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
@@ -44,54 +93,5 @@
 			</dict>
 		</dict>
 	</array>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLName</key>
-			<string>TeamTalk Server Link</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>tt</string>
-			</array>
-		</dict>
-	</array>
-	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
-	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-	<key>CFBundleInfoDictionaryVersion</key>
-	<string>6.0</string>
-	<key>CFBundleName</key>
-	<string>tt-Accessible</string>
-	<key>CFBundleDisplayName</key>
-	<string>tt-Accessible</string>
-	<key>CFBundlePackageType</key>
-	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
-	<key>CFBundleShortVersionString</key>
-	<string>$(MARKETING_VERSION)</string>
-	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
-	<key>NSHumanReadableCopyright</key>
-	<string></string>
-	<key>NSAppleEventsUsageDescription</key>
-	<string>tt-Accessible can optionally control VoiceOver to read incoming messages while the app is in the background.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>tt-Accessible uses the microphone to talk in TeamTalk channels.</string>
-	<key>NSAudioCaptureUsageDescription</key>
-	<string>tt-Accessible can capture audio from other applications to stream it to TeamTalk channels.</string>
-	<key>NSScreenCaptureUsageDescription</key>
-	<string>tt-Accessible can capture audio from specific applications to stream it to TeamTalk channels.</string>
-	<key>SUFeedURL</key>
-	<string>https://math65.github.io/ttaccessible/appcast.xml</string>
-	<key>SUPublicEDKey</key>
-	<string>DSDUNhrNE0tBI9oT++xFgxQW4Hs6/8SyiNNDTXfj/to=</string>
-	<key>SUEnableInstallerLauncherService</key>
-	<true/>
-	<key>SUEnableDownloaderService</key>
-	<true/>
-	<key>SUEnableAutomaticChecks</key>
-	<true/>
-	<key>SUScheduledCheckInterval</key>
-	<integer>86400</integer>
 </dict>
 </plist>

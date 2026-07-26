@@ -13,12 +13,6 @@ extension TeamTalkConnectionController {
 
     // MARK: Public
 
-    func rememberedChannelPassword(for channelID: Int32) -> String {
-        queue.sync {
-            channelPasswords[channelID] ?? ""
-        }
-    }
-
     func openPrivateConversation(
         withUserID userID: Int32,
         displayName: String,

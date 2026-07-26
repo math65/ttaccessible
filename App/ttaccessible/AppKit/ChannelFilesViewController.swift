@@ -493,7 +493,7 @@ final class ChannelFilesViewController: NSViewController {
             self.connectionController.sendFile(toChannelID: self.session.currentChannelID, localURL: url) { [weak self] result in
                 guard let self else { return }
                 if case .failure(let error) = result {
-                    self.presentActionError(error.localizedDescription)
+                    self.presentActionError(error)
                 }
             }
         }
@@ -512,7 +512,7 @@ final class ChannelFilesViewController: NSViewController {
             self.connectionController.receiveFile(fromChannelID: file.channelID, fileID: file.id, toLocalURL: url) { [weak self] result in
                 guard let self else { return }
                 if case .failure(let error) = result {
-                    self.presentActionError(error.localizedDescription)
+                    self.presentActionError(error)
                 }
             }
         }
@@ -534,7 +534,7 @@ final class ChannelFilesViewController: NSViewController {
         connectionController.deleteChannelFile(channelID: file.channelID, fileID: file.id) { [weak self] result in
             guard let self else { return }
             if case .failure(let error) = result {
-                self.presentActionError(error.localizedDescription)
+                self.presentActionError(error)
             }
         }
     }
@@ -545,6 +545,14 @@ final class ChannelFilesViewController: NSViewController {
         alert.messageText = L10n.text("connectedServer.action.error.title")
         alert.informativeText = message
         alert.runModal()
+    }
+
+    /// Error-taking overload — see the twin in `ConnectedServerViewController`:
+    /// a drop that armed an automatic reconnect must not raise a dialog on top
+    /// of the "reconnecting…" state.
+    private func presentActionError(_ error: Error) {
+        guard !TeamTalkConnectionError.isReconnectingDrop(error) else { return }
+        presentActionError(error)
     }
 
     private func announceNewTransfers(_ transfers: [FileTransferProgress]) {

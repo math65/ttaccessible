@@ -163,6 +163,9 @@ enum ProfileDuplicator {
             if let channel = try? srcStore.channelPassword(for: record.id) {
                 try? dstStore.setChannelPassword(channel, for: record.id)
             }
+            if let channels = try? srcStore.allChannelPasswords(for: record.id), !channels.isEmpty {
+                try? dstStore.setChannelPasswords(channels, for: record.id)
+            }
         }
     }
 

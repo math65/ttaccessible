@@ -236,6 +236,7 @@
 "connectedServer.menu.createChannel" = "Créer un canal";
 "connectedServer.menu.editChannel" = "Modifier le canal";
 "connectedServer.menu.deleteChannel" = "Supprimer le canal";
+"connectedServer.menu.forgetChannelPassword" = "Oublier le mot de passe enregistré";
 "connectedServer.channel.create.title" = "Créer un canal";
 "connectedServer.channel.create.success" = "Canal créé.";
 "connectedServer.channel.edit.title" = "Modifier %@";
@@ -307,6 +308,7 @@
 "subscriptions.error.updateFailed" = "Impossible de modifier l'abonnement.";
 "connectedServer.channelPassword.title" = "Rejoindre %@";
 "connectedServer.channelPassword.message" = "Ce canal est protégé. Saisissez son mot de passe.";
+"connectedServer.channelPassword.forgotten" = "Mot de passe enregistré pour %@ oublié";
 "connectedServer.channelPassword.error.incorrect" = "Mot de passe de canal incorrect. Réessayez.";
 "connectedServer.channelPassword.placeholder" = "Mot de passe du canal";
 "connectedServer.channelPassword.accessibilityLabel" = "Mot de passe du canal";
@@ -371,6 +373,13 @@
 "preferences.connection.autoAwayStatusMessage" = "Message d'absence";
 "preferences.general.relativeTimestamps" = "Utiliser des horodatages relatifs (ex. \"il y a 2 min\")";
 "preferences.general.autoDetectImport" = "Utiliser la détection automatique du fichier TeamTalk lors de l'import";
+"preferences.general.language.label" = "Langue";
+"preferences.general.language.system" = "Langue du système";
+"preferences.general.language.english" = "Anglais";
+"preferences.general.language.french" = "Français";
+"preferences.general.language.help" = "L'application continue d'utiliser la langue du système sauf si vous en choisissez une autre. Redémarrez ttaccessible pour appliquer le changement partout.";
+"firstLaunch.language.title" = "Choisissez votre langue";
+"firstLaunch.language.message" = "Quelle langue souhaitez-vous utiliser pour ttaccessible ? Vous pourrez modifier ce choix plus tard dans les Préférences.";
 "preferences.general.autoJoinRootChannel" = "Rejoindre automatiquement le canal principal à la connexion";
 "preferences.general.autoReconnect" = "Reconnexion automatique en cas de perte de connexion";
 "preferences.general.rejoinLastChannelOnReconnect" = "Rejoindre automatiquement le dernier canal après une reconnexion";
@@ -431,9 +440,18 @@
 "preferences.audio.microphoneMode.label" = "Mode du microphone";
 "preferences.audio.microphoneMode.alwaysOn" = "Toujours actif";
 "preferences.audio.microphoneMode.pushToTalk" = "Push-to-talk (maintenez une touche pour parler)";
-"preferences.audio.pushToTalk.key.label" = "Raccourci";
+"preferences.audio.microphoneMode.both" = "Les deux (coupure avec push-to-talk)";
+"preferences.audio.microphoneMode.both.help" = "⌘⇧A active ou désactive une transmission continue : lorsque le micro est activé, il transmet en permanence. Maintenir la touche push-to-talk transmet dans tous les cas, et la relâcher coupe le son (jusqu'à ce que vous appuyiez de nouveau sur ⌘⇧A ou que vous mainteniez la touche).";
+"preferences.audio.pushToTalk.key.label" = "Touche de push-to-talk";
+"preferences.audio.pushToTalk.key.notSet" = "Non définie";
+"preferences.audio.pushToTalk.key.recording" = "Appuyez sur une touche… (Échap pour annuler)";
+"preferences.audio.pushToTalk.key.recordHint" = "Activez, puis appuyez sur la touche à maintenir pour le push-to-talk. N'importe quelle touche convient, même une seule touche. Vous pouvez aussi utiliser une combinaison de touches de modification seule, comme Commande-Contrôle : appuyez puis relâchez-la. Appuyez sur Supprimer pour effacer.";
 "preferences.audio.pushToTalk.beep.label" = "Jouer un son au début et à la fin de la transmission";
-"preferences.audio.pushToTalk.warning.noShortcut" = "Aucun raccourci configuré — le push-to-talk est inactif et le microphone reste ouvert comme en mode « toujours actif ». Cliquez sur l'enregistreur ci-dessus pour définir une touche.";
+"preferences.audio.pushToTalk.global.label" = "Le push-to-talk fonctionne même quand une autre app est au premier plan";
+"preferences.audio.muteHotkey.global.label" = "Le raccourci d'activation du microphone fonctionne même quand une autre app est au premier plan";
+"preferences.audio.muteHotkey.key.label" = "Touche globale d'activation du microphone";
+"preferences.audio.hotkey.global.help" = "Le fonctionnement depuis une autre app utilise l'autorisation « Surveillance des saisies » — macOS la demande la première fois. Remarque : tant que ttaccessible est en bac à sable, le raccourci est détecté mais atteint quand même l'app au premier plan (il ne peut pas être intercepté). Le plus sûr est une combinaison de touches de modification seules, comme Commande-Contrôle, ou une touche de fonction de F13 à F19 : ni l'une ni l'autre n'écrit quoi que ce soit dans l'app où vous travaillez. Évitez les lettres seules et les raccourcis courants.";
+"preferences.audio.pushToTalk.warning.noShortcut" = "Aucun raccourci configuré — le push-to-talk est inactif et le microphone reste ouvert comme en mode « toujours actif ». Activez le bouton ci-dessus pour définir une touche.";
 "preferences.audio.volumeMemory.section" = "Mémorisation des volumes par utilisateur";
 "preferences.audio.volumeMemory.label" = "Mémoriser les réglages de volume par utilisateur";
 "preferences.audio.volumeMemory.off" = "Désactivé — tout revient à 50 % à la reconnexion";
@@ -751,6 +769,7 @@
 "connectedServer.menu.unmuteMediaFile" = "Rétablir le flux média localement";
 "connectedServer.menu.kickUser" = "Expulser du canal";
 "connectedServer.menu.moveUser" = "Déplacer vers un canal…";
+"connectedServer.menu.moveChannelUsers" = "Déplacer tout le monde…";
 "connectedServer.kick.title" = "Expulser %@ ?";
 "connectedServer.kick.message" = "L'utilisateur sera retiré de son canal actuel.";
 "connectedServer.kick.confirm" = "Expulser";
@@ -759,7 +778,26 @@
 "connectedServer.move.confirm" = "Déplacer";
 "connectedServer.move.noChannel" = "Aucun autre canal disponible";
 
+// Feuille de déplacement groupé d'utilisateurs
+"moveUsers.header" = "Sélectionnez les utilisateurs à déplacer depuis « %@ »";
+"moveUsers.usersList" = "Utilisateurs";
+"moveUsers.targetChannel" = "Déplacer vers le canal :";
+"moveUsers.selectAll" = "Tout sélectionner";
+"moveUsers.deselectAll" = "Tout désélectionner";
+"moveUsers.confirm" = "Déplacer";
+"moveUsers.noneSelected" = "Aucun utilisateur sélectionné";
+"moveUsers.noneAvailable" = "Aucun utilisateur à déplacer";
+"moveUsers.userItem" = "%1$@, %2$d sur %3$d";
+"moveUsers.allSelected" = "Les %d utilisateurs sont sélectionnés";
+"moveUsers.allSelected.one" = "%d utilisateur sélectionné";
+"moveUsers.allDeselected" = "Tous les utilisateurs sont désélectionnés";
+"moveUsers.result.success" = "%1$d utilisateurs déplacés vers %2$@";
+"moveUsers.result.success.one" = "1 utilisateur déplacé vers %@";
+"moveUsers.result.partial" = "%1$d utilisateurs sur %2$d déplacés vers %3$@";
+"moveUsers.result.partial.one" = "%1$d utilisateur sur %2$d déplacé vers %3$@";
+
 // VoiceOver custom actions
+"connectedServer.voAction.moveChannelUsers" = "Déplacer tout le monde vers un autre canal";
 "connectedServer.voAction.join" = "Rejoindre";
 "connectedServer.voAction.leave" = "Quitter";
 "connectedServer.voAction.privateMessage" = "Message privé";

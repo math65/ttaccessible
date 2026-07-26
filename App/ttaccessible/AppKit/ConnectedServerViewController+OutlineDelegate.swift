@@ -151,11 +151,23 @@ extension ConnectedServerViewController: NSOutlineViewDelegate {
             let joinActionName = channel.isCurrentChannel
                 ? L10n.text("connectedServer.voAction.leave")
                 : L10n.text("connectedServer.voAction.join")
-            textField.setAccessibilityCustomActions([
+            var channelActions: [NSAccessibilityCustomAction] = [
                 NSAccessibilityCustomAction(name: joinActionName) { [weak self] in
                     self?.performDefaultAction(); return true
                 }
-            ])
+            ]
+            if !channel.users.isEmpty, canMoveUsers(from: channel) {
+                // Capture the ID and re-resolve at invoke time: this action
+                // belongs to THIS row (the VoiceOver cursor's), and the row's
+                // occupants may have changed since the cell was built.
+                let channelID = channel.id
+                channelActions.append(NSAccessibilityCustomAction(name: L10n.text("connectedServer.voAction.moveChannelUsers")) { [weak self] in
+                    guard let self, let target = self.session.findChannelByID(channelID) else { return false }
+                    self.presentMoveUsers(in: target)
+                    return true
+                })
+            }
+            textField.setAccessibilityCustomActions(channelActions)
         case .user(let user):
             textField.font = user.isTalking
                 ? .boldSystemFont(ofSize: NSFont.systemFontSize)

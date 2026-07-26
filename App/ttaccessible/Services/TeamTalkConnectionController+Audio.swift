@@ -82,7 +82,196 @@ extension TeamTalkConnectionController {
 
     func setPushToTalkPressed(_ pressed: Bool) {
         queue.async { [weak self] in
-            self?.pushToTalkPressed = pressed
+            guard let self else { return }
+            let wasPressed = self.pushToTalkPressed
+            guard wasPressed != pressed else { return }
+            self.pushToTalkPressed = pressed
+            // Both mode: releasing PTT closes the always-on gate — the mic goes
+            // silent (stays silent until ⌘⇧A reopens it or PTT is held again),
+            // matching the "PTT takes over" behavior.
+            if self.currentMicrophoneMode == .both, wasPressed, pressed == false, self.bothGateOpen {
+                self.bothGateOpen = false
+            }
+            // Publish on EVERY press/release transition: the snapshot's own
+            // isTalking tracks isEffectivelyTransmittingLocked, so VoiceOver's
+            // talking state must refresh with the key, not only on gate closes.
+            if let instance = self.instance, let record = self.connectedRecord {
+                self.publishSessionLocked(instance: instance, record: record)
+            }
+        }
+    }
+
+    /// The active microphone mode, cached queue-side: the hot paths (every mic
+    /// chunk) must not read the `@Published` preferences struct across threads
+    /// (data race with main-thread mutation + a whole-struct copy per chunk).
+    /// Updated via applyMicrophoneHotkeySettings from the preferences sink.
+    var currentMicrophoneMode: AppPreferences.MicrophoneMode {
+        cachedMicrophoneMode
+    }
+
+    /// The persistent, user-controlled transmit gate reflected by the mic mute
+    /// button / menu. In "both" mode this is the always-on gate; otherwise it is
+    /// the engine-armed flag (unchanged behavior for always-on / push-to-talk).
+    var microphoneGateOpenLocked: Bool {
+        currentMicrophoneMode == .both ? bothGateOpen : voiceTransmissionEnabled
+    }
+
+    /// Whether voice is actually flowing to the channel right now (momentary —
+    /// tracks PTT). This is THE transmit gate: the chunk-insert path guards on
+    /// it directly.
+    var isEffectivelyTransmittingLocked: Bool {
+        guard voiceTransmissionEnabled else { return false }
+        switch currentMicrophoneMode {
+        case .alwaysOn:
+            return true
+        case .pushToTalk:
+            // PTT only gates transmission when a key is actually configured.
+            // Without one, pushToTalkPressed could never become true and the
+            // mic would be silently muted forever — fall back to always-on so
+            // the user is at least heard.
+            return cachedPushToTalkKeyConfigured == false || pushToTalkPressed
+        case .both:
+            return pushToTalkPressed || bothGateOpen
+        }
+    }
+
+    /// Toggles the "both" mode gate (⌘⇧A). Ensures the engine is hot when
+    /// opening, so this is instant and never tears the mic engine down.
+    /// The success value is the AUTHORITATIVE gate state after the toggle
+    /// (computed on the controller queue) — callers must announce/act on it,
+    /// not on a main-thread session snapshot, which can be stale under quick
+    /// repeated toggles.
+    func toggleBothModeGate(completion: @escaping (Result<Bool, Error>) -> Void) {
+        queue.async { [weak self] in
+            guard let self else { return }
+            guard let instance = self.instance, let record = self.connectedRecord else {
+                self.healStaleSessionIfNeededLocked()
+                self.finishOnMain(.failure(self.sessionUnavailableErrorLocked()), completion: completion)
+                return
+            }
+            guard TT_GetMyChannelID(instance) > 0 else {
+                self.finishOnMain(
+                    .failure(TeamTalkConnectionError.internalError(L10n.text("connectedServer.audio.error.notInChannel"))),
+                    completion: completion
+                )
+                return
+            }
+
+            let opening = self.bothGateOpen == false
+            if opening {
+                if self.voiceTransmissionEnabled == false {
+                    do {
+                        try self.ensureAdvancedMicrophoneInputReadyLocked(instance: instance)
+                        self.voiceTransmissionEnabled = true
+                    } catch {
+                        self.finishOnMain(.failure(error), completion: completion)
+                        return
+                    }
+                }
+                self.bothGateOpen = true
+                SoundPlayer.shared.play(.voxMeEnable)
+            } else {
+                self.bothGateOpen = false
+                SoundPlayer.shared.play(.voxMeDisable)
+            }
+            self.publishSessionLocked(instance: instance, record: record)
+            self.finishOnMain(.success(opening), completion: completion)
+        }
+    }
+
+    /// Arms the mic engine hot (silent, gated) whenever "both" mode needs it and
+    /// the app is on the current controller queue. Called on channel join and on
+    /// a mode change to "both". Starts with the gate closed (muted).
+    func armBothModeEngineIfNeededLocked(instance: UnsafeMutableRawPointer) {
+        guard currentMicrophoneMode == .both else { return }
+        guard voiceTransmissionEnabled == false else { return }
+        guard TT_GetMyChannelID(instance) > 0 else { return }
+        guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else { return }
+        do {
+            try ensureAdvancedMicrophoneInputReadyLocked(instance: instance)
+            voiceTransmissionEnabled = true
+            bothGateOpen = false
+            // Deliberately silent: the mic is hot but not transmitting.
+        } catch {
+            AudioLogger.log("both-mode engine arm failed: %@", error.localizedDescription)
+        }
+    }
+
+    /// Called when our own user joins a channel. In "both" mode the mic engine
+    /// is armed hot (silent, gated) for instant PTT; in always-on / push-to-talk
+    /// it restores the last transmit state, as before.
+    func armMicrophoneEngineOnJoinLocked(instance: UnsafeMutableRawPointer) {
+        guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else { return }
+        if currentMicrophoneMode == .both {
+            armBothModeEngineIfNeededLocked(instance: instance)
+            if let connectedRecord {
+                publishSessionLocked(instance: instance, record: connectedRecord)
+            }
+            return
+        }
+        guard voiceTransmissionEnabled == false,
+              preferencesStore.preferences.lastVoiceTransmissionEnabled else { return }
+        do {
+            try ensureAdvancedMicrophoneInputReadyLocked(instance: instance)
+            voiceTransmissionEnabled = true
+            SoundPlayer.shared.play(.voxMeEnable)
+            if let connectedRecord {
+                publishSessionLocked(instance: instance, record: connectedRecord)
+            }
+        } catch {
+            AudioLogger.log("auto-restore mic on join failed: %@", error.localizedDescription)
+        }
+    }
+
+    /// Applies the current microphone hotkey settings (from the preferences
+    /// sink — the passed values are the PUBLISHED ones; @Published fires in
+    /// willSet, so re-reading the store here would see stale prefs).
+    ///
+    /// On a mode CHANGE the transmit state is normalized explicitly, so no
+    /// mode can inherit another mode's flags in a way that opens the mic
+    /// without user action: `pushToTalkPressed`/`bothGateOpen` always reset,
+    /// and `voiceTransmissionEnabled` is re-derived from whether the
+    /// user-facing gate was open under the OLD mode. Concretely: leaving a
+    /// muted "both" (engine hot, gate closed) for always-on tears the engine
+    /// down instead of going live; entering "both" always starts gated-closed.
+    func applyMicrophoneHotkeySettings(mode: AppPreferences.MicrophoneMode, pushToTalkKeyConfigured: Bool) {
+        queue.async { [weak self] in
+            guard let self else { return }
+            self.cachedPushToTalkKeyConfigured = pushToTalkKeyConfigured
+            let oldMode = self.cachedMicrophoneMode
+            guard mode != oldMode else { return }
+            // The user-facing "mic on" gate under the OLD mode — the intent
+            // the new mode must honor (read before the cache flips).
+            let wasGateOpen = self.microphoneGateOpenLocked
+            self.cachedMicrophoneMode = mode
+            self.pushToTalkPressed = false
+            self.bothGateOpen = false
+            guard let instance = self.instance else { return }
+            switch mode {
+            case .alwaysOn:
+                if wasGateOpen == false, self.voiceTransmissionEnabled {
+                    // Engine hot but user-muted (both-mode gate closed): going
+                    // live silently is the one transition that must not happen.
+                    self.stopAdvancedMicrophoneInputLocked(instance: instance, reason: "mode change to always-on while muted")
+                    self.voiceTransmissionEnabled = false
+                }
+            case .pushToTalk:
+                // An armed state carries over only if the user-facing gate was
+                // open. Engine hot but user-muted (both-mode gate closed) must
+                // tear down like the always-on case: with no PTT key configured
+                // this mode falls back to always-transmit, so leaving the
+                // engine armed would open the mic without user action.
+                if wasGateOpen == false, self.voiceTransmissionEnabled {
+                    self.stopAdvancedMicrophoneInputLocked(instance: instance, reason: "mode change to push-to-talk while muted")
+                    self.voiceTransmissionEnabled = false
+                }
+            case .both:
+                // Arm hot with the gate closed (silent) for instant PTT.
+                self.armBothModeEngineIfNeededLocked(instance: instance)
+            }
+            if let record = self.connectedRecord {
+                self.publishSessionLocked(instance: instance, record: record)
+            }
         }
     }
 
@@ -542,7 +731,7 @@ extension TeamTalkConnectionController {
 
     func makeAudioStatusText() -> String {
         var status: String
-        if voiceTransmissionEnabled {
+        if microphoneGateOpenLocked {
             status = L10n.text("connectedServer.audio.status.microphoneActive")
         } else if inputAudioReady {
             status = L10n.text("connectedServer.audio.status.inputReady")
@@ -870,14 +1059,7 @@ extension TeamTalkConnectionController {
             return
         }
         let inChannel = TT_GetMyChannelID(instance) > 0
-        // PTT only gates transmission when a global shortcut is actually
-        // configured. Without a shortcut, pushToTalkPressed could never become
-        // true and the mic would be silently muted forever — fall back to
-        // always-on so the user is at least heard.
-        let pttEnforced = preferencesStore.preferences.microphoneMode == .pushToTalk
-            && (pushToTalkShortcutResolver?() ?? false)
-        let allowTransmission = !pttEnforced || pushToTalkPressed
-        guard voiceTransmissionEnabled, inChannel, allowTransmission else {
+        guard isEffectivelyTransmittingLocked, inChannel else {
             AudioCaptureDiagnostics.shared.recordInsertAttempt(
                 sampleRate: chunk.sampleRate,
                 accepted: false,

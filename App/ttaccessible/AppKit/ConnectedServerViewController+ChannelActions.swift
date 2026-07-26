@@ -57,7 +57,7 @@ extension ConnectedServerViewController {
                 case .success:
                     self?.announce(L10n.text("connectedServer.channel.create.success"))
                 case .failure(let error):
-                    self?.presentActionError(error.localizedDescription)
+                    self?.presentActionError(error)
                 }
             }
         }
@@ -90,7 +90,7 @@ extension ConnectedServerViewController {
                 case .success:
                     self?.announce(L10n.text("connectedServer.channel.edit.success"))
                 case .failure(let error):
-                    self?.presentActionError(error.localizedDescription)
+                    self?.presentActionError(error)
                 }
             }
         }
@@ -114,7 +114,7 @@ extension ConnectedServerViewController {
                 case .success:
                     self?.announce(L10n.text("connectedServer.channel.delete.success"))
                 case .failure(let error):
-                    self?.presentActionError(error.localizedDescription)
+                    self?.presentActionError(error)
                 }
             }
         }
@@ -373,12 +373,35 @@ extension ConnectedServerViewController {
         }
 
         if channel.isPasswordProtected {
-            let initialPassword = connectionController.rememberedChannelPassword(for: channel.id)
-            promptAndJoinProtectedChannel(channel, initialPassword: initialPassword, errorMessage: nil)
+            // If we already know this channel's password — from this session or
+            // saved in the keychain from a previous one — join straight away.
+            // Only prompt when we have nothing (or the saved one gets rejected,
+            // handled in joinChannel's failure path).
+            let known = knownChannelPassword(for: channel)
+            if !known.isEmpty {
+                joinChannel(channel, password: known)
+            } else {
+                promptAndJoinProtectedChannel(channel, initialPassword: "", errorMessage: nil)
+            }
             return
         }
 
         joinChannel(channel, password: "")
+    }
+
+    /// The password we already hold for a protected channel — in-session first,
+    /// then the keychain. Resolved by the connection controller so that this
+    /// path and the auto-join/reconnect paths share one accessor and one key.
+    func knownChannelPassword(for channel: ConnectedServerChannel) -> String {
+        connectionController.knownChannelPassword(forChannelID: channel.id)
+    }
+
+    /// Discard a saved channel password, so the next join prompts again.
+    @objc
+    func forgetChannelPasswordAction(_ sender: Any? = nil) {
+        guard case .channel(let channel)? = selectedNode else { return }
+        connectionController.forgetChannelPassword(forChannelID: channel.id)
+        announce(L10n.format("connectedServer.channelPassword.forgotten", displayText(for: .channel(channel))))
     }
 
     @objc
@@ -397,7 +420,7 @@ extension ConnectedServerViewController {
             case .success:
                 self.announce(L10n.text("connectedServer.action.left"))
             case .failure(let error):
-                self.presentActionError(error.localizedDescription)
+                self.presentActionError(error)
             }
         }
     }
@@ -410,20 +433,30 @@ extension ConnectedServerViewController {
 
             switch result {
             case .success:
+                // Persist the working password so future joins (even after a
+                // restart or leaving/rejoining the server) skip the dialog.
+                if !password.isEmpty {
+                    self.connectionController.rememberChannelPassword(password, forChannelID: channel.id)
+                }
                 self.announce(L10n.format("connectedServer.action.joined", self.displayText(for: .channel(channel))))
             case .failure(let error as TeamTalkConnectionError):
                 switch error {
                 case .incorrectChannelPassword(let message):
+                    // The stored password is wrong (rotated server-side, or it
+                    // was never right). Forget it, or every future join
+                    // re-submits the doomed value and pre-fills the prompt with
+                    // it — and cancelling would leave it there forever.
+                    self.connectionController.forgetChannelPassword(forChannelID: channel.id)
                     self.promptAndJoinProtectedChannel(
                         channel,
-                        initialPassword: password,
+                        initialPassword: "",
                         errorMessage: message.isEmpty ? nil : message
                     )
                 default:
-                    self.presentActionError(error.localizedDescription)
+                    self.presentActionError(error)
                 }
             case .failure(let error):
-                self.presentActionError(error.localizedDescription)
+                self.presentActionError(error)
             }
         }
     }

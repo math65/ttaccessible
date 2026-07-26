@@ -1,3 +1,32 @@
+## v1.9.0 (build 44) — 2026-07-24
+
+This release rebuilds push-to-talk from the ground up: any key can be your talk key, it can work while you are busy in another app, and a new microphone mode lets you combine muting with push-to-talk. You can also now pick the app's language instead of following your Mac's.
+
+### Highlights
+- **Push-to-talk rebuilt.** Any key works — a single key on its own, or a combination of modifier keys.
+- **Your talk key and the microphone toggle can work from any app**, not only when tt-Accessible is in front.
+- **Choose the app's language** — English or French — instead of following your Mac.
+
+### Push-to-talk
+- **Any key can be your push-to-talk key.** A single key on its own, or a combination of modifier keys such as Command-Control (press it and let go). Setting it is one button: activate it, then press the key you want.
+- **The key field is properly accessible now.** It is a real button that VoiceOver announces, and while you are recording a key it no longer trips over VoiceOver's own Control-Option presses.
+- **New microphone mode: Both.** ⌘⇧A mutes and unmutes as it always did. On top of that, holding your push-to-talk key lets you talk even while muted, and releasing it puts you back to silence. Choose it in Preferences › Audio.
+- **An optional sound when transmission starts and stops**, so you can hear that your key registered.
+- **Hotkeys can work while another app is in front.** Switch it on separately for push-to-talk and for the ⌘⇧A microphone toggle. macOS asks for the Input Monitoring permission the first time.
+- Worth knowing: the key still reaches the app you are working in — tt-Accessible can see it go by, but cannot keep it to itself. So prefer a combination of modifier keys on their own, such as Command-Control, or a function key between F13 and F19: neither one types anything anywhere. Avoid single letters.
+- **⌘⇧A no longer fires while the Finder is in front.**
+- The push-to-talk key you were already using is carried over automatically.
+
+### Language
+- **Preferences › General now has a Language setting** — System Default, English, or French. Restart the app to apply it everywhere.
+- **The first time you launch the app, it asks which language you want.**
+
+### Thanks
+Push-to-talk was designed and built by **Rocco Fiorentino**. The language setting was contributed by **Gruia Chiscop**. Thanks to both — and to everyone who keeps sending feedback.
+
+### Download
+[ttaccessible-1.9.0-44.zip](https://github.com/math65/ttaccessible/releases/download/v1.9.0/ttaccessible-1.9.0-44.zip)
+
 ## v1.8.0 (build 43) — 2026-07-22
 
 This release adds live audio-device streaming into a channel, brings back support for macOS 12 (Monterey), and fixes audio going silent in "no recording" channels — plus mixer and recording refinements.

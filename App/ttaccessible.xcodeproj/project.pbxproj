@@ -10,7 +10,6 @@
 		94A4A5F73B941A8E00C01234 /* libTeamTalk5.dylib in Embed TeamTalk */ = {isa = PBXBuildFile; fileRef = 94A4A5F63B941A8E00C01234 /* libTeamTalk5.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		94A4A5F93B941A8E00C01234 /* libTeamTalk5.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 94A4A5F63B941A8E00C01234 /* libTeamTalk5.dylib */; };
 		94BABE0100000000000000A1 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 94BABE0300000000000000A3 /* Sparkle */; };
-		94KS010100000000000000B1 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 94KS030100000000000000B3 /* KeyboardShortcuts */; };
 		94WEBRTC013B941A8E00C0AB /* libwebrtc-audio-processing.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 94WEBRTC003B941A8E00C0AB /* libwebrtc-audio-processing.a */; };
 /* End PBXBuildFile section */
 
@@ -91,7 +90,6 @@
 				94A4A5F93B941A8E00C01234 /* libTeamTalk5.dylib in Frameworks */,
 				94WEBRTC013B941A8E00C0AB /* libwebrtc-audio-processing.a in Frameworks */,
 				94BABE0100000000000000A1 /* Sparkle in Frameworks */,
-				94KS010100000000000000B1 /* KeyboardShortcuts in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -172,7 +170,6 @@
 			name = ttaccessible;
 			packageProductDependencies = (
 				94BABE0300000000000000A3 /* Sparkle */,
-				94KS030100000000000000B3 /* KeyboardShortcuts */,
 			);
 			productName = ttaccessible;
 			productReference = 943281C62F68C35A00682D6B /* ttaccessible.app */;
@@ -209,7 +206,6 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				94BABE0200000000000000A2 /* XCRemoteSwiftPackageReference "Sparkle" */,
-				94KS020100000000000000B2 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 943281C72F68C35A00682D6B /* Products */;
@@ -434,7 +430,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 43;
+				CURRENT_PROJECT_VERSION = 44;
 				DEVELOPMENT_TEAM = 633EG76YX5;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -455,7 +451,7 @@
 					"$(SRCROOT)/../Vendor/TeamTalk",
 					"$(SRCROOT)/../Vendor/WebRTC",
 				);
-				MARKETING_VERSION = "1.8.0";
+				MARKETING_VERSION = "1.9.0";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-lc++",
@@ -482,7 +478,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 43;
+				CURRENT_PROJECT_VERSION = 44;
 				DEVELOPMENT_TEAM = 633EG76YX5;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -503,7 +499,7 @@
 					"$(SRCROOT)/../Vendor/TeamTalk",
 					"$(SRCROOT)/../Vendor/WebRTC",
 				);
-				MARKETING_VERSION = "1.8.0";
+				MARKETING_VERSION = "1.9.0";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-lc++",
@@ -562,14 +558,6 @@
 				minimumVersion = 2.6.0;
 			};
 		};
-		94KS020100000000000000B2 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/sindresorhus/KeyboardShortcuts";
-			requirement = {
-				kind = exactVersion;
-				version = 2.4.0;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -577,11 +565,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 94BABE0200000000000000A2 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
-		};
-		94KS030100000000000000B3 /* KeyboardShortcuts */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 94KS020100000000000000B2 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
-			productName = KeyboardShortcuts;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
