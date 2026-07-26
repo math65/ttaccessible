@@ -149,10 +149,15 @@ extension ConnectedServerViewController: NSOutlineViewDelegate {
                     self?.performDefaultAction(); return true
                 }
             ]
-            let me = session.currentUser
-            if (me?.isAdministrator == true || me?.isChannelOperator == true), !channel.users.isEmpty {
+            if !channel.users.isEmpty, canMoveUsers(from: channel) {
+                // Capture the ID and re-resolve at invoke time: this action
+                // belongs to THIS row (the VoiceOver cursor's), and the row's
+                // occupants may have changed since the cell was built.
+                let channelID = channel.id
                 channelActions.append(NSAccessibilityCustomAction(name: L10n.text("connectedServer.voAction.moveChannelUsers")) { [weak self] in
-                    self?.moveChannelUsersAction(nil); return true
+                    guard let self, let target = self.session.findChannelByID(channelID) else { return false }
+                    self.presentMoveUsers(in: target)
+                    return true
                 })
             }
             textField.setAccessibilityCustomActions(channelActions)

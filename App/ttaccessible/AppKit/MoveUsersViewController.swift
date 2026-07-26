@@ -9,6 +9,14 @@
 
 import AppKit
 
+/// Document view for the occupant checklist. Flipped so a list taller than the
+/// sheet starts at the FIRST user: in AppKit's default bottom-left coordinate
+/// space an unflipped document view shows the last rows and has to be scrolled
+/// back up.
+private final class FlippedStackView: NSStackView {
+    override var isFlipped: Bool { true }
+}
+
 final class MoveUsersViewController: NSViewController {
 
     /// Called with the chosen user IDs and the destination channel ID when the
@@ -16,7 +24,6 @@ final class MoveUsersViewController: NSViewController {
     var onMove: (([Int32], Int32) -> Void)?
 
     private let candidates: [ConnectedServerUser]
-    private let preselected: Set<Int32>
     private let channels: [ConnectedServerChannel]
     private let headerText: String
 
@@ -24,16 +31,14 @@ final class MoveUsersViewController: NSViewController {
     private var channelPopup: NSPopUpButton!
 
     /// - Parameters:
-    ///   - candidates: users that may be moved (already permission-filtered by the caller).
-    ///   - preselected: IDs that should start checked.
+    ///   - candidates: users that may be moved (already permission-filtered by
+    ///     the caller). All start checked; the admin deselects any to exclude.
     ///   - channels: destination channels (flattened, source channel already excluded).
     ///   - headerText: descriptive header, e.g. "Select users to move from “General”".
     init(candidates: [ConnectedServerUser],
-         preselected: Set<Int32>,
          channels: [ConnectedServerChannel],
          headerText: String) {
         self.candidates = candidates
-        self.preselected = preselected
         self.channels = channels
         self.headerText = headerText
         super.init(nibName: nil, bundle: nil)
@@ -58,6 +63,10 @@ final class MoveUsersViewController: NSViewController {
         let header = NSTextField(wrappingLabelWithString: headerText)
         header.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
         header.translatesAutoresizingMaskIntoConstraints = false
+        // AXHeading by raw value: the typed NSAccessibilityHeadingRole constant
+        // is macOS 26+, and this app targets 12. Without it the sheet has
+        // nothing for the VoiceOver heading rotor to land on.
+        header.setAccessibilityRole(NSAccessibility.Role(rawValue: "AXHeading"))
 
         // Select all / deselect all
         let selectAllButton = NSButton(title: L10n.text("moveUsers.selectAll"),
@@ -72,17 +81,25 @@ final class MoveUsersViewController: NSViewController {
         selectionButtons.translatesAutoresizingMaskIntoConstraints = false
 
         // Checkbox list
-        let listStack = NSStackView()
+        let listStack = FlippedStackView()
         listStack.orientation = .vertical
         listStack.alignment = .leading
         listStack.spacing = 4
         listStack.translatesAutoresizingMaskIntoConstraints = false
+        listStack.setAccessibilityRole(.list)
+        listStack.setAccessibilityLabel(L10n.text("moveUsers.usersList"))
 
-        for user in candidates {
+        for (index, user) in candidates.enumerated() {
             let checkbox = NSButton(checkboxWithTitle: user.displayName, target: nil, action: nil)
-            checkbox.state = preselected.contains(user.id) ? .on : .off
+            checkbox.state = .on
             checkbox.tag = Int(user.id)
             checkbox.translatesAutoresizingMaskIntoConstraints = false
+            // Position and count, which a bare run of checkboxes doesn't carry.
+            // The label is safe to override here — the checked state lives in
+            // the button's accessibility VALUE, not its title.
+            checkbox.setAccessibilityLabel(
+                L10n.format("moveUsers.userItem", user.displayName, index + 1, candidates.count)
+            )
             checkboxes.append(checkbox)
             listStack.addArrangedSubview(checkbox)
         }
@@ -92,7 +109,6 @@ final class MoveUsersViewController: NSViewController {
         scrollView.hasVerticalScroller = true
         scrollView.borderType = .bezelBorder
         scrollView.drawsBackground = false
-        scrollView.setAccessibilityLabel(L10n.text("moveUsers.usersList"))
         let clipView = scrollView.contentView
         scrollView.documentView = listStack
 
@@ -102,7 +118,7 @@ final class MoveUsersViewController: NSViewController {
         channelPopup = NSPopUpButton(frame: .zero, pullsDown: false)
         channelPopup.translatesAutoresizingMaskIntoConstraints = false
         channelPopup.setAccessibilityLabel(L10n.text("moveUsers.targetChannel"))
-        channels.forEach { channelPopup.addItem(withTitle: $0.name) }
+        channels.forEach { channelPopup.addItem(withTitle: $0.displayPath) }
         let targetRow = NSStackView(views: [targetLabel, channelPopup])
         targetRow.orientation = .horizontal
         targetRow.spacing = 8
@@ -126,7 +142,11 @@ final class MoveUsersViewController: NSViewController {
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
             scrollView.bottomAnchor.constraint(equalTo: targetRow.topAnchor, constant: -12),
 
+            // Width is tied to the clip view so the list only ever scrolls
+            // vertically; the stack's intrinsic height drives the document
+            // height (no bottom pin, which would clamp it to the clip height).
             listStack.leadingAnchor.constraint(equalTo: clipView.leadingAnchor, constant: 4),
+            listStack.trailingAnchor.constraint(equalTo: clipView.trailingAnchor, constant: -4),
             listStack.topAnchor.constraint(equalTo: clipView.topAnchor, constant: 4),
 
             targetRow.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
@@ -161,23 +181,31 @@ final class MoveUsersViewController: NSViewController {
 
     @objc private func selectAllUsers() {
         checkboxes.forEach { $0.state = .on }
+        // Flipping the boxes silently would leave a blind admin to arrow
+        // through every one of them to find out whether the button worked.
+        announce(L10n.format("moveUsers.allSelected", checkboxes.count))
     }
 
     @objc private func deselectAllUsers() {
         checkboxes.forEach { $0.state = .off }
+        announce(L10n.text("moveUsers.allDeselected"))
+    }
+
+    private func announce(_ message: String) {
+        NSAccessibility.post(
+            element: view,
+            notification: .announcementRequested,
+            userInfo: [
+                NSAccessibility.NotificationUserInfoKey.announcement: message,
+                NSAccessibility.NotificationUserInfoKey.priority: NSAccessibilityPriorityLevel.high.rawValue
+            ]
+        )
     }
 
     @objc private func confirm() {
         let selectedIDs = checkboxes.filter { $0.state == .on }.map { Int32($0.tag) }
         guard !selectedIDs.isEmpty else {
-            NSAccessibility.post(
-                element: view,
-                notification: .announcementRequested,
-                userInfo: [
-                    NSAccessibility.NotificationUserInfoKey.announcement: L10n.text("moveUsers.noneSelected"),
-                    NSAccessibility.NotificationUserInfoKey.priority: NSAccessibilityPriorityLevel.high.rawValue
-                ]
-            )
+            announce(L10n.text("moveUsers.noneSelected"))
             return
         }
         let targetIndex = channelPopup.indexOfSelectedItem

@@ -354,14 +354,90 @@ extension ConnectedServerViewController {
         performMove(selectedUserNodes(), presentingWindow: view.window)
     }
 
+    /// Destination channels for a move: everything except `excludedChannelID`
+    /// (the channel the users are already in — moving them there is a no-op the
+    /// server would reject).
+    func moveDestinationChannels(excluding excludedChannelID: Int32?) -> [ConnectedServerChannel] {
+        flatChannels(from: session.rootChannels).filter { $0.id != excludedChannelID }
+    }
+
+    /// The channel every one of `users` shares, or nil if they're spread across
+    /// several. Used to keep the source channel out of the destination list —
+    /// previously only done for a single user, so a multi-user move offered the
+    /// channel they were all already in.
+    func commonChannelID(of users: [ConnectedServerUser]) -> Int32? {
+        let channelIDs = Set(users.map(\.channelID))
+        return channelIDs.count == 1 ? channelIDs.first : nil
+    }
+
+    /// Shared commit path for every move flow: drops users who left while the
+    /// picker was open, moves the rest, and reports ONE aggregate result.
+    ///
+    /// Each failure used to raise its own `presentError`, which with no local
+    /// override is AppKit's modal `NSResponder.presentError` — so N failures
+    /// stacked N blocking dialogs, worst of all under VoiceOver.
+    func commitMove(userIDs: [Int32], to channel: ConnectedServerChannel, presentingWindow window: NSWindow?) {
+        // A user who left between opening the picker and confirming is a
+        // guaranteed failure; don't dispatch doomed commands for them.
+        let presentUserIDs = Set(flatChannels(from: session.rootChannels).flatMap { $0.users }.map(\.id))
+        let targets = userIDs.filter { presentUserIDs.contains($0) }
+        guard !targets.isEmpty else {
+            announce(L10n.text("moveUsers.noneAvailable"))
+            return
+        }
+
+        let requested = targets.count
+        var succeeded = 0
+        var firstError: Error?
+        let group = DispatchGroup()
+
+        for userID in targets {
+            group.enter()
+            connectionController.moveUser(userID: userID, toChannelID: channel.id) { result in
+                // moveUser always completes on the main queue, so these
+                // counters need no further synchronization.
+                switch result {
+                case .success:
+                    succeeded += 1
+                case .failure(let error):
+                    if firstError == nil { firstError = error }
+                }
+                group.leave()
+            }
+        }
+
+        group.notify(queue: .main) { [weak self] in
+            guard let self else { return }
+            let message: String
+            if succeeded != requested {
+                message = L10n.format("moveUsers.result.partial", succeeded, requested, channel.displayPath)
+            } else if succeeded == 1 {
+                // The single-user move goes through here too — "Moved 1 users"
+                // is not what VoiceOver should be reading out.
+                message = L10n.format("moveUsers.result.success.one", channel.displayPath)
+            } else {
+                message = L10n.format("moveUsers.result.success", succeeded, channel.displayPath)
+            }
+            self.announce(message)
+            // Note: this reports what the server ACCEPTED for delivery. A
+            // rights rejection arrives later as a command error, which the
+            // controller doesn't correlate back to individual commands — the
+            // same limitation the single-user path has always had.
+            if succeeded < requested, firstError != nil, let host = self.sheetHostWindow(window) {
+                let alert = NSAlert()
+                alert.alertStyle = .warning
+                alert.messageText = message
+                alert.addButton(withTitle: L10n.text("common.ok"))
+                alert.beginSheetModal(for: host, completionHandler: nil)
+            }
+        }
+    }
+
     /// Parameterized core for moving one or more users to another channel.
     func performMove(_ users: [ConnectedServerUser], presentingWindow window: NSWindow?) {
         guard !users.isEmpty, let host = sheetHostWindow(window) else { return }
 
-        // Available channels: all except the common channel if all users are in the same one
-        let commonChannelID = users.count == 1 ? users[0].channelID : nil
-        let allChannels = flatChannels(from: session.rootChannels)
-        let channels = allChannels.filter { $0.id != commonChannelID }
+        let channels = moveDestinationChannels(excluding: commonChannelID(of: users))
         guard !channels.isEmpty else {
             let element: Any = host
             NSAccessibility.post(
@@ -385,7 +461,7 @@ extension ConnectedServerViewController {
         alert.addButton(withTitle: L10n.text("common.cancel"))
 
         let popup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 280, height: 26), pullsDown: false)
-        channels.forEach { popup.addItem(withTitle: $0.name) }
+        channels.forEach { popup.addItem(withTitle: $0.displayPath) }
         alert.accessoryView = popup
         alert.window.initialFirstResponder = popup
 
@@ -393,14 +469,11 @@ extension ConnectedServerViewController {
             let selectedIndex = popup.indexOfSelectedItem
             guard response == .alertFirstButtonReturn, let self,
                   selectedIndex >= 0, selectedIndex < channels.count else { return }
-            let target = channels[selectedIndex]
-            for user in users {
-                self.connectionController.moveUser(userID: user.id, toChannelID: target.id) { [weak self] result in
-                    if case .failure(let error) = result {
-                        self?.presentError(error)
-                    }
-                }
-            }
+            self.commitMove(
+                userIDs: users.map(\.id),
+                to: channels[selectedIndex],
+                presentingWindow: window
+            )
         }
     }
 
@@ -418,11 +491,27 @@ extension ConnectedServerViewController {
         }
     }
 
+    /// Whether the local user may move people out of `channel`. Target-aware on
+    /// purpose: being an operator somewhere else doesn't grant it here.
+    func canMoveUsers(from channel: ConnectedServerChannel) -> Bool {
+        if session.currentUser?.isAdministrator == true { return true }
+        return connectionController.canMoveUsers(fromChannelID: channel.id)
+    }
+
     /// Move everyone in the selected channel to another channel, via the
     /// accessible checklist sheet (users start pre-checked; the admin can
     /// deselect any before confirming).
     @objc func moveChannelUsersAction(_ sender: Any? = nil) {
         guard let channel = bulkMoveTargetChannel() else { return }
+        presentMoveUsers(in: channel)
+    }
+
+    /// Bulk-move for an EXPLICIT channel. The VoiceOver custom action must come
+    /// through here: it is attached to one channel's row, but moving the
+    /// VoiceOver cursor doesn't change the table's selection, so re-resolving
+    /// the target from `selectedRow` would empty whichever channel happened to
+    /// be selected instead of the one the user is on.
+    func presentMoveUsers(in channel: ConnectedServerChannel) {
         presentMoveUsers(
             candidates: channel.users,
             excludingChannelID: channel.id,
@@ -442,7 +531,7 @@ extension ConnectedServerViewController {
             announce(L10n.text("moveUsers.noneAvailable"))
             return
         }
-        let channels = flatChannels(from: session.rootChannels).filter { $0.id != excludingChannelID }
+        let channels = moveDestinationChannels(excluding: excludingChannelID)
         guard !channels.isEmpty else {
             announce(L10n.text("connectedServer.move.noChannel"))
             return
@@ -450,19 +539,13 @@ extension ConnectedServerViewController {
 
         let vc = MoveUsersViewController(
             candidates: candidates,
-            preselected: Set(candidates.map(\.id)),
             channels: channels,
             headerText: headerText
         )
         vc.onMove = { [weak self] userIDs, targetChannelID in
-            guard let self else { return }
-            for userID in userIDs {
-                self.connectionController.moveUser(userID: userID, toChannelID: targetChannelID) { [weak self] result in
-                    if case .failure(let error) = result {
-                        self?.presentError(error)
-                    }
-                }
-            }
+            guard let self,
+                  let target = channels.first(where: { $0.id == targetChannelID }) else { return }
+            self.commitMove(userIDs: userIDs, to: target, presentingWindow: window)
         }
         (window?.contentViewController ?? self).presentAsSheet(vc)
     }

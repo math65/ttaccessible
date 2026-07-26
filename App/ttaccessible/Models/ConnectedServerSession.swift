@@ -63,6 +63,16 @@ struct ConnectedServerChannel: Equatable, Identifiable {
     var totalUserCount: Int {
         directUserCount + children.reduce(0) { $0 + $1.totalUserCount }
     }
+
+    /// Human-readable path for pickers: the channel hierarchy without the root
+    /// element, which carries the SERVER's display name rather than a channel
+    /// name. A bare name can't distinguish same-named subchannels under
+    /// different parents, which TeamTalk allows — "Music / General" can.
+    /// Falls back to `name` for the root channel itself (empty path).
+    var displayPath: String {
+        let path = pathComponents.dropFirst()
+        return path.isEmpty ? name : path.joined(separator: " / ")
+    }
 }
 
 extension ConnectedServerSession {

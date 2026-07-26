@@ -1115,9 +1115,11 @@ final class ConnectedServerViewController: NSViewController {
         case #selector(moveChannelUsersAction):
             // Bulk-move a channel's occupants. Works whether a channel row or a
             // user row is selected (resolves to the user's channel), as long as
-            // that channel has users and we have moderator rights.
+            // that channel has users and we may move people out of THAT channel
+            // — `canModerate` is target-blind and would offer the action on
+            // channels the server rejects.
             guard let channel = bulkMoveTargetChannel(), !channel.users.isEmpty else { return false }
-            return canModerate
+            return canMoveUsers(from: channel)
         default:
             return true
         }

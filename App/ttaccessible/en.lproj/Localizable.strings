@@ -687,6 +687,12 @@
 "moveUsers.confirm" = "Move";
 "moveUsers.noneSelected" = "No users selected";
 "moveUsers.noneAvailable" = "No users to move";
+"moveUsers.userItem" = "%1$@, %2$d of %3$d";
+"moveUsers.allSelected" = "All %d users selected";
+"moveUsers.allDeselected" = "All users deselected";
+"moveUsers.result.success" = "Moved %1$d users to %2$@";
+"moveUsers.result.success.one" = "Moved 1 user to %@";
+"moveUsers.result.partial" = "Moved %1$d of %2$d users to %3$@";
 
 // VoiceOver custom actions
 "connectedServer.voAction.moveChannelUsers" = "Move everyone here to another channel";
