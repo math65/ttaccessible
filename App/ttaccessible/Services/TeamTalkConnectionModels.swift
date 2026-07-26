@@ -134,6 +134,11 @@ enum TeamTalkConnectionError: LocalizedError {
     case connectionStartFailed
     case loginStartFailed
     case connectionFailed
+    /// The connection dropped mid-command AND an automatic reconnect was armed.
+    /// Unwinds the command without an error dialog: the UI is already showing
+    /// the reconnecting state, and stacking an alert on top of it is confusing
+    /// — most of all under VoiceOver.
+    case connectionLostReconnecting
     case connectionTimeout
     case loginFailed(String)
     case incorrectChannelPassword(String)
@@ -149,7 +154,7 @@ enum TeamTalkConnectionError: LocalizedError {
             return L10n.text("teamtalk.connection.error.connectionStartFailed")
         case .loginStartFailed:
             return L10n.text("teamtalk.connection.error.loginStartFailed")
-        case .connectionFailed:
+        case .connectionFailed, .connectionLostReconnecting:
             return L10n.text("teamtalk.connection.error.connectionFailed")
         case .connectionTimeout:
             return L10n.text("teamtalk.connection.error.timeout")
@@ -158,6 +163,17 @@ enum TeamTalkConnectionError: LocalizedError {
         case .loginFailed(let message), .incorrectChannelPassword(let message), .internalError(let message), .webLoginFailed(let message):
             return message
         }
+    }
+
+    /// Whether `error` is a drop that already armed an automatic reconnect, and
+    /// so must not raise a dialog. Takes an `Error` because that is what the
+    /// presentation layer holds: every command completes with `Result<_, Error>`,
+    /// and this case is indistinguishable from `.connectionFailed` by its
+    /// message alone — both read "the connection to the server failed".
+    static func isReconnectingDrop(_ error: Error) -> Bool {
+        guard let error = error as? TeamTalkConnectionError else { return false }
+        if case .connectionLostReconnecting = error { return true }
+        return false
     }
 }
 

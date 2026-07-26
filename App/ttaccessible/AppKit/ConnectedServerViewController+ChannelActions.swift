@@ -57,7 +57,7 @@ extension ConnectedServerViewController {
                 case .success:
                     self?.announce(L10n.text("connectedServer.channel.create.success"))
                 case .failure(let error):
-                    self?.presentActionError(error.localizedDescription)
+                    self?.presentActionError(error)
                 }
             }
         }
@@ -90,7 +90,7 @@ extension ConnectedServerViewController {
                 case .success:
                     self?.announce(L10n.text("connectedServer.channel.edit.success"))
                 case .failure(let error):
-                    self?.presentActionError(error.localizedDescription)
+                    self?.presentActionError(error)
                 }
             }
         }
@@ -114,7 +114,7 @@ extension ConnectedServerViewController {
                 case .success:
                     self?.announce(L10n.text("connectedServer.channel.delete.success"))
                 case .failure(let error):
-                    self?.presentActionError(error.localizedDescription)
+                    self?.presentActionError(error)
                 }
             }
         }
@@ -397,7 +397,7 @@ extension ConnectedServerViewController {
             case .success:
                 self.announce(L10n.text("connectedServer.action.left"))
             case .failure(let error):
-                self.presentActionError(error.localizedDescription)
+                self.presentActionError(error)
             }
         }
     }
@@ -420,10 +420,10 @@ extension ConnectedServerViewController {
                         errorMessage: message.isEmpty ? nil : message
                     )
                 default:
-                    self.presentActionError(error.localizedDescription)
+                    self.presentActionError(error)
                 }
             case .failure(let error):
-                self.presentActionError(error.localizedDescription)
+                self.presentActionError(error)
             }
         }
     }

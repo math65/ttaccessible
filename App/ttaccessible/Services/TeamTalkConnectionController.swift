@@ -205,6 +205,23 @@ final class TeamTalkConnectionController {
     var reconnectPassword: String?
     var reconnectOptions = TeamTalkConnectOptions()
     var lastChannelID: Int32 = 0
+    /// Path + password of the channel we were in when the connection dropped.
+    /// The PATH is what we rejoin by on reconnect: a full server restart
+    /// reassigns numeric channel IDs, so `lastChannelID` can point at the wrong
+    /// channel (or nothing), but the path is stable.
+    var lastChannelPath: String = ""
+    var lastChannelPassword: String = ""
+    /// Index into `reconnectBackoffSeconds`; also the give-up counter.
+    var reconnectAttempt = 0
+    /// When we were last kicked. A server kick emits MYSELF_KICKED and then
+    /// MYSELF_LOGGEDOUT, and that logout must not be treated as a dropped
+    /// connection worth reconnecting.
+    var justKickedAt: Date?
+    /// Channel we were last confirmed to be in, refreshed on every session
+    /// publish. The SDK clears its own channel state BEFORE posting
+    /// MYSELF_LOGGEDOUT, so asking it at drop time returns nothing on that path.
+    var lastKnownChannelID: Int32 = 0
+    var lastKnownChannelPath: String = ""
     var isRestartingSoundSystem = false
     var suppressDeviceChangeUntil = Date.distantPast
     var audioHardwareChangeWorkItem: DispatchWorkItem?
