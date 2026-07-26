@@ -128,6 +128,7 @@ final class NotificationParameterSliderNSView: NSView {
         valueLabel.stringValue = text
         setAccessibilityValue(value)
         setAccessibilityValueDescription(text)
+        NSAccessibility.post(element: self, notification: .valueChanged)
     }
 
     private func adjust(by delta: Double) {
@@ -214,7 +215,7 @@ struct PreferencesNotificationsView: View {
     }
 
     var body: some View {
-        PreferencesPaneScrollView {
+        PreferencesPaneScrollView(accessibilityLabel: L10n.text("preferences.notifications.title")) {
             VStack(alignment: .leading, spacing: 18) {
                 Toggle(
                     L10n.text("preferences.general.soundNotifications"),

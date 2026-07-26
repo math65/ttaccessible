@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ttaccessible-1.7.0-beta.8-39</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --code-bg: #f5f5f7;
+  --link: #0066cc;
+  --link-hover: #0040a0;
+  --rule: #e5e5ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #ececec;
+    --muted: #a0a0a0;
+    --code-bg: #2d2d2d;
+    --link: #4eaaff;
+    --link-hover: #82c4ff;
+    --rule: #3a3a3a;
+  }
+}
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  padding: 1rem 1.25rem 1.5rem;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.15rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.2em; }
+h3 { font-size: 1.02rem; }
+h4 { font-size: 0.95rem; color: var(--muted); }
+p { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; margin: 0.6em 0; }
+li { margin: 0.25em 0; }
+li > p { margin: 0.3em 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover, a:focus { color: var(--link-hover); text-decoration: underline; }
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.75em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+pre code { background: transparent; padding: 0; border-radius: 0; }
+blockquote {
+  border-left: 3px solid var(--rule);
+  margin: 0.8em 0;
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--muted);
+}
+hr { border: 0; border-top: 1px solid var(--rule); margin: 1.5em 0; }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<h2 id="v170-beta8-build-39--2026-06-25">v1.7.0-beta.8 (build 39) —
+2026-06-25</h2>
+<p>This is a <strong>beta</strong> release, for testing new changes
+before they ship to everyone. To receive beta updates, turn on
+<strong>Include beta versions</strong> in Preferences › General.</p>
+<h3 id="highlights">Highlights</h3>
+<ul>
+<li><strong>Noise reduction, on its own.</strong> You can now clean up
+background noise from your microphone without turning on echo
+cancellation.</li>
+<li><strong>Hear your own media.</strong> When you stream a music or
+audio file to a channel, you finally hear it too — not just everyone
+else.</li>
+</ul>
+<h3 id="whats-new">What's new</h3>
+<p><strong>Noise reduction without echo cancellation.</strong> Until
+now, the microphone's noise reduction only came bundled with echo
+cancellation — all or nothing. Preferences › Audio now has a single
+<strong>Microphone processing</strong> menu with three clear
+choices:</p>
+<ul>
+<li><strong>None</strong> — clean passthrough, no processing.</li>
+<li><strong>Noise reduction</strong> — quiets background hiss, fans, and
+room noise. No echo cancellation, so nothing else gets in the way.</li>
+<li><strong>Echo cancellation + noise reduction</strong> — the full
+treatment for when you're on speakers instead of headphones (echo
+cancellation always keeps noise reduction on, because it needs it to
+work well).</li>
+</ul>
+<p>Switch between them anytime — even mid-conversation — and the change
+takes effect right away. No need to stop and restart your
+microphone.</p>
+<p><strong>You can hear the media you stream.</strong> When you streamed
+a music or audio file into a channel, everyone else could hear it, but
+you couldn't hear your own playback. Now you do — smoothly, alongside
+the people in your channel. The playback controls (play, pause, volume)
+work just as before; the broadcast volume slider still sets the level
+everyone else hears.</p>
+<h3 id="worth-knowing">Worth knowing</h3>
+<p>Both changes touch the audio engine that was rebuilt in beta.7. It's
+solid in daily use, but that's what the beta is for — put it through its
+paces and tell us how it holds up.</p>
+<h2 id="install">Install</h2>
+<p>If you have beta updates enabled, tt-Accessible will install this
+update for you — no action needed.</p>
+<p>Manual install:</p>
+<ol type="1">
+<li>Download <code>ttaccessible-1.7.0-beta.8-39.zip</code> below.</li>
+<li>Unzip and drag <code>ttaccessible.app</code> into your
+<code>/Applications</code> folder, replacing the previous version.</li>
+<li>Double-click — no Gatekeeper warning thanks to notarization.</li>
+</ol>
+</body>
+</html>

@@ -101,6 +101,8 @@ extension TeamTalkConnectionController {
                 }
 
                 self.mediaStreamingActive = true
+                // Subscribe to our own media stream so we hear what we broadcast.
+                self.refreshLocalMediaAudioEventLocked(instance: instance)
                 self.mediaStreamingPath = resolved.path
                 self.mediaStreamingStartedHistoryLogged = false
                 self.mediaStreamingSeekedWhilePaused = false
@@ -122,6 +124,97 @@ extension TeamTalkConnectionController {
                     securityScopedURL?.stopAccessingSecurityScopedResource()
                     self.finishOnMain(.failure(error), completion: completion)
                 }
+            }
+        }
+    }
+
+    /// Stream a live audio input device to the channel. The device is captured
+    /// locally and served as an endless WAV on a loopback URL, which the SDK
+    /// broadcasts exactly like a URL stream — the source paces itself and pads
+    /// silence, so a quiet or unplugged device never ends the broadcast.
+    func startStreamingAudioDevice(
+        deviceUID: String,
+        monitorEnabled: Bool,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        // Enumerate + open the capture device OFF the controller queue. Device
+        // enumeration and the loopback server's readiness wait (up to 5s) must
+        // not block the SDK's serial event loop.
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self else { return }
+
+            guard let device = InputAudioDeviceResolver.availableInputDevices()
+                .first(where: { $0.uid == deviceUID }) else {
+                self.finishOnMain(
+                    .failure(TeamTalkConnectionError.internalError(L10n.text("mediaStream.device.error.deviceUnavailable"))),
+                    completion: completion
+                )
+                return
+            }
+
+            let source = AudioDeviceStreamSource(device: device)
+            let url: URL
+            do {
+                url = try source.start()
+            } catch {
+                self.finishOnMain(
+                    .failure(TeamTalkConnectionError.internalError(L10n.text("mediaStream.device.error.startFailed"))),
+                    completion: completion
+                )
+                return
+            }
+
+            self.queue.async { [weak self] in
+                guard let self else { source.stop(); return }
+                guard let instance = self.instance, let record = self.connectedRecord else {
+                    source.stop()
+                    self.healStaleSessionIfNeededLocked()
+                    self.finishOnMain(.failure(self.sessionUnavailableErrorLocked()), completion: completion)
+                    return
+                }
+
+                if self.mediaStreamingActive {
+                    self.stopStreamingMediaFileLocked(instance: instance)
+                }
+
+                self.mediaStreamingPaused = false
+                self.mediaStreamingBroadcastGainLevel = INT32(SOUND_GAIN_DEFAULT.rawValue)
+                self.mediaStreamingHasVideo = false
+
+                var playback = self.makeMediaFilePlaybackLocked(offsetMSec: 0)
+                var videoCodec = self.makeVideoCodecLocked(includeVideo: false)
+                self.mediaStreamingActiveVideoCodec = videoCodec
+
+                let started = url.absoluteString.withCString { cPath -> Bool in
+                    TT_StartStreamingMediaFileToChannelEx(instance, cPath, &playback, &videoCodec) != 0
+                }
+                guard started else {
+                    source.stop()
+                    self.finishOnMain(
+                        .failure(TeamTalkConnectionError.internalError(L10n.text("mediaStream.device.error.startFailed"))),
+                        completion: completion
+                    )
+                    return
+                }
+
+                self.deviceStreamSource = source
+            self.deviceStreamMonitorEnabled = monitorEnabled
+            self.mediaStreamingActive = true
+            // Subscribe to our own media stream only if the user opted in.
+            self.refreshLocalMediaAudioEventLocked(instance: instance)
+            self.mediaStreamingPath = url.absoluteString
+            self.mediaStreamingStartedHistoryLogged = false
+            self.mediaStreamingSeekedWhilePaused = false
+            self.mediaStreamingFileName = device.name
+            self.mediaStreamingSecurityScopedURL = nil
+            // Endless live stream: duration stays 0 so the seek UI remains inert.
+            self.mediaStreamingDurationMSec = 0
+            self.mediaStreamingElapsedMSec = 0
+            self.mediaStreamingElapsedSampleAt = Date()
+
+            self.publishSessionLocked(instance: instance, record: record, invalidation: .audio)
+            self.publishMediaStreamingProgressLocked()
+            self.finishOnMain(.success(()), completion: completion)
             }
         }
     }
@@ -161,9 +254,14 @@ extension TeamTalkConnectionController {
     }
 
     func finalizeMediaStreamingLocked(instance: UnsafeMutableRawPointer, reason: MediaStreamingFinalizeReason) {
+        deviceStreamSource?.stop()
+        deviceStreamSource = nil
+        deviceStreamMonitorEnabled = false
         mediaStreamingSecurityScopedURL?.stopAccessingSecurityScopedResource()
         mediaStreamingSecurityScopedURL = nil
         mediaStreamingActive = false
+        // Drop our own media subscription now that we're no longer broadcasting.
+        refreshLocalMediaAudioEventLocked(instance: instance)
         mediaStreamingPath = nil
         mediaStreamingStartedHistoryLogged = false
         mediaStreamingSeekedWhilePaused = false
@@ -228,6 +326,19 @@ extension TeamTalkConnectionController {
         guard let instance = self.instance, self.mediaStreamingActive else { return }
         if self.mediaStreamingPaused == paused { return }
 
+        // Live device streams can't be SDK-paused: the loopback keeps producing,
+        // so TT_UpdateStreamingMediaFileToChannel(bPaused) desyncs it and resume
+        // breaks. Instead mute the capture — the loopback keeps feeding the SDK
+        // real-time silence, so there's no discontinuity.
+        if let deviceStreamSource {
+            mediaStreamingPaused = paused
+            mediaStreamingUserPauseIntent = paused
+            mediaStreamingElapsedSampleAt = paused ? nil : Date()
+            deviceStreamSource.setMuted(paused)
+            publishMediaStreamingProgressLocked()
+            return
+        }
+
         let offsetMSec = currentMediaStreamingElapsedMSecLocked()
         let previousPaused = mediaStreamingPaused
         let previousPauseIntent = mediaStreamingUserPauseIntent
@@ -266,9 +377,14 @@ extension TeamTalkConnectionController {
     }
 
     func seekMediaStreaming(toMSec offsetMSec: UInt32) {
+        // Coalesce: each seek stops and restarts the SDK stream, so a key-repeat
+        // flood would otherwise queue restarts that keep seeking after release.
+        guard mediaStreamingSeekRequest.submit(offsetMSec) else { return }
         queue.async { [weak self] in
-            guard let self, let instance = self.instance, self.mediaStreamingActive else { return }
-            let clamped = self.clampedMediaStreamOffsetMSec(offsetMSec)
+            guard let self else { return }
+            guard let requestedMSec = self.mediaStreamingSeekRequest.take() else { return }
+            guard let instance = self.instance, self.mediaStreamingActive else { return }
+            let clamped = self.clampedMediaStreamOffsetMSec(requestedMSec)
             guard self.restartMediaStreamLocked(instance: instance, offsetMSec: clamped, paused: self.mediaStreamingPaused) else {
                 AudioLogger.log("Media stream: seek restart failed at %u ms", clamped)
                 self.publishMediaStreamingProgressLocked()
@@ -281,9 +397,15 @@ extension TeamTalkConnectionController {
     }
 
     func setMediaStreamingBroadcastGainPercent(_ percent: Int) {
+        // Coalesce: the SDK update is slow enough on some machines that
+        // key-repeat floods queue a backlog which keeps stepping the gain
+        // after the key is released — only the newest value matters.
+        guard mediaStreamingGainRequest.submit(percent) else { return }
         queue.async { [weak self] in
-            guard let self, let instance = self.instance, self.mediaStreamingActive else { return }
-            self.mediaStreamingBroadcastGainLevel = Self.userVolumeFromPercent(Double(percent))
+            guard let self else { return }
+            guard let requestedPercent = self.mediaStreamingGainRequest.take() else { return }
+            guard let instance = self.instance, self.mediaStreamingActive else { return }
+            self.mediaStreamingBroadcastGainLevel = Self.userVolumeFromPercent(Double(requestedPercent))
             var playback = self.makeMediaFilePlaybackLocked(offsetMSec: UInt32(TT_MEDIAPLAYBACK_OFFSET_IGNORE))
             guard self.applyMediaStreamingUpdateLocked(instance: instance, playback: &playback) else {
                 AudioLogger.log("Media stream: broadcast gain update failed")
@@ -306,6 +428,27 @@ extension TeamTalkConnectionController {
         guard mediaStreamingDurationMSec > 0 else { return true }
         // Ignore spurious finish/abort right after a seek while still far from the end.
         return info.uElapsedMSec + 2_000 < mediaStreamingDurationMSec
+    }
+
+    /// Re-point an active media stream at the newly-joined channel. The SDK
+    /// streams to whatever channel you're in, so a channel switch requires a
+    /// stop + restart — otherwise the broadcast keeps going to the old channel
+    /// (or stops), which is the "device stream breaks on channel switch" bug.
+    func restartMediaStreamForChannelChangeLocked(instance: UnsafeMutableRawPointer) {
+        guard mediaStreamingActive, mediaStreamingPath != nil else { return }
+        if deviceStreamSource != nil {
+            // Live device stream: restart to the new channel, never SDK-paused —
+            // the mute/pause state lives in the capture source and persists across
+            // the restart (same AudioDeviceStreamSource, same loopback URL). The
+            // restart resets mediaStreamingPaused, so restore it to match the
+            // source's still-muted state.
+            let wasPaused = mediaStreamingPaused
+            _ = restartMediaStreamLocked(instance: instance, offsetMSec: 0, paused: false)
+            mediaStreamingPaused = wasPaused
+        } else {
+            let offset = currentMediaStreamingElapsedMSecLocked()
+            _ = restartMediaStreamLocked(instance: instance, offsetMSec: offset, paused: mediaStreamingPaused)
+        }
     }
 
     /// Stop and restart channel media streaming (TT_Update seek/resume is unreliable for media files).
@@ -405,7 +548,9 @@ extension TeamTalkConnectionController {
         }
         mediaStreamingElapsedMSec = elapsedMSec
         mediaStreamingElapsedSampleAt = Date()
-        if durationMSec > 0 {
+        // Device streams are endless: whatever duration FFmpeg guesses from the
+        // WAV header must not enable the seek UI.
+        if durationMSec > 0, deviceStreamSource == nil {
             mediaStreamingDurationMSec = durationMSec
         }
         publishMediaStreamingProgressLocked()

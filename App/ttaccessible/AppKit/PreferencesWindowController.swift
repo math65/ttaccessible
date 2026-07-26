@@ -13,6 +13,7 @@ final class PreferencesWindowController: NSWindowController {
     enum Pane: CaseIterable {
         case general
         case connection
+        case bearWare
         case audio
         case sounds
         case announcements
@@ -24,6 +25,8 @@ final class PreferencesWindowController: NSWindowController {
                 return L10n.text("preferences.general.title")
             case .connection:
                 return L10n.text("preferences.connection.title")
+            case .bearWare:
+                return L10n.text("preferences.bearware.title")
             case .audio:
                 return L10n.text("preferences.audio.title")
             case .sounds:
@@ -41,6 +44,8 @@ final class PreferencesWindowController: NSWindowController {
                 return "person"
             case .connection:
                 return "network"
+            case .bearWare:
+                return "globe"
             case .audio:
                 return "speaker.wave.2"
             case .sounds:
@@ -73,7 +78,7 @@ final class PreferencesWindowController: NSWindowController {
             advancedMicrophoneSettingsStore: advancedMicrophoneSettingsStore
         )
 
-        let window = NSWindow(
+        let window = EscapeClosableWindow(
             contentRect: NSRect(x: 0, y: 0, width: 700, height: 420),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
@@ -157,6 +162,14 @@ private final class PreferencesContainerViewController: NSViewController {
         nil
     }
 
+    // Programmatic view controllers MUST override loadView: before macOS 14
+    // AppKit's default implementation looks for a nib and throws when there
+    // isn't one (macOS 14+ silently creates an empty view — the behavior this
+    // class was unknowingly relying on).
+    override func loadView() {
+        view = NSView()
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         configureLayout()
@@ -167,8 +180,22 @@ private final class PreferencesContainerViewController: NSViewController {
         selectPane(.general)
     }
 
+    // Escape closes the Preferences window. As the window's content view
+    // controller, this VC is in the responder chain, so an unhandled Escape
+    // (cancelOperation:) bubbles up to here.
+    override func cancelOperation(_ sender: Any?) {
+        view.window?.performClose(nil)
+    }
+
     func warmupExpensiveDependencies() {
-        audioPreferencesStore.warmup()
+        // NOTE: deliberately NOT warming the audio device catalog here. That probe
+        // calls the SDK's TT_GetSoundDevices, which on a large rig takes ~12 s AND
+        // the SDK serializes sound-system access internally — so a launch-time warm
+        // serialized against the connect's TT_InitSoundOutputDevice and made
+        // connecting take ~12 s. The audio device list is seeded instantly from the
+        // persisted cache, and refreshes when the user actually opens Audio prefs
+        // (AudioPreferencesStore.prepareIfNeeded). Output/input themselves use the
+        // virtual device, so the connection never needs this catalog.
         notificationsPreferencesStore.prepareIfNeeded()
     }
 
@@ -208,6 +235,8 @@ private final class PreferencesContainerViewController: NSViewController {
             return NSHostingController(
                 rootView: PreferencesConnectionView(store: connectionPreferencesStore)
             )
+        case .bearWare:
+            return NSHostingController(rootView: PreferencesBearWareView())
         case .audio:
             return NSHostingController(
                 rootView: PreferencesAudioView(store: audioPreferencesStore)
@@ -391,9 +420,13 @@ private final class PreferencesSidebarCellView: NSTableCellView {
 
         paneImageView.translatesAutoresizingMaskIntoConstraints = false
         paneImageView.imageScaling = .scaleProportionallyDown
+        // The row already carries the pane title as its accessibility label, so the
+        // icon and the duplicate text field shouldn't be separate VoiceOver stops.
+        paneImageView.setAccessibilityElement(false)
 
         paneTextField.translatesAutoresizingMaskIntoConstraints = false
         paneTextField.font = .systemFont(ofSize: NSFont.systemFontSize)
+        paneTextField.setAccessibilityElement(false)
 
         addSubview(paneImageView)
         addSubview(paneTextField)
@@ -414,6 +447,14 @@ private final class PreferencesSidebarCellView: NSTableCellView {
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         nil
+    }
+
+    // The row exposes the pane title as its own accessibility label, so don't let
+    // VoiceOver descend into the icon + text field (which made it read e.g.
+    // "Recording, circle image, Recording"). Returning no children leaves just the
+    // single label.
+    override func accessibilityChildren() -> [Any]? {
+        []
     }
 
     func configure(with pane: PreferencesWindowController.Pane) {

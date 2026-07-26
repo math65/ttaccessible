@@ -22,14 +22,12 @@ extension TeamTalkConnectionController {
             }
 
             let trimmed = nickname.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard trimmed.isEmpty == false else {
-                DispatchQueue.main.async {
-                    completion(.failure(TeamTalkConnectionError.internalError(L10n.text("connectedServer.identity.error.emptyNickname"))))
-                }
-                return
-            }
+            // An empty nickname falls back to the same resolution used at connection time
+            // (saved-server nickname → default preference → "tt-Accessible") instead of being
+            // rejected, so clearing the field returns to the default nickname.
+            let resolved = trimmed.isEmpty ? self.effectiveNickname(for: record) : trimmed
 
-            let commandID = trimmed.withCString { TT_DoChangeNickname(instance, $0) }
+            let commandID = resolved.withCString { TT_DoChangeNickname(instance, $0) }
             guard commandID > 0 else {
                 DispatchQueue.main.async {
                     completion(.failure(TeamTalkConnectionError.connectionFailed))

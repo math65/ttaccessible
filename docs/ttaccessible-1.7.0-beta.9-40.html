@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ttaccessible-1.7.0-beta.9-40</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --code-bg: #f5f5f7;
+  --link: #0066cc;
+  --link-hover: #0040a0;
+  --rule: #e5e5ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #ececec;
+    --muted: #a0a0a0;
+    --code-bg: #2d2d2d;
+    --link: #4eaaff;
+    --link-hover: #82c4ff;
+    --rule: #3a3a3a;
+  }
+}
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  padding: 1rem 1.25rem 1.5rem;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.15rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.2em; }
+h3 { font-size: 1.02rem; }
+h4 { font-size: 0.95rem; color: var(--muted); }
+p { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; margin: 0.6em 0; }
+li { margin: 0.25em 0; }
+li > p { margin: 0.3em 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover, a:focus { color: var(--link-hover); text-decoration: underline; }
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.75em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+pre code { background: transparent; padding: 0; border-radius: 0; }
+blockquote {
+  border-left: 3px solid var(--rule);
+  margin: 0.8em 0;
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--muted);
+}
+hr { border: 0; border-top: 1px solid var(--rule); margin: 1.5em 0; }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<h2 id="v170-beta9-build-40--2026-07-06">v1.7.0-beta.9 (build 40) —
+2026-07-06</h2>
+<p>This is a <strong>beta</strong> release, for testing new changes
+before they ship to everyone. To receive beta updates, turn on
+<strong>Include beta versions</strong> in Preferences › General.</p>
+<h3 id="highlights">Highlights</h3>
+<ul>
+<li><strong>Clearer voices on busy servers.</strong> Channels tuned to
+save bandwidth (with larger voice packets, common on big community
+servers) could sound choppy and hard to follow — that's fixed, playback
+is smooth again.</li>
+<li><strong>Per-user volumes stay where you put them.</strong> The
+volume, balance and pan you set for individual people no longer bleed
+across servers — or onto someone else who happens to share the same
+login.</li>
+<li><strong>You decide what gets remembered.</strong> A new setting lets
+you keep per-user volumes forever, only for the current session, or not
+at all.</li>
+</ul>
+<h3 id="whats-new">What's new</h3>
+<p><strong>Smoother playback on high-traffic channels.</strong> Some
+community servers set up their channels with larger voice packets to
+save bandwidth. On those, voices could come through choppy — buffery and
+hard to understand — while ordinary channels were fine. Playback now
+adapts to the channel's packet size, so it stays clean whatever the
+server's settings. Crowded channels also hold up better: incoming audio
+is handled on its own dedicated path, so a channel full of people can no
+longer make everyone's sound stutter at once.</p>
+<p><strong>Per-user volumes are now tied to the server.</strong> Some
+people noticed users showing up at odd volumes — loud or quiet — without
+ever having touched them. The cause: a level you'd set for one account
+name was being reused for anyone with that same name, including on
+completely different servers. (Public servers often share generic logins
+like <code>guest</code>.) Volumes, stereo balance and pan are now scoped
+to the server they were set on, so a level you set on one server stays
+there.</p>
+<p><strong>Choose how per-user volumes are remembered.</strong>
+Preferences › Audio has a new <strong>Per-user volume memory</strong>
+setting with three options:</p>
+<ul>
+<li><strong>Off</strong> — nothing is remembered; reconnecting puts
+everyone back to 50%, like the official client.</li>
+<li><strong>This session only</strong> — your adjustments last while the
+app is open, then reset when you quit.</li>
+<li><strong>Always</strong> (default) — adjustments are remembered
+across launches, per server.</li>
+</ul>
+<p>You can switch modes anytime and it takes effect right away.</p>
+<h3 id="worth-knowing">Worth knowing</h3>
+<p>Because of the per-user volume fix above, any per-user volumes you
+had saved are cleared once on this update and start fresh at 50% — those
+old values were exactly the cross-server data being cleaned up. You'll
+just need to re-set the few users you care about.</p>
+<h2 id="install">Install</h2>
+<p>If you have beta updates enabled, tt-Accessible will install this
+update for you — no action needed.</p>
+<p>Manual install:</p>
+<ol type="1">
+<li>Download <code>ttaccessible-1.7.0-beta.9-40.zip</code> below.</li>
+<li>Unzip and drag <code>ttaccessible.app</code> into your
+<code>/Applications</code> folder, replacing the previous version.</li>
+<li>Double-click — no Gatekeeper warning thanks to notarization.</li>
+</ol>
+</body>
+</html>

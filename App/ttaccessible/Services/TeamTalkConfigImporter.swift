@@ -233,6 +233,7 @@ final class TeamTalkConfigImporter {
             encrypted: payload.encrypted,
             nickname: nickname,
             username: payload.auth.username,
+            useWebLogin: BearWareWebLogin.isWebLogin(payload.auth.username),
             initialChannelPath: payload.join?.channelPath ?? "",
             initialChannelPassword: payload.join?.password ?? ""
         )
@@ -351,6 +352,7 @@ final class TeamTalkConfigImporter {
                     encrypted: encrypted,
                     nickname: nickname,
                     username: username,
+                    useWebLogin: BearWareWebLogin.isWebLogin(username),
                     initialChannelPath: values["channel"] ?? "",
                     initialChannelPassword: values["chanpassword"] ?? ""
                 )
@@ -387,6 +389,7 @@ extension SavedServerRecord {
             encrypted: encrypted,
             nickname: nickname,
             username: username,
+            useWebLogin: useWebLogin,
             initialChannelPath: initialChannelPath,
             initialChannelPassword: initialChannelPassword
         )

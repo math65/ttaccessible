@@ -22,13 +22,15 @@ struct AdvancedMicrophoneAudioConfiguration: Equatable {
     var inputGainDB: Double
     let targetFormat: AdvancedMicrophoneAudioTargetFormat
     var echoCancellationEnabled: Bool
+    var noiseSuppressionEnabled: Bool
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.device == rhs.device &&
         lhs.preset == rhs.preset &&
         lhs.inputGainDB == rhs.inputGainDB &&
         lhs.targetFormat == rhs.targetFormat &&
-        lhs.echoCancellationEnabled == rhs.echoCancellationEnabled
+        lhs.echoCancellationEnabled == rhs.echoCancellationEnabled &&
+        lhs.noiseSuppressionEnabled == rhs.noiseSuppressionEnabled
     }
 }
 
@@ -255,7 +257,8 @@ final class AdvancedMicrophoneAudioEngine {
                 preset: configuration.preset,
                 inputGainDB: configuration.inputGainDB,
                 targetFormat: effectiveTargetFormat,
-                echoCancellationEnabled: configuration.echoCancellationEnabled
+                echoCancellationEnabled: configuration.echoCancellationEnabled,
+                noiseSuppressionEnabled: configuration.noiseSuppressionEnabled
             )
             currentConfiguration = stored
             engine = newEngine
@@ -265,11 +268,15 @@ final class AdvancedMicrophoneAudioEngine {
             return activeStreamID
         }
 
-        // Create WebRTC AEC3 echo canceller if enabled.
-        if configuration.echoCancellationEnabled {
+        // Create the WebRTC audio processor when echo cancellation and/or noise
+        // suppression is requested. Noise suppression can run on its own (no reference
+        // signal needed); the echo canceller always implies noise suppression.
+        if configuration.echoCancellationEnabled || configuration.noiseSuppressionEnabled {
             let aecConfig = EchoCanceller.Configuration(
                 sampleRate: Int(sampleRate),
-                channels: max(configuration.targetFormat.channels, 1)
+                channels: max(configuration.targetFormat.channels, 1),
+                echoCancellationEnabled: configuration.echoCancellationEnabled,
+                noiseSuppressionEnabled: configuration.noiseSuppressionEnabled
             )
             echoCanceller = EchoCanceller(configuration: aecConfig)
         } else {
@@ -461,7 +468,8 @@ final class AdvancedMicrophoneAudioEngine {
                 preset: configuration.preset,
                 inputGainDB: configuration.inputGainDB,
                 targetFormat: effectiveTargetFormat,
-                echoCancellationEnabled: configuration.echoCancellationEnabled
+                echoCancellationEnabled: configuration.echoCancellationEnabled,
+                noiseSuppressionEnabled: configuration.noiseSuppressionEnabled
             )
             currentConfiguration = stored
             encoderOutputFormat = encoderFormat
@@ -480,11 +488,15 @@ final class AdvancedMicrophoneAudioEngine {
             return activeStreamID
         }
 
-        // Create WebRTC AEC3 echo canceller if enabled.
-        if configuration.echoCancellationEnabled {
+        // Create the WebRTC audio processor when echo cancellation and/or noise
+        // suppression is requested. Noise suppression can run on its own (no reference
+        // signal needed); the echo canceller always implies noise suppression.
+        if configuration.echoCancellationEnabled || configuration.noiseSuppressionEnabled {
             let aecConfig = EchoCanceller.Configuration(
                 sampleRate: Int(sampleRate),
-                channels: max(configuration.targetFormat.channels, 1)
+                channels: max(configuration.targetFormat.channels, 1),
+                echoCancellationEnabled: configuration.echoCancellationEnabled,
+                noiseSuppressionEnabled: configuration.noiseSuppressionEnabled
             )
             echoCanceller = EchoCanceller(configuration: aecConfig)
         } else {
@@ -635,11 +647,21 @@ final class AdvancedMicrophoneAudioEngine {
         }
 
         // Write interleaved frames to accumulation buffer.
-        for frame in 0..<frameCount {
-            for ch in 0..<channelCount {
-                let srcPtr = auhalRenderDataPtrs[ch]
-                auhalAccumBuffer[auhalAccumWriteIndex] = srcPtr[frame]
-                auhalAccumWriteIndex += 1
+        // This runs inside the real-time AUHAL IO callback, so it uses raw
+        // pointers instead of array subscripts: Swift's per-element bounds
+        // checks (kept in unoptimized/Debug builds) made this loop miss the
+        // IO deadline at 96kHz, causing HAL overload and audible crackle.
+        auhalAccumBuffer.withUnsafeMutableBufferPointer { accumBuf in
+            auhalRenderDataPtrs.withUnsafeBufferPointer { srcBuf in
+                guard let accum = accumBuf.baseAddress, let srcPtrs = srcBuf.baseAddress else { return }
+                var writeIndex = auhalAccumWriteIndex
+                for frame in 0..<frameCount {
+                    for ch in 0..<channelCount {
+                        accum[writeIndex] = srcPtrs[ch][frame]
+                        writeIndex += 1
+                    }
+                }
+                auhalAccumWriteIndex = writeIndex
             }
         }
 
@@ -660,8 +682,13 @@ final class AdvancedMicrophoneAudioEngine {
         if interleavedBuffer.count < totalSamples {
             interleavedBuffer = [Float](repeating: 0, count: totalSamples)
         }
-        for i in 0..<totalSamples {
-            interleavedBuffer[i] = auhalAccumBuffer[i]
+        // Bulk copy (memcpy) instead of a per-sample bounds-checked loop — same
+        // real-time-deadline reasoning as the interleave loop above.
+        interleavedBuffer.withUnsafeMutableBufferPointer { dst in
+            auhalAccumBuffer.withUnsafeBufferPointer { src in
+                guard let d = dst.baseAddress, let s = src.baseAddress else { return }
+                d.update(from: s, count: totalSamples)
+            }
         }
 
         processInterleavedAudio(interleavedData: &interleavedBuffer, frameCount: frameCount, availableChannels: channelCount)

@@ -20,7 +20,7 @@ final class SavedServerEditorWindowController: NSWindowController {
     private let coordinator = Coordinator()
 
     init(mode: SavedServerEditorMode, draft: SavedServerDraft, parentWindow: NSWindow?) {
-        let window = NSWindow(
+        let window = EscapeClosableWindow(
             contentRect: NSRect(x: 0, y: 0, width: 460, height: 380),
             styleMask: [.titled, .closable],
             backing: .buffered,

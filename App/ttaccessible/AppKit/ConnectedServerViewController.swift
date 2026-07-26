@@ -15,6 +15,20 @@ final class ServerTreeRowView: NSTableRowView {
     override func accessibilityCustomActions() -> [NSAccessibilityCustomAction]? { nil }
 }
 
+// Cellule d'étiquette qui transmet l'action « presser » de VoiceOver (VO-Espace)
+// à une closure, pour que VO-Espace active une ligne comme le fait la touche Entrée.
+// Sans cela, VO-Espace ne fait rien sur ces étiquettes et seule Entrée permet de
+// rejoindre un serveur / un salon.
+final class PressActionTextField: NSTextField {
+    var onPress: (() -> Void)?
+
+    override func accessibilityPerformPress() -> Bool {
+        guard let onPress else { return super.accessibilityPerformPress() }
+        onPress()
+        return true
+    }
+}
+
 
 final class ConnectedServerViewController: NSViewController {
     enum Column {
@@ -45,7 +59,14 @@ final class ConnectedServerViewController: NSViewController {
     let messageField = NSTextField(frame: .zero)
     let sendButton = NSButton(title: "", target: nil, action: nil)
     let microphoneButton = NSButton(title: "", target: nil, action: nil)
+    private var lastAnnouncedMicrophoneStatus: String?
     let collapsibleVideoPanel = CollapsibleVideoPanelView()
+    lazy var channelMixerCoordinator = ChannelMixerCoordinator(controller: connectionController)
+    lazy var channelMixerSectionView: NSView = buildChannelMixerSection()
+    lazy var channelMixerKeyboardController = ChannelMixerKeyboardController(
+        coordinator: channelMixerCoordinator,
+        masterVolumeAdjust: { [weak self] up in self?.outputGainControl.adjustAndDescribe(up: up) }
+    )
     let embeddedMediaStreamingControls = MediaStreamingPlayerViewController()
     var lastVideoDisplayState = VideoDisplayState.empty
     lazy var inputGainControl = AudioGainControlView(
@@ -59,6 +80,12 @@ final class ConnectedServerViewController: NSViewController {
         accessibilityLabel: L10n.text("connectedServer.audio.outputGain.accessibilityLabel")
     ) { [weak self] value in
         self?.applyOutputGain(value)
+    }
+    lazy var soundEffectsGainControl = AudioGainControlView(
+        title: L10n.text("connectedServer.audio.soundEffectsGain.label"),
+        accessibilityLabel: L10n.text("connectedServer.audio.soundEffectsGain.accessibilityLabel")
+    ) { [weak self] value in
+        self?.applySoundEffectsGain(value)
     }
     lazy var contextMenu: NSMenu = makeContextMenu()
 
@@ -138,6 +165,7 @@ final class ConnectedServerViewController: NSViewController {
     func update(session: ConnectedServerSession) {
         applySession(session, preserveSelection: true)
         startRelativeTimestampTimerIfNeeded()
+        channelMixerCoordinator.update(session: session)
     }
 
     func showReconnecting() {
@@ -155,6 +183,21 @@ final class ConnectedServerViewController: NSViewController {
 
     func focusHistory() {
         view.window?.makeFirstResponder(historyTableView)
+    }
+
+    func focusChannelMixer() {
+        // Unlike the other focus areas, a plain makeFirstResponder does not move the
+        // VoiceOver cursor onto the mixer's virtual accessibility tree. Target the first
+        // user strip (or the Mixer group itself when the channel has no other users) and
+        // post an accessibility focus notification to move VO there.
+        let overlay = channelMixerCoordinator.overlay
+        let target: NSView = overlay.virtualStrips.first ?? overlay
+        // Prepend "Channel Mixer" to the landed element's label for this one read so VO
+        // speaks the region name first — a plain focus change would otherwise announce only
+        // the element (the strip/area), swallowing the region context.
+        (target as? MixerRegionAnnouncing)?.applyRegionPrefix(L10n.text("mixer.area.announce"))
+        view.window?.makeFirstResponder(target)
+        NSAccessibility.post(element: target, notification: .focusedUIElementChanged)
     }
 
     func focusMessageInput() {
@@ -176,8 +219,8 @@ final class ConnectedServerViewController: NSViewController {
         focusMessageInput()
     }
 
-    func performToggleMicrophoneShortcut() {
-        toggleMicrophone(nil)
+    func performToggleMicrophoneShortcut(announceStatus: Bool = true) {
+        toggleMicrophone(announceStatus: announceStatus)
     }
 
     func promptChangeNickname() {
@@ -408,7 +451,7 @@ final class ConnectedServerViewController: NSViewController {
         sendButton.setAccessibilityLabel(L10n.text("connectedServer.chat.send.accessibilityLabel"))
 
         microphoneButton.target = self
-        microphoneButton.action = #selector(toggleMicrophone)
+        microphoneButton.action = #selector(toggleMicrophone(_:))
         microphoneButton.bezelStyle = .rounded
 
         collapsibleVideoPanel.setExpanded(preferencesStore.preferences.videoPanelExpanded, notifyDelegate: false)
@@ -433,6 +476,7 @@ final class ConnectedServerViewController: NSViewController {
         let audioControlsStack = NSStackView(views: [
             outputGainControl,
             inputGainControl,
+            soundEffectsGainControl,
             embeddedMediaStreamingControls.view
         ])
         audioControlsStack.orientation = .vertical
@@ -448,6 +492,7 @@ final class ConnectedServerViewController: NSViewController {
             channelsScrollView,
             collapsibleVideoPanel,
             audioControlsStack,
+            channelMixerSectionView,
             chatTitleLabel,
             chatScrollView,
             inputStack,
@@ -469,9 +514,11 @@ final class ConnectedServerViewController: NSViewController {
             channelsScrollView.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
             channelsScrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 200),
             collapsibleVideoPanel.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
+            channelMixerSectionView.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
             audioControlsStack.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
             outputGainControl.widthAnchor.constraint(equalTo: audioControlsStack.widthAnchor),
             inputGainControl.widthAnchor.constraint(equalTo: audioControlsStack.widthAnchor),
+            soundEffectsGainControl.widthAnchor.constraint(equalTo: audioControlsStack.widthAnchor),
             embeddedMediaStreamingControls.view.widthAnchor.constraint(equalTo: audioControlsStack.widthAnchor),
             chatScrollView.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
             chatScrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 160),
@@ -655,6 +702,7 @@ final class ConnectedServerViewController: NSViewController {
                 }
             )
         )
+        menuState.setMicrophoneMuted(session.voiceTransmissionEnabled == false)
         menuState.setRecordingActive(session.recordingActive)
         menuState.setMediaStreamingActive(session.mediaStreamingActive)
     }
@@ -675,8 +723,15 @@ final class ConnectedServerViewController: NSViewController {
         microphoneButton.isEnabled = session.currentChannelID > 0 || session.voiceTransmissionEnabled
         microphoneButton.setAccessibilityLabel(L10n.text("connectedServer.audio.microphone.accessibilityLabel"))
         microphoneButton.setAccessibilityValue(session.audioStatusText)
+        // Announce the new transmission status only when it actually changes, so VoiceOver
+        // doesn't re-read the value on every (frequent) updateAudioControls() call.
+        if lastAnnouncedMicrophoneStatus != session.audioStatusText {
+            lastAnnouncedMicrophoneStatus = session.audioStatusText
+            NSAccessibility.post(element: microphoneButton, notification: .valueChanged)
+        }
         inputGainControl.setValue(session.inputGainDB)
         outputGainControl.setValue(session.outputGainDB)
+        soundEffectsGainControl.setValue(preferencesStore.preferences.soundEffectsGainDB)
     }
 
     func applyIncrementalTableUpdate<T: Equatable>(
@@ -853,6 +908,13 @@ final class ConnectedServerViewController: NSViewController {
             mediaStreamingHasVideo: session.mediaStreamingHasVideo
         )
         updateAudioControls()
+    }
+
+    func applySoundEffectsGain(_ value: Double) {
+        // Sound-effects level is a global preference (not per-session), so it just
+        // persists to the store, which pushes the new level to the SoundPlayer.
+        let normalized = AppPreferences.clampGainDB(value)
+        preferencesStore.updateSoundEffectsGainDB(normalized)
     }
 
     func promptBroadcastMessage() {
@@ -1329,8 +1391,45 @@ final class ConnectedServerViewController: NSViewController {
         }
     }
 
+    // Pressing the in-window mic button directly makes VoiceOver re-read the button's
+    // changed title/state, so skip the redundant spoken status announcement in that case.
     @objc
     func toggleMicrophone(_ sender: Any? = nil) {
+        toggleMicrophone(announceStatus: (sender as AnyObject?) !== microphoneButton)
+    }
+
+    func toggleMicrophone(announceStatus: Bool) {
+        // In "both" mode ⌘⇧A toggles the always-on gate (lightweight) instead of
+        // arming/disarming the mic engine — the engine stays hot for instant PTT.
+        if connectionController.currentMicrophoneMode == .both {
+            // Opening the gate can arm the mic engine, which needs microphone
+            // access — request it unconditionally: when the mic is already
+            // authorized (any armed state) this returns immediately, and the
+            // authoritative open/closed result comes back from the toggle
+            // itself rather than a possibly-stale main-thread snapshot.
+            connectionController.requestMicrophoneAccess { [weak self] granted in
+                guard let self else { return }
+                guard granted else {
+                    self.presentActionError(L10n.text("connectedServer.audio.error.microphonePermissionDenied"))
+                    return
+                }
+                self.connectionController.toggleBothModeGate { [weak self] result in
+                    guard let self else { return }
+                    switch result {
+                    case .success(let gateNowOpen):
+                        if announceStatus {
+                            self.announce(gateNowOpen
+                                ? L10n.text("connectedServer.audio.voiceEnabled")
+                                : L10n.text("connectedServer.audio.voiceDisabled"))
+                        }
+                    case .failure(let error):
+                        self.presentActionError(error.localizedDescription)
+                    }
+                }
+            }
+            return
+        }
+
         if session.voiceTransmissionEnabled {
             connectionController.deactivateVoiceTransmission { [weak self] result in
                 guard let self else {
@@ -1339,7 +1438,9 @@ final class ConnectedServerViewController: NSViewController {
 
                 switch result {
                 case .success:
-                    self.announce(L10n.text("connectedServer.audio.voiceDisabled"))
+                    if announceStatus {
+                        self.announce(L10n.text("connectedServer.audio.voiceDisabled"))
+                    }
                 case .failure(let error):
                     self.presentActionError(error)
                 }
@@ -1363,7 +1464,9 @@ final class ConnectedServerViewController: NSViewController {
 
                 switch result {
                 case .success:
-                    self.announce(L10n.text("connectedServer.audio.voiceEnabled"))
+                    if announceStatus {
+                        self.announce(L10n.text("connectedServer.audio.voiceEnabled"))
+                    }
                 case .failure(let error):
                     self.presentActionError(error)
                 }

@@ -9,7 +9,7 @@ struct PreferencesImportView: View {
     @ObservedObject var store: AppPreferencesStore
 
     var body: some View {
-        PreferencesPaneScrollView {
+        PreferencesPaneScrollView(accessibilityLabel: L10n.text("preferences.import.title")) {
             VStack(alignment: .leading, spacing: 18) {
                 Toggle(
                     L10n.text("preferences.general.autoDetectImport"),

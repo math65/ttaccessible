@@ -129,17 +129,14 @@ extension ConnectedServerViewController {
         return slider
     }
 
-    private func makeVolumeValueLabel(value: Double) -> NSTextField {
-        let valueLabel = NSTextField(labelWithString: VolumeSliderHandler.formatPercent(value))
-        valueLabel.font = .monospacedDigitSystemFont(ofSize: NSFont.preferredFont(forTextStyle: .body).pointSize, weight: .regular)
-        valueLabel.alignment = .right
+    private func makeVolumeValueLabel(value: Double) -> PercentValueView {
+        let valueLabel = PercentValueView(text: VolumeSliderHandler.formatPercent(value))
         valueLabel.setContentHuggingPriority(.required, for: .horizontal)
-        valueLabel.setAccessibilityElement(false)
         valueLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 44).isActive = true
         return valueLabel
     }
 
-    private func makeVolumeSliderRow(title: String, slider: NSSlider, valueLabel: NSTextField) -> NSStackView {
+    private func makeVolumeSliderRow(title: String, slider: NSSlider, valueLabel: NSView) -> NSStackView {
         let titleLabel = NSTextField(labelWithString: title)
         titleLabel.setContentHuggingPriority(.required, for: .horizontal)
         titleLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 86).isActive = true
@@ -445,6 +442,43 @@ extension ConnectedServerViewController {
     }
 }
 
+/// Right-aligned percentage readout that DRAWS its text rather than using an NSTextField,
+/// so it stays visible for sighted users but offers VoiceOver no text to read. NSTextField
+/// derives `isAccessibilityElement` from its content, so `setAccessibilityElement(false)`
+/// doesn't reliably suppress it inside an NSAlert (which reads its accessory's descendant
+/// NSTextFields even when they aren't accessibility elements). A plain drawing view that
+/// hard-overrides `isAccessibilityElement()` to `false` sidesteps that entirely.
+private final class PercentValueView: NSView {
+    var text: String { didSet { needsDisplay = true; invalidateIntrinsicContentSize() } }
+
+    private static let font = NSFont.monospacedDigitSystemFont(
+        ofSize: NSFont.preferredFont(forTextStyle: .body).pointSize, weight: .regular)
+    private var attributes: [NSAttributedString.Key: Any] {
+        [.font: Self.font, .foregroundColor: NSColor.labelColor]
+    }
+
+    init(text: String) {
+        self.text = text
+        super.init(frame: .zero)
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func isAccessibilityElement() -> Bool { false }
+
+    override var intrinsicContentSize: NSSize {
+        let size = (text as NSString).size(withAttributes: attributes)
+        return NSSize(width: max(44, ceil(size.width)), height: ceil(size.height))
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let str = text as NSString
+        let size = str.size(withAttributes: attributes)
+        str.draw(at: NSPoint(x: bounds.width - size.width,            // right-aligned
+                             y: (bounds.height - size.height) / 2),   // vertically centered
+                 withAttributes: attributes)
+    }
+}
+
 private class VolumeSliderHandler: NSObject {
     enum Stream {
         case voice
@@ -455,7 +489,7 @@ private class VolumeSliderHandler: NSObject {
     let userID: Int32
     let stream: Stream
     let connectionController: TeamTalkConnectionController
-    weak var valueLabel: NSTextField?
+    weak var valueLabel: PercentValueView?
 
     init(userID: Int32, stream: Stream, connectionController: TeamTalkConnectionController) {
         self.userID = userID
@@ -468,7 +502,7 @@ private class VolumeSliderHandler: NSObject {
         sender.doubleValue = percent
         let formatted = Self.formatPercent(percent)
         sender.setAccessibilityValueDescription(formatted)
-        valueLabel?.stringValue = formatted
+        valueLabel?.text = formatted
         let clamped = TeamTalkConnectionController.userVolumeFromPercent(percent)
         switch stream {
         case .voice:

@@ -80,36 +80,63 @@ enum InputChannelPreset: Codable, Hashable {
     }
 }
 
+/// Microphone processing mode. The AEC always implies noise suppression (AEC3
+/// convergence degrades without it), so there is no "echo cancellation alone" state.
+enum MicrophoneProcessingMode: String, Codable, CaseIterable {
+    /// No WebRTC processing — clean passthrough.
+    case none
+    /// Noise suppression only, without echo cancellation (no reference signal needed).
+    case noiseSuppression
+    /// Echo cancellation, which always includes noise suppression.
+    case echoAndNoise
+}
+
 struct AdvancedInputAudioPreferences: Codable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case preset
-        case echoCancellationEnabled
+        case processingMode
         // Legacy keys decoded for backward compatibility but not re-encoded.
+        case echoCancellationEnabled
         case isEnabled
     }
 
     var preset: InputChannelPreset
-    var echoCancellationEnabled: Bool
+    var processingMode: MicrophoneProcessingMode
+
+    /// Whether the AEC3 echo canceller should run (and arm the far-end reference).
+    var echoCancellationEnabled: Bool { processingMode == .echoAndNoise }
+
+    /// Whether WebRTC noise suppression should run. The AEC always implies it.
+    var noiseSuppressionEnabled: Bool {
+        processingMode == .noiseSuppression || processingMode == .echoAndNoise
+    }
 
     init(
         preset: InputChannelPreset = .auto,
-        echoCancellationEnabled: Bool = false
+        processingMode: MicrophoneProcessingMode = .none
     ) {
         self.preset = preset
-        self.echoCancellationEnabled = echoCancellationEnabled
+        self.processingMode = processingMode
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let preset = try container.decodeIfPresent(InputChannelPreset.self, forKey: .preset) ?? .auto
-        let echoCancellationEnabled = try container.decodeIfPresent(Bool.self, forKey: .echoCancellationEnabled) ?? false
-        self.init(preset: preset, echoCancellationEnabled: echoCancellationEnabled)
+        let processingMode: MicrophoneProcessingMode
+        if let mode = try container.decodeIfPresent(MicrophoneProcessingMode.self, forKey: .processingMode) {
+            processingMode = mode
+        } else {
+            // Migrate legacy boolean: AEC on → echo + noise; otherwise no processing.
+            let legacyAEC = try container.decodeIfPresent(Bool.self, forKey: .echoCancellationEnabled) ?? false
+            processingMode = legacyAEC ? .echoAndNoise : .none
+        }
+        self.init(preset: preset, processingMode: processingMode)
     }
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(preset, forKey: .preset)
-        try container.encode(echoCancellationEnabled, forKey: .echoCancellationEnabled)
+        try container.encode(processingMode, forKey: .processingMode)
     }
 }
 

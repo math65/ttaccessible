@@ -37,7 +37,8 @@ extension ConnectedServerViewController {
         let props = ChannelProperties(
             name: "", topic: "", password: "", maxUsers: 200,
             isPermanent: false, isSoloTransmit: false, isNoVoiceActivation: false, isNoRecording: false,
-            opusCodec: parentCodec ?? OpusCodecSettings.defaultSettings
+            opusCodec: parentCodec ?? OpusCodecSettings.defaultSettings,
+            diskQuotaBytes: 0
         )
 
         presentChannelDialog(
@@ -73,7 +74,8 @@ extension ConnectedServerViewController {
             maxUsers: info.maxUsers, isPermanent: info.isPermanent,
             isSoloTransmit: info.isSoloTransmit, isNoVoiceActivation: info.isNoVoiceActivation,
             isNoRecording: info.isNoRecording,
-            opusCodec: info.opusCodec
+            opusCodec: info.opusCodec,
+            diskQuotaBytes: info.diskQuotaBytes
         )
 
         presentChannelDialog(
@@ -157,6 +159,27 @@ extension ConnectedServerViewController {
         maxUsersField.placeholderString = "200"
         maxUsersField.setAccessibilityLabel(L10n.text("connectedServer.channel.form.maxUsers"))
 
+        // File-storage quota with a KB/MB/GB unit picker; converted to the raw
+        // bytes the SDK's nDiskQuota expects. Opens showing the largest unit
+        // that divides the current value cleanly, and switching units converts
+        // the displayed number in place.
+        let diskQuotaLabel = NSTextField(labelWithString: L10n.text("connectedServer.channel.form.diskQuota"))
+        let diskQuotaField = NSTextField(frame: .zero)
+        diskQuotaField.placeholderString = "0"
+        diskQuotaField.setAccessibilityLabel(L10n.text("connectedServer.channel.form.diskQuota"))
+
+        let diskQuotaUnitPopUp = NSPopUpButton()
+        for key in ["common.unit.kb", "common.unit.mb", "common.unit.gb"] {
+            diskQuotaUnitPopUp.addItem(withTitle: L10n.text(key))
+        }
+        diskQuotaUnitPopUp.setAccessibilityLabel(L10n.text("connectedServer.channel.form.diskQuota.unit"))
+
+        let diskQuotaConverter = DiskQuotaUnitConverter(
+            field: diskQuotaField,
+            popup: diskQuotaUnitPopUp,
+            initialBytes: properties.diskQuotaBytes
+        )
+
         let permanentCheck = NSButton(checkboxWithTitle: L10n.text("connectedServer.channel.form.permanent"), target: nil, action: nil)
         permanentCheck.state = properties.isPermanent ? .on : .off
         permanentCheck.setAccessibilityLabel(L10n.text("connectedServer.channel.form.permanent"))
@@ -236,6 +259,19 @@ extension ConnectedServerViewController {
             }
         }
 
+        diskQuotaLabel.translatesAutoresizingMaskIntoConstraints = false
+        stack.addArrangedSubview(diskQuotaLabel)
+        let diskQuotaRow = NSStackView(views: [diskQuotaField, diskQuotaUnitPopUp])
+        diskQuotaRow.orientation = .horizontal
+        diskQuotaRow.spacing = 8
+        diskQuotaField.translatesAutoresizingMaskIntoConstraints = false
+        diskQuotaUnitPopUp.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            diskQuotaField.widthAnchor.constraint(equalToConstant: 232),
+            diskQuotaUnitPopUp.widthAnchor.constraint(equalToConstant: 80)
+        ])
+        stack.addArrangedSubview(diskQuotaRow)
+
         let separator = NSBox()
         separator.boxType = .separator
         stack.addArrangedSubview(separator)
@@ -305,6 +341,7 @@ extension ConnectedServerViewController {
                 bitrate: max(6000, min(510000, bitrateKbps * 1000)),
                 application: Int32(applicationPopUp.selectedItem?.tag ?? 2048)
             )
+            let diskQuotaBytes = diskQuotaConverter.currentBytes
             let result = ChannelProperties(
                 name: nameField.stringValue,
                 topic: topicField.stringValue,
@@ -314,7 +351,8 @@ extension ConnectedServerViewController {
                 isSoloTransmit: soloCheck.state == .on,
                 isNoVoiceActivation: noVoxCheck.state == .on,
                 isNoRecording: noRecCheck.state == .on,
-                opusCodec: codec
+                opusCodec: codec,
+                diskQuotaBytes: diskQuotaBytes
             )
             completion(result, joinCheck?.state == .on)
         }
@@ -325,7 +363,10 @@ extension ConnectedServerViewController {
         guard let channel = selectedChannel else {
             return
         }
+        join(channel)
+    }
 
+    func join(_ channel: ConnectedServerChannel) {
         if channel.isCurrentChannel {
             announce(L10n.format("connectedServer.action.alreadyInChannel", displayText(for: .channel(channel))))
             return
@@ -421,17 +462,25 @@ extension ConnectedServerViewController {
     }
 
     func performDefaultAction() {
-        switch selectedNode {
+        guard let node = selectedNode else {
+            return
+        }
+        performDefaultAction(for: node)
+    }
+
+    // Action par défaut sur un nœud explicite (la ligne sous le curseur VoiceOver),
+    // sans dépendre de la sélection : sans interaction le tableau n'a aucune ligne
+    // sélectionnée, mais VO-Espace doit quand même agir sur la ligne pressée.
+    func performDefaultAction(for node: ServerTreeNode) {
+        switch node {
         case .channel(let channel):
             if channel.isCurrentChannel {
                 leaveCurrentChannel(nil)
             } else {
-                joinSelectedChannel(nil)
+                join(channel)
             }
-        case .user:
-            openPrivateConversation(nil)
-        case .none:
-            return
+        case .user(let user):
+            appDelegate.openPrivateConversation(userID: user.id, displayName: user.displayName)
         }
     }
 
@@ -442,5 +491,80 @@ extension ConnectedServerViewController {
         }
 
         appDelegate.openPrivateConversation(userID: user.id, displayName: user.displayName)
+    }
+}
+
+/// Keeps the channel disk-quota field and its KB/MB/GB popup in sync: switching
+/// units converts the displayed number in place, while the underlying byte
+/// value stays exact — display rounding never drifts the stored quota unless
+/// the user actually edits the text. Retained by the dialog's completion
+/// closure for the lifetime of the sheet.
+private final class DiskQuotaUnitConverter: NSObject {
+    private let field: NSTextField
+    private let popup: NSPopUpButton
+    private let multipliers: [Int64] = [1 << 10, 1 << 20, 1 << 30]
+    private var trueBytes: Int64
+    private var lastRenderedText = ""
+    private var lastUnitIndex: Int
+
+    init(field: NSTextField, popup: NSPopUpButton, initialBytes: Int64) {
+        self.field = field
+        self.popup = popup
+        self.trueBytes = max(0, initialBytes)
+        // Largest unit that divides the value cleanly.
+        if trueBytes > 0, trueBytes % (1 << 30) == 0 {
+            lastUnitIndex = 2
+        } else if trueBytes > 0, trueBytes % (1 << 20) == 0 {
+            lastUnitIndex = 1
+        } else {
+            lastUnitIndex = 0
+        }
+        super.init()
+        popup.target = self
+        popup.action = #selector(unitChanged)
+        render()
+    }
+
+    /// The quota in bytes as currently shown: the exact original value while
+    /// the text is untouched, otherwise the edited number times the unit.
+    var currentBytes: Int64 {
+        bytesParsingField(withUnit: lastUnitIndex)
+    }
+
+    @objc private func unitChanged() {
+        let newIndex = max(0, min(popup.indexOfSelectedItem, multipliers.count - 1))
+        guard newIndex != lastUnitIndex else { return }
+        // Absorb any manual edit in the old unit before converting the display.
+        trueBytes = bytesParsingField(withUnit: lastUnitIndex)
+        lastUnitIndex = newIndex
+        render()
+    }
+
+    private func bytesParsingField(withUnit index: Int) -> Int64 {
+        if field.stringValue == lastRenderedText {
+            return trueBytes
+        }
+        // Accept a decimal comma (French keyboards) as well as a point.
+        let normalized = field.stringValue
+            .trimmingCharacters(in: .whitespaces)
+            .replacingOccurrences(of: ",", with: ".")
+        guard let value = Double(normalized), value.isFinite, value >= 0 else {
+            return trueBytes
+        }
+        let bytes = (value * Double(multipliers[index])).rounded()
+        return bytes >= Double(Int64.max) ? Int64.max : Int64(bytes)
+    }
+
+    private func render() {
+        let multiplier = multipliers[lastUnitIndex]
+        let text: String
+        if trueBytes % multiplier == 0 {
+            text = String(trueBytes / multiplier)
+        } else {
+            text = String(format: "%.2f", Double(trueBytes) / Double(multiplier))
+        }
+        field.stringValue = text
+        lastRenderedText = text
+        popup.selectItem(at: lastUnitIndex)
     }
 }

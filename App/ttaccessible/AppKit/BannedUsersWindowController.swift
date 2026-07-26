@@ -7,7 +7,7 @@ import AppKit
 
 final class BannedUsersWindowController: NSWindowController {
     init(contentViewController: NSViewController) {
-        let window = NSWindow(
+        let window = EscapeClosableWindow(
             contentRect: NSRect(x: 0, y: 0, width: 760, height: 460),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,

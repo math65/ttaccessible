@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ttaccessible-1.7.0-beta.3-34.fr</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --code-bg: #f5f5f7;
+  --link: #0066cc;
+  --link-hover: #0040a0;
+  --rule: #e5e5ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #ececec;
+    --muted: #a0a0a0;
+    --code-bg: #2d2d2d;
+    --link: #4eaaff;
+    --link-hover: #82c4ff;
+    --rule: #3a3a3a;
+  }
+}
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  padding: 1rem 1.25rem 1.5rem;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.15rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.2em; }
+h3 { font-size: 1.02rem; }
+h4 { font-size: 0.95rem; color: var(--muted); }
+p { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; margin: 0.6em 0; }
+li { margin: 0.25em 0; }
+li > p { margin: 0.3em 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover, a:focus { color: var(--link-hover); text-decoration: underline; }
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.75em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+pre code { background: transparent; padding: 0; border-radius: 0; }
+blockquote {
+  border-left: 3px solid var(--rule);
+  margin: 0.8em 0;
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--muted);
+}
+hr { border: 0; border-top: 1px solid var(--rule); margin: 1.5em 0; }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<h2 id="v170-beta3-build-34--2026-06-21">v1.7.0-beta.3 (build 34) —
+2026-06-21</h2>
+<p>Ceci est une version <strong>bêta</strong>, destinée à tester de
+nouveaux changements avant leur diffusion à tout le monde. Pour recevoir
+les mises à jour bêta, activez <strong>Inclure les versions
+bêta</strong> dans Préférences › Général.</p>
+<h2 id="corrections">Corrections</h2>
+<ul>
+<li><strong>VoiceOver annonce de nouveau les changements de
+volume.</strong> Lorsque vous ajustez les curseurs de gain du microphone
+ou de volume de sortie, VoiceOver énonce désormais la nouvelle valeur
+immédiatement au lieu de répéter la précédente. Merci à Gabriel pour le
+signalement.</li>
+</ul>
+<h2 id="aussi-dans-cette-bêta">Aussi dans cette bêta</h2>
+<ul>
+<li><strong>Lancement plus rapide.</strong> L'application marquait une
+pause au démarrage. Cette pause a disparu — ttaccessible s'ouvre
+désormais immédiatement.</li>
+<li><strong>Vider votre pseudo ne vous déconnecte plus.</strong> Lorsque
+vous changez votre pseudo (F5) et laissez le champ vide, ttaccessible
+utilise désormais votre pseudo par défaut des réglages au lieu
+d'afficher l'erreur « Le pseudo ne peut pas être vide ».</li>
+<li><strong>Connectez-vous avec un compte BearWare.</strong>
+Connectez-vous aux serveurs qui utilisent la connexion web BearWare
+(bearware.dk) sans créer de compte distinct sur chacun. Configurez votre
+compte BearWare gratuit une seule fois dans <strong>Préférences ›
+BearWare</strong>, puis activez <strong>Utiliser la connexion web
+BearWare</strong> pour chaque serveur qui la prend en charge. Cette
+fonctionnalité cherche encore des testeurs — vos retours sont les
+bienvenus via Aide › Contacter le développeur.</li>
+</ul>
+<h2 id="installation">Installation</h2>
+<p>Si vous avez activé les mises à jour bêta, ttaccessible installera
+cette mise à jour pour vous — aucune action nécessaire.</p>
+<p>Installation manuelle :</p>
+<ol type="1">
+<li>Téléchargez <code>ttaccessible-1.7.0-beta.3-34.zip</code>
+ci-dessous.</li>
+<li>Décompressez l'archive et glissez <code>ttaccessible.app</code> dans
+votre dossier <code>/Applications</code>, en remplaçant la version
+précédente.</li>
+<li>Double-cliquez — aucun avertissement Gatekeeper grâce à la
+notarisation.</li>
+</ol>
+</body>
+</html>
