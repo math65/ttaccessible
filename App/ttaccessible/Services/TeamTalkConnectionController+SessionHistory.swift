@@ -252,6 +252,17 @@ extension TeamTalkConnectionController {
         let currentStates = Dictionary(uniqueKeysWithValues: UserSubscriptionOption.allCases.map { option in
             (option, option.isPeerEnabled(for: user))
         })
+
+        // During the login sync the server is only (re)establishing peers'
+        // pre-existing subscriptions, often across several user updates —
+        // record the state silently instead of announcing each "transition"
+        // (the intercept sound fired on every login). Alerts are for changes
+        // made while we're actually on the server.
+        if isSuppressingLoginHistoryLocked {
+            observedSubscriptionStates[user.nUserID] = currentStates
+            return
+        }
+
         let previousStates = observedSubscriptionStates[user.nUserID] ?? [:]
 
         for option in UserSubscriptionOption.allCases {

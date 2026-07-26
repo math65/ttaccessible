@@ -18,17 +18,12 @@ extension TeamTalkConnectionController {
                 return
             }
             let didAccess = localURL.startAccessingSecurityScopedResource()
-            do {
-                try self.validateUploadQuotaLocked(instance: instance, channelID: channelID, localURL: localURL)
-            } catch {
-                if didAccess {
-                    localURL.stopAccessingSecurityScopedResource()
-                }
-                DispatchQueue.main.async {
-                    completion(.failure(error))
-                }
-                return
-            }
+            // No client-side quota pre-check: the server is the authority and its
+            // enforcement differs from the visible numbers (verified live: it
+            // accepts uploads past nDiskQuota for privileged users), so local
+            // math false-rejects files the server would take. A genuine quota
+            // rejection comes back as CMDERR_MAX_DISKUSAGE_EXCEEDED and is
+            // mapped to the same localized message.
             let result = localURL.path.withCString { TT_DoSendFile(instance, channelID, $0) }
             if result > 0 {
                 if didAccess {
@@ -93,44 +88,6 @@ extension TeamTalkConnectionController {
     private func releaseSecurityScopedTransferURLLocked(transferID: Int32) {
         guard let url = securityScopedFileTransferURLs.removeValue(forKey: transferID) else { return }
         url.stopAccessingSecurityScopedResource()
-    }
-
-    private func validateUploadQuotaLocked(
-        instance: UnsafeMutableRawPointer,
-        channelID: Int32,
-        localURL: URL
-    ) throws {
-        var channel = Channel()
-        guard TT_GetChannel(instance, channelID, &channel) != 0, channel.nDiskQuota > 0 else {
-            return
-        }
-
-        let values = try? localURL.resourceValues(forKeys: [.fileSizeKey])
-        guard let size = values?.fileSize, size > 0 else {
-            return
-        }
-
-        let fileSize = Int64(size)
-        let usedStorage = channelFileStorageUsedLocked(instance: instance, channelID: channelID)
-        guard usedStorage + fileSize <= channel.nDiskQuota else {
-            throw TeamTalkConnectionError.internalError(L10n.text("files.error.uploadQuotaExceeded"))
-        }
-    }
-
-    private func channelFileStorageUsedLocked(instance: UnsafeMutableRawPointer, channelID: Int32) -> Int64 {
-        var fileCount: INT32 = 0
-        guard TT_GetChannelFiles(instance, channelID, nil, &fileCount) != 0, fileCount > 0 else {
-            return 0
-        }
-
-        var files = Array(repeating: RemoteFile(), count: Int(fileCount))
-        guard TT_GetChannelFiles(instance, channelID, &files, &fileCount) != 0 else {
-            return 0
-        }
-
-        return files.prefix(Int(fileCount)).reduce(Int64(0)) { partial, file in
-            partial + file.nFileSize
-        }
     }
 
     private func standardFilePath(_ path: String) -> String {
@@ -261,6 +218,19 @@ extension TeamTalkConnectionController {
             if cmdID > 0 {
                 self.pendingUserAccounts = []
                 self.listUserAccountsCmdID = cmdID
+                // Build the online-nickname map once for this listing (first login
+                // wins for multi-login accounts, matching the old per-account
+                // TT_GetUserByUsername behaviour) instead of one SDK call each.
+                var nicknames: [String: String] = [:]
+                for user in self.fetchServerUsersLocked(instance: instance) {
+                    let username = ttString(from: user.szUsername)
+                    guard username.isEmpty == false else { continue }
+                    let key = username.lowercased()
+                    if nicknames[key] == nil {
+                        nicknames[key] = ttString(from: user.szNickname)
+                    }
+                }
+                self.onlineNicknamesByUsername = nicknames
             }
         }
     }
@@ -360,6 +330,12 @@ extension TeamTalkConnectionController {
     func makeUserAccountProperties(from account: UserAccount) -> UserAccountProperties {
         var props = UserAccountProperties()
         props.username = ttString(from: account.szUsername)
+        // Show who currently uses the account: nickname of the logged-in user
+        // (first match for multi-login accounts), empty when nobody's online.
+        // Read from the map built once per listing rather than an SDK call each.
+        if props.username.isEmpty == false {
+            props.onlineNickname = onlineNicknamesByUsername[props.username.lowercased()] ?? ""
+        }
         props.password = ttString(from: account.szPassword)
         if (account.uUserType & UInt32(USERTYPE_ADMIN.rawValue)) != 0 {
             props.userType = .admin
@@ -630,10 +606,34 @@ extension TeamTalkConnectionController {
         }
     }
 
+    // The per-channel "may I move people out of here" right lives on
+    // `ConnectedServerChannel.canMoveUsersOut`, computed in the session
+    // snapshot: the answer is needed while building outline cells, where a
+    // `queue.sync` per row would block the main thread on this queue.
+
     func hasOperatorEnableRight() -> Bool {
         guard let instance else { return false }
         return queue.sync {
             (TT_GetMyUserRights(instance) & UInt32(USERRIGHT_OPERATOR_ENABLE.rawValue)) != 0
+        }
+    }
+
+    /// Whether recording is allowed in the channel we are currently in. Mirrors the SDK's
+    /// own rule: a channel with CHANNEL_NO_RECORDING forbids recording unless our account
+    /// holds USERRIGHT_RECORD_VOICE. Used to disable the ⌘R / ⌘⇧R recording actions so the
+    /// app honours the channel's policy (matching the Qt client). Returns true when not in
+    /// a channel, so the caller's other guards decide.
+    func isRecordingAllowedInCurrentChannel() -> Bool {
+        guard let instance else { return true }
+        return queue.sync {
+            let channelID = TT_GetMyChannelID(instance)
+            guard channelID > 0 else { return true }
+            var channel = Channel()
+            guard TT_GetChannel(instance, channelID, &channel) != 0 else { return true }
+            let noRecording = (channel.uChannelType & UInt32(CHANNEL_NO_RECORDING.rawValue)) != 0
+            guard noRecording else { return true }
+            let canRecord = (TT_GetMyUserRights(instance) & UInt32(USERRIGHT_RECORD_VOICE.rawValue)) != 0
+            return canRecord
         }
     }
 
@@ -689,7 +689,11 @@ extension TeamTalkConnectionController {
                 maxVideoCaptureTxPerSecond: sp.nMaxVideoCaptureTxPerSecond,
                 maxMediaFileTxPerSecond: sp.nMaxMediaFileTxPerSecond,
                 maxDesktopTxPerSecond: sp.nMaxDesktopTxPerSecond,
-                maxTotalTxPerSecond: sp.nMaxTotalTxPerSecond
+                maxTotalTxPerSecond: sp.nMaxTotalTxPerSecond,
+                tcpPort: sp.nTcpPort,
+                udpPort: sp.nUdpPort,
+                serverVersion: self.ttString(from: sp.szServerVersion),
+                serverProtocolVersion: self.ttString(from: sp.szServerProtocolVersion)
             )
         }
         return result
@@ -722,6 +726,8 @@ extension TeamTalkConnectionController {
             sp.nMaxMediaFileTxPerSecond = props.maxMediaFileTxPerSecond
             sp.nMaxDesktopTxPerSecond = props.maxDesktopTxPerSecond
             sp.nMaxTotalTxPerSecond = props.maxTotalTxPerSecond
+            sp.nTcpPort = props.tcpPort
+            sp.nUdpPort = props.udpPort
 
             let commandID = withUnsafeMutablePointer(to: &sp) { TT_DoUpdateServer(instance, $0) }
             guard commandID > 0 else {
@@ -781,6 +787,46 @@ extension TeamTalkConnectionController {
             guard let self, let instance = self.instance else { return }
             _ = TT_SetUserStereo(instance, userID, STREAMTYPE_VOICE, leftSpeaker ? 1 : 0, rightSpeaker ? 1 : 0)
         }
+    }
+
+    /// Continuous pan for the Channel Mixer (-1 left .. 0 center .. +1 right) plus the
+    /// engine-level mute used for SOLO (mute everyone NOT soloed). Voice and media are
+    /// independent sources in our own per-user mix (OutputAudioRenderEngine), each with
+    /// its own pan — mirroring the split voice/media volume controls — so the two are set
+    /// separately. This is independent of the SDK's discrete left/right stereo and the
+    /// SDK per-user mute. Volume stays at the SDK layer, so the engine gain is left at 1.
+    /// Pan persisted. `engineMuted` (SOLO) applies to whichever source is being set.
+    func setUserVoicePan(userID: Int32, username: String, pan: Float, engineMuted: Bool = false) {
+        let clamped = max(-1, min(1, pan))
+        userVolumeStore.setVoicePan(clamped, forUsername: username)
+        queue.async { [weak self] in
+            guard let self else { return }
+            let settings = OutputUserMixSettings(volume: 1, pan: clamped, muted: engineMuted)
+            self.outputRenderEngine.setUserSettings(settings, for: userID)
+        }
+    }
+
+    func setUserMediaPan(userID: Int32, username: String, pan: Float, engineMuted: Bool = false) {
+        let clamped = max(-1, min(1, pan))
+        userVolumeStore.setMediaPan(clamped, forUsername: username)
+        let mediaKey = outputMediaSourceKey(userID)
+        queue.async { [weak self] in
+            guard let self else { return }
+            let settings = OutputUserMixSettings(volume: 1, pan: clamped, muted: engineMuted)
+            self.outputRenderEngine.setUserSettings(settings, for: mediaKey)
+        }
+    }
+
+    /// Content-derived effective channels for the user's voice / media source (1 mono,
+    /// 2 stereo, nil if not judged yet) — drives the mixer's "Center" vs "Stereo".
+    /// This reflects whether L actually differs from R, not the SDK's codec-driven
+    /// nChannels (a stereo-codec channel decodes even a mono phone mic to 2 channels).
+    func deliveredVoiceChannels(userID: Int32) -> Int? {
+        outputRenderEngine.announcedChannels(for: userID)
+    }
+
+    func deliveredMediaChannels(userID: Int32) -> Int? {
+        outputRenderEngine.announcedChannels(for: outputMediaSourceKey(userID))
     }
 
     func getUserStereo(userID: Int32, completion: @escaping @MainActor (Bool, Bool) -> Void) {

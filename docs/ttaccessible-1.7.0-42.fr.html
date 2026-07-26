@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ttaccessible-1.7.0-42.fr</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --code-bg: #f5f5f7;
+  --link: #0066cc;
+  --link-hover: #0040a0;
+  --rule: #e5e5ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #ececec;
+    --muted: #a0a0a0;
+    --code-bg: #2d2d2d;
+    --link: #4eaaff;
+    --link-hover: #82c4ff;
+    --rule: #3a3a3a;
+  }
+}
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  padding: 1rem 1.25rem 1.5rem;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.15rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.2em; }
+h3 { font-size: 1.02rem; }
+h4 { font-size: 0.95rem; color: var(--muted); }
+p { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; margin: 0.6em 0; }
+li { margin: 0.25em 0; }
+li > p { margin: 0.3em 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover, a:focus { color: var(--link-hover); text-decoration: underline; }
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.75em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+pre code { background: transparent; padding: 0; border-radius: 0; }
+blockquote {
+  border-left: 3px solid var(--rule);
+  margin: 0.8em 0;
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--muted);
+}
+hr { border: 0; border-top: 1px solid var(--rule); margin: 1.5em 0; }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<h2 id="v170-build-42--8-juillet-2026">v1.7.0 (build 42) — 8 juillet
+2026</h2>
+<p>Voici la version stable qui met entre toutes les mains ce qui a été
+mis au point tout au long des bêtas 1.7.0. Si vous veniez de la 1.6.0,
+voici ce qui a changé.</p>
+<h3 id="en-bref">En bref</h3>
+<ul>
+<li><strong>Une toute nouvelle table de mixage par personne.</strong>
+Pour chaque personne présente dans votre canal, vous réglez son volume
+de voix, son volume des médias, sa position gauche/droite, sa coupure et
+son solo — le tout au clavier et avec VoiceOver.</li>
+<li><strong>Connexion avec un compte BearWare.</strong> Un identifiant
+gratuit bearware.dk suffit désormais pour vous connecter aux serveurs
+compatibles, sans créer un compte différent sur chacun.</li>
+<li><strong>Un moteur audio reconstruit, plus rapide et plus
+stable.</strong> La connexion est de nouveau quasi instantanée, changer
+de casque ou d'enceintes ne fige plus le son, et les canaux chargés
+restent fluides.</li>
+</ul>
+<h3 id="la-table-de-mixage">La table de mixage</h3>
+<ul>
+<li>Chaque personne du canal a sa propre tranche : <strong>volume de la
+voix, volume des médias, position stéréo, coupure et solo</strong>.</li>
+<li>Tout se pilote au clavier lorsque vous êtes positionné sur une
+personne : Haut/Bas pour le volume de la voix, Commande+Haut/Bas pour
+son volume des médias, Gauche/Droite pour la déplacer dans l'espace
+stéréo, et V, P, M, S pour entendre ou réinitialiser le volume, la
+position, la coupure et le solo.</li>
+<li><strong>Nouveau : appuyez sur Commande+5 pour aller directement à la
+table de mixage</strong> — elle rejoint les raccourcis de zones
+Commande+1 à Commande+4 en tant que cinquième zone. (Merci à Matthew
+Whitaker pour l'idée.)</li>
+<li>Les réglages de chaque personne sont mémorisés et reviennent la
+prochaine fois qu'elle se connecte.</li>
+</ul>
+<h3 id="audio">Audio</h3>
+<ul>
+<li><strong>Changer de périphérique de sortie ne fige plus le
+son.</strong> Basculez de casque ou d'enceintes en cours de connexion,
+le son suit tout simplement.</li>
+<li><strong>La connexion est de nouveau rapide.</strong> Sur les Mac
+équipés de beaucoup de matériel audio, l'ouverture d'une connexion
+pouvait s'immobiliser une dizaine de secondes le temps d'inspecter
+chaque appareil — cette analyse a disparu, et le correctif est
+maintenant intégré à chaque version.</li>
+<li><strong>Les canaux chargés et en haute qualité restent
+fluides.</strong> Les canaux qui utilisent de gros paquets audio
+pouvaient hacher pour tout le monde ; la lecture a été revue pour tenir
+la charge.</li>
+<li><strong>Votre micro et votre sortie choisis sont retenus de façon
+fiable</strong>, même après un débranchement, un rebranchement ou un
+redémarrage, au lieu de retomber discrètement sur le mauvais
+appareil.</li>
+<li><strong>Réduction de bruit indépendante.</strong> Un nouveau réglage
+Traitement du microphone (Préférences › Audio) vous laisse choisir entre
+Aucun, Réduction de bruit, ou Annulation d'écho avec réduction de bruit
+— et le changement s'applique en direct, même pendant que vous
+parlez.</li>
+<li><strong>Vous entendez désormais vos propres médias diffusés</strong>
+lorsque vous jouez un fichier audio ou vidéo dans un canal.</li>
+<li><strong>Les volumes par personne sont maintenant conservés par
+serveur</strong> : un volume réglé sur un serveur ne déborde plus sur un
+autre. Un nouveau réglage vous laisse décider s'ils sont retenus en
+permanence, seulement le temps de la session, ou pas du tout.</li>
+</ul>
+<h3 id="accessibilité">Accessibilité</h3>
+<ul>
+<li>L'application s'appelle désormais <strong>tt-Accessible</strong>,
+pour que VoiceOver et les synthèses vocales la prononcent
+correctement.</li>
+<li><strong>Appuyez sur VoiceOver+Espace pour rejoindre</strong> le
+serveur ou le canal sélectionné.</li>
+<li><strong>Les curseurs et le bouton du microphone annoncent maintenant
+leur valeur</strong> au fur et à mesure que vous les modifiez — gain,
+volume de sortie et les différents curseurs des Préférences.</li>
+<li>Les Préférences se lisent plus proprement avec VoiceOver : plus
+d'étiquettes en double, chaque section est un vrai titre, les zones de
+défilement sont nommées, et Échap ferme la fenêtre.</li>
+</ul>
+<h3 id="corrections">Corrections</h3>
+<ul>
+<li><strong>La connexion web BearWare aboutit de façon fiable</strong>,
+y compris sur les serveurs qui répondent de manière un peu
+inhabituelle.</li>
+<li><strong>Un pseudo laissé vide</strong> revient maintenant à votre
+pseudo par défaut au lieu d'empêcher la connexion.</li>
+<li>L'application <strong>démarre plus vite</strong>.</li>
+</ul>
+<h3 id="remerciements">Remerciements</h3>
+<p>Un grand merci à <strong>Rocco Fiorentino</strong>, qui a conçu et
+réalisé la refonte audio et la table de mixage, les améliorations
+d'accessibilité et VoiceOver, ainsi que la connexion plus rapide et plus
+stable de cette version. Merci à <strong>Matthew Whitaker</strong> pour
+la suggestion du Commande+5 — et à toutes les personnes qui ont testé
+les bêtas et fait remonter leurs retours.</p>
+<h3 id="installation">Installation</h3>
+<p>tt-Accessible installe cette mise à jour pour vous automatiquement.
+Pour l'installer à la main :</p>
+<ol type="1">
+<li>Téléchargez <code>ttaccessible-1.7.0-42.zip</code> ci-dessous.</li>
+<li>Décompressez-le et glissez <code>ttaccessible.app</code> dans votre
+dossier <code>/Applications</code>, en remplaçant la version
+précédente.</li>
+<li>Double-cliquez — aucun avertissement Gatekeeper grâce à la
+notarisation.</li>
+</ol>
+<h3 id="téléchargement">Téléchargement</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.7.0/ttaccessible-1.7.0-42.zip">ttaccessible-1.7.0-42.zip</a></p>
+</body>
+</html>

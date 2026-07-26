@@ -102,14 +102,21 @@ extension ConnectedServerViewController: NSOutlineViewDelegate {
         guard let node = item as? ServerTreeNode else { return nil }
 
         let identifier = NSUserInterfaceItemIdentifier("ConnectedServerCell")
-        let textField: NSTextField
+        let textField: PressActionTextField
 
-        if let cell = outlineView.makeView(withIdentifier: identifier, owner: self) as? NSTextField {
+        if let cell = outlineView.makeView(withIdentifier: identifier, owner: self) as? PressActionTextField {
             textField = cell
         } else {
-            textField = NSTextField(labelWithString: "")
+            textField = PressActionTextField(labelWithString: "")
             textField.identifier = identifier
             textField.lineBreakMode = .byTruncatingTail
+        }
+
+        // VO-Espace effectue l'action par défaut sur CE nœud (rejoindre/quitter un salon,
+        // ouvrir un message privé), comme la touche Entrée — indépendamment de la
+        // sélection, car sans interaction l'arbre n'a aucune ligne sélectionnée.
+        textField.onPress = { [weak self] in
+            self?.performDefaultAction(for: node)
         }
 
         let accessLabel = accessibilityText(for: node)
@@ -144,11 +151,23 @@ extension ConnectedServerViewController: NSOutlineViewDelegate {
             let joinActionName = channel.isCurrentChannel
                 ? L10n.text("connectedServer.voAction.leave")
                 : L10n.text("connectedServer.voAction.join")
-            textField.setAccessibilityCustomActions([
+            var channelActions: [NSAccessibilityCustomAction] = [
                 NSAccessibilityCustomAction(name: joinActionName) { [weak self] in
                     self?.performDefaultAction(); return true
                 }
-            ])
+            ]
+            if !channel.users.isEmpty, canMoveUsers(from: channel) {
+                // Capture the ID and re-resolve at invoke time: this action
+                // belongs to THIS row (the VoiceOver cursor's), and the row's
+                // occupants may have changed since the cell was built.
+                let channelID = channel.id
+                channelActions.append(NSAccessibilityCustomAction(name: L10n.text("connectedServer.voAction.moveChannelUsers")) { [weak self] in
+                    guard let self, let target = self.session.findChannelByID(channelID) else { return false }
+                    self.presentMoveUsers(in: target)
+                    return true
+                })
+            }
+            textField.setAccessibilityCustomActions(channelActions)
         case .user(let user):
             textField.font = user.isTalking
                 ? .boldSystemFont(ofSize: NSFont.systemFontSize)

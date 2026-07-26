@@ -50,6 +50,48 @@ enum AudioPCMResampler {
 
         return Result(samples: output, frameCount: outputFrames)
     }
+
+    /// Zero-allocation variant for the real-time audio thread: resamples `input`
+    /// (`frameCount * channels` interleaved Int16 samples) into the caller-owned
+    /// `output` buffer and returns the number of output frames written. Never
+    /// allocates and never writes past `outputCapacityFrames`.
+    static func resampleInterleaved(
+        input: UnsafePointer<Int16>,
+        frameCount: Int,
+        channels: Int,
+        inputRate: Double,
+        outputRate: Double,
+        output: UnsafeMutablePointer<Int16>,
+        outputCapacityFrames: Int
+    ) -> Int {
+        guard frameCount > 0, channels > 0, inputRate > 0, outputRate > 0,
+              outputCapacityFrames > 0 else { return 0 }
+
+        // No rate change (or degenerate rates): straight copy, bounded by capacity.
+        if abs(inputRate - outputRate) < 0.5 {
+            let framesToCopy = min(frameCount, outputCapacityFrames)
+            output.update(from: input, count: framesToCopy * channels)
+            return framesToCopy
+        }
+
+        let ratio = outputRate / inputRate
+        let outputFrames = min(outputCapacityFrames,
+                               max(1, Int((Double(frameCount) * ratio).rounded())))
+        for outFrame in 0..<outputFrames {
+            let srcPosition = Double(outFrame) / ratio
+            let srcIndex = Int(srcPosition)
+            let fraction = srcPosition - Double(srcIndex)
+            let nextIndex = min(srcIndex + 1, frameCount - 1)
+
+            for channel in 0..<channels {
+                let sample0 = Double(input[srcIndex * channels + channel])
+                let sample1 = Double(input[nextIndex * channels + channel])
+                let value = sample0 + fraction * (sample1 - sample0)
+                output[outFrame * channels + channel] = Int16(clamping: Int(value.rounded()))
+            }
+        }
+        return outputFrames
+    }
 }
 
 #if DEBUG

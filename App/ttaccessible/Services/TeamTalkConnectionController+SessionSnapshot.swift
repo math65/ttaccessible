@@ -25,7 +25,7 @@ extension TeamTalkConnectionController {
             userAudioStates: Dictionary(
                 uniqueKeysWithValues: users.map { user in
                     let isTalking = user.nUserID == TT_GetMyUserID(instance)
-                        ? voiceTransmissionEnabled
+                        ? isEffectivelyTransmittingLocked
                         : (user.uUserState & UInt32(USERSTATE_VOICE.rawValue)) != 0
                     let isMuted = (user.uUserState & UInt32(USERSTATE_MUTE_VOICE.rawValue)) != 0
                     let isMediaFileMuted = (user.uUserState & UInt32(USERSTATE_MUTE_MEDIAFILE.rawValue)) != 0
@@ -42,7 +42,7 @@ extension TeamTalkConnectionController {
                     )
                 }
             ),
-            voiceTransmissionEnabled: voiceTransmissionEnabled,
+            voiceTransmissionEnabled: microphoneGateOpenLocked,
             audioStatusText: makeAudioStatusText(),
             inputAudioReady: inputAudioReady,
             outputAudioReady: outputAudioReady
@@ -60,6 +60,15 @@ extension TeamTalkConnectionController {
         record: SavedServerRecord,
         invalidation: SessionPublishInvalidation = .all
     ) {
+        // Record where we are while the SDK still knows: it clears its own
+        // channel state before posting MYSELF_LOGGEDOUT, so the drop handler
+        // can't ask for it on that path and rejoins nothing.
+        let myChannelID = TT_GetMyChannelID(instance)
+        if myChannelID > 0 {
+            lastKnownChannelID = myChannelID
+            lastKnownChannelPath = channelPathLocked(instance: instance, channelID: myChannelID)
+        }
+
         let snapshot = makeSessionSnapshotLocked(instance: instance, record: record, invalidation: invalidation)
         lastBuiltSessionSnapshot = snapshot
 
@@ -206,7 +215,7 @@ extension TeamTalkConnectionController {
                     isAdministrator: (user.uUserType & UInt32(USERTYPE_ADMIN.rawValue)) != 0,
                     isChannelOperator: TT_IsChannelOperator(instance, user.nUserID, user.nChannelID) != 0,
                     isTalking: user.nUserID == currentUserID
-                        ? voiceTransmissionEnabled
+                        ? isEffectivelyTransmittingLocked
                         : (user.uUserState & UInt32(USERSTATE_VOICE.rawValue)) != 0,
                     isMuted: (user.uUserState & UInt32(USERSTATE_MUTE_VOICE.rawValue)) != 0,
                     isMediaFileMuted: (user.uUserState & UInt32(USERSTATE_MUTE_MEDIAFILE.rawValue)) != 0,
@@ -227,6 +236,12 @@ extension TeamTalkConnectionController {
                 )
             }
 
+            // Account-wide move right: constant across channels, so resolve it
+            // once instead of per channel. When it's absent the per-channel
+            // operator check below decides.
+            let hasGlobalMoveRight =
+                (TT_GetMyUserRights(instance) & UInt32(USERRIGHT_MOVE_USERS.rawValue)) != 0
+
             func buildChannelTree(parentID: Int32, parentPathComponents: [String]) -> [ConnectedServerChannel] {
                 let childChannels = channelsByParent[parentID] ?? []
 
@@ -246,7 +261,9 @@ extension TeamTalkConnectionController {
                         isCurrentChannel: channel.nChannelID == currentChannelID,
                         pathComponents: channelPathComponents,
                         children: buildChannelTree(parentID: channel.nChannelID, parentPathComponents: channelPathComponents),
-                        users: channelUsers
+                        users: channelUsers,
+                        canMoveUsersOut: hasGlobalMoveRight
+                            || TT_IsChannelOperator(instance, currentUserID, channel.nChannelID) != 0
                     )
                 }
 
@@ -336,7 +353,7 @@ extension TeamTalkConnectionController {
                 : (previousSnapshot?.activeTransfers ?? Array(activeTransferProgress.values)),
             outputAudioReady: outputAudioReady,
             inputAudioReady: inputAudioReady,
-            voiceTransmissionEnabled: voiceTransmissionEnabled,
+            voiceTransmissionEnabled: microphoneGateOpenLocked,
             canSendBroadcast: canSendBroadcast,
             isNicknameLocked: isNicknameLocked,
             isStatusLocked: isStatusLocked,

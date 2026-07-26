@@ -1,0 +1,36 @@
+Split: 12 train, 8 test (holdout=0.4)
+
+============================================================
+Iteration 1/5
+Description: Inspect the ttaccessible audio diagnostics log at ~/Library/Logs/TTAccessible/audio.log. Use this skill whenever the user is investigating an audio issue — mic not working, no input level, echo or feedback, crackling/saturation, AEC not cancelling, device hot-plug bugs, mic preview freeze, output device switch problems, AVAudioEngine or AUHAL failures — or asks to "check the audio log", "debug the mic", "see what AEC is doing". The log is wiped on each app launch, so always reproduce the issue first, then read. Includes ready-made grep patterns (`AEC diag:`, device events, engine lifecycle, errors).
+============================================================
+Train: 20/36 correct, precision=100% recall=11% accuracy=56% (40.6s)
+  [FAIL] rate=0/3 expected=True: j'entends mon propre écho quand je parle, l'AEC a l'air de p
+  [FAIL] rate=0/3 expected=True: VoiceOver speech is leaking into my mic and other users hear
+  [FAIL] rate=0/3 expected=True: The mic preview test passes — I hear myself in the preview —
+  [FAIL] rate=1/3 expected=True: I get an 'AEC diag:' line showing reference rate 48000 and c
+  [FAIL] rate=0/3 expected=True: Mon micro grésille à fond dès que je passe sur l'interface K
+  [PASS] rate=0/3 expected=False: Refactor AdvancedMicrophoneAudioEngine to use async/await in
+  [FAIL] rate=1/3 expected=True: AEC isn't cancelling anymore — the voice from my speakers co
+  [PASS] rate=0/3 expected=False: Write a unit test for AudioPCMResampler that verifies the li
+  [PASS] rate=0/3 expected=False: Bump the default input gain to +6 dB and update the slider's
+  [PASS] rate=0/3 expected=False: What does TT_MUXED_USERID do in the TeamTalk SDK and how is 
+  [PASS] rate=0/3 expected=False: Where exactly does AudioLogger write its log file on a sandb
+  [PASS] rate=0/3 expected=False: Explain how WebRTC AEC3 works conceptually — what's a refere
+Test : 12/24 correct, precision=100% recall=0% accuracy=50% (0.0s)
+  [FAIL] rate=0/3 expected=True: Beta tester just reported that the mic engine fails to start
+  [FAIL] rate=0/3 expected=True: Why is my mic input dropping out every 30 seconds or so? It'
+  [FAIL] rate=0/3 expected=True: I just plugged in a new USB mic (Yeti Nano) and ttaccessible
+  [FAIL] rate=0/3 expected=True: AVAudioEngine doesn't seem to switch to my non-default input
+  [PASS] rate=0/3 expected=False: Write the release notes for the v1.3.3 audio fixes — the dup
+  [PASS] rate=0/3 expected=False: Document the AUHAL frame accumulation logic in CLAUDE.md — t
+  [PASS] rate=0/3 expected=False: How do I add a new notification sound to the Default sound p
+  [PASS] rate=0/3 expected=False: Add a setting in Preferences > Audio to disable the speaker 
+
+Improving description...
+Proposed (19.3s): Use this skill whenever the user reports or wants to debug an audio problem in the ttaccessible / TeamTalk app — symptoms involving the mic, speakers, AEC / echo cancellation, hearing their own echo, voice leaking to other users in a channel, VoiceOver bleeding into the mic, no sound reaching the channel even when mic preview works, crackling / distortion / saturation on a USB interface, hot-plug or device-switch glitches, mic preview freeze, sample-rate mismatches, or AVAudioEngine / AUHAL failures. Trigger on symptom descriptions in any language (English, French, etc.) — the user does NOT need to say "log", "AEC diag", or any technical term; "j'entends mon écho", "mon micro grésille", "AEC isn't cancelling", "others hear my speakers" all qualify. Reads `~/Library/Logs/TTAccessible/audio.log` (wiped each launch — reproduce first) with ready-made grep patterns. Do NOT use for code refactors, unit tests, UI tweaks, SDK questions, or AEC theory.
+
+============================================================
+Iteration 2/5
+Description: Use this skill whenever the user reports or wants to debug an audio problem in the ttaccessible / TeamTalk app — symptoms involving the mic, speakers, AEC / echo cancellation, hearing their own echo, voice leaking to other users in a channel, VoiceOver bleeding into the mic, no sound reaching the channel even when mic preview works, crackling / distortion / saturation on a USB interface, hot-plug or device-switch glitches, mic preview freeze, sample-rate mismatches, or AVAudioEngine / AUHAL failures. Trigger on symptom descriptions in any language (English, French, etc.) — the user does NOT need to say "log", "AEC diag", or any technical term; "j'entends mon écho", "mon micro grésille", "AEC isn't cancelling", "others hear my speakers" all qualify. Reads `~/Library/Logs/TTAccessible/audio.log` (wiped each launch — reproduce first) with ready-made grep patterns. Do NOT use for code refactors, unit tests, UI tweaks, SDK questions, or AEC theory.
+============================================================

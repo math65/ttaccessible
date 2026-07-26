@@ -36,6 +36,11 @@ struct ConnectedServerUser: Equatable, Identifiable {
         if username.isEmpty {
             return nickname
         }
+        // When the nickname and username are effectively the same, show it once
+        // (otherwise VoiceOver reads e.g. "dom (dom)" — the same name twice).
+        if nickname.caseInsensitiveCompare(username) == .orderedSame {
+            return nickname
+        }
         return "\(nickname) (\(username))"
     }
 
@@ -55,6 +60,17 @@ struct ConnectedServerChannel: Equatable, Identifiable {
     let pathComponents: [String]
     let children: [ConnectedServerChannel]
     let users: [ConnectedServerUser]
+    /// Whether the local user may move people OUT of this channel: the
+    /// account-wide move right, or operator status on this very channel.
+    ///
+    /// Carried in the snapshot rather than asked of the SDK on demand, because
+    /// the answer is needed while building outline cells — one `queue.sync` per
+    /// channel row, on the main thread, against the queue the message loop
+    /// occupies and a reconnect attempt can hold for ~10 s. Computed here it
+    /// costs one SDK call per channel on a thread that is already on the queue.
+    /// (`ConnectedServerUser.isChannelOperator` can't answer this: it is
+    /// computed against the user's OWN channel.)
+    let canMoveUsersOut: Bool
 
     var directUserCount: Int {
         users.count
@@ -62,6 +78,16 @@ struct ConnectedServerChannel: Equatable, Identifiable {
 
     var totalUserCount: Int {
         directUserCount + children.reduce(0) { $0 + $1.totalUserCount }
+    }
+
+    /// Human-readable path for pickers: the channel hierarchy without the root
+    /// element, which carries the SERVER's display name rather than a channel
+    /// name. A bare name can't distinguish same-named subchannels under
+    /// different parents, which TeamTalk allows — "Music / General" can.
+    /// Falls back to `name` for the root channel itself (empty path).
+    var displayPath: String {
+        let path = pathComponents.dropFirst()
+        return path.isEmpty ? name : path.joined(separator: " / ")
     }
 }
 
@@ -99,6 +125,28 @@ extension ConnectedServerSession {
 enum ServerTreeNode: Equatable {
     case channel(ConnectedServerChannel)
     case user(ConnectedServerUser)
+}
+
+// ServerTreeNode is the item type backing the channel NSOutlineView, so AppKit calls
+// -hash on it constantly during reloads (heaviest right at connect, when the whole
+// tree populates). Without Hashable, that hits a slow Obj-C reflection fallback —
+// flagged by the runtime as a "severe performance problem" and a CPU drain in exactly
+// the window the audio engine is starting. Hash by identity only (case + id), NOT the
+// channel's recursive children/users (a synthesized hash would deep-traverse the whole
+// subtree). This stays consistent with the synthesized Equatable: equal nodes share the
+// same id, so they hash equally; differing-but-same-id nodes may collide, which Hashable
+// permits. Equality (and thus outline item identity) is unchanged.
+extension ServerTreeNode: Hashable {
+    func hash(into hasher: inout Hasher) {
+        switch self {
+        case .channel(let channel):
+            hasher.combine(0)
+            hasher.combine(channel.id)
+        case .user(let user):
+            hasher.combine(1)
+            hasher.combine(user.id)
+        }
+    }
 }
 
 struct FileTransferProgress: Equatable {

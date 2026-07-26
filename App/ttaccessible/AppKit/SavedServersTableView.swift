@@ -28,6 +28,14 @@ final class SavedServersTableView: NSTableView {
         return actionDelegate?.savedServersTableView(self, menuForRow: row)
     }
 
+    // VO-Espace sur le tableau (sans interagir) rejoint la ligne sélectionnée,
+    // exactement comme la touche Entrée. Sans cela, VO-Espace n'agit que lorsqu'on
+    // a « interagi » avec le tableau (curseur VoiceOver descendu sur une cellule).
+    override func accessibilityPerformPress() -> Bool {
+        actionDelegate?.savedServersTableViewDidRequestConnect(self)
+        return true
+    }
+
     override func keyDown(with event: NSEvent) {
         if event.modifierFlags.intersection(.deviceIndependentFlagsMask).isEmpty,
            event.keyCode == 36 || event.keyCode == 76 {

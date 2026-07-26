@@ -5,7 +5,9 @@
 //  Created by Mathieu Martin on 18/03/2026.
 //
 
+import AudioToolbox
 import AVFAudio
+import CoreAudio
 import Foundation
 
 @MainActor
@@ -29,7 +31,7 @@ final class AdvancedMicrophonePreviewController {
         captureEngine.isRunning
     }
 
-    func start(configuration: AdvancedMicrophoneAudioConfiguration) throws {
+    func start(configuration: AdvancedMicrophoneAudioConfiguration, outputDeviceID: AudioDeviceID?) throws {
         stop()
 
         // Set up playback first. On duplex devices (e.g. Komplete Audio 6) used as both
@@ -49,6 +51,28 @@ final class AdvancedMicrophonePreviewController {
         }
 
         self.playbackFormat = playbackFormat
+
+        // Route preview monitoring to the user's selected output device instead of
+        // the system default. Mirrors the explicit CurrentDevice binding the
+        // capture AUHAL uses. If it can't be resolved/bound, fall back to the
+        // engine's default output so monitoring still works.
+        if let outputDeviceID, let outputAU = playbackEngine.outputNode.audioUnit {
+            var deviceID = outputDeviceID
+            let status = AudioUnitSetProperty(
+                outputAU,
+                kAudioOutputUnitProperty_CurrentDevice,
+                kAudioUnitScope_Global,
+                0,
+                &deviceID,
+                UInt32(MemoryLayout<AudioDeviceID>.size)
+            )
+            if status == noErr {
+                AudioLogger.log("preview: bound output to device %u", outputDeviceID)
+            } else {
+                AudioLogger.log("preview: failed to bind output device %u (OSStatus %d) — using default", outputDeviceID, Int(status))
+            }
+        }
+
         playbackEngine.connect(playerNode, to: playbackEngine.mainMixerNode, format: playbackFormat)
         playbackEngine.prepare()
 

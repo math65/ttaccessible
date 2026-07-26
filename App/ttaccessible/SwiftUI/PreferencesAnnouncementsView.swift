@@ -41,24 +41,26 @@ struct PreferencesAnnouncementsView: View {
     }
 
     var body: some View {
-        PreferencesPaneScrollView {
+        PreferencesPaneScrollView(accessibilityLabel: L10n.text("preferences.announcements.title")) {
             VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(L10n.text("preferences.notifications.backgroundAnnouncements.title"))
                         .font(.headline)
                         .accessibilityAddTraits(.isHeader)
 
-                    Toggle(
-                        L10n.text("preferences.notifications.useGlobalMode"),
-                        isOn: Binding(
-                            get: { notificationsStore.state.useGlobalAnnouncementMode },
-                            set: { notificationsStore.updateUseGlobalAnnouncementMode($0) }
-                        )
-                    )
+                    Toggle(isOn: Binding(
+                        get: { notificationsStore.state.useGlobalAnnouncementMode },
+                        set: { notificationsStore.updateUseGlobalAnnouncementMode($0) }
+                    )) {
+                        Text(L10n.text("preferences.notifications.useGlobalMode"))
+                            .accessibilityHidden(true)
+                    }
+                    .accessibilityLabel(L10n.text("preferences.notifications.useGlobalMode"))
 
                     if notificationsStore.state.useGlobalAnnouncementMode {
                         VStack(alignment: .leading, spacing: 6) {
                             Text(L10n.text("preferences.notifications.globalMode"))
+                                .accessibilityHidden(true)
                             Picker(
                                 L10n.text("preferences.notifications.globalMode"),
                                 selection: Binding(
@@ -77,6 +79,7 @@ struct PreferencesAnnouncementsView: View {
                         ForEach(BackgroundMessageAnnouncementType.allCases) { type in
                             VStack(alignment: .leading, spacing: 6) {
                                 Text(L10n.text(type.titleLocalizationKey))
+                                    .accessibilityHidden(true)
                                 Picker(
                                     L10n.text(type.titleLocalizationKey),
                                     selection: Binding(
@@ -180,32 +183,35 @@ struct PreferencesAnnouncementsView: View {
                         .font(.headline)
                         .accessibilityAddTraits(.isHeader)
 
-                    Toggle(
-                        L10n.text("preferences.accessibility.channelAnnouncements"),
-                        isOn: Binding(
-                            get: { accessibilityStore.state.channelMessagesEnabled },
-                            set: { accessibilityStore.updateVoiceOverChannelMessagesEnabled($0) }
-                        )
-                    )
+                    Toggle(isOn: Binding(
+                        get: { accessibilityStore.state.channelMessagesEnabled },
+                        set: { accessibilityStore.updateVoiceOverChannelMessagesEnabled($0) }
+                    )) {
+                        Text(L10n.text("preferences.accessibility.channelAnnouncements"))
+                            .accessibilityHidden(true)
+                    }
                     .toggleStyle(.switch)
+                    .accessibilityLabel(L10n.text("preferences.accessibility.channelAnnouncements"))
 
-                    Toggle(
-                        L10n.text("preferences.accessibility.privateAnnouncements"),
-                        isOn: Binding(
-                            get: { accessibilityStore.state.privateMessagesEnabled },
-                            set: { accessibilityStore.updateVoiceOverPrivateMessagesEnabled($0) }
-                        )
-                    )
+                    Toggle(isOn: Binding(
+                        get: { accessibilityStore.state.privateMessagesEnabled },
+                        set: { accessibilityStore.updateVoiceOverPrivateMessagesEnabled($0) }
+                    )) {
+                        Text(L10n.text("preferences.accessibility.privateAnnouncements"))
+                            .accessibilityHidden(true)
+                    }
                     .toggleStyle(.switch)
+                    .accessibilityLabel(L10n.text("preferences.accessibility.privateAnnouncements"))
 
-                    Toggle(
-                        L10n.text("preferences.accessibility.broadcastAnnouncements"),
-                        isOn: Binding(
-                            get: { accessibilityStore.state.broadcastMessagesEnabled },
-                            set: { accessibilityStore.updateVoiceOverBroadcastMessagesEnabled($0) }
-                        )
-                    )
+                    Toggle(isOn: Binding(
+                        get: { accessibilityStore.state.broadcastMessagesEnabled },
+                        set: { accessibilityStore.updateVoiceOverBroadcastMessagesEnabled($0) }
+                    )) {
+                        Text(L10n.text("preferences.accessibility.broadcastAnnouncements"))
+                            .accessibilityHidden(true)
+                    }
                     .toggleStyle(.switch)
+                    .accessibilityLabel(L10n.text("preferences.accessibility.broadcastAnnouncements"))
 
                     DisclosureGroup(L10n.text("preferences.accessibility.historyAnnouncements")) {
                         HStack(spacing: 12) {
@@ -226,14 +232,15 @@ struct PreferencesAnnouncementsView: View {
                                 .padding(.top, 4)
 
                             ForEach(group.kinds, id: \.self) { kind in
-                                Toggle(
-                                    L10n.text(kind.localizationKey),
-                                    isOn: Binding(
-                                        get: { accessibilityStore.isSessionHistoryKindEnabled(kind) },
-                                        set: { accessibilityStore.updateSessionHistoryKindEnabled(kind, $0) }
-                                    )
-                                )
+                                Toggle(isOn: Binding(
+                                    get: { accessibilityStore.isSessionHistoryKindEnabled(kind) },
+                                    set: { accessibilityStore.updateSessionHistoryKindEnabled(kind, $0) }
+                                )) {
+                                    Text(L10n.text(kind.localizationKey))
+                                        .accessibilityHidden(true)
+                                }
                                 .toggleStyle(.switch)
+                                .accessibilityLabel(L10n.text(kind.localizationKey))
                             }
                         }
                     }

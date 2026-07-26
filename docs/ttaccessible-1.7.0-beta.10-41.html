@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ttaccessible-1.7.0-beta.10-41</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --code-bg: #f5f5f7;
+  --link: #0066cc;
+  --link-hover: #0040a0;
+  --rule: #e5e5ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #ececec;
+    --muted: #a0a0a0;
+    --code-bg: #2d2d2d;
+    --link: #4eaaff;
+    --link-hover: #82c4ff;
+    --rule: #3a3a3a;
+  }
+}
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  padding: 1rem 1.25rem 1.5rem;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.15rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.2em; }
+h3 { font-size: 1.02rem; }
+h4 { font-size: 0.95rem; color: var(--muted); }
+p { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; margin: 0.6em 0; }
+li { margin: 0.25em 0; }
+li > p { margin: 0.3em 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover, a:focus { color: var(--link-hover); text-decoration: underline; }
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.75em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+pre code { background: transparent; padding: 0; border-radius: 0; }
+blockquote {
+  border-left: 3px solid var(--rule);
+  margin: 0.8em 0;
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--muted);
+}
+hr { border: 0; border-top: 1px solid var(--rule); margin: 1.5em 0; }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<h2 id="v170-beta10-build-41--2026-07-07">v1.7.0-beta.10 (build 41) —
+2026-07-07</h2>
+<p>This is a <strong>beta</strong> release, for testing new changes
+before they ship to everyone. To receive beta updates, turn on
+<strong>Include beta versions</strong> in Preferences › General.</p>
+<h3 id="highlights">Highlights</h3>
+<ul>
+<li><strong>Fast connecting is back.</strong> On Macs with several audio
+devices, connecting to a server had crept back up to around 13 seconds —
+this build makes it near-instant again.</li>
+</ul>
+<h3 id="whats-new">What's new</h3>
+<p><strong>Connecting is quick again.</strong> A start-up speed-up added
+a few betas ago wasn't actually making it into the released builds. So
+on setups with a lot of audio devices — interfaces, virtual devices,
+headsets — opening a connection could stall for roughly 13 seconds
+before anything happened, while simpler setups were fine. That's now
+fixed at the root: the optimization is baked into every build for good,
+and connecting is back to being near-instant.</p>
+<p>Nothing else changes in this build — same features and audio as
+beta.9.</p>
+<h2 id="install">Install</h2>
+<p>If you have beta updates enabled, tt-Accessible will install this
+update for you — no action needed.</p>
+<p>Manual install:</p>
+<ol type="1">
+<li>Download <code>ttaccessible-1.7.0-beta.10-41.zip</code> below.</li>
+<li>Unzip and drag <code>ttaccessible.app</code> into your
+<code>/Applications</code> folder, replacing the previous version.</li>
+<li>Double-click — no Gatekeeper warning thanks to notarization.</li>
+</ol>
+</body>
+</html>

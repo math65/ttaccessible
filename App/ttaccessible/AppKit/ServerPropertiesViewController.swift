@@ -24,6 +24,10 @@ final class ServerPropertiesViewController: NSViewController {
     private var maxMediaFileTxField: NSTextField!
     private var maxDesktopTxField: NSTextField!
     private var maxTotalTxField: NSTextField!
+    private var tcpPortField: NSTextField!
+    private var udpPortField: NSTextField!
+    private var serverVersionLabel: NSTextField!
+    private var protocolVersionLabel: NSTextField!
 
     init(properties: ServerPropertiesData) {
         self.properties = properties
@@ -70,6 +74,14 @@ final class ServerPropertiesViewController: NSViewController {
         maxMediaFileTxField = numericField(label: "serverProperties.form.maxMediaFileTx")
         maxDesktopTxField = numericField(label: "serverProperties.form.maxDesktopTx")
         maxTotalTxField = numericField(label: "serverProperties.form.maxTotalTx")
+
+        tcpPortField = numericField(label: "serverProperties.form.tcpPort")
+        udpPortField = numericField(label: "serverProperties.form.udpPort")
+
+        serverVersionLabel = NSTextField(labelWithString: "")
+        serverVersionLabel.setAccessibilityLabel(L10n.text("serverProperties.form.serverVersion"))
+        protocolVersionLabel = NSTextField(labelWithString: "")
+        protocolVersionLabel.setAccessibilityLabel(L10n.text("serverProperties.form.protocolVersion"))
     }
 
     private func setupLayout() {
@@ -116,6 +128,19 @@ final class ServerPropertiesViewController: NSViewController {
             ("serverProperties.form.maxTotalTx", maxTotalTxField),
         ]
         for (key, field) in bwRows {
+            contentStack.addArrangedSubview(makeRow(labelKey: key, field: field, fieldHeight: 22))
+        }
+
+        // Network + server info section (versions are read-only, reported by the server)
+        contentStack.addArrangedSubview(sectionHeader(L10n.text("serverProperties.form.section.info")))
+
+        let infoRows: [(String, NSView)] = [
+            ("serverProperties.form.tcpPort", tcpPortField),
+            ("serverProperties.form.udpPort", udpPortField),
+            ("serverProperties.form.serverVersion", serverVersionLabel),
+            ("serverProperties.form.protocolVersion", protocolVersionLabel),
+        ]
+        for (key, field) in infoRows {
             contentStack.addArrangedSubview(makeRow(labelKey: key, field: field, fieldHeight: 22))
         }
 
@@ -176,6 +201,10 @@ final class ServerPropertiesViewController: NSViewController {
         maxMediaFileTxField.stringValue = String(properties.maxMediaFileTxPerSecond)
         maxDesktopTxField.stringValue = String(properties.maxDesktopTxPerSecond)
         maxTotalTxField.stringValue = String(properties.maxTotalTxPerSecond)
+        tcpPortField.stringValue = String(properties.tcpPort)
+        udpPortField.stringValue = String(properties.udpPort)
+        serverVersionLabel.stringValue = properties.serverVersion
+        protocolVersionLabel.stringValue = properties.serverProtocolVersion
     }
 
     // MARK: - Actions
@@ -195,6 +224,8 @@ final class ServerPropertiesViewController: NSViewController {
         updated.maxMediaFileTxPerSecond = Int32(maxMediaFileTxField.stringValue) ?? properties.maxMediaFileTxPerSecond
         updated.maxDesktopTxPerSecond = Int32(maxDesktopTxField.stringValue) ?? properties.maxDesktopTxPerSecond
         updated.maxTotalTxPerSecond = Int32(maxTotalTxField.stringValue) ?? properties.maxTotalTxPerSecond
+        updated.tcpPort = Int32(tcpPortField.stringValue) ?? properties.tcpPort
+        updated.udpPort = Int32(udpPortField.stringValue) ?? properties.udpPort
 
         dismiss(nil)
         onSave?(updated)

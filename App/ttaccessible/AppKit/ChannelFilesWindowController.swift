@@ -9,7 +9,7 @@ final class ChannelFilesWindowController: NSWindowController, NSWindowDelegate {
     var onUserClose: (() -> Void)?
 
     init(contentViewController: NSViewController) {
-        let window = NSWindow(
+        let window = EscapeClosableWindow(
             contentRect: NSRect(x: 0, y: 0, width: 720, height: 480),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,

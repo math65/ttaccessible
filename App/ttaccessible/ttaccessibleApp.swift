@@ -216,8 +216,11 @@ struct ttaccessibleApp: App {
                 }
             }
 
-            if menuState.mode == .connectedServer {
-                CommandMenu(L10n.text("user.menu.title")) {
+            // The mode condition lives INSIDE the menu (ViewBuilder), not around
+            // it: CommandsBuilder has no `if` before macOS 13, and SwiftUI omits
+            // a CommandMenu whose content is empty, so this renders identically.
+            CommandMenu(L10n.text("user.menu.title")) {
+                if menuState.mode == .connectedServer {
                     Button(L10n.text("user.menu.info")) {
                         appDelegate.openSelectedUserInfo()
                     }
@@ -313,6 +316,7 @@ struct ttaccessibleApp: App {
             }
 
             CommandMenu(L10n.text("shortcuts.menu.title")) {
+
                 Button(L10n.text("shortcuts.focus.primary")) {
                     appDelegate.focusPrimaryArea()
                 }
@@ -335,6 +339,12 @@ struct ttaccessibleApp: App {
                 }
                 .keyboardShortcut("4", modifiers: [.command])
                 .disabled(menuState.mode != .connectedServer)
+
+                Button(L10n.text("mixer.menu.open")) {
+                    appDelegate.focusChannelMixerArea()
+                }
+                .keyboardShortcut("5", modifiers: [.command])
+                .disabled(menuState.mode != .connectedServer || menuState.isInChannel == false)
 
                 Divider()
 
@@ -370,13 +380,27 @@ struct ttaccessibleApp: App {
                 .keyboardShortcut("m", modifiers: [.command])
                 .disabled(menuState.mode != .connectedServer)
 
-                Button(menuState.isRecordingActive
-                       ? L10n.text("shortcuts.recording.stop")
-                       : L10n.text("shortcuts.recording.start")) {
-                    appDelegate.toggleRecording()
+                // While recording, show a single Stop item (⌘R). When idle, show the two
+                // start options: ⌘R single file, ⌘⇧R the preference mode (separate/both).
+                if menuState.isRecordingActive {
+                    Button(L10n.text("shortcuts.recording.stop")) {
+                        appDelegate.toggleRecording()
+                    }
+                    .keyboardShortcut("r", modifiers: [.command])
+                    .disabled(menuState.mode != .connectedServer)
+                } else {
+                    Button(L10n.text("shortcuts.recording.startSingle")) {
+                        appDelegate.toggleRecording(mode: 1)
+                    }
+                    .keyboardShortcut("r", modifiers: [.command])
+                    .disabled(menuState.mode != .connectedServer || menuState.isInChannel == false)
+
+                    Button(L10n.text("shortcuts.recording.startPreferred")) {
+                        appDelegate.toggleRecording()
+                    }
+                    .keyboardShortcut("r", modifiers: [.command, .shift])
+                    .disabled(menuState.mode != .connectedServer || menuState.isInChannel == false)
                 }
-                .keyboardShortcut("r", modifiers: [.command])
-                .disabled(menuState.mode != .connectedServer || (!menuState.isRecordingActive && menuState.isInChannel == false))
 
                 Divider()
 
@@ -390,6 +414,12 @@ struct ttaccessibleApp: App {
                     appDelegate.startStreamingMediaFromURL()
                 }
                 .keyboardShortcut("u", modifiers: [.command, .option])
+                .disabled(menuState.mode != .connectedServer || menuState.isMediaStreamingActive || menuState.isInChannel == false)
+
+                Button(L10n.text("shortcuts.mediaStream.startDevice")) {
+                    appDelegate.startStreamingMediaFromDevice()
+                }
+                .keyboardShortcut("a", modifiers: [.command, .option])
                 .disabled(menuState.mode != .connectedServer || menuState.isMediaStreamingActive || menuState.isInChannel == false)
 
                 Button(L10n.text("shortcuts.mediaStream.stop")) {

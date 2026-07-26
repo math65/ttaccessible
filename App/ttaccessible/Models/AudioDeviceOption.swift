@@ -7,13 +7,13 @@
 
 import Foundation
 
-struct AudioDeviceOption: Identifiable, Equatable {
+struct AudioDeviceOption: Identifiable, Equatable, Codable {
     let id: String
     let persistentID: String
     let displayName: String
 }
 
-struct AudioDeviceCatalog: Equatable {
+struct AudioDeviceCatalog: Equatable, Codable {
     let inputDevices: [AudioDeviceOption]
     let outputDevices: [AudioDeviceOption]
 

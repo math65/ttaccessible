@@ -1,0 +1,22 @@
+[
+  {"query": "Mon micro grésille à fond dès que je passe sur l'interface Komplete Audio 6 MK2, j'entends rien de propre dans le canal", "should_trigger": true},
+  {"query": "AEC isn't cancelling anymore — the voice from my speakers comes right back through to the other users in the channel. It was working yesterday.", "should_trigger": true},
+  {"query": "I just plugged in a new USB mic (Yeti Nano) and ttaccessible shows zero input level even though the mic works in QuickTime.", "should_trigger": true},
+  {"query": "Why is my mic input dropping out every 30 seconds or so? It's like the engine restarts itself.", "should_trigger": true},
+  {"query": "The mic preview test passes — I hear myself in the preview — but no audio reaches the channel when I actually transmit.", "should_trigger": true},
+  {"query": "VoiceOver speech is leaking into my mic and other users hear my announcements even though I have AEC on. Help me figure out what's going wrong.", "should_trigger": true},
+  {"query": "j'entends mon propre écho quand je parle, l'AEC a l'air de pas fonctionner depuis que j'ai changé de casque", "should_trigger": true},
+  {"query": "Beta tester just reported that the mic engine fails to start on their M1 MacBook running Sonoma 14.7. Can we figure out what's happening from the logs?", "should_trigger": true},
+  {"query": "AVAudioEngine doesn't seem to switch to my non-default input device even after I select it in Preferences > Audio. The system default keeps being used.", "should_trigger": true},
+  {"query": "I get an 'AEC diag:' line showing reference rate 48000 and capture rate 44100 — is that the problem? My setup has clear echo.", "should_trigger": true},
+  {"query": "Explain how WebRTC AEC3 works conceptually — what's a reference signal and why do we need a speaker tap on macOS 14.2+?", "should_trigger": false},
+  {"query": "Refactor AdvancedMicrophoneAudioEngine to use async/await instead of dispatch queues for the engine lifecycle.", "should_trigger": false},
+  {"query": "How do I add a new notification sound to the Default sound pack so it plays when someone joins my channel?", "should_trigger": false},
+  {"query": "Write the release notes for the v1.3.3 audio fixes — the duplex mic preview freeze and the chat copy stuff.", "should_trigger": false},
+  {"query": "Add a setting in Preferences > Audio to disable the speaker tap on older macOS versions where it's flaky.", "should_trigger": false},
+  {"query": "Document the AUHAL frame accumulation logic in CLAUDE.md — the part about 1764 frames at 44100 Hz becoming 1920 frames at 48000 Hz.", "should_trigger": false},
+  {"query": "What does TT_MUXED_USERID do in the TeamTalk SDK and how is it different from TT_LOCAL_USERID?", "should_trigger": false},
+  {"query": "Bump the default input gain to +6 dB and update the slider's initial value in PreferencesAudioView.", "should_trigger": false},
+  {"query": "Write a unit test for AudioPCMResampler that verifies the linear interpolation between 44.1 kHz and 48 kHz produces no clicks.", "should_trigger": false},
+  {"query": "Where exactly does AudioLogger write its log file on a sandboxed install? I want to mention it in the README.", "should_trigger": false}
+]

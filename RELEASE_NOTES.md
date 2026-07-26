@@ -1,19 +1,114 @@
-You can now duplicate a profile to set one up from an existing one in a couple of clicks, and a new "No output device" option lets a profile stay connected and keep transmitting without playing any sound.
+## v1.9.0 (build 44) — 2026-07-24
 
-## Profiles
+This release rebuilds push-to-talk from the ground up: any key can be your talk key, it can work while you are busy in another app, and a new microphone mode lets you combine muting with push-to-talk. You can also now pick the app's language instead of following your Mac's.
 
-- **Duplicate a profile** — Setting up a second profile used to mean re-entering all your servers, passwords, and settings by hand. Now, in the Profiles window, select a profile and choose **Duplicate…** (from the context menu, the button row, or its VoiceOver actions) to make a full copy under a new name: servers, passwords, every preference, your chat history, and any custom sound packs. The copy appears in the list ready to launch — nothing connects automatically, so you can review or rename it first.
+### Highlights
+- **Push-to-talk rebuilt.** Any key works — a single key on its own, or a combination of modifier keys.
+- **Your talk key and the microphone toggle can work from any app**, not only when tt-Accessible is in front.
+- **Choose the app's language** — English or French — instead of following your Mac.
 
-## Audio
+### Push-to-talk
+- **Any key can be your push-to-talk key.** A single key on its own, or a combination of modifier keys such as Command-Control (press it and let go). Setting it is one button: activate it, then press the key you want.
+- **The key field is properly accessible now.** It is a real button that VoiceOver announces, and while you are recording a key it no longer trips over VoiceOver's own Control-Option presses.
+- **New microphone mode: Both.** ⌘⇧A mutes and unmutes as it always did. On top of that, holding your push-to-talk key lets you talk even while muted, and releasing it puts you back to silence. Choose it in Preferences › Audio.
+- **An optional sound when transmission starts and stops**, so you can hear that your key registered.
+- **Hotkeys can work while another app is in front.** Switch it on separately for push-to-talk and for the ⌘⇧A microphone toggle. macOS asks for the Input Monitoring permission the first time.
+- Worth knowing: the key still reaches the app you are working in — tt-Accessible can see it go by, but cannot keep it to itself. So prefer a combination of modifier keys on their own, such as Command-Control, or a function key between F13 and F19: neither one types anything anywhere. Avoid single letters.
+- **⌘⇧A no longer fires while the Finder is in front.**
+- The push-to-talk key you were already using is carried over automatically.
 
-- **New "No output device" option** — The output menu in Preferences › Audio now offers a third choice, **No output device**, next to "System default" and your devices. Pick it and the profile stays connected and keeps sending your microphone, but never opens a sound output — handy when a second profile or another app is already playing the channel for you. Unlike muting, which keeps the output device busy, this leaves it completely free.
+### Language
+- **Preferences › General now has a Language setting** — System Default, English, or French. Restart the app to apply it everywhere.
+- **The first time you launch the app, it asks which language you want.**
 
-## Install
+### Thanks
+Push-to-talk was designed and built by **Rocco Fiorentino**. The language setting was contributed by **Gruia Chiscop**. Thanks to both — and to everyone who keeps sending feedback.
 
-If you're already running ttaccessible, it will install this update for you — no action needed.
+### Download
+[ttaccessible-1.9.0-44.zip](https://github.com/math65/ttaccessible/releases/download/v1.9.0/ttaccessible-1.9.0-44.zip)
 
-Manual install:
+## v1.8.0 (build 43) — 2026-07-22
 
-1. Download `ttaccessible-1.6.0-31.zip` below.
+This release adds live audio-device streaming into a channel, brings back support for macOS 12 (Monterey), and fixes audio going silent in "no recording" channels — plus mixer and recording refinements.
+
+### Highlights
+- **Stream a live audio device into your channel.** Pick any input device — an audio interface, a virtual device, loopback — and broadcast it into the channel as a media stream alongside your voice. Press **⌘⌥A**.
+- **macOS 12 Monterey is supported again.** The app now runs on macOS 12 and later.
+- **Audio no longer goes silent in "no recording" channels.**
+
+### Live device streaming
+- **⌘⌥A** streams the selected input device into the current channel as a media stream, alongside your voice.
+- It starts fast without freezing the channel, and stays low-latency — the stream uses Opus with very small frames so the server's analysis is near-instant.
+- If the device goes quiet, silence is filled in automatically so the stream never drops out.
+
+### Audio
+- **"No recording" channels now play sound again.** In a channel flagged as no-recording, other people's voices were silent for you — even though they worked fine for people on the Qt or iPhone clients. That's fixed: you hear everyone again. Recording itself stays blocked in those channels, exactly as the server intends.
+
+### Channel Mixer
+- **Independent stereo placement (pan) for each person's voice and their media.** You can position someone's voice and their media stream separately in the stereo field.
+
+### Recording
+- **⌘R records a single mixed file; ⌘⇧R records per-person stems (or both).** The two shortcuts now pick the recording layout directly.
+- Note if you used recording before: if you were on "single file", the toolbar button now records **both** a single file and per-person stems. Use **⌘R** for single-file only.
+
+### Administration
+- **Per-channel disk quota**, editable with a KB / MB / GB unit picker.
+- **Full server properties** — TCP/UDP ports and version info — in the server properties window.
+- **Online-nickname column** in the user accounts list.
+
+### Accessibility & polish
+- Clearer VoiceOver in the Channel Mixer: spoken region announcements and mute-state labels in the toolbar.
+- **Escape closes auxiliary windows.**
+- Smaller fixes: no false intercept sound during login sync, live disk-quota unit conversion, and file uploads are no longer wrongly rejected by a client-side quota check.
+
+### Download
+[ttaccessible-1.8.0-43.zip](https://github.com/math65/ttaccessible/releases/download/v1.8.0/ttaccessible-1.8.0-43.zip)
+
+## v1.7.0 (build 42) — 2026-07-08
+
+This is the stable release that brings everything from the 1.7.0 beta line to everyone. If you were on 1.6.0, here is what has changed.
+
+### Highlights
+- **A brand-new per-user Channel Mixer.** Every person in your channel gets their own voice volume, media volume, left/right placement, mute, and solo — all reachable from the keyboard and VoiceOver.
+- **Sign in with a BearWare account.** Use a free bearware.dk login to connect to servers that support it, without creating a separate account on each one.
+- **A rebuilt, faster, steadier audio engine.** Connecting is near-instant again, switching headphones or speakers no longer freezes the sound, and crowded channels stay smooth.
+
+### The Channel Mixer
+- Each user in the channel has their own strip: **voice volume, media volume, stereo placement (pan), mute, and solo**.
+- Drive it entirely from the keyboard while focused on a person: Up/Down for voice volume, Command+Up/Down for their media volume, Left/Right to move them in the stereo field, and V, P, M, S to hear or reset volume, pan, mute, and solo.
+- **New: press Command+5 to jump straight to the mixer** — it joins the Command+1 to Command+4 area shortcuts as a fifth focus target. (Thanks to Matthew Whitaker for the suggestion.)
+- Each person's settings are remembered and come back the next time they join.
+
+### Audio
+- **Switching your output device no longer freezes the sound.** Change headphones or speakers while connected and the audio simply follows.
+- **Connecting is quick again.** On Macs with a lot of audio gear, opening a connection used to stall for around 13 seconds while every device was checked — that scan is gone, and it is now baked into every build for good.
+- **Crowded and high-quality channels stay smooth.** Channels using larger audio packets could sound choppy for everyone; the playback path was reworked so it holds up under load.
+- **Your chosen microphone and output are remembered reliably**, surviving unplugging, replugging, and restarts instead of quietly landing on the wrong device.
+- **Standalone noise reduction.** A new Microphone processing setting (Preferences › Audio) lets you pick None, Noise reduction, or Echo cancellation with noise reduction — and it applies live, even mid-transmission.
+- **You can now hear your own streamed media** when you play an audio or video file into a channel.
+- **Per-user volumes are now kept per server**, so volumes set on one server no longer bleed into another. A new setting lets you choose whether these are remembered always, only for the session, or not at all.
+
+### Accessibility
+- The app is now named **tt-Accessible** so VoiceOver and speech synthesizers pronounce it correctly.
+- **Press VoiceOver+Space to join** the selected server or channel.
+- **Sliders and the microphone button now speak their values** as you change them — gain, output volume, and the various Preferences sliders.
+- Preferences reads more cleanly in VoiceOver: no duplicate labels, each section is a proper heading, scroll areas are named, and Escape closes the window.
+
+### Fixes
+- **BearWare web login connects reliably** on servers that respond in slightly non-standard ways.
+- **An empty nickname** now falls back to your default instead of failing to connect.
+- The app **launches faster**.
+
+### Thanks
+Huge thanks to **Rocco Fiorentino**, who designed and built the audio rewrite and the Channel Mixer, the accessibility and VoiceOver improvements, and the faster, steadier connecting in this release. Thanks to **Matthew Whitaker** for the Command+5 suggestion — and to everyone who tested the betas and sent feedback.
+
+### Install
+
+tt-Accessible will install this update for you automatically. To install by hand:
+
+1. Download `ttaccessible-1.7.0-42.zip` below.
 2. Unzip and drag `ttaccessible.app` into your `/Applications` folder, replacing the previous version.
 3. Double-click — no Gatekeeper warning thanks to notarization.
+
+### Download
+[ttaccessible-1.7.0-42.zip](https://github.com/math65/ttaccessible/releases/download/v1.7.0/ttaccessible-1.7.0-42.zip)

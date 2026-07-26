@@ -37,6 +37,12 @@ struct ServerPropertiesData {
     var maxMediaFileTxPerSecond: Int32
     var maxDesktopTxPerSecond: Int32
     var maxTotalTxPerSecond: Int32
+    var tcpPort: Int32
+    var udpPort: Int32
+    /// Read-only, reported by the server.
+    var serverVersion: String
+    /// Read-only, reported by the server.
+    var serverProtocolVersion: String
 }
 
 // MARK: - Banned user model
@@ -73,6 +79,9 @@ enum UserAccountType {
 
 struct UserAccountProperties {
     var username: String
+    /// Current nickname of the user logged in with this account, empty when
+    /// offline (accounts themselves carry no nickname in the protocol).
+    var onlineNickname: String = ""
     var password: String
     var userType: UserAccountType
     var userRights: UInt32
@@ -125,10 +134,17 @@ enum TeamTalkConnectionError: LocalizedError {
     case connectionStartFailed
     case loginStartFailed
     case connectionFailed
+    /// The connection dropped mid-command AND an automatic reconnect was armed.
+    /// Unwinds the command without an error dialog: the UI is already showing
+    /// the reconnecting state, and stacking an alert on top of it is confusing
+    /// — most of all under VoiceOver.
+    case connectionLostReconnecting
     case connectionTimeout
     case loginFailed(String)
     case incorrectChannelPassword(String)
     case internalError(String)
+    case webLoginNotConfigured
+    case webLoginFailed(String)
 
     var errorDescription: String? {
         switch self {
@@ -138,13 +154,26 @@ enum TeamTalkConnectionError: LocalizedError {
             return L10n.text("teamtalk.connection.error.connectionStartFailed")
         case .loginStartFailed:
             return L10n.text("teamtalk.connection.error.loginStartFailed")
-        case .connectionFailed:
+        case .connectionFailed, .connectionLostReconnecting:
             return L10n.text("teamtalk.connection.error.connectionFailed")
         case .connectionTimeout:
             return L10n.text("teamtalk.connection.error.timeout")
-        case .loginFailed(let message), .incorrectChannelPassword(let message), .internalError(let message):
+        case .webLoginNotConfigured:
+            return L10n.text("teamtalk.connection.error.webLoginNotConfigured")
+        case .loginFailed(let message), .incorrectChannelPassword(let message), .internalError(let message), .webLoginFailed(let message):
             return message
         }
+    }
+
+    /// Whether `error` is a drop that already armed an automatic reconnect, and
+    /// so must not raise a dialog. Takes an `Error` because that is what the
+    /// presentation layer holds: every command completes with `Result<_, Error>`,
+    /// and this case is indistinguishable from `.connectionFailed` by its
+    /// message alone — both read "the connection to the server failed".
+    static func isReconnectingDrop(_ error: Error) -> Bool {
+        guard let error = error as? TeamTalkConnectionError else { return false }
+        if case .connectionLostReconnecting = error { return true }
+        return false
     }
 }
 
@@ -197,6 +226,9 @@ struct ChannelProperties {
     var isNoVoiceActivation: Bool
     var isNoRecording: Bool
     var opusCodec: OpusCodecSettings?
+    /// Channel file-storage quota in bytes (SDK `nDiskQuota`); shown as KB in
+    /// the dialog, matching the official client.
+    var diskQuotaBytes: Int64
 }
 
 struct ChannelInfo {
@@ -211,4 +243,5 @@ struct ChannelInfo {
     let isNoVoiceActivation: Bool
     let isNoRecording: Bool
     let opusCodec: OpusCodecSettings?
+    let diskQuotaBytes: Int64
 }

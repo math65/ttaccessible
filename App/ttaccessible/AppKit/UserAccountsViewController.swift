@@ -157,6 +157,10 @@ final class UserAccountsViewController: NSViewController {
         usernameCol.width = 180
         usernameCol.sortDescriptorPrototype = NSSortDescriptor(key: "username", ascending: true)
 
+        let nicknameCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("nickname"))
+        nicknameCol.title = L10n.text("accounts.column.nickname")
+        nicknameCol.width = 150
+
         let passwordCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("password"))
         passwordCol.title = L10n.text("accounts.column.password")
         passwordCol.width = 150
@@ -174,6 +178,7 @@ final class UserAccountsViewController: NSViewController {
         lastLoginCol.width = 160
 
         tableView.addTableColumn(usernameCol)
+        tableView.addTableColumn(nicknameCol)
         tableView.addTableColumn(passwordCol)
         tableView.addTableColumn(typeCol)
         tableView.addTableColumn(lastLoginCol)
@@ -581,6 +586,8 @@ extension UserAccountsViewController: NSTableViewDelegate {
         switch identifier.rawValue {
         case "username":
             cell.textField?.stringValue = account.username
+        case "nickname":
+            cell.textField?.stringValue = account.onlineNickname
         case "password":
             cell.textField?.stringValue = account.password
         case "type":

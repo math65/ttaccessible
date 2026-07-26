@@ -3,7 +3,6 @@
 //  ttaccessible
 
 import AppKit
-import KeyboardShortcuts
 import SwiftUI
 
 struct PreferencesAudioView: View {
@@ -14,13 +13,13 @@ struct PreferencesAudioView: View {
 
     @State private var selectedInputID = "__system_default__"
     @State private var selectedOutputID = "__system_default__"
-    @State private var pushToTalkShortcutConfigured: Bool = KeyboardShortcuts.getShortcut(for: .pushToTalk) != nil
 
     var body: some View {
-        PreferencesPaneScrollView {
+        PreferencesPaneScrollView(accessibilityLabel: L10n.text("preferences.audio.title")) {
             VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.text("preferences.audio.outputDevice"))
+                        .accessibilityHidden(true)
                     Picker("", selection: $selectedOutputID) {
                         Text(L10n.text("preferences.audio.systemDefault")).tag(defaultDeviceTag)
                         Text(L10n.text("preferences.audio.noOutput")).tag(noOutputDeviceTag)
@@ -30,13 +29,14 @@ struct PreferencesAudioView: View {
                     }
                     .labelsHidden()
                     .accessibilityLabel(L10n.text("preferences.audio.outputDevice"))
-                    .onChange(of: selectedOutputID) { _, _ in
+                    .onChangeCompat(of: selectedOutputID) { _ in
                         persistAndApply()
                     }
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.text("preferences.audio.inputDevice"))
+                        .accessibilityHidden(true)
                     Picker("", selection: $selectedInputID) {
                         Text(L10n.text("preferences.audio.systemDefault")).tag(defaultDeviceTag)
                         ForEach(store.state.catalog.inputDevices) { device in
@@ -45,7 +45,7 @@ struct PreferencesAudioView: View {
                     }
                     .labelsHidden()
                     .accessibilityLabel(L10n.text("preferences.audio.inputDevice"))
-                    .onChange(of: selectedInputID) { _, _ in
+                    .onChangeCompat(of: selectedInputID) { _ in
                         persistAndApply()
                     }
                 }
@@ -55,27 +55,40 @@ struct PreferencesAudioView: View {
                 }
                 .disabled(store.state.isCatalogLoading)
 
-                // Microphone settings (AEC, channel preset, preview).
+                // Microphone settings (processing mode, channel preset, preview).
                 VStack(alignment: .leading, spacing: 12) {
                     Text(L10n.text("preferences.audio.advanced.title"))
                         .font(.headline)
                         .accessibilityAddTraits(.isHeader)
 
-                    Toggle(
-                        L10n.text("preferences.audio.advanced.echoCancellation"),
-                        isOn: Binding(
-                            get: { store.advancedPreferences.echoCancellationEnabled },
-                            set: { store.updateEchoCancellationEnabled($0) }
-                        )
-                    )
-                    .toggleStyle(.switch)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(L10n.text("preferences.audio.advanced.processing"))
+                            .accessibilityHidden(true)
+                        Picker(
+                            "",
+                            selection: Binding(
+                                get: { store.advancedPreferences.processingMode },
+                                set: { store.updateProcessingMode($0) }
+                            )
+                        ) {
+                            Text(L10n.text("preferences.audio.advanced.processing.none"))
+                                .tag(MicrophoneProcessingMode.none)
+                            Text(L10n.text("preferences.audio.advanced.processing.noiseSuppression"))
+                                .tag(MicrophoneProcessingMode.noiseSuppression)
+                            Text(L10n.text("preferences.audio.advanced.processing.echoAndNoise"))
+                                .tag(MicrophoneProcessingMode.echoAndNoise)
+                        }
+                        .labelsHidden()
+                        .accessibilityLabel(L10n.text("preferences.audio.advanced.processing"))
+                    }
 
-                    Text(L10n.text("preferences.audio.advanced.echoCancellation.help"))
+                    Text(L10n.text("preferences.audio.advanced.processing.help"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
                     VStack(alignment: .leading, spacing: 6) {
                         Text(L10n.text("preferences.audio.advanced.preset.label"))
+                            .accessibilityHidden(true)
                         Picker(
                             "",
                             selection: Binding(
@@ -102,6 +115,8 @@ struct PreferencesAudioView: View {
                 }
 
                 pushToTalkSection
+
+                volumeMemorySection
 
                 if let feedbackMessage = store.state.advancedFeedbackMessage, feedbackMessage.isEmpty == false {
                     Text(feedbackMessage)
@@ -132,13 +147,13 @@ struct PreferencesAudioView: View {
             store.prepareIfNeeded()
             syncSelectionFromStore()
         }
-        .onChange(of: store.state.preferredInputDevice) { _, _ in
+        .onChangeCompat(of: store.state.preferredInputDevice) { _ in
             syncSelectionFromStore()
         }
-        .onChange(of: store.state.preferredOutputDevice) { _, _ in
+        .onChangeCompat(of: store.state.preferredOutputDevice) { _ in
             syncSelectionFromStore()
         }
-        .onChange(of: store.state.catalog) { _, _ in
+        .onChangeCompat(of: store.state.catalog) { _ in
             syncSelectionFromStore()
         }
         .onDisappear {
@@ -152,6 +167,49 @@ struct PreferencesAudioView: View {
     }
 
     @ViewBuilder
+    private var volumeMemorySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(L10n.text("preferences.audio.volumeMemory.section"))
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(L10n.text("preferences.audio.volumeMemory.label"))
+                    .accessibilityHidden(true)
+                Picker(
+                    "",
+                    selection: Binding(
+                        get: { store.userVolumeMemoryMode },
+                        set: { store.updateUserVolumeMemoryMode($0) }
+                    )
+                ) {
+                    Text(L10n.text("preferences.audio.volumeMemory.off"))
+                        .tag(AppPreferences.UserVolumeMemoryMode.off)
+                    Text(L10n.text("preferences.audio.volumeMemory.session"))
+                        .tag(AppPreferences.UserVolumeMemoryMode.session)
+                    Text(L10n.text("preferences.audio.volumeMemory.persistent"))
+                        .tag(AppPreferences.UserVolumeMemoryMode.persistent)
+                }
+                .labelsHidden()
+                .pickerStyle(.radioGroup)
+                .accessibilityLabel(L10n.text("preferences.audio.volumeMemory.label"))
+            }
+
+            Text(L10n.text("preferences.audio.volumeMemory.help"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var usesPushToTalkKey: Bool {
+        store.state.microphoneMode == .pushToTalk || store.state.microphoneMode == .both
+    }
+
+    private var pushToTalkKeyConfigured: Bool {
+        store.state.pushToTalkKey?.isValid ?? false
+    }
+
+    @ViewBuilder
     private var pushToTalkSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(L10n.text("preferences.audio.pushToTalk.section"))
@@ -160,6 +218,7 @@ struct PreferencesAudioView: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(L10n.text("preferences.audio.microphoneMode.label"))
+                    .accessibilityHidden(true)
                 Picker(
                     "",
                     selection: Binding(
@@ -171,40 +230,86 @@ struct PreferencesAudioView: View {
                         .tag(AppPreferences.MicrophoneMode.alwaysOn)
                     Text(L10n.text("preferences.audio.microphoneMode.pushToTalk"))
                         .tag(AppPreferences.MicrophoneMode.pushToTalk)
+                    Text(L10n.text("preferences.audio.microphoneMode.both"))
+                        .tag(AppPreferences.MicrophoneMode.both)
                 }
                 .labelsHidden()
-                .pickerStyle(.radioGroup)
                 .accessibilityLabel(L10n.text("preferences.audio.microphoneMode.label"))
             }
 
-            if store.state.microphoneMode == .pushToTalk {
+            if store.state.microphoneMode == .both {
+                Text(L10n.text("preferences.audio.microphoneMode.both.help"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if usesPushToTalkKey {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.text("preferences.audio.pushToTalk.key.label"))
-                    KeyboardShortcuts.Recorder(for: .pushToTalk)
-                        .accessibilityLabel(L10n.text("preferences.audio.pushToTalk.key.label"))
+                        .accessibilityHidden(true)
+                    PushToTalkKeyRecorder(store: store)
                 }
 
-                if !pushToTalkShortcutConfigured {
+                if pushToTalkKeyConfigured == false {
                     Text(L10n.text("preferences.audio.pushToTalk.warning.noShortcut"))
                         .font(.caption)
                         .foregroundStyle(.orange)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                Toggle(
-                    L10n.text("preferences.audio.pushToTalk.beep.label"),
-                    isOn: Binding(
-                        get: { store.state.pushToTalkBeepEnabled },
-                        set: { store.updatePushToTalkBeepEnabled($0) }
-                    )
-                )
+                Toggle(isOn: Binding(
+                    get: { store.state.pushToTalkGlobal },
+                    set: { store.updatePushToTalkGlobal($0) }
+                )) {
+                    Text(L10n.text("preferences.audio.pushToTalk.global.label"))
+                        .accessibilityHidden(true)
+                }
                 .toggleStyle(.switch)
+                .accessibilityLabel(L10n.text("preferences.audio.pushToTalk.global.label"))
+
+                Toggle(isOn: Binding(
+                    get: { store.state.pushToTalkBeepEnabled },
+                    set: { store.updatePushToTalkBeepEnabled($0) }
+                )) {
+                    Text(L10n.text("preferences.audio.pushToTalk.beep.label"))
+                        .accessibilityHidden(true)
+                }
+                .toggleStyle(.switch)
+                .accessibilityLabel(L10n.text("preferences.audio.pushToTalk.beep.label"))
             }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
-            let configured = KeyboardShortcuts.getShortcut(for: .pushToTalk) != nil
-            if configured != pushToTalkShortcutConfigured {
-                pushToTalkShortcutConfigured = configured
+
+            Divider()
+
+            Toggle(isOn: Binding(
+                get: { store.state.muteHotkeyGlobal },
+                set: { store.updateMuteHotkeyGlobal($0) }
+            )) {
+                Text(L10n.text("preferences.audio.muteHotkey.global.label"))
+                    .accessibilityHidden(true)
+            }
+            .toggleStyle(.switch)
+            .accessibilityLabel(L10n.text("preferences.audio.muteHotkey.global.label"))
+
+            if store.state.muteHotkeyGlobal {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(L10n.text("preferences.audio.muteHotkey.key.label"))
+                        .accessibilityHidden(true)
+                    HotkeyRecorderButton(
+                        value: store.state.muteHotkeyBinding,
+                        accessibilityLabelKey: "preferences.audio.muteHotkey.key.label",
+                        emptyValueText: HotkeyBinding.defaultMuteHotkey().displayString
+                    ) { binding in
+                        store.updateMuteHotkeyBinding(binding)
+                    }
+                }
+            }
+
+            if store.state.pushToTalkGlobal || store.state.muteHotkeyGlobal {
+                Text(L10n.text("preferences.audio.hotkey.global.help"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }

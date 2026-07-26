@@ -14,11 +14,16 @@ extern "C" {
 /// Opaque handle to the WebRTC AudioProcessing instance.
 typedef struct WebRTCAEC* WebRTCAECRef;
 
-/// Create a new AEC instance.
+/// Create a new audio-processing instance.
 /// @param sample_rate Sample rate in Hz (must be 8000, 16000, 32000, or 48000).
 /// @param channels Number of audio channels (1 or 2).
+/// @param aec_enabled Enable the AEC3 echo canceller. When enabled, the far-end
+///        reference must be fed via webrtc_aec_feed_render.
+/// @param ns_enabled Enable noise suppression (moderate level). Can run on its own
+///        without echo cancellation; the AEC also relies on it for convergence, so
+///        callers should keep it on whenever aec_enabled is true.
 /// @return Opaque handle, or NULL on failure.
-WebRTCAECRef webrtc_aec_create(int sample_rate, int channels);
+WebRTCAECRef webrtc_aec_create(int sample_rate, int channels, bool aec_enabled, bool ns_enabled);
 
 /// Destroy an AEC instance and free resources.
 void webrtc_aec_destroy(WebRTCAECRef aec);

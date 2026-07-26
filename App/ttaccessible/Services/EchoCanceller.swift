@@ -19,6 +19,22 @@ final class EchoCanceller {
     struct Configuration {
         let sampleRate: Int
         let channels: Int
+        /// Enable the AEC3 echo canceller. Requires the far-end reference to be fed.
+        let echoCancellationEnabled: Bool
+        /// Enable noise suppression. The WebRTC layer also forces it on when AEC is enabled.
+        let noiseSuppressionEnabled: Bool
+
+        init(
+            sampleRate: Int,
+            channels: Int,
+            echoCancellationEnabled: Bool = true,
+            noiseSuppressionEnabled: Bool = true
+        ) {
+            self.sampleRate = sampleRate
+            self.channels = channels
+            self.echoCancellationEnabled = echoCancellationEnabled
+            self.noiseSuppressionEnabled = noiseSuppressionEnabled
+        }
 
         /// Number of samples per channel in a 10ms frame.
         var frameSamplesPerChannel: Int { sampleRate / 100 }
@@ -49,7 +65,12 @@ final class EchoCanceller {
 
     init?(configuration: Configuration) {
         self.config = configuration
-        guard let ref = webrtc_aec_create(Int32(configuration.sampleRate), Int32(configuration.channels)) else {
+        guard let ref = webrtc_aec_create(
+            Int32(configuration.sampleRate),
+            Int32(configuration.channels),
+            configuration.echoCancellationEnabled,
+            configuration.noiseSuppressionEnabled
+        ) else {
             return nil
         }
         self.aecRef = ref
@@ -137,7 +158,8 @@ final class EchoCanceller {
 
     private func logDiagnosticsIfNeeded(refRate: Int, refChannels: Int) {
         let now = CFAbsoluteTimeGetCurrent()
-        guard now - lastDiagnosticTime >= 5.0 else { return }
+        // Sparse heartbeat (cumulative counters) — keeps a long session's log small.
+        guard now - lastDiagnosticTime >= 30.0 else { return }
         lastDiagnosticTime = now
         AudioLogger.log(
             "AEC diag: config=%dHz/%dch, ref=%dHz/%dch, refFrames=%d, capFrames=%d",

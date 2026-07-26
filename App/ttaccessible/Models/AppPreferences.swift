@@ -11,7 +11,7 @@ struct AppPreferences: Codable, Equatable {
     static func defaultNicknameFromAccount() -> String {
         let fullName = NSFullUserName().trimmingCharacters(in: .whitespacesAndNewlines)
         let firstWord = fullName.components(separatedBy: .whitespacesAndNewlines).first ?? ""
-        return firstWord.isEmpty ? "TTAccessible" : firstWord
+        return firstWord.isEmpty ? "tt-Accessible" : firstWord
     }
 
     enum ChannelSortMode: String, Codable, CaseIterable {
@@ -22,6 +22,21 @@ struct AppPreferences: Codable, Equatable {
     enum MicrophoneMode: String, Codable, CaseIterable {
         case alwaysOn
         case pushToTalk
+        /// Mute-gated with a momentary PTT override. ⌘⇧A toggles an always-on
+        /// gate; holding the PTT key transmits regardless, and releasing it
+        /// closes the gate (goes silent). See PushToTalkController.
+        case both
+    }
+
+    /// How per-user volume/stereo/pan adjustments are remembered (issue #24).
+    /// - off: never remembered; reconnecting resets everyone to 50% (like the
+    ///   official client).
+    /// - session: remembered while the app runs, discarded on quit.
+    /// - persistent: remembered across launches, scoped per server.
+    enum UserVolumeMemoryMode: String, Codable, CaseIterable {
+        case off
+        case session
+        case persistent
     }
 
     enum SavedServersSortField: String, Codable, CaseIterable {
@@ -64,6 +79,7 @@ struct AppPreferences: Codable, Equatable {
         case prefersAutomaticTeamTalkConfigDetection
         case useRelativeTimestamps
         case lastRecordingWasActive
+        case lastActiveRecordingMode
         case autoRestartRecording
         case preferredInputDevice
         case preferredOutputDevice
@@ -72,6 +88,7 @@ struct AppPreferences: Codable, Equatable {
         case voiceOverAnnouncements
         case inputGainDB
         case outputGainDB
+        case soundEffectsGainDB
         case savedServersSort
         case autoJoinRootChannel
         case autoReconnect
@@ -111,7 +128,16 @@ struct AppPreferences: Codable, Equatable {
         case includeBetaUpdates
         case microphoneMode
         case pushToTalkBeepEnabled
+        case pushToTalkKey
+        case pushToTalkGlobal
+        case muteHotkeyGlobal
+        case muteHotkeyBinding
+        case didMigrateLegacyPushToTalkKey
         case videoPanelExpanded
+        case userVolumeMemoryMode
+        case deviceStreamLastDeviceUID
+        case languagePreference
+        case hasChosenInitialLanguage
     }
 
     var defaultNickname: String
@@ -122,6 +148,12 @@ struct AppPreferences: Codable, Equatable {
     var prefersAutomaticTeamTalkConfigDetection: Bool
     var useRelativeTimestamps: Bool
     var lastRecordingWasActive: Bool
+    /// The recording mode (1 = single file, 2 = separate stems, 3 = both) of the
+    /// recording that was active when it last stopped. Unlike `recordingMode`, this
+    /// is stored raw (not clamped to 2/3) so auto-restart can faithfully restore a
+    /// single-file (⌘R) recording rather than silently upgrading it to the preference.
+    /// 0 means "no active recording to restore".
+    var lastActiveRecordingMode: Int
     var autoRestartRecording: Bool
     var autoJoinRootChannel: Bool
     var autoReconnect: Bool
@@ -155,6 +187,10 @@ struct AppPreferences: Codable, Equatable {
     var voiceOverAnnouncements: VoiceOverAnnouncementPreferences
     var inputGainDB: Double
     var outputGainDB: Double
+    // Base level for app notification sound effects (dB). The effective playback
+    // volume is this gain combined with the output (master) volume, so master
+    // scales the sound effects too.
+    var soundEffectsGainDB: Double
     var savedServersSort: SavedServersSortPreferences
     var recordingFolderBookmark: Data?
     var recordingAudioFileFormat: Int
@@ -168,7 +204,28 @@ struct AppPreferences: Codable, Equatable {
     var includeBetaUpdates: Bool
     var microphoneMode: MicrophoneMode
     var pushToTalkBeepEnabled: Bool
+    /// The push-to-talk key/chord. `nil` means unset.
+    var pushToTalkKey: HotkeyBinding?
+    /// When true, the PTT key works even when ttaccessible is not the active app
+    /// (requires Input Monitoring permission).
+    var pushToTalkGlobal: Bool
+    /// When true, ⌘⇧A (mute / gate) works from any app (requires Input Monitoring).
+    var muteHotkeyGlobal: Bool
+    /// Custom binding for the GLOBAL mic-toggle hotkey (nil = the default,
+    /// ⌘⇧ + the key that types "A" on the current layout). The in-app case is
+    /// always the ⌘⇧A menu shortcut; this binding only drives the global
+    /// listen-only tap used while another app is frontmost.
+    var muteHotkeyBinding: HotkeyBinding?
+    /// One-time migration marker: the old KeyboardShortcuts library's stored
+    /// push-to-talk key has been imported (or found absent).
+    var didMigrateLegacyPushToTalkKey: Bool
     var videoPanelExpanded: Bool
+    var userVolumeMemoryMode: UserVolumeMemoryMode
+    /// CoreAudio UID of the input device last streamed to a channel, so the
+    /// device-stream dialog preselects it next time.
+    var deviceStreamLastDeviceUID: String?
+    var languagePreference: AppLanguagePreference
+    var hasChosenInitialLanguage: Bool
     init(
         defaultNickname: String = AppPreferences.defaultNicknameFromAccount(),
         defaultStatusMessage: String = "",
@@ -178,6 +235,7 @@ struct AppPreferences: Codable, Equatable {
         prefersAutomaticTeamTalkConfigDetection: Bool = true,
         useRelativeTimestamps: Bool = false,
         lastRecordingWasActive: Bool = false,
+        lastActiveRecordingMode: Int = 0,
         autoRestartRecording: Bool = false,
         preferredInputDevice: AudioDevicePreference = .systemDefault,
         preferredOutputDevice: AudioDevicePreference = .systemDefault,
@@ -185,6 +243,7 @@ struct AppPreferences: Codable, Equatable {
         voiceOverAnnouncements: VoiceOverAnnouncementPreferences = VoiceOverAnnouncementPreferences(),
         inputGainDB: Double = 0,
         outputGainDB: Double = 0,
+        soundEffectsGainDB: Double = 0,
         savedServersSort: SavedServersSortPreferences = SavedServersSortPreferences(),
         autoJoinRootChannel: Bool = true,
         autoReconnect: Bool = true,
@@ -214,7 +273,7 @@ struct AppPreferences: Codable, Equatable {
         macOSTTSVolume: Double = 1.0,
         recordingFolderBookmark: Data? = nil,
         recordingAudioFileFormat: Int = 2,
-        recordingMode: Int = 1,
+        recordingMode: Int = 3,
         soundPack: String = "Default",
         disabledSoundEvents: Set<NotificationSound> = [],
         skipKickConfirmation: Bool = false,
@@ -224,7 +283,16 @@ struct AppPreferences: Codable, Equatable {
         includeBetaUpdates: Bool = false,
         microphoneMode: MicrophoneMode = .alwaysOn,
         pushToTalkBeepEnabled: Bool = true,
-        videoPanelExpanded: Bool = true
+        pushToTalkKey: HotkeyBinding? = nil,
+        pushToTalkGlobal: Bool = true,
+        muteHotkeyGlobal: Bool = false,
+        muteHotkeyBinding: HotkeyBinding? = nil,
+        didMigrateLegacyPushToTalkKey: Bool = false,
+        videoPanelExpanded: Bool = true,
+        userVolumeMemoryMode: UserVolumeMemoryMode = .persistent,
+        deviceStreamLastDeviceUID: String? = nil,
+        languagePreference: AppLanguagePreference = .system,
+        hasChosenInitialLanguage: Bool = false
     ) {
         self.defaultNickname = defaultNickname
         self.defaultStatusMessage = defaultStatusMessage
@@ -234,6 +302,7 @@ struct AppPreferences: Codable, Equatable {
         self.prefersAutomaticTeamTalkConfigDetection = prefersAutomaticTeamTalkConfigDetection
         self.useRelativeTimestamps = useRelativeTimestamps
         self.lastRecordingWasActive = lastRecordingWasActive
+        self.lastActiveRecordingMode = lastActiveRecordingMode
         self.autoRestartRecording = autoRestartRecording
         self.preferredInputDevice = preferredInputDevice
         self.preferredOutputDevice = preferredOutputDevice
@@ -241,6 +310,7 @@ struct AppPreferences: Codable, Equatable {
         self.voiceOverAnnouncements = voiceOverAnnouncements
         self.inputGainDB = Self.clampGainDB(inputGainDB)
         self.outputGainDB = Self.clampGainDB(outputGainDB)
+        self.soundEffectsGainDB = Self.clampGainDB(soundEffectsGainDB)
         self.savedServersSort = savedServersSort
         self.autoJoinRootChannel = autoJoinRootChannel
         self.autoReconnect = autoReconnect
@@ -280,7 +350,16 @@ struct AppPreferences: Codable, Equatable {
         self.includeBetaUpdates = includeBetaUpdates
         self.microphoneMode = microphoneMode
         self.pushToTalkBeepEnabled = pushToTalkBeepEnabled
+        self.pushToTalkKey = pushToTalkKey
+        self.pushToTalkGlobal = pushToTalkGlobal
+        self.muteHotkeyGlobal = muteHotkeyGlobal
+        self.muteHotkeyBinding = muteHotkeyBinding
+        self.didMigrateLegacyPushToTalkKey = didMigrateLegacyPushToTalkKey
         self.videoPanelExpanded = videoPanelExpanded
+        self.userVolumeMemoryMode = userVolumeMemoryMode
+        self.deviceStreamLastDeviceUID = deviceStreamLastDeviceUID
+        self.languagePreference = languagePreference
+        self.hasChosenInitialLanguage = hasChosenInitialLanguage
     }
 
     nonisolated static func clampGainDB(_ value: Double) -> Double {
@@ -305,8 +384,12 @@ struct AppPreferences: Codable, Equatable {
     }
 
     /// Recording mode bitmask: 1=muxed, 2=separate, 3=both.
+    // The stored recording mode drives ⌘⇧R (and the toolbar Record button), which record
+    // separate files (2) or both muxed + separate (3). Single-file recording is always
+    // available on ⌘R and is not a stored preference, so a legacy "single" (1) value
+    // migrates to "both" (3) — a superset that still produces the single muxed file.
     nonisolated static func clampRecordingMode(_ value: Int) -> Int {
-        (1...3).contains(value) ? value : 1
+        value == 2 ? 2 : 3
     }
 
     init(from decoder: Decoder) throws {
@@ -319,6 +402,7 @@ struct AppPreferences: Codable, Equatable {
         prefersAutomaticTeamTalkConfigDetection = try container.decodeIfPresent(Bool.self, forKey: .prefersAutomaticTeamTalkConfigDetection) ?? true
         useRelativeTimestamps = try container.decodeIfPresent(Bool.self, forKey: .useRelativeTimestamps) ?? false
         lastRecordingWasActive = try container.decodeIfPresent(Bool.self, forKey: .lastRecordingWasActive) ?? false
+        lastActiveRecordingMode = try container.decodeIfPresent(Int.self, forKey: .lastActiveRecordingMode) ?? 0
         autoRestartRecording = try container.decodeIfPresent(Bool.self, forKey: .autoRestartRecording) ?? false
         preferredInputDevice = try container.decodeIfPresent(AudioDevicePreference.self, forKey: .preferredInputDevice) ?? .systemDefault
         preferredOutputDevice = try container.decodeIfPresent(AudioDevicePreference.self, forKey: .preferredOutputDevice) ?? .systemDefault
@@ -339,6 +423,7 @@ struct AppPreferences: Codable, Equatable {
         voiceOverAnnouncements = try container.decodeIfPresent(VoiceOverAnnouncementPreferences.self, forKey: .voiceOverAnnouncements) ?? VoiceOverAnnouncementPreferences()
         inputGainDB = Self.clampGainDB(try container.decodeIfPresent(Double.self, forKey: .inputGainDB) ?? 0)
         outputGainDB = Self.clampGainDB(try container.decodeIfPresent(Double.self, forKey: .outputGainDB) ?? 0)
+        soundEffectsGainDB = Self.clampGainDB(try container.decodeIfPresent(Double.self, forKey: .soundEffectsGainDB) ?? 0)
         savedServersSort = try container.decodeIfPresent(SavedServersSortPreferences.self, forKey: .savedServersSort) ?? SavedServersSortPreferences()
         autoJoinRootChannel = try container.decodeIfPresent(Bool.self, forKey: .autoJoinRootChannel) ?? true
         autoReconnect = try container.decodeIfPresent(Bool.self, forKey: .autoReconnect) ?? true
@@ -381,7 +466,7 @@ struct AppPreferences: Codable, Equatable {
         macOSTTSVolume = Self.clampMacOSTTSVolume(try container.decodeIfPresent(Double.self, forKey: .macOSTTSVolume) ?? 1.0)
         recordingFolderBookmark = try container.decodeIfPresent(Data.self, forKey: .recordingFolderBookmark)
         recordingAudioFileFormat = Self.clampRecordingAudioFileFormat(try container.decodeIfPresent(Int.self, forKey: .recordingAudioFileFormat) ?? 2)
-        recordingMode = Self.clampRecordingMode(try container.decodeIfPresent(Int.self, forKey: .recordingMode) ?? 1)
+        recordingMode = Self.clampRecordingMode(try container.decodeIfPresent(Int.self, forKey: .recordingMode) ?? 3)
         soundPack = try container.decodeIfPresent(String.self, forKey: .soundPack) ?? "Default"
         disabledSoundEvents = try container.decodeIfPresent(Set<NotificationSound>.self, forKey: .disabledSoundEvents) ?? []
         skipKickConfirmation = try container.decodeIfPresent(Bool.self, forKey: .skipKickConfirmation) ?? false
@@ -391,7 +476,16 @@ struct AppPreferences: Codable, Equatable {
         includeBetaUpdates = try container.decodeIfPresent(Bool.self, forKey: .includeBetaUpdates) ?? false
         microphoneMode = try container.decodeIfPresent(MicrophoneMode.self, forKey: .microphoneMode) ?? .alwaysOn
         pushToTalkBeepEnabled = try container.decodeIfPresent(Bool.self, forKey: .pushToTalkBeepEnabled) ?? true
+        pushToTalkKey = try container.decodeIfPresent(HotkeyBinding.self, forKey: .pushToTalkKey)
+        pushToTalkGlobal = try container.decodeIfPresent(Bool.self, forKey: .pushToTalkGlobal) ?? true
+        muteHotkeyGlobal = try container.decodeIfPresent(Bool.self, forKey: .muteHotkeyGlobal) ?? false
+        muteHotkeyBinding = try container.decodeIfPresent(HotkeyBinding.self, forKey: .muteHotkeyBinding)
+        didMigrateLegacyPushToTalkKey = try container.decodeIfPresent(Bool.self, forKey: .didMigrateLegacyPushToTalkKey) ?? false
         videoPanelExpanded = try container.decodeIfPresent(Bool.self, forKey: .videoPanelExpanded) ?? true
+        userVolumeMemoryMode = try container.decodeIfPresent(UserVolumeMemoryMode.self, forKey: .userVolumeMemoryMode) ?? .persistent
+        deviceStreamLastDeviceUID = try container.decodeIfPresent(String.self, forKey: .deviceStreamLastDeviceUID)
+        languagePreference = try container.decodeIfPresent(AppLanguagePreference.self, forKey: .languagePreference) ?? .system
+        hasChosenInitialLanguage = try container.decodeIfPresent(Bool.self, forKey: .hasChosenInitialLanguage) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -404,6 +498,7 @@ struct AppPreferences: Codable, Equatable {
         try container.encode(prefersAutomaticTeamTalkConfigDetection, forKey: .prefersAutomaticTeamTalkConfigDetection)
         try container.encode(useRelativeTimestamps, forKey: .useRelativeTimestamps)
         try container.encode(lastRecordingWasActive, forKey: .lastRecordingWasActive)
+        try container.encode(lastActiveRecordingMode, forKey: .lastActiveRecordingMode)
         try container.encode(autoRestartRecording, forKey: .autoRestartRecording)
         try container.encode(preferredInputDevice, forKey: .preferredInputDevice)
         try container.encode(preferredOutputDevice, forKey: .preferredOutputDevice)
@@ -411,6 +506,7 @@ struct AppPreferences: Codable, Equatable {
         try container.encode(voiceOverAnnouncements, forKey: .voiceOverAnnouncements)
         try container.encode(Self.clampGainDB(inputGainDB), forKey: .inputGainDB)
         try container.encode(Self.clampGainDB(outputGainDB), forKey: .outputGainDB)
+        try container.encode(Self.clampGainDB(soundEffectsGainDB), forKey: .soundEffectsGainDB)
         try container.encode(savedServersSort, forKey: .savedServersSort)
         try container.encode(autoJoinRootChannel, forKey: .autoJoinRootChannel)
         try container.encode(autoReconnect, forKey: .autoReconnect)
@@ -450,7 +546,16 @@ struct AppPreferences: Codable, Equatable {
         try container.encode(includeBetaUpdates, forKey: .includeBetaUpdates)
         try container.encode(microphoneMode, forKey: .microphoneMode)
         try container.encode(pushToTalkBeepEnabled, forKey: .pushToTalkBeepEnabled)
+        try container.encodeIfPresent(pushToTalkKey, forKey: .pushToTalkKey)
+        try container.encode(pushToTalkGlobal, forKey: .pushToTalkGlobal)
+        try container.encode(muteHotkeyGlobal, forKey: .muteHotkeyGlobal)
+        try container.encodeIfPresent(muteHotkeyBinding, forKey: .muteHotkeyBinding)
+        try container.encode(didMigrateLegacyPushToTalkKey, forKey: .didMigrateLegacyPushToTalkKey)
         try container.encode(videoPanelExpanded, forKey: .videoPanelExpanded)
+        try container.encode(userVolumeMemoryMode, forKey: .userVolumeMemoryMode)
+        try container.encodeIfPresent(deviceStreamLastDeviceUID, forKey: .deviceStreamLastDeviceUID)
+        try container.encode(languagePreference, forKey: .languagePreference)
+        try container.encode(hasChosenInitialLanguage, forKey: .hasChosenInitialLanguage)
     }
 
     func isSubscriptionEnabledByDefault(_ option: UserSubscriptionOption) -> Bool {

@@ -16,6 +16,7 @@ struct SavedServerDraft: Equatable {
     var nickname: String
     var username: String
     var password: String
+    var useWebLogin: Bool
     var initialChannelPath: String
     var initialChannelPassword: String
 
@@ -28,6 +29,7 @@ struct SavedServerDraft: Equatable {
         nickname: String = AppPreferences.defaultNicknameFromAccount(),
         username: String = "",
         password: String = "",
+        useWebLogin: Bool = false,
         initialChannelPath: String = "",
         initialChannelPassword: String = ""
     ) {
@@ -39,6 +41,7 @@ struct SavedServerDraft: Equatable {
         self.nickname = nickname
         self.username = username
         self.password = password
+        self.useWebLogin = useWebLogin
         self.initialChannelPath = initialChannelPath
         self.initialChannelPassword = initialChannelPassword
     }
@@ -53,6 +56,7 @@ struct SavedServerDraft: Equatable {
             nickname: record.nickname,
             username: record.username,
             password: password,
+            useWebLogin: record.useWebLogin,
             initialChannelPath: record.initialChannelPath,
             initialChannelPassword: initialChannelPassword ?? record.initialChannelPassword
         )
@@ -106,7 +110,8 @@ struct SavedServerDraft: Equatable {
             udpPort: udpPort,
             encrypted: encrypted,
             nickname: sanitizedNickname,
-            username: sanitizedUsername,
+            username: useWebLogin ? BearWareWebLogin.username : sanitizedUsername,
+            useWebLogin: useWebLogin,
             initialChannelPath: sanitizedInitialChannelPath,
             initialChannelPassword: initialChannelPassword
         )

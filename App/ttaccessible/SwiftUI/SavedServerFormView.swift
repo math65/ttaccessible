@@ -105,18 +105,27 @@ struct SavedServerFormView: View {
                         .accessibilityLabel(L10n.text("savedServer.form.nickname"))
                 }
 
-                fieldRow(title: L10n.text("savedServer.form.username")) {
-                    TextField("", text: $draft.username)
-                        .focused($focusedField, equals: .username)
-                        .textFieldStyle(.roundedBorder)
-                        .accessibilityLabel(L10n.text("savedServer.form.username"))
-                }
+                Toggle(L10n.text("savedServer.form.webLogin"), isOn: $draft.useWebLogin)
+                    .accessibilityLabel(L10n.text("savedServer.form.webLogin"))
 
-                fieldRow(title: L10n.text("savedServer.form.password")) {
-                    SecureField("", text: $draft.password)
-                        .focused($focusedField, equals: .password)
-                        .textFieldStyle(.roundedBorder)
-                        .accessibilityLabel(L10n.text("savedServer.form.password"))
+                if draft.useWebLogin {
+                    Text(L10n.text("savedServer.form.webLogin.help"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    fieldRow(title: L10n.text("savedServer.form.username")) {
+                        TextField("", text: $draft.username)
+                            .focused($focusedField, equals: .username)
+                            .textFieldStyle(.roundedBorder)
+                            .accessibilityLabel(L10n.text("savedServer.form.username"))
+                    }
+
+                    fieldRow(title: L10n.text("savedServer.form.password")) {
+                        SecureField("", text: $draft.password)
+                            .focused($focusedField, equals: .password)
+                            .textFieldStyle(.roundedBorder)
+                            .accessibilityLabel(L10n.text("savedServer.form.password"))
+                    }
                 }
 
                 fieldRow(title: L10n.text("savedServer.form.initialChannelPath")) {
