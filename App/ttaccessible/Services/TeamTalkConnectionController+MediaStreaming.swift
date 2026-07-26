@@ -209,9 +209,9 @@ extension TeamTalkConnectionController {
             }
 
             self.queue.async { [weak self] in
-                guard let self else { source.stop(); return }
+                guard let self else { source.stopAsynchronously(); return }
                 guard let instance = self.instance, let record = self.connectedRecord else {
-                    source.stop()
+                    source.stopAsynchronously()
                     self.healStaleSessionIfNeededLocked()
                     self.finishOnMain(.failure(self.sessionUnavailableErrorLocked()), completion: completion)
                     return
@@ -233,7 +233,7 @@ extension TeamTalkConnectionController {
                     TT_StartStreamingMediaFileToChannelEx(instance, cPath, &playback, &videoCodec) != 0
                 }
                 guard started else {
-                    source.stop()
+                    source.stopAsynchronously()
                     self.finishOnMain(
                         .failure(TeamTalkConnectionError.internalError(L10n.text("mediaStream.device.error.startFailed"))),
                         completion: completion
@@ -309,7 +309,7 @@ extension TeamTalkConnectionController {
         // mic would otherwise carry the stale delay indefinitely.
         voiceSyncEstimator.endSession()
         voiceSyncDelayLine.clear()
-        deviceStreamSource?.stop()
+        deviceStreamSource?.stopAsynchronously()
         deviceStreamSource = nil
         deviceStreamMonitorEnabled = false
         mediaStreamingSecurityScopedURL?.stopAccessingSecurityScopedResource()

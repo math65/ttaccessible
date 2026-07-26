@@ -210,15 +210,51 @@ final class AudioDeviceStreamSource {
     }
 
     func stop() {
-        stopLock.lock()
-        let alreadyStopped = didStop
-        didStop = true
-        stopLock.unlock()
-        guard alreadyStopped == false else { return }
+        guard claimStop() else { return }
 
         // Capture first, so no more ring writes; then the server.
         backend?.stop()
         backend = nil
+        shutdownServer()
+        AudioLogger.log("device stream: source stopped source=%@", spec.displayName)
+    }
+
+    /// Stop without blocking the caller on backend teardown.
+    ///
+    /// The controller tears streams down from its serial queue
+    /// (`finalizeMediaStreamingLocked`, `destroyLocked`), and backend teardown
+    /// is slow: `SCKAudioCaptureBackend` waits on a semaphore for up to 2 s,
+    /// and `ProcessTapCaptureBackend.stop()` takes `controlQueue`, which may be
+    /// mid-rebuild (a 0.1 s settle plus aggregate-device create/destroy). Held
+    /// on the SDK's serial queue that stalls the message loop — and
+    /// `disconnectSynchronously()` puts the main thread behind that same queue,
+    /// so the UI freezes with it.
+    ///
+    /// Teardown order is inverted relative to `stop()`: the server closes
+    /// first, so whatever the backend still writes to the ring while it winds
+    /// down simply has no reader.
+    func stopAsynchronously() {
+        guard claimStop() else { return }
+
+        let backend = self.backend
+        self.backend = nil
+        shutdownServer()
+        DispatchQueue.global(qos: .userInitiated).async { [spec] in
+            backend?.stop()
+            AudioLogger.log("device stream: source stopped source=%@", spec.displayName)
+        }
+    }
+
+    /// Returns true for the one caller that wins the stop race.
+    private func claimStop() -> Bool {
+        stopLock.lock()
+        defer { stopLock.unlock() }
+        guard didStop == false else { return false }
+        didStop = true
+        return true
+    }
+
+    private func shutdownServer() {
         serverQueue.sync {
             stopped = true
             // Snapshot + clear before cancelling: cancel() → finish() → onFinish
@@ -232,7 +268,6 @@ final class AudioDeviceStreamSource {
             listener?.cancel()
             listener = nil
         }
-        AudioLogger.log("device stream: source stopped source=%@", spec.displayName)
     }
 
     // MARK: - Loopback HTTP server

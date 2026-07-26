@@ -1120,7 +1120,7 @@ extension TeamTalkConnectionController {
 
         voiceSyncEstimator.endSession()
         voiceSyncDelayLine.clear()
-        deviceStreamSource?.stop()
+        deviceStreamSource?.stopAsynchronously()
         deviceStreamSource = nil
         deviceStreamMonitorEnabled = false
         mediaStreamingSecurityScopedURL?.stopAccessingSecurityScopedResource()
