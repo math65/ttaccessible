@@ -113,6 +113,9 @@ final class AudioDeviceStreamSource {
 
     private let spec: DeviceStreamCaptureSpec
     private let muteSourceOutput: Bool
+    /// Passed to the process-tap backend so its transient aggregate device
+    /// doesn't trigger a sound-system restart. See `ProcessTapCaptureBackend`.
+    private let suppressDeviceChanges: ((TimeInterval) -> Void)?
     private let ring = PCMRing(capacityFrames: outputSampleRate * 2, channels: outputChannels)
     private let serverQueue = DispatchQueue(label: "com.ttaccessible.device-stream-server")
     private var backend: DeviceStreamCaptureBackend?
@@ -138,9 +141,14 @@ final class AudioDeviceStreamSource {
     /// `muteSourceOutput`: process-tap sources only — silence the captured
     /// app/VoiceOver on this Mac while it streams (CATapDescription's
     /// muted-while-tapped behavior). Ignored for devices and the SCK backend.
-    init(spec: DeviceStreamCaptureSpec, muteSourceOutput: Bool = false) {
+    init(
+        spec: DeviceStreamCaptureSpec,
+        muteSourceOutput: Bool = false,
+        suppressDeviceChanges: ((TimeInterval) -> Void)? = nil
+    ) {
         self.spec = spec
         self.muteSourceOutput = muteSourceOutput
+        self.suppressDeviceChanges = suppressDeviceChanges
         self.syncClock = MediaSyncClock(ring: ring)
     }
 
@@ -180,7 +188,12 @@ final class AudioDeviceStreamSource {
             return DeviceInputCaptureBackend(device: device, ring: ring)
         case .processes(let selection):
             if #available(macOS 14.2, *) {
-                return ProcessTapCaptureBackend(selection: selection, ring: ring, muteLocalOutput: muteSourceOutput)
+                return ProcessTapCaptureBackend(
+                    selection: selection,
+                    ring: ring,
+                    muteLocalOutput: muteSourceOutput,
+                    suppressDeviceChanges: suppressDeviceChanges
+                )
             }
             if #available(macOS 13.0, *) {
                 return SCKAudioCaptureBackend(selection: selection, ring: ring)

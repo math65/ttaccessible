@@ -600,7 +600,7 @@
 "mediaStream.device.prompt.title" = "Diffuser un périphérique audio";
 "mediaStream.device.prompt.message" = "Choisissez une source audio à diffuser dans le canal. La diffusion continue même lorsque la source est silencieuse.";
 "mediaStream.device.prompt.start" = "Diffuser";
-"mediaStream.device.prompt.deviceLabel" = "Périphérique d'entrée audio";
+"mediaStream.device.prompt.sourceLabel" = "Source audio";
 "mediaStream.device.prompt.monitor" = "Me faire entendre l'audio diffusé";
 "mediaStream.device.error.noDevices" = "Aucun périphérique d'entrée audio n'est disponible.";
 "mediaStream.device.error.deviceUnavailable" = "Le périphérique audio sélectionné n'est plus disponible.";

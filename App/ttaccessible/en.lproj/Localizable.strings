@@ -600,7 +600,7 @@
 "mediaStream.device.prompt.title" = "Stream Audio Device";
 "mediaStream.device.prompt.message" = "Choose an audio source to stream into the channel. The stream keeps going even while the source is silent.";
 "mediaStream.device.prompt.start" = "Stream";
-"mediaStream.device.prompt.deviceLabel" = "Audio input device";
+"mediaStream.device.prompt.sourceLabel" = "Audio source";
 "mediaStream.device.prompt.monitor" = "Play the streamed audio back to me";
 "mediaStream.device.error.noDevices" = "No audio input devices are available.";
 "mediaStream.device.error.deviceUnavailable" = "The selected audio device is no longer available.";

@@ -1596,10 +1596,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // A plain button popping a standalone NSMenu (Mixer's source-menu
         // pattern) — NSPopUpButton chokes VoiceOver once submenus are involved.
-        let sourceButton = NSButton(title: "", target: nil, action: nil)
+        let sourceButton = DeviceStreamSourceButton(title: "", target: nil, action: nil)
         sourceButton.bezelStyle = .rounded
         sourceButton.frame = NSRect(x: 0, y: 32, width: 320, height: 26)
-        sourceButton.setAccessibilityLabel(L10n.text("mediaStream.device.prompt.deviceLabel"))
+        sourceButton.accessibleName = L10n.text("mediaStream.device.prompt.sourceLabel")
         // The browse-for-any-app entry needs the tap backend's wait-and-attach
         // behavior (14.2+); the SCK tier can only capture running apps.
         let allowsApplicationBrowsing: Bool
@@ -2576,8 +2576,54 @@ private extension AppDelegate {
 /// (An NSPopUpButton with submenus is NOT VoiceOver-navigable: VO announces a
 /// "pop up button group" and the submenu items can't be chosen.) Retained by
 /// the sheet-completion closure (menu-item targets are weak).
+/// Source-picker button, mirroring the Mixer project's `VirtualStripAccessibility`
+/// `.picker` role. VoiceOver has to see a POP UP BUTTON carrying the current
+/// selection as its value — a plain `NSButton` with `setAccessibilityLabel`/
+/// `setAccessibilityValue` reads as "button", exposes no selection, and its menu
+/// (the applications submenu especially) doesn't navigate correctly, because the
+/// attribute setters can't change the element's ROLE. Overriding the
+/// accessibility methods is what does.
+private final class DeviceStreamSourceButton: NSButton {
+    /// What VoiceOver reads as the control's name (its purpose).
+    var accessibleName: String = ""
+    /// What VoiceOver reads as its value (the selected source).
+    var accessibleValue: String = ""
+    /// Step to the next/previous source without opening the menu at all —
+    /// Mixer's picker does this, and it keeps the common case off the submenu.
+    var onIncrement: (() -> Void)?
+    var onDecrement: (() -> Void)?
+
+    override func accessibilityRole() -> NSAccessibility.Role? { .popUpButton }
+
+    override func accessibilityRoleDescription() -> String? {
+        // The system's own localized "pop up button" — not a hardcoded string.
+        NSAccessibility.Role.popUpButton.description(with: nil)
+    }
+
+    override func accessibilityLabel() -> String? { accessibleName }
+
+    override func accessibilityValue() -> Any? { accessibleValue }
+
+    override func accessibilityPerformPress() -> Bool {
+        performClick(nil)
+        return true
+    }
+
+    override func accessibilityPerformIncrement() -> Bool {
+        guard let onIncrement else { return false }
+        onIncrement()
+        return true
+    }
+
+    override func accessibilityPerformDecrement() -> Bool {
+        guard let onDecrement else { return false }
+        onDecrement()
+        return true
+    }
+}
+
 private final class DeviceStreamSourcePicker: NSObject {
-    private let button: NSButton
+    private let button: DeviceStreamSourceButton
     private let devices: [InputAudioDeviceInfo]
     private let applicationSources: [DeviceStreamCaptureSpec]
     private let voiceOverAvailable: Bool
@@ -2592,7 +2638,7 @@ private final class DeviceStreamSourcePicker: NSObject {
     var onSelectionChanged: ((DeviceStreamCaptureSpec?) -> Void)?
 
     init(
-        button: NSButton,
+        button: DeviceStreamSourceButton,
         devices: [InputAudioDeviceInfo],
         applicationSources: [DeviceStreamCaptureSpec],
         voiceOverAvailable: Bool,
@@ -2606,6 +2652,40 @@ private final class DeviceStreamSourcePicker: NSObject {
         super.init()
         button.target = self
         button.action = #selector(showSourceMenu(_:))
+        button.onIncrement = { [weak self] in self?.step(by: 1) }
+        button.onDecrement = { [weak self] in self?.step(by: -1) }
+    }
+
+    /// Every selectable source in menu order, for VoiceOver's increment and
+    /// decrement (the "Select Application…" browse entry isn't a source, so it
+    /// isn't in here — it stays a menu-only action).
+    private var orderedSpecs: [DeviceStreamCaptureSpec] {
+        var specs = devices.map { DeviceStreamCaptureSpec.inputDevice($0) }
+        if voiceOverAvailable {
+            specs.append(.voiceOver())
+        }
+        specs.append(contentsOf: applicationSources)
+        if let browsedApplication, specs.contains(browsedApplication) == false {
+            specs.append(browsedApplication)
+        }
+        return specs
+    }
+
+    private func step(by offset: Int) {
+        let specs = orderedSpecs
+        guard specs.isEmpty == false else { return }
+        let current = selectedSpec.flatMap { specs.firstIndex(of: $0) } ?? 0
+        let next = min(max(current + offset, 0), specs.count - 1)
+        guard next != current else { return }
+        applySelection(specs[next])
+        NSAccessibility.post(
+            element: button,
+            notification: .announcementRequested,
+            userInfo: [
+                NSAccessibility.NotificationUserInfoKey.announcement: specs[next].displayName,
+                NSAccessibility.NotificationUserInfoKey.priority: NSAccessibilityPriorityLevel.high.rawValue
+            ]
+        )
     }
 
     func preselect(token: String?, fallbackDeviceUID: String?) {
@@ -2633,12 +2713,17 @@ private final class DeviceStreamSourcePicker: NSObject {
             applySelection(.inputDevice(firstDevice))
         } else if voiceOverAvailable {
             applySelection(.voiceOver())
+        } else if let firstApplication = applicationSources.first {
+            // No input devices and no capturable VoiceOver (13.0–14.1): without
+            // this the picker stays empty and Stream silently does nothing.
+            applySelection(firstApplication)
         }
     }
 
     private func applySelection(_ spec: DeviceStreamCaptureSpec) {
         selectedSpec = spec
         button.title = spec.displayName
+        button.accessibleValue = spec.displayName
         onSelectionChanged?(spec)
     }
 

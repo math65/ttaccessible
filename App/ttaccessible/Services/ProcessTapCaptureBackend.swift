@@ -33,6 +33,14 @@ final class ProcessTapCaptureBackend: DeviceStreamCaptureBackend {
     private let selection: DeviceStreamCaptureSpec.ProcessSelection
     private let ring: AudioDeviceStreamSource.PCMRing
     private let muteLocalOutput: Bool
+    /// Called immediately before every aggregate-device create/destroy.
+    /// Creating or destroying an aggregate fires `kAudioHardwarePropertyDevices`,
+    /// which can perturb default routing and trigger a debounced
+    /// `restartSoundSystem` — a mid-stream mic dropout. The AEC speaker tap
+    /// guards the identical operation the same way (`startSpeakerTapForAEC`);
+    /// the process-list watcher makes the exposure worse here, since app
+    /// launch/quit churn rebuilds the aggregate every ~0.3 s.
+    private let suppressDeviceChanges: ((TimeInterval) -> Void)?
     /// Serializes all lifecycle (start/stop/rebuild); the HAL process-list
     /// listener fires here too.
     private let controlQueue = DispatchQueue(label: "com.ttaccessible.process-tap-control")
@@ -56,18 +64,25 @@ final class ProcessTapCaptureBackend: DeviceStreamCaptureBackend {
     private var resampleScratch = [Int16]()
     private static let maxFramesPerSlice = 16_384
 
-    private lazy var processListListener: (UInt32, UnsafePointer<AudioObjectPropertyAddress>) -> Void = { [weak self] _, _ in
+    /// Must be typed as `AudioObjectPropertyListenerBlock` (`@convention(block)`),
+    /// not as a plain Swift function: CoreAudio matches add/remove by block
+    /// identity, and a plain-function-typed value is re-bridged to a NEW block
+    /// at each call site — so the remove would never match and every stream
+    /// start/stop would leak a live listener holding `controlQueue`.
+    private lazy var processListListener: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
         self?.scheduleRebuildCheck()
     }
 
     init(
         selection: DeviceStreamCaptureSpec.ProcessSelection,
         ring: AudioDeviceStreamSource.PCMRing,
-        muteLocalOutput: Bool = false
+        muteLocalOutput: Bool = false,
+        suppressDeviceChanges: ((TimeInterval) -> Void)? = nil
     ) {
         self.selection = selection
         self.ring = ring
         self.muteLocalOutput = muteLocalOutput
+        self.suppressDeviceChanges = suppressDeviceChanges
     }
 
     deinit {
@@ -244,9 +259,12 @@ final class ProcessTapCaptureBackend: DeviceStreamCaptureBackend {
             mScope: kAudioObjectPropertyScopeGlobal,
             mElement: kAudioObjectPropertyElementMain
         )
-        AudioObjectRemovePropertyListenerBlock(
+        let status = AudioObjectRemovePropertyListenerBlock(
             AudioObjectID(kAudioObjectSystemObject), &address, controlQueue, processListListener
         )
+        if status != noErr {
+            AudioLogger.log("process tap: process-list listener remove failed status=%d — listener leaked", status)
+        }
         processListListenerInstalled = false
     }
 
@@ -315,6 +333,7 @@ final class ProcessTapCaptureBackend: DeviceStreamCaptureBackend {
             kAudioAggregateDeviceIsStackedKey: false
         ]
         var newDeviceID: AudioObjectID = 0
+        suppressDeviceChanges?(2.0)
         status = AudioHardwareCreateAggregateDevice(aggDesc as CFDictionary, &newDeviceID)
         guard status == noErr else {
             AudioLogger.log("process tap: AudioHardwareCreateAggregateDevice failed status=%d", status)
@@ -397,6 +416,7 @@ final class ProcessTapCaptureBackend: DeviceStreamCaptureBackend {
 
     private func cleanupCoreAudioObjectsLocked() {
         if aggregateDeviceID != 0 && aggregateDeviceID != AudioObjectID(kAudioObjectUnknown) {
+            suppressDeviceChanges?(2.0)
             AudioHardwareDestroyAggregateDevice(aggregateDeviceID)
             aggregateDeviceID = AudioObjectID(kAudioObjectUnknown)
         }

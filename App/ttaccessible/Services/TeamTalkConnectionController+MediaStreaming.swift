@@ -169,7 +169,13 @@ extension TeamTalkConnectionController {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
 
-            let source = AudioDeviceStreamSource(spec: spec, muteSourceOutput: muteSourceOutput)
+            let source = AudioDeviceStreamSource(
+                spec: spec,
+                muteSourceOutput: muteSourceOutput,
+                suppressDeviceChanges: { [weak self] duration in
+                    self?.suppressNextDeviceChange(for: duration)
+                }
+            )
             let url: URL
             do {
                 url = try source.start()
