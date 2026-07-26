@@ -213,7 +213,7 @@ final class ConnectedServerViewController: NSViewController {
             case .success:
                 self.announce(L10n.text("connectedServer.identity.nickname.updated"))
             case .failure(let error):
-                self.presentActionError(error.localizedDescription)
+                self.presentActionError(error)
             }
         }
     }
@@ -290,14 +290,14 @@ final class ConnectedServerViewController: NSViewController {
                         case .success:
                             self.announce(L10n.text("connectedServer.identity.status.updated"))
                         case .failure(let error):
-                            self.presentActionError(error.localizedDescription)
+                            self.presentActionError(error)
                         }
                     }
                 } else {
                     self.announce(L10n.text("connectedServer.identity.status.updated"))
                 }
             case .failure(let error):
-                self.presentActionError(error.localizedDescription)
+                self.presentActionError(error)
             }
         }
     }
@@ -885,7 +885,7 @@ final class ConnectedServerViewController: NSViewController {
 
             self.connectionController.sendBroadcastMessage(message) { [weak self] result in
                 if case .failure(let error) = result {
-                    self?.presentActionError(error.localizedDescription)
+                    self?.presentActionError(error)
                 }
             }
         }
@@ -1072,9 +1072,12 @@ final class ConnectedServerViewController: NSViewController {
     /// when the connection drops unwinds with it, and the UI is already showing
     /// the reconnecting state — a modal alert (and its VoiceOver announcement)
     /// on top of that is noise, and there can be one per in-flight command.
+    ///
+    /// Note this override only covers the handful of call sites that hand an
+    /// `Error` to `NSResponder`; almost every command failure in this screen
+    /// goes through `presentActionError(_:)` instead, which has the same guard.
     override func presentError(_ error: Error) -> Bool {
-        if let error = error as? TeamTalkConnectionError,
-           case .connectionLostReconnecting = error {
+        if TeamTalkConnectionError.isReconnectingDrop(error) {
             return false
         }
         return super.presentError(error)
@@ -1151,7 +1154,7 @@ final class ConnectedServerViewController: NSViewController {
                 case .success:
                     self?.announce(L10n.text("serverProperties.announced.updated"))
                 case .failure(let error):
-                    self?.presentActionError(error.localizedDescription)
+                    self?.presentActionError(error)
                 }
             }
         }
@@ -1289,6 +1292,16 @@ final class ConnectedServerViewController: NSViewController {
         announce(message)
     }
 
+    /// Error-taking overload: this is the one command failures should use, so a
+    /// drop that armed a reconnect stays silent. Reporting it would stack a
+    /// modal alert per in-flight command on top of the "reconnecting…" state —
+    /// and the message alone can't be filtered, since it is identical to a
+    /// genuine connection failure.
+    func presentActionError(_ error: Error) {
+        guard !TeamTalkConnectionError.isReconnectingDrop(error) else { return }
+        presentActionError(error)
+    }
+
     @objc
     func sendCurrentMessage(_ sender: Any? = nil) {
         let message = messageField.stringValue
@@ -1311,7 +1324,7 @@ final class ConnectedServerViewController: NSViewController {
                 }
                 self.announce(L10n.text("connectedServer.chat.sent"))
             case .failure(let error):
-                self.presentActionError(error.localizedDescription)
+                self.presentActionError(error)
             }
         }
     }
@@ -1328,7 +1341,7 @@ final class ConnectedServerViewController: NSViewController {
                 case .success:
                     self.announce(L10n.text("connectedServer.audio.voiceDisabled"))
                 case .failure(let error):
-                    self.presentActionError(error.localizedDescription)
+                    self.presentActionError(error)
                 }
             }
             return
@@ -1352,7 +1365,7 @@ final class ConnectedServerViewController: NSViewController {
                 case .success:
                     self.announce(L10n.text("connectedServer.audio.voiceEnabled"))
                 case .failure(let error):
-                    self.presentActionError(error.localizedDescription)
+                    self.presentActionError(error)
                 }
             }
         }

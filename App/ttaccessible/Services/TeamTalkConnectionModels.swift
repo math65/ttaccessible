@@ -151,6 +151,17 @@ enum TeamTalkConnectionError: LocalizedError {
             return message
         }
     }
+
+    /// Whether `error` is a drop that already armed an automatic reconnect, and
+    /// so must not raise a dialog. Takes an `Error` because that is what the
+    /// presentation layer holds: every command completes with `Result<_, Error>`,
+    /// and this case is indistinguishable from `.connectionFailed` by its
+    /// message alone — both read "the connection to the server failed".
+    static func isReconnectingDrop(_ error: Error) -> Bool {
+        guard let error = error as? TeamTalkConnectionError else { return false }
+        if case .connectionLostReconnecting = error { return true }
+        return false
+    }
 }
 
 // MARK: - Connect options

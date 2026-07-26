@@ -129,21 +129,22 @@ extension TeamTalkConnectionController {
 
     // MARK: - Reconnexion automatique
 
-    /// Handle a server-initiated connection drop from any message loop, honoring
-    /// the `autoReconnect` preference. A drop can surface as `CON_LOST` (ping
-    /// timeout / TCP drop) or, when a server shuts down or restarts, as a
-    /// server-forced `MYSELF_LOGGEDOUT` — the app never calls `TT_DoLogout`, so a
-    /// logout event is always the server dropping us, never a deliberate local
-    /// logout. (An admin kick/ban arrives as `MYSELF_KICKED`, handled elsewhere,
-    /// so it never reaches here.) Centralizes what used to be three divergent
-    /// paths, two of which booted the user unconditionally regardless of the
-    /// preference.
     /// Delay before each successive attempt. A server restart is usually back
     /// within seconds, so the first retries are quick; a longer outage spaces
     /// them out instead of hammering the host. Running off the end gives up and
     /// tells the user the connection is lost.
     static let reconnectBackoffSeconds: [Int] = [5, 10, 30, 60, 60, 60, 60, 60]
 
+    /// Handle a server-initiated connection drop from any message loop, honoring
+    /// the `autoReconnect` preference. A drop can surface as `CON_LOST` (ping
+    /// timeout / TCP drop) or, when a server shuts down or restarts, as a
+    /// server-forced `MYSELF_LOGGEDOUT` — the app never calls `TT_DoLogout`, so a
+    /// logout event is always the server dropping us, never a deliberate local
+    /// logout. (An admin kick/ban arrives as `MYSELF_KICKED`, which marks the
+    /// logout that follows it as expected.) Centralizes what used to be three
+    /// divergent paths, two of which booted the user unconditionally regardless
+    /// of the preference.
+    ///
     /// Returns whether a reconnect was armed — callers on the command path use
     /// it to decide whether the failure still deserves an error dialog.
     @discardableResult
@@ -665,9 +666,13 @@ extension TeamTalkConnectionController {
                 // A kick from the SERVER is followed by MYSELF_LOGGEDOUT; mark
                 // it so the drop handler knows that logout was expected and
                 // doesn't reconnect us straight back in (or, for a ban, retry
-                // forever). A kick from a CHANNEL sends no logout, so the mark
-                // simply expires unused.
-                justKickedAt = Date()
+                // forever). Only a server kick, identified by nSource == 0 the
+                // same way `appendKickHistoryLocked` does: marking a CHANNEL
+                // kick too would suppress a genuine reconnect if the connection
+                // happened to drop within the mark's lifetime.
+                if message.nSource == 0 {
+                    justKickedAt = Date()
+                }
                 if connectedRecord != nil {
                     appendKickHistoryLocked(message, instance: instance)
                     publishInvalidation = .all
@@ -1013,6 +1018,14 @@ extension TeamTalkConnectionController {
         autoAwayActivationTime = nil
         autoAwayRestoreStatusMessage = ""
         autoAwayPeakIdleSeconds = nil
+        // Belongs to the session being torn down. Without this it survives into
+        // the NEXT one, and a drop there — before any channel has been joined,
+        // so `TT_GetMyChannelID` gives 0 and the fallback kicks in — rejoins a
+        // channel from the previous session, possibly on a different server.
+        // Read by `handleServerDropLocked` BEFORE it calls us, so clearing here
+        // costs the drop path nothing.
+        lastKnownChannelID = 0
+        lastKnownChannelPath = ""
     }
 
     // MARK: - Error helpers
@@ -1092,8 +1105,11 @@ extension TeamTalkConnectionController {
                 throw TeamTalkConnectionError.connectionFailed
             case CLIENTEVENT_CMD_MYSELF_KICKED:
                 // See the idle loop's handler: marks the MYSELF_LOGGEDOUT that
-                // follows a server kick as expected, so it isn't reconnected.
-                justKickedAt = Date()
+                // follows a SERVER kick (nSource == 0) as expected, so it isn't
+                // reconnected. A channel kick is left unmarked on purpose.
+                if message.nSource == 0 {
+                    justKickedAt = Date()
+                }
                 if let connectedRecord {
                     appendKickHistoryLocked(message, instance: instance)
                     publishSessionLocked(instance: instance, record: connectedRecord)

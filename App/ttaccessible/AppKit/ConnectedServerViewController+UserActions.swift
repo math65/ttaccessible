@@ -243,7 +243,7 @@ extension ConnectedServerViewController {
                     NSAccessibility.NotificationUserInfoKey.priority: NSAccessibilityPriorityLevel.high.rawValue
                 ])
             case .failure(let error):
-                self.presentActionError(error.localizedDescription)
+                self.presentActionError(error)
             }
         }
 
@@ -439,7 +439,7 @@ extension ConnectedServerViewController {
         guard userIDs.isEmpty == false else { return }
         connectionController.setSubscription(option, forUserIDs: userIDs, enabled: enabled) { [weak self] result in
             if case .failure(let error) = result {
-                self?.presentActionError(error.localizedDescription)
+                self?.presentActionError(error)
             }
         }
     }
