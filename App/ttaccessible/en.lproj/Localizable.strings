@@ -698,6 +698,7 @@
 "mixer.strip.roleDescription" = "channel strip";
 "mixer.control.slider.roleDescription" = "slider";
 "mixer.control.button.roleDescription" = "button";
+"mixer.control.picker.roleDescription" = "pop up button";
 "mixer.voice.label.short" = "Volume";
 "mixer.media.label.short" = "Media volume";
 "mixer.pan.label.short" = "Pan";

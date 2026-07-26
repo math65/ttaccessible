@@ -1594,12 +1594,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.addButton(withTitle: L10n.text("mediaStream.device.prompt.start"))
         alert.addButton(withTitle: L10n.text("common.cancel"))
 
-        // A plain button popping a standalone NSMenu (Mixer's source-menu
-        // pattern) — NSPopUpButton chokes VoiceOver once submenus are involved.
+        // The visible control, which is also what VoiceOver drives — see
+        // DeviceStreamSourceButton. Its picker behaviour is the machinery ported
+        // from Mixer's virtual-accessibility engine.
         let sourceButton = DeviceStreamSourceButton(title: "", target: nil, action: nil)
         sourceButton.bezelStyle = .rounded
         sourceButton.frame = NSRect(x: 0, y: 32, width: 320, height: 26)
-        sourceButton.accessibleName = L10n.text("mediaStream.device.prompt.sourceLabel")
         // The browse-for-any-app entry needs the tap backend's wait-and-attach
         // behavior (14.2+); the SCK tier can only capture running apps.
         let allowsApplicationBrowsing: Bool
@@ -1611,6 +1611,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             voiceOverAvailable: voiceOverAvailable,
             allowsApplicationBrowsing: allowsApplicationBrowsing
         )
+        // Role, value and increment/decrement stepping only — the menu itself stays
+        // the existing one (submenu included), opened by accessibilityPerformPress.
+        sourceButton.pickerController = VirtualPickerController(config: VirtualPickerConfig(
+            label: L10n.text("mediaStream.device.prompt.sourceLabel"),
+            getOptions: { [weak picker] in picker?.orderedSpecs.map(\.displayName) ?? [] },
+            getIndex: { [weak picker] in picker?.selectedIndex },
+            setIndex: { [weak picker] index in picker?.selectSource(at: index) }
+        ))
+
         let lastSourceToken = preferencesStore.preferences.deviceStreamLastSource
             ?? preferencesStore.preferences.deviceStreamLastDeviceUID.map { "device:\($0)" }
         picker.preselect(
@@ -1663,14 +1672,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.accessoryView = accessory
         alert.window.initialFirstResponder = sourceButton
 
-        guard let parentWindow = NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first else { return }
-        alert.beginSheetModal(for: parentWindow) { [weak self] response in
-            // `picker` is captured here so it (the submenu items' target)
-            // outlives the sheet.
-            guard response == .alertFirstButtonReturn, let self else { _ = picker; return }
-            guard let spec = picker.selectedSpec else { return }
-            self.preferencesStore.mutateDeviceStreamLastSource(spec)
-            self.connectionController.startStreamingCaptureSource(
+        // Presented APP-MODALLY, not as a sheet — this is load-bearing for VoiceOver.
+        //
+        // A submenu popped from a control inside an NSAlert *sheet* cannot be entered
+        // with VoiceOver: the submenu is announced as a group, opens, and is torn down
+        // within a millisecond, dropping focus back to the dialog. Instrumenting the
+        // menu delegate showed it closing in the same millisecond it opened whenever a
+        // flagsChanged event (VoiceOver's own Ctrl+Option) was in flight, and surviving
+        // only when NSApp.currentEvent was nil — hence the intermittency. Running the
+        // alert app-modally fixes it outright, with the menu, the items and the control
+        // all unchanged. Do not move this back to beginSheetModal(for:).
+        let response = alert.runModal()
+        // `picker` is referenced here so it (the menu items' target) outlives the dialog.
+        _ = picker
+        if response == .alertFirstButtonReturn, let spec = picker.selectedSpec {
+            preferencesStore.mutateDeviceStreamLastSource(spec)
+            connectionController.startStreamingCaptureSource(
                 spec: spec,
                 monitorEnabled: monitorCheckbox.state == .on,
                 muteSourceOutput: muteSourceCheckbox?.state == .on
@@ -2576,54 +2593,43 @@ private extension AppDelegate {
 /// (An NSPopUpButton with submenus is NOT VoiceOver-navigable: VO announces a
 /// "pop up button group" and the submenu items can't be chosen.) Retained by
 /// the sheet-completion closure (menu-item targets are weak).
-/// Source-picker button, mirroring the Mixer project's `VirtualStripAccessibility`
-/// `.picker` role. VoiceOver has to see a POP UP BUTTON carrying the current
-/// selection as its value — a plain `NSButton` with `setAccessibilityLabel`/
-/// `setAccessibilityValue` reads as "button", exposes no selection, and its menu
-/// (the applications submenu especially) doesn't navigate correctly, because the
-/// attribute setters can't change the element's ROLE. Overriding the
-/// accessibility methods is what does.
+
+/// The visible source button, which is also the accessibility element: it adopts the
+/// picker behaviour ported from Mixer (VirtualPickerController) rather than duplicating
+/// it into an invisible parallel view. Mixer needs a parallel tree only because its
+/// visible layer is SwiftUI; this control is already AppKit.
 private final class DeviceStreamSourceButton: NSButton {
-    /// What VoiceOver reads as the control's name (its purpose).
-    var accessibleName: String = ""
-    /// What VoiceOver reads as its value (the selected source).
-    var accessibleValue: String = ""
-    /// Step to the next/previous source without opening the menu at all —
-    /// Mixer's picker does this, and it keeps the common case off the submenu.
-    var onIncrement: (() -> Void)?
-    var onDecrement: (() -> Void)?
+    var pickerController: VirtualPickerController?
 
     override func accessibilityRole() -> NSAccessibility.Role? { .popUpButton }
 
     override func accessibilityRoleDescription() -> String? {
-        // The system's own localized "pop up button" — not a hardcoded string.
-        NSAccessibility.Role.popUpButton.description(with: nil)
+        L10n.text("mixer.control.picker.roleDescription")
     }
 
-    override func accessibilityLabel() -> String? { accessibleName }
+    override func accessibilityLabel() -> String? { pickerController?.label }
 
-    override func accessibilityValue() -> Any? { accessibleValue }
+    override func accessibilityValue() -> Any? { pickerController?.selectedOption }
 
     override func accessibilityPerformPress() -> Bool {
+        // Opens the SAME menu a mouse click does — the existing one, applications
+        // submenu and all. The ported machinery supplies the role, the value and the
+        // stepping; it does not get to decide what the menu looks like.
         performClick(nil)
         return true
     }
 
     override func accessibilityPerformIncrement() -> Bool {
-        guard let onIncrement else { return false }
-        onIncrement()
-        return true
+        pickerController?.step(by: 1) ?? false
     }
 
     override func accessibilityPerformDecrement() -> Bool {
-        guard let onDecrement else { return false }
-        onDecrement()
-        return true
+        pickerController?.step(by: -1) ?? false
     }
 }
 
 private final class DeviceStreamSourcePicker: NSObject {
-    private let button: DeviceStreamSourceButton
+    private let button: NSButton
     private let devices: [InputAudioDeviceInfo]
     private let applicationSources: [DeviceStreamCaptureSpec]
     private let voiceOverAvailable: Bool
@@ -2638,7 +2644,7 @@ private final class DeviceStreamSourcePicker: NSObject {
     var onSelectionChanged: ((DeviceStreamCaptureSpec?) -> Void)?
 
     init(
-        button: DeviceStreamSourceButton,
+        button: NSButton,
         devices: [InputAudioDeviceInfo],
         applicationSources: [DeviceStreamCaptureSpec],
         voiceOverAvailable: Bool,
@@ -2652,40 +2658,6 @@ private final class DeviceStreamSourcePicker: NSObject {
         super.init()
         button.target = self
         button.action = #selector(showSourceMenu(_:))
-        button.onIncrement = { [weak self] in self?.step(by: 1) }
-        button.onDecrement = { [weak self] in self?.step(by: -1) }
-    }
-
-    /// Every selectable source in menu order, for VoiceOver's increment and
-    /// decrement (the "Select Application…" browse entry isn't a source, so it
-    /// isn't in here — it stays a menu-only action).
-    private var orderedSpecs: [DeviceStreamCaptureSpec] {
-        var specs = devices.map { DeviceStreamCaptureSpec.inputDevice($0) }
-        if voiceOverAvailable {
-            specs.append(.voiceOver())
-        }
-        specs.append(contentsOf: applicationSources)
-        if let browsedApplication, specs.contains(browsedApplication) == false {
-            specs.append(browsedApplication)
-        }
-        return specs
-    }
-
-    private func step(by offset: Int) {
-        let specs = orderedSpecs
-        guard specs.isEmpty == false else { return }
-        let current = selectedSpec.flatMap { specs.firstIndex(of: $0) } ?? 0
-        let next = min(max(current + offset, 0), specs.count - 1)
-        guard next != current else { return }
-        applySelection(specs[next])
-        NSAccessibility.post(
-            element: button,
-            notification: .announcementRequested,
-            userInfo: [
-                NSAccessibility.NotificationUserInfoKey.announcement: specs[next].displayName,
-                NSAccessibility.NotificationUserInfoKey.priority: NSAccessibilityPriorityLevel.high.rawValue
-            ]
-        )
     }
 
     func preselect(token: String?, fallbackDeviceUID: String?) {
@@ -2713,22 +2685,51 @@ private final class DeviceStreamSourcePicker: NSObject {
             applySelection(.inputDevice(firstDevice))
         } else if voiceOverAvailable {
             applySelection(.voiceOver())
-        } else if let firstApplication = applicationSources.first {
-            // No input devices and no capturable VoiceOver (13.0–14.1): without
-            // this the picker stays empty and Stream silently does nothing.
-            applySelection(firstApplication)
         }
     }
+
+    /// Every selectable source, flat, in menu order. The browse action is not a
+    /// source, so it is supplied separately as an extra menu item.
+    var orderedSpecs: [DeviceStreamCaptureSpec] {
+        var specs = devices.map { DeviceStreamCaptureSpec.inputDevice($0) }
+        if voiceOverAvailable { specs.append(.voiceOver()) }
+        specs.append(contentsOf: applicationSources)
+        if let browsedApplication, specs.contains(browsedApplication) == false {
+            specs.append(browsedApplication)
+        }
+        return specs
+    }
+
+    var selectedIndex: Int? {
+        guard let selectedSpec else { return nil }
+        return orderedSpecs.firstIndex(of: selectedSpec)
+    }
+
+    func selectSource(at index: Int) {
+        let specs = orderedSpecs
+        guard specs.indices.contains(index) else { return }
+        applySelection(specs[index])
+    }
+
+    var canBrowseForApplication: Bool { allowsApplicationBrowsing }
 
     private func applySelection(_ spec: DeviceStreamCaptureSpec) {
         selectedSpec = spec
         button.title = spec.displayName
-        button.accessibleValue = spec.displayName
         onSelectionChanged?(spec)
     }
 
     @objc private func showSourceMenu(_ sender: NSButton) {
         let menu = NSMenu()
+        // REQUIRED: this menu is popped from inside an NSAlert sheet, i.e. while the
+        // app is in a modal state, and AppKit "skips over item validation and always
+        // disables the item" in that state. Every item then comes up disabled, and a
+        // submenu whose items are all disabled is itself disabled — which is why
+        // VoiceOver announced the applications submenu as a group and bounced back to
+        // the sheet instead of entering it. Mixer's equivalent menus work because they
+        // are never popped in a modal state. We set enablement explicitly, so opting
+        // out of automatic enabling is safe.
+        menu.autoenablesItems = false
         for device in devices {
             let spec = DeviceStreamCaptureSpec.inputDevice(device)
             menu.addItem(makeSourceItem(for: spec))
@@ -2744,6 +2745,7 @@ private final class DeviceStreamSourcePicker: NSObject {
             }
             if showApplicationMenu {
                 let submenu = NSMenu(title: L10n.text("mediaStream.device.source.applicationMenu"))
+                submenu.autoenablesItems = false
                 var submenuSources = applicationSources
                 if let browsedApplication, submenuSources.contains(browsedApplication) == false {
                     submenuSources.append(browsedApplication)
@@ -2775,6 +2777,9 @@ private final class DeviceStreamSourcePicker: NSObject {
             }
         }
 
+        // Anchored to the button. (Popping at NSEvent.mouseLocation was tried while
+        // chasing the sheet bug and put the menu under the cursor, which generated
+        // mouseExited events against it — no reason to do that.)
         menu.popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height + 2), in: sender)
     }
 

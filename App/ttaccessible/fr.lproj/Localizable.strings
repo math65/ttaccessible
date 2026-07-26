@@ -698,6 +698,7 @@
 "mixer.strip.roleDescription" = "tranche de console";
 "mixer.control.slider.roleDescription" = "curseur";
 "mixer.control.button.roleDescription" = "bouton";
+"mixer.control.picker.roleDescription" = "bouton contextuel";
 "mixer.voice.label.short" = "Volume";
 "mixer.media.label.short" = "Volume du média";
 "mixer.pan.label.short" = "Panoramique";
