@@ -215,7 +215,11 @@ extension TeamTalkConnectionController {
                 TT_GetChannelIDFromPath(instance, pathPointer)
             }
             if channelID > 0 {
-                let password = options.initialChannelPassword
+                // Explicit option wins; otherwise use whatever we already know
+                // for this channel (in-session or persisted).
+                let password = options.initialChannelPassword.isEmpty
+                    ? knownChannelPasswordLocked(instance: instance, channelID: channelID)
+                    : options.initialChannelPassword
                 channelPasswords[channelID] = password
                 _ = password.withCString { pwdPointer in
                     TT_DoJoinChannelByID(instance, channelID, pwdPointer)
@@ -232,7 +236,11 @@ extension TeamTalkConnectionController {
                         TT_GetChannelIDFromPath(instance, pathPointer)
                     }
                     if channelID > 0 {
-                        let pwd = channelPasswords[channelID] ?? ""
+                        // On a cold launch the in-session map is empty, so this
+                        // is exactly where the persisted password has to be
+                        // consulted — otherwise "join last channel" lands the
+                        // user in root despite a saved secret.
+                        let pwd = knownChannelPasswordLocked(instance: instance, channelID: channelID)
                         _ = pwd.withCString { pwdPointer in
                             TT_DoJoinChannelByID(instance, channelID, pwdPointer)
                         }
@@ -265,7 +273,10 @@ extension TeamTalkConnectionController {
                 TT_GetChannelIDFromPath(instance, pathPointer)
             }
             if channelID > 0 {
-                let password = connectedRecord?.initialChannelPassword ?? ""
+                let configured = connectedRecord?.initialChannelPassword ?? ""
+                let password = configured.isEmpty
+                    ? knownChannelPasswordLocked(instance: instance, channelID: channelID)
+                    : configured
                 channelPasswords[channelID] = password
                 _ = password.withCString { pwdPointer in
                     TT_DoJoinChannelByID(instance, channelID, pwdPointer)

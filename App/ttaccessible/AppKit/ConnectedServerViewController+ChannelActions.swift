@@ -348,24 +348,19 @@ extension ConnectedServerViewController {
         joinChannel(channel, password: "")
     }
 
-    /// Full root-to-leaf path of a channel — a stable key for persisted passwords
-    /// (survives restarts and channel-ID reassignment; unlike the numeric ID).
-    func channelPathKey(for channel: ConnectedServerChannel) -> String {
-        channel.pathComponents.joined(separator: "/")
+    /// The password we already hold for a protected channel — in-session first,
+    /// then the keychain. Resolved by the connection controller so that this
+    /// path and the auto-join/reconnect paths share one accessor and one key.
+    func knownChannelPassword(for channel: ConnectedServerChannel) -> String {
+        connectionController.knownChannelPassword(forChannelID: channel.id)
     }
 
-    /// The password we already hold for a protected channel: the in-session
-    /// remembered value first, then the keychain-persisted one. Empty if unknown.
-    func knownChannelPassword(for channel: ConnectedServerChannel) -> String {
-        let remembered = connectionController.rememberedChannelPassword(for: channel.id)
-        if !remembered.isEmpty {
-            return remembered
-        }
-        let saved = try? passwordStore.channelPassword(
-            for: session.savedServer.id,
-            channelPath: channelPathKey(for: channel)
-        )
-        return saved ?? ""
+    /// Discard a saved channel password, so the next join prompts again.
+    @objc
+    func forgetChannelPasswordAction(_ sender: Any? = nil) {
+        guard case .channel(let channel)? = selectedNode else { return }
+        connectionController.forgetChannelPassword(forChannelID: channel.id)
+        announce(L10n.format("connectedServer.channelPassword.forgotten", displayText(for: .channel(channel))))
     }
 
     @objc
@@ -400,19 +395,20 @@ extension ConnectedServerViewController {
                 // Persist the working password so future joins (even after a
                 // restart or leaving/rejoining the server) skip the dialog.
                 if !password.isEmpty {
-                    try? self.passwordStore.setChannelPassword(
-                        password,
-                        for: self.session.savedServer.id,
-                        channelPath: self.channelPathKey(for: channel)
-                    )
+                    self.connectionController.rememberChannelPassword(password, forChannelID: channel.id)
                 }
                 self.announce(L10n.format("connectedServer.action.joined", self.displayText(for: .channel(channel))))
             case .failure(let error as TeamTalkConnectionError):
                 switch error {
                 case .incorrectChannelPassword(let message):
+                    // The stored password is wrong (rotated server-side, or it
+                    // was never right). Forget it, or every future join
+                    // re-submits the doomed value and pre-fills the prompt with
+                    // it — and cancelling would leave it there forever.
+                    self.connectionController.forgetChannelPassword(forChannelID: channel.id)
                     self.promptAndJoinProtectedChannel(
                         channel,
-                        initialPassword: password,
+                        initialPassword: "",
                         errorMessage: message.isEmpty ? nil : message
                     )
                 default:

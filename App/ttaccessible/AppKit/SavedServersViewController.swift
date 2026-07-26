@@ -411,6 +411,13 @@ final class SavedServersViewController: NSViewController {
         do {
             try passwordStore.setPassword(result.password, for: record.id)
             try passwordStore.setChannelPassword(result.initialChannelPassword, for: record.id)
+            // Per-channel passwords belong to a HOST, and an edit keeps the same
+            // record ID (which keys the keychain item). Repointing the entry at
+            // a different server would otherwise auto-submit the old host's
+            // channel passwords to the new one, with no prompt.
+            if updatedRecord.host != record.host || updatedRecord.tcpPort != record.tcpPort {
+                try passwordStore.clearChannelPasswords(for: record.id)
+            }
             store.update(updatedRecord)
             store.setSelectedServer(id: record.id)
             reloadRecords(selecting: record.id)
@@ -601,6 +608,13 @@ final class SavedServersViewController: NSViewController {
         do {
             try passwordStore.setPassword(result.password, for: record.id)
             try passwordStore.setChannelPassword(result.initialChannelPassword, for: record.id)
+            // Per-channel passwords belong to a HOST, and an edit keeps the same
+            // record ID (which keys the keychain item). Repointing the entry at
+            // a different server would otherwise auto-submit the old host's
+            // channel passwords to the new one, with no prompt.
+            if updatedRecord.host != record.host || updatedRecord.tcpPort != record.tcpPort {
+                try passwordStore.clearChannelPasswords(for: record.id)
+            }
             store.update(updatedRecord)
             store.setSelectedServer(id: record.id)
             reloadRecords(selecting: record.id)

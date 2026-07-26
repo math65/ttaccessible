@@ -15,14 +15,23 @@ import Security
 /// case `SavedServersViewController.handleLoginFailure` lets the user re-enter
 /// the credentials, which simply rewrites the item with the new ACL.
 final class ServerPasswordStore {
+    /// Bumped whenever a field is added to `Credentials`. Persisted so a record
+    /// last written by an OLDER build is recognizable: that build re-encodes the
+    /// whole blob without knowing about newer fields, silently dropping them
+    /// (the per-channel map, today). The loss is self-healing — the next
+    /// successful join re-persists — but it should be visible in the log rather
+    /// than a mystery.
+    private static let currentSchemaVersion = 2
+
     private struct Credentials: Codable {
         var server: String?
         var channel: String?
         /// Passwords for individual password-protected channels, keyed by the
-        /// channel's full path (root-to-leaf names). Persisted so a channel joined
-        /// once doesn't prompt again after quitting or leaving/rejoining the server.
+        /// channel's full SDK path. Persisted so a channel joined once doesn't
+        /// prompt again after quitting or leaving/rejoining the server.
         /// Optional + decodeIfPresent keeps old keychain items readable.
         var channels: [String: String]?
+        var schemaVersion: Int?
 
         var isEmpty: Bool {
             (server?.isEmpty ?? true)
@@ -133,10 +142,35 @@ final class ServerPasswordStore {
         try writeCredentials(credentials, for: id)
     }
 
-    /// Per-channel password persistence, keyed by the channel's full path.
+    /// Per-channel password persistence, keyed by the channel's full SDK path
+    /// (`TT_GetChannelPath`). Resolved through the connection controller, which
+    /// is the single accessor every join path goes through — see
+    /// `TeamTalkConnectionController.knownChannelPasswordLocked`.
 
     func channelPassword(for id: UUID, channelPath: String) throws -> String? {
         nonEmpty(try loadCredentials(for: id).channels?[channelPath])
+    }
+
+    /// Every per-channel password for a server, for bulk copies (profile
+    /// duplication). Empty when there are none or the item is unreadable.
+    func allChannelPasswords(for id: UUID) throws -> [String: String] {
+        try loadCredentials(for: id).channels ?? [:]
+    }
+
+    func setChannelPasswords(_ map: [String: String], for id: UUID) throws {
+        var credentials = loadCredentialsForUpdate(for: id)
+        credentials.channels = map.isEmpty ? nil : map
+        try writeCredentials(credentials, for: id)
+    }
+
+    /// Drops every per-channel password without touching the server password.
+    /// Used when a saved server is repointed at a different host, where the old
+    /// host's channel secrets must not follow.
+    func clearChannelPasswords(for id: UUID) throws {
+        var credentials = loadCredentialsForUpdate(for: id)
+        guard credentials.channels != nil else { return }
+        credentials.channels = nil
+        try writeCredentials(credentials, for: id)
     }
 
     func setChannelPassword(_ password: String?, for id: UUID, channelPath: String) throws {
@@ -181,6 +215,12 @@ final class ServerPasswordStore {
                   let credentials = try? JSONDecoder().decode(Credentials.self, from: data) else {
                 throw PasswordStoreError.invalidPasswordData
             }
+            if (credentials.schemaVersion ?? 1) < Self.currentSchemaVersion {
+                AudioLogger.log(
+                    "Keychain: credentials for %@ were last written by an older build (schema %d < %d) — newer fields may have been dropped",
+                    id.uuidString, credentials.schemaVersion ?? 1, Self.currentSchemaVersion
+                )
+            }
             cacheCredentials(credentials, for: id)
             return credentials
         case errSecItemNotFound:
@@ -195,7 +235,10 @@ final class ServerPasswordStore {
         }
     }
 
-    private func writeCredentials(_ credentials: Credentials, for id: UUID) throws {
+    private func writeCredentials(_ input: Credentials, for id: UUID) throws {
+        var credentials = input
+        credentials.schemaVersion = Self.currentSchemaVersion
+
         // Tolerate auth/ACL failures on delete: if the existing item is locked
         // behind a stale ACL we still want a shot at overwriting it via the
         // SecItemAdd → SecItemUpdate fallback below. Real failures resurface
@@ -215,6 +258,10 @@ final class ServerPasswordStore {
         let data = try JSONEncoder().encode(credentials)
         var attributes = baseQuery(for: id)
         attributes[kSecValueData] = data
+        // Per-device VoIP credentials have no business travelling in a keychain
+        // migration to another Mac. Set only on ADD — kSecAttrAccessible in the
+        // lookup query would stop matching items written before this.
+        attributes[kSecAttrAccessible] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
 
         let addStatus = SecItemAdd(attributes as CFDictionary, nil)
         switch addStatus {

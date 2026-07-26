@@ -31,7 +31,6 @@ final class ConnectedServerViewController: NSViewController {
     let connectionController: TeamTalkConnectionController
     let menuState: SavedServersMenuState
     unowned let appDelegate: AppDelegate
-    let passwordStore: ServerPasswordStore
     let outlineView = ConnectedServerOutlineView(frame: .zero)
     let chatTableView = ChatTableView(frame: .zero)
     let historyTableView = NSTableView(frame: .zero)
@@ -97,15 +96,13 @@ final class ConnectedServerViewController: NSViewController {
         preferencesStore: AppPreferencesStore,
         connectionController: TeamTalkConnectionController,
         menuState: SavedServersMenuState,
-        appDelegate: AppDelegate,
-        passwordStore: ServerPasswordStore
+        appDelegate: AppDelegate
     ) {
         self.session = session
         self.preferencesStore = preferencesStore
         self.connectionController = connectionController
         self.menuState = menuState
         self.appDelegate = appDelegate
-        self.passwordStore = passwordStore
         super.init(nibName: nil, bundle: nil)
         embeddedMediaStreamingControls.actions = self
         collapsibleVideoPanel.delegate = self
@@ -1066,6 +1063,18 @@ final class ConnectedServerViewController: NSViewController {
         deleteItem.target = self
         menu.addItem(deleteItem)
 
+        // Saving a channel password is automatic on a successful join, which
+        // includes a one-off visit to a protected channel. This is the way back
+        // out — otherwise the only way to drop a saved channel secret is to
+        // delete the whole saved server.
+        let forgetPasswordItem = NSMenuItem(
+            title: L10n.text("connectedServer.menu.forgetChannelPassword"),
+            action: #selector(forgetChannelPasswordAction),
+            keyEquivalent: ""
+        )
+        forgetPasswordItem.target = self
+        menu.addItem(forgetPasswordItem)
+
         return menu
     }
 
@@ -1080,6 +1089,13 @@ final class ConnectedServerViewController: NSViewController {
             return me.isAdministrator || me.isChannelOperator
         }()
         switch menuItem.action {
+        case #selector(forgetChannelPasswordAction):
+            // Deliberately does NOT consult the store: resolving a saved
+            // password means keychain I/O on the controller's serial queue with
+            // the main thread waiting on it, and menu validation is far too hot
+            // a path for that. Forgetting nothing is harmless.
+            guard case .channel(let channel)? = selectedNode else { return false }
+            return channel.isPasswordProtected
         case #selector(toggleMuteUserAction):
             let muted = selectedUser.map { localMuteState[$0.id] ?? $0.isMuted } == true
             menuItem.title = muted ? L10n.text("connectedServer.menu.unmuteUser") : L10n.text("connectedServer.menu.muteUser")

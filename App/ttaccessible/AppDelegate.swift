@@ -68,7 +68,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let macOSTextToSpeechAnnouncementService = MacOSTextToSpeechAnnouncementService()
     private let menuState = SavedServersMenuState.shared
     private let audioDeviceChangeMonitor = AudioDeviceChangeMonitor()
-    private lazy var connectionController = TeamTalkConnectionController(preferencesStore: preferencesStore)
+    private lazy var connectionController = TeamTalkConnectionController(preferencesStore: preferencesStore, passwordStore: passwordStore)
     private lazy var advancedMicrophoneSettingsStore = AdvancedMicrophoneSettingsStore(
         preferencesStore: preferencesStore,
         connectionController: connectionController
@@ -448,8 +448,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 preferencesStore: preferencesStore,
                 connectionController: connectionController,
                 menuState: menuState,
-                appDelegate: self,
-                passwordStore: passwordStore
+                appDelegate: self
             )
             connectedServerViewController = viewController
             savedServersViewController = nil
