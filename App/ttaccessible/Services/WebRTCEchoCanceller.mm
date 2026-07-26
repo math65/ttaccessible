@@ -19,7 +19,7 @@ struct WebRTCAEC {
     {}
 };
 
-WebRTCAECRef webrtc_aec_create(int sample_rate, int channels) {
+WebRTCAECRef webrtc_aec_create(int sample_rate, int channels, bool aec_enabled, bool ns_enabled) {
     auto* aec = new (std::nothrow) WebRTCAEC(sample_rate, channels);
     if (!aec) return nullptr;
 
@@ -34,11 +34,12 @@ WebRTCAECRef webrtc_aec_create(int sample_rate, int channels) {
     webrtc::AudioProcessing::Config config;
 
     // Echo cancellation (AEC3).
-    config.echo_canceller.enabled = true;
+    config.echo_canceller.enabled = aec_enabled;
     config.echo_canceller.mobile_mode = false;
 
-    // Noise suppression — helps AEC by removing background noise.
-    config.noise_suppression.enabled = true;
+    // Noise suppression — helps AEC by removing background noise. Forced on whenever
+    // the echo canceller is enabled (AEC3 convergence degrades without it).
+    config.noise_suppression.enabled = ns_enabled || aec_enabled;
     config.noise_suppression.level = webrtc::AudioProcessing::Config::NoiseSuppression::kModerate;
 
     // Multi-channel support.

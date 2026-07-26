@@ -1,0 +1,192 @@
+//
+//  HotkeyBinding.swift
+//  ttaccessible
+//
+//  A user-configurable hotkey used for push-to-talk. Unlike the KeyboardShortcuts
+//  library this replaces, a binding can be:
+//    • a regular key, optionally with modifiers (e.g. Space, ⌥Space, F5)
+//    • a pure-modifier chord with no key (e.g. ⌘⌃ held down)
+//  The pure-modifier case is impossible to express as a keyDown event, so it is
+//  detected from `flagsChanged` by HotkeyMonitor instead.
+//
+
+import AppKit
+import Carbon.HIToolbox
+
+struct HotkeyBinding: Codable, Equatable {
+    /// Carbon/AppKit virtual key code. `nil` means a pure-modifier chord.
+    var keyCode: Int?
+    /// Raw value of the device-independent modifier subset.
+    var modifiersRawValue: UInt
+    /// Human-readable label for the key portion, captured at record time
+    /// (e.g. "Space", "A", "F5"). `nil` for a pure-modifier chord.
+    var keyLabel: String?
+
+    /// The chord's matchable modifiers. `.numericPad`/`.function`/`.capsLock`
+    /// are stripped here (not just at record time, so stored bindings are
+    /// covered too): arrow/keypad keys carry `.numericPad` in NSEvents but the
+    /// CGEventTap flag conversion never produces it — leaving it in would make
+    /// such a key match locally yet never match globally.
+    var modifiers: NSEvent.ModifierFlags {
+        NSEvent.ModifierFlags(rawValue: modifiersRawValue)
+            .intersection(.deviceIndependentFlagsMask)
+            .subtracting([.numericPad, .function, .capsLock])
+    }
+
+    /// A chord with no key code — matched via modifier state rather than keyDown.
+    var isModifierOnly: Bool { keyCode == nil }
+
+    var isValid: Bool {
+        if keyCode != nil { return true }
+        return !modifiers.isEmpty
+    }
+
+    init(keyCode: Int?, modifiers: NSEvent.ModifierFlags, keyLabel: String?) {
+        self.keyCode = keyCode
+        self.modifiersRawValue = modifiers.intersection(.deviceIndependentFlagsMask).rawValue
+        self.keyLabel = keyLabel
+    }
+
+    /// The default global mic-toggle chord: ⌘⇧ + the key that TYPES "a" on
+    /// the current layout (key codes are positional — a hardcoded 0 is Q on
+    /// AZERTY).
+    static func defaultMuteHotkey() -> HotkeyBinding {
+        let keyCode = KeyCodeResolver.keyCode(for: "a") ?? 0
+        return HotkeyBinding(
+            keyCode: keyCode,
+            modifiers: [.command, .shift],
+            keyLabel: KeyCodeResolver.label(forKeyCode: keyCode)
+        )
+    }
+
+    /// Builds a binding from a captured key event, or a pure-modifier chord when
+    /// `event` carries no usable key (caller decides which path via the event
+    /// type). Returns `nil` if the event yields neither.
+    static func fromKeyEvent(_ event: NSEvent) -> HotkeyBinding? {
+        let mods = event.modifierFlags
+            .intersection(.deviceIndependentFlagsMask)
+            .subtracting([.function, .capsLock, .numericPad])
+        let label = Self.keyLabel(for: event)
+        return HotkeyBinding(keyCode: Int(event.keyCode), modifiers: mods, keyLabel: label)
+    }
+
+    /// The ⌃⌥⇧⌘ prefix in the canonical macOS display order.
+    private var modifierSymbols: String {
+        var result = ""
+        if modifiers.contains(.control) { result += "\u{2303}" }  // ⌃
+        if modifiers.contains(.option) { result += "\u{2325}" }   // ⌥
+        if modifiers.contains(.shift) { result += "\u{21E7}" }    // ⇧
+        if modifiers.contains(.command) { result += "\u{2318}" }  // ⌘
+        return result
+    }
+
+    /// Human-readable rendering, e.g. "⌥Space", "F5", or "⌘⌃".
+    var displayString: String {
+        let symbols = modifierSymbols
+        guard let keyLabel, keyLabel.isEmpty == false else {
+            return symbols
+        }
+        return symbols + keyLabel
+    }
+
+    // MARK: - Key labels
+
+    static let specialKeyLabels: [Int: String] = [
+        49: "Space",
+        48: "Tab",
+        36: "Return",
+        76: "Enter",
+        53: "Esc",
+        51: "Delete",
+        117: "Fwd Delete",
+        123: "\u{2190}",   // ←
+        124: "\u{2192}",   // →
+        125: "\u{2193}",   // ↓
+        126: "\u{2191}",   // ↑
+        115: "Home",
+        119: "End",
+        116: "Page Up",
+        121: "Page Down",
+        122: "F1", 120: "F2", 99: "F3", 118: "F4", 96: "F5", 97: "F6",
+        98: "F7", 100: "F8", 101: "F9", 109: "F10", 103: "F11", 111: "F12"
+    ]
+
+    private static func keyLabel(for event: NSEvent) -> String {
+        let keyCode = Int(event.keyCode)
+        if let special = specialKeyLabels[keyCode] {
+            return special
+        }
+        if let chars = event.charactersIgnoringModifiers, chars.isEmpty == false {
+            let scalar = chars.unicodeScalars.first!
+            // Printable characters render uppercased; control chars fall through.
+            if scalar.value >= 0x20, scalar.value != 0x7F {
+                return chars.uppercased()
+            }
+        }
+        return "Key \(keyCode)"
+    }
+}
+
+/// Layout-aware virtual-key-code lookups (Carbon UCKeyTranslate). Key codes
+/// are positional: hardcoding "A = keyCode 0" is ANSI-only — on AZERTY that
+/// physical key types Q, so a chord built from a character must resolve the
+/// code through the CURRENT keyboard layout.
+enum KeyCodeResolver {
+    /// The virtual key code whose unmodified press types `character` on the
+    /// current layout, or nil when the layout has no such key.
+    static func keyCode(for character: Character) -> Int? {
+        guard let layoutData = currentLayoutData() else { return nil }
+        let target = String(character).lowercased()
+        for code in 0..<128 where translate(keyCode: code, layoutData: layoutData)?.lowercased() == target {
+            return code
+        }
+        return nil
+    }
+
+    /// A display label for `keyCode` under the current layout (special keys
+    /// first, then the typed character, then a raw fallback).
+    static func label(forKeyCode keyCode: Int) -> String {
+        if let special = HotkeyBinding.specialKeyLabels[keyCode] {
+            return special
+        }
+        if let layoutData = currentLayoutData(),
+           let translated = translate(keyCode: keyCode, layoutData: layoutData),
+           translated.isEmpty == false,
+           let scalar = translated.unicodeScalars.first,
+           scalar.value >= 0x20, scalar.value != 0x7F {
+            return translated.uppercased()
+        }
+        return "Key \(keyCode)"
+    }
+
+    private static func currentLayoutData() -> Data? {
+        guard let source = TISCopyCurrentKeyboardLayoutInputSource()?.takeRetainedValue(),
+              let layoutDataRef = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData) else {
+            return nil
+        }
+        return unsafeBitCast(layoutDataRef, to: CFData.self) as Data
+    }
+
+    private static func translate(keyCode: Int, layoutData: Data) -> String? {
+        layoutData.withUnsafeBytes { rawBuffer -> String? in
+            guard let layoutPtr = rawBuffer.bindMemory(to: UCKeyboardLayout.self).baseAddress else { return nil }
+            var deadKeyState: UInt32 = 0
+            var chars = [UniChar](repeating: 0, count: 4)
+            var length = 0
+            let status = UCKeyTranslate(
+                layoutPtr,
+                UInt16(keyCode),
+                UInt16(kUCKeyActionDisplay),
+                0,
+                UInt32(LMGetKbdType()),
+                OptionBits(kUCKeyTranslateNoDeadKeysBit),
+                &deadKeyState,
+                chars.count,
+                &length,
+                &chars
+            )
+            guard status == noErr, length > 0 else { return nil }
+            return String(utf16CodeUnits: chars, count: length)
+        }
+    }
+}

@@ -9,61 +9,67 @@ struct PreferencesConnectionView: View {
     @ObservedObject var store: ConnectionPreferencesStore
 
     var body: some View {
-        PreferencesPaneScrollView {
+        PreferencesPaneScrollView(accessibilityLabel: L10n.text("preferences.connection.title")) {
             VStack(alignment: .leading, spacing: 18) {
-                Toggle(
-                    L10n.text("preferences.general.autoJoinRootChannel"),
-                    isOn: Binding(
-                        get: { store.state.autoJoinRootChannel },
-                        set: { store.updateAutoJoinRootChannel($0) }
-                    )
-                )
+                Toggle(isOn: Binding(
+                    get: { store.state.autoJoinRootChannel },
+                    set: { store.updateAutoJoinRootChannel($0) }
+                )) {
+                    Text(L10n.text("preferences.general.autoJoinRootChannel"))
+                        .accessibilityHidden(true)
+                }
                 .toggleStyle(.switch)
+                .accessibilityLabel(L10n.text("preferences.general.autoJoinRootChannel"))
 
-                Toggle(
-                    L10n.text("preferences.general.autoReconnect"),
-                    isOn: Binding(
-                        get: { store.state.autoReconnect },
-                        set: { store.updateAutoReconnect($0) }
-                    )
-                )
+                Toggle(isOn: Binding(
+                    get: { store.state.autoReconnect },
+                    set: { store.updateAutoReconnect($0) }
+                )) {
+                    Text(L10n.text("preferences.general.autoReconnect"))
+                        .accessibilityHidden(true)
+                }
                 .toggleStyle(.switch)
+                .accessibilityLabel(L10n.text("preferences.general.autoReconnect"))
 
-                Toggle(
-                    L10n.text("preferences.general.rejoinLastChannelOnReconnect"),
-                    isOn: Binding(
-                        get: { store.state.rejoinLastChannelOnReconnect },
-                        set: { store.updateRejoinLastChannelOnReconnect($0) }
-                    )
-                )
+                Toggle(isOn: Binding(
+                    get: { store.state.rejoinLastChannelOnReconnect },
+                    set: { store.updateRejoinLastChannelOnReconnect($0) }
+                )) {
+                    Text(L10n.text("preferences.general.rejoinLastChannelOnReconnect"))
+                        .accessibilityHidden(true)
+                }
                 .toggleStyle(.switch)
+                .accessibilityLabel(L10n.text("preferences.general.rejoinLastChannelOnReconnect"))
 
-                Toggle(
-                    L10n.text("preferences.general.connectToLastServerOnLaunch"),
-                    isOn: Binding(
-                        get: { store.state.connectToLastServerOnLaunch },
-                        set: { store.updateConnectToLastServerOnLaunch($0) }
-                    )
-                )
+                Toggle(isOn: Binding(
+                    get: { store.state.connectToLastServerOnLaunch },
+                    set: { store.updateConnectToLastServerOnLaunch($0) }
+                )) {
+                    Text(L10n.text("preferences.general.connectToLastServerOnLaunch"))
+                        .accessibilityHidden(true)
+                }
                 .toggleStyle(.switch)
+                .accessibilityLabel(L10n.text("preferences.general.connectToLastServerOnLaunch"))
 
-                Toggle(
-                    L10n.text("preferences.connection.skipKickConfirmation"),
-                    isOn: Binding(
-                        get: { store.state.skipKickConfirmation },
-                        set: { store.updateSkipKickConfirmation($0) }
-                    )
-                )
+                Toggle(isOn: Binding(
+                    get: { store.state.skipKickConfirmation },
+                    set: { store.updateSkipKickConfirmation($0) }
+                )) {
+                    Text(L10n.text("preferences.connection.skipKickConfirmation"))
+                        .accessibilityHidden(true)
+                }
                 .toggleStyle(.switch)
+                .accessibilityLabel(L10n.text("preferences.connection.skipKickConfirmation"))
 
-                Toggle(
-                    L10n.text("preferences.connection.adaptiveJitterBuffer"),
-                    isOn: Binding(
-                        get: { store.state.adaptiveJitterBuffer },
-                        set: { store.updateAdaptiveJitterBuffer($0) }
-                    )
-                )
+                Toggle(isOn: Binding(
+                    get: { store.state.adaptiveJitterBuffer },
+                    set: { store.updateAdaptiveJitterBuffer($0) }
+                )) {
+                    Text(L10n.text("preferences.connection.adaptiveJitterBuffer"))
+                        .accessibilityHidden(true)
+                }
                 .toggleStyle(.switch)
+                .accessibilityLabel(L10n.text("preferences.connection.adaptiveJitterBuffer"))
 
                 Picker(
                     L10n.text("preferences.connection.channelSortMode"),
@@ -87,14 +93,15 @@ struct PreferencesConnectionView: View {
                         .accessibilityAddTraits(.isHeader)
 
                     ForEach(UserSubscriptionOption.regularCases, id: \.self) { option in
-                        Toggle(
-                            L10n.text(option.preferencesKey),
-                            isOn: Binding(
-                                get: { store.isSubscriptionEnabledByDefault(option) },
-                                set: { enabled in store.updateSubscriptionEnabledByDefault(enabled, for: option) }
-                            )
-                        )
+                        Toggle(isOn: Binding(
+                            get: { store.isSubscriptionEnabledByDefault(option) },
+                            set: { enabled in store.updateSubscriptionEnabledByDefault(enabled, for: option) }
+                        )) {
+                            Text(L10n.text(option.preferencesKey))
+                                .accessibilityHidden(true)
+                        }
                         .toggleStyle(.switch)
+                        .accessibilityLabel(L10n.text(option.preferencesKey))
                     }
                 }
 
@@ -104,14 +111,15 @@ struct PreferencesConnectionView: View {
                         .accessibilityAddTraits(.isHeader)
 
                     ForEach(UserSubscriptionOption.interceptCases, id: \.self) { option in
-                        Toggle(
-                            L10n.text(option.preferencesKey),
-                            isOn: Binding(
-                                get: { store.isSubscriptionEnabledByDefault(option) },
-                                set: { enabled in store.updateSubscriptionEnabledByDefault(enabled, for: option) }
-                            )
-                        )
+                        Toggle(isOn: Binding(
+                            get: { store.isSubscriptionEnabledByDefault(option) },
+                            set: { enabled in store.updateSubscriptionEnabledByDefault(enabled, for: option) }
+                        )) {
+                            Text(L10n.text(option.preferencesKey))
+                                .accessibilityHidden(true)
+                        }
                         .toggleStyle(.switch)
+                        .accessibilityLabel(L10n.text(option.preferencesKey))
                     }
                 }
             }

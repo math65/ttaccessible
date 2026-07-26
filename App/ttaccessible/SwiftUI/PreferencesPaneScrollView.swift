@@ -6,6 +6,9 @@
 import SwiftUI
 
 struct PreferencesPaneScrollView<Content: View>: View {
+    // Names the scroll area for VoiceOver (it appends the "scroll area" role, so
+    // pass just the pane name, e.g. "General" → "General, scroll area").
+    let accessibilityLabel: String
     @ViewBuilder let content: () -> Content
 
     var body: some View {
@@ -17,5 +20,6 @@ struct PreferencesPaneScrollView<Content: View>: View {
             .padding(24)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .accessibilityLabel(accessibilityLabel)
     }
 }

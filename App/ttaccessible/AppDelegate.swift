@@ -7,7 +7,6 @@
 
 import AppKit
 import Combine
-import KeyboardShortcuts
 import UserNotifications
 import UniformTypeIdentifiers
 import Sparkle
@@ -101,6 +100,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastObservedSessionHistory: [SessionHistoryEntry] = []
     private var recordingAccessedFolder: URL?
     private var activeRecordingMode: Int = 0
+    private var recordingStopKeyMonitor: Any?
     private var lastObservedChannelID: Int32 = 0
     private var pendingUnsavedServerConfiguration: PendingUnsavedServerConfiguration?
 
@@ -113,7 +113,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     )
     private var updaterAutoCheckCancellable: AnyCancellable?
     private var nicknameCancellable: AnyCancellable?
-    private var pushToTalkModeCancellable: AnyCancellable?
+    private var userMenuVisibilityCancellable: AnyCancellable?
+    private var hotkeyPrefsCancellable: AnyCancellable?
+    private let pushToTalkMonitor = HotkeyMonitor()
+    private let muteHotkeyMonitor = HotkeyMonitor()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         ProfileInstanceLock.acquire(for: ProfileContext.current)
@@ -137,18 +140,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.connectionController.handleDebouncedAudioHardwareChange(selector: selector)
         }
         requestNotificationPermission()
+        promptInitialLanguageIfNeeded()
         showSavedServersWindow()
         connectToLastServerOnLaunchIfEnabled()
         DispatchQueue.main.async { [weak self] in
             self?.preloadPreferencesWindow()
         }
         hasFinishedLaunching = true
+        // Create the first TeamTalk instance in the background now. TT_InitTeamTalkPoll
+        // enumerates all CoreAudio devices (~12 s on a large rig); prewarming it here
+        // keeps that cost off the connect path so connecting is fast.
+        connectionController.prewarmConnection()
         handleLaunchTTFilesIfNeeded()
         processPendingTTFileURLsIfPossible()
         syncSparkleAutoCheckPreference()
         syncNicknamePreference()
         scheduleLaunchUpdateCheck()
         configurePushToTalkObservers()
+        installRecordingStopKeyMonitor()
+        configureUserMenuVisibility()
         // Slight delay so the announcement alert never races the main window.
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
             self?.announcementService.checkAtLaunch()
@@ -163,6 +173,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         preferencesStore.flushPendingChanges()
     }
 
+    /// The User command menu is declared unconditionally — macOS 12's
+    /// CommandsBuilder cannot express a conditional menu, and the Optional
+    /// Commands conformance an availability split would need doesn't exist at
+    /// runtime before macOS 13. Its menu-bar visibility is managed here at the
+    /// AppKit layer instead: hidden unless connected, the same behavior the
+    /// SwiftUI-level `if` used to provide. Re-applied (idempotently) after any
+    /// menuState change, since SwiftUI may rebuild the main menu then.
+    private func configureUserMenuVisibility() {
+        userMenuVisibilityCancellable = menuState.objectWillChange
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                self?.applyUserMenuVisibility()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    self?.applyUserMenuVisibility()
+                }
+            }
+        // SwiftUI installs the main menu after launch finishes — apply once
+        // now and again after it has settled.
+        applyUserMenuVisibility()
+        for delay in [0.5, 1.5, 3.0] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                self?.applyUserMenuVisibility()
+            }
+        }
+    }
+
+    private func applyUserMenuVisibility() {
+        let title = L10n.text("user.menu.title")
+        guard let item = NSApp.mainMenu?.items.first(where: {
+            $0.submenu?.title == title || $0.title == title
+        }) else { return }
+        item.isHidden = menuState.mode != .connectedServer
+    }
+
     private func syncNicknamePreference() {
         nicknameCancellable = preferencesStore.$preferences
             .map(\.defaultNickname)
@@ -173,35 +217,96 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
     }
 
+    /// The subset of preferences that affect hotkey monitor configuration, so we
+    /// only reconfigure the monitors when one of these actually changes.
+    private struct HotkeyPrefsKey: Equatable {
+        let mode: AppPreferences.MicrophoneMode
+        let key: HotkeyBinding?
+        let pushToTalkGlobal: Bool
+        let muteHotkeyGlobal: Bool
+        let muteHotkeyBinding: HotkeyBinding?
+
+        init(preferences: AppPreferences) {
+            mode = preferences.microphoneMode
+            key = preferences.pushToTalkKey
+            pushToTalkGlobal = preferences.pushToTalkGlobal
+            muteHotkeyGlobal = preferences.muteHotkeyGlobal
+            muteHotkeyBinding = preferences.muteHotkeyBinding
+        }
+    }
+
     private func configurePushToTalkObservers() {
-        // Lets the audio insert path treat PTT as inactive when no global
-        // shortcut is configured — otherwise pushToTalkPressed never flips
-        // and the mic stays muted forever.
-        connectionController.pushToTalkShortcutResolver = {
-            KeyboardShortcuts.getShortcut(for: .pushToTalk) != nil
+        // Lets the audio insert path treat PTT as inactive when no key is
+        // configured — otherwise pushToTalkPressed never flips and the mic
+        // stays muted forever in push-to-talk mode.
+        pushToTalkMonitor.onPress = { [weak self] in self?.handlePushToTalkPress() }
+        pushToTalkMonitor.onRelease = { [weak self] in self?.handlePushToTalkRelease() }
+        // The global ⌘⇧A tap fires only while another app is focused (the menu
+        // shortcut covers the focused case), so it mirrors the menu action —
+        // without restoring/focusing our window, which would steal focus.
+        muteHotkeyMonitor.onPress = { [weak self] in
+            guard let self, self.menuState.mode == .connectedServer else { return }
+            self.connectedServerViewController?.performToggleMicrophoneShortcut(announceStatus: true)
         }
 
-        // Static handlers registered once for the lifetime of the app — the
-        // library only fires them while a shortcut is configured for the
-        // .pushToTalk name. Mode gating (always-on vs PTT) happens in the
-        // audio insert path; we still want the press/release effects for the
-        // beep + announcement either way (cheap and harmless if mode is
-        // .alwaysOn — the user wouldn't have set a shortcut in that case).
-        KeyboardShortcuts.onKeyDown(for: .pushToTalk) { [weak self] in
-            self?.handlePushToTalkPress()
-        }
-        KeyboardShortcuts.onKeyUp(for: .pushToTalk) { [weak self] in
-            self?.handlePushToTalkRelease()
-        }
+        configureHotkeyMonitors(with: preferencesStore.preferences)
 
-        // Reset transmit state when the mode toggles, so toggling Push-to-talk
-        // off doesn't leave the gate stuck open from a previous press.
-        pushToTalkModeCancellable = preferencesStore.$preferences
-            .map(\.microphoneMode)
-            .removeDuplicates()
-            .sink { [weak self] _ in
-                self?.connectionController.setPushToTalkPressed(false)
+        // Reconfigure the monitors whenever the mode, key, or scope changes.
+        // NOTE: @Published fires in willSet, so the sink must use the value the
+        // publisher delivers — reading preferencesStore.preferences here would
+        // return the OLD value and reconfigure with stale settings.
+        hotkeyPrefsCancellable = preferencesStore.$preferences
+            .removeDuplicates { HotkeyPrefsKey(preferences: $0) == HotkeyPrefsKey(preferences: $1) }
+            .sink { [weak self] prefs in
+                self?.configureHotkeyMonitors(with: prefs)
             }
+    }
+
+    /// Installs/updates the PTT and mute hotkey monitors from current prefs.
+    /// The PTT monitor is only active in push-to-talk / both modes, so it never
+    /// captures the key in always-transmit mode. Global scope uses a listen-only
+    /// CGEventTap (Input Monitoring) which observes without stealing the key.
+    private func configureHotkeyMonitors(with prefs: AppPreferences) {
+        AudioLogger.log("[Hotkey] configure mode=%@ key=%@ pttGlobal=%d muteGlobal=%d",
+                        String(describing: prefs.microphoneMode),
+                        prefs.pushToTalkKey?.displayString ?? "nil",
+                        prefs.pushToTalkGlobal ? 1 : 0,
+                        prefs.muteHotkeyGlobal ? 1 : 0)
+
+        // Push the queue-side caches + normalize transmit state on mode
+        // changes (the controller must never read the @Published prefs from
+        // its own queue).
+        connectionController.applyMicrophoneHotkeySettings(
+            mode: prefs.microphoneMode,
+            pushToTalkKeyConfigured: prefs.pushToTalkKey?.isValid ?? false
+        )
+
+        let pttActive = prefs.microphoneMode == .pushToTalk || prefs.microphoneMode == .both
+        if pttActive, let key = prefs.pushToTalkKey, key.isValid {
+            pushToTalkMonitor.configure(
+                binding: key,
+                scope: prefs.pushToTalkGlobal ? .global : .local
+            )
+        } else {
+            pushToTalkMonitor.stop()
+        }
+
+        if prefs.muteHotkeyGlobal {
+            // User-configurable global mic-toggle binding; the default is
+            // ⌘⇧ + whatever key TYPES "a" on the current layout (key codes
+            // are positional — hardcoding 0 made ⌘⇧Q toggle the mic on
+            // AZERTY). A user whose chord collides with another app's
+            // shortcut (the listen-only tap can't swallow) picks a
+            // different binding instead of us keeping per-app ignore lists.
+            muteHotkeyMonitor.configure(
+                binding: prefs.muteHotkeyBinding ?? HotkeyBinding.defaultMuteHotkey(),
+                scope: .global,
+                globalOnlyWhenInactive: true,
+                wantsReleaseEvents: false
+            )
+        } else {
+            muteHotkeyMonitor.stop()
+        }
     }
 
     private func handlePushToTalkPress() {
@@ -383,6 +488,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if NSApp.windows.contains(where: { $0.isVisible }) == false {
             restoreMainWindow()
         }
+        // If a global monitor was waiting on Input Monitoring permission, the
+        // user may have just granted it in System Settings — retry now.
+        if pushToTalkMonitor.isAwaitingGlobalPermission || muteHotkeyMonitor.isAwaitingGlobalPermission {
+            configureHotkeyMonitors(with: preferencesStore.preferences)
+        }
     }
 
     private func showSavedServersWindow() {
@@ -434,7 +544,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             || savedServersWindowController?.window?.isVisible == false
 
         if savedServersWindowController == nil {
-            let windowController = SavedServersWindowController(contentViewController: NSViewController())
+            // Assign the placeholder's view directly: a bare NSViewController
+            // has no nib, and before macOS 14 its default loadView throws.
+            let placeholder = NSViewController()
+            placeholder.view = NSView()
+            let windowController = SavedServersWindowController(contentViewController: placeholder)
             savedServersWindowController = windowController
         }
 
@@ -606,7 +720,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             vc.clientStatisticsProvider = { [weak self] in
                 self?.connectionController.getClientStatistics()
             }
-            let window = NSWindow(
+            let window = EscapeClosableWindow(
                 contentRect: NSRect(x: 0, y: 0, width: 400, height: 260),
                 styleMask: [.titled, .closable, .resizable],
                 backing: .buffered,
@@ -693,6 +807,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case nil:
             return
         }
+    }
+
+    private func promptInitialLanguageIfNeeded() {
+        guard preferencesStore.preferences.hasChosenInitialLanguage == false else {
+            return
+        }
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = L10n.text("firstLaunch.language.title")
+        alert.informativeText = L10n.text("firstLaunch.language.message")
+        alert.addButton(withTitle: L10n.text("common.ok"))
+
+        let popUp = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 260, height: 26), pullsDown: false)
+        for languagePreference in AppLanguagePreference.allCases {
+            popUp.addItem(withTitle: L10n.text(languagePreference.localizationKey))
+            popUp.lastItem?.representedObject = languagePreference
+        }
+        popUp.selectItem(withTitle: L10n.text(AppLanguagePreference.system.localizationKey))
+        popUp.setAccessibilityLabel(L10n.text("preferences.general.language.label"))
+        alert.accessoryView = popUp
+        alert.window.initialFirstResponder = popUp
+
+        alert.runModal()
+        let chosenLanguage = popUp.selectedItem?.representedObject as? AppLanguagePreference ?? .system
+        preferencesStore.updateLanguagePreference(chosenLanguage)
+        preferencesStore.markInitialLanguageChosen()
     }
 
     private func promptServerListExportMode() -> ServerListExportMode? {
@@ -1126,6 +1266,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         connectedServerViewController?.focusHistory()
     }
 
+    func focusChannelMixerArea() {
+        guard menuState.mode == .connectedServer else {
+            return
+        }
+        restoreMainWindow()
+        connectedServerViewController?.focusChannelMixer()
+    }
+
     func joinSelectedChannel() {
         guard menuState.mode == .connectedServer else {
             return
@@ -1151,12 +1299,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    func toggleMicrophone() {
+    // `fromControl` is true when triggered by pressing the mic toolbar button itself:
+    // VoiceOver then re-reads the button's state-bearing label, so the spoken status
+    // announcement is suppressed to avoid saying "Microphone" twice. The keyboard
+    // shortcut / menu path (focus elsewhere) keeps the announcement.
+    func toggleMicrophone(fromControl: Bool = false) {
         guard menuState.mode == .connectedServer else {
             return
         }
         restoreMainWindow()
-        connectedServerViewController?.performToggleMicrophoneShortcut()
+        connectedServerViewController?.performToggleMicrophoneShortcut(announceStatus: fromControl == false)
     }
 
     func changeNickname() {
@@ -1252,17 +1404,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
     }
 
-    func toggleRecording() {
+    /// While recording, ⌘⇧R has no menu item (only a single Stop item on ⌘R is shown), so
+    /// catch ⌘⇧R here to stop as well. When idle, the "start (preferred)" menu item claims
+    /// ⌘⇧R before it reaches this monitor, so this only ever fires while recording is active.
+    private func installRecordingStopKeyMonitor() {
+        recordingStopKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
+            guard let self, self.menuState.isRecordingActive,
+                  event.charactersIgnoringModifiers?.lowercased() == "r",
+                  event.modifierFlags.intersection(.deviceIndependentFlagsMask) == [.command, .shift] else {
+                return event
+            }
+            self.toggleRecording()
+            return nil
+        }
+    }
+
+    /// Toggle recording. When starting, `mode` selects the recording layout as a bitmask
+    /// (1 = single muxed file, 2 = separate files, 3 = both). Pass `nil` to use the mode
+    /// configured in preferences (⌘⇧R and the toolbar button); ⌘R passes `1` to force a
+    /// single file regardless of the preference.
+    func toggleRecording(mode: Int? = nil) {
         guard menuState.mode == .connectedServer else { return }
         if menuState.isRecordingActive {
             stopAllRecording()
             return
         }
-        guard let folderURL = preferencesStore.resolveRecordingFolderURL() else {
-            promptRecordingFolder()
+        // Honour the channel's recording policy: a CHANNEL_NO_RECORDING channel forbids
+        // recording unless our account holds USERRIGHT_RECORD_VOICE. (We patch the SDK to
+        // keep *playing* audio in such channels, but must not record there.)
+        guard connectionController.isRecordingAllowedInCurrentChannel() else {
+            announceWithVoiceOver(L10n.text("recording.announced.notAllowedHere"))
             return
         }
-        startRecordingToFolder(folderURL)
+        let resolvedMode = mode ?? preferencesStore.preferences.recordingMode
+        guard let folderURL = preferencesStore.resolveRecordingFolderURL() else {
+            promptRecordingFolder(mode: resolvedMode)
+            return
+        }
+        startRecordingToFolder(folderURL, mode: resolvedMode)
     }
 
     private func stopAllRecording() {
@@ -1294,7 +1473,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func promptRecordingFolder() {
+    private func promptRecordingFolder(mode: Int) {
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
@@ -1307,34 +1486,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if let bookmark = try? url.bookmarkData(options: .withSecurityScope) {
                 self.preferencesStore.updateRecordingFolderBookmark(bookmark)
             }
-            self.startRecordingToFolder(url)
+            self.startRecordingToFolder(url, mode: mode)
         }
     }
 
-    private func startRecordingToFolder(_ folder: URL) {
+    private func startRecordingToFolder(_ folder: URL, mode: Int) {
         guard folder.startAccessingSecurityScopedResource() else {
             preferencesStore.updateRecordingFolderBookmark(nil)
-            promptRecordingFolder()
+            promptRecordingFolder(mode: mode)
             return
         }
         recordingAccessedFolder = folder
         let format = AudioFileFormat(rawValue: UInt32(preferencesStore.preferences.recordingAudioFileFormat))
-        let mode = preferencesStore.preferences.recordingMode
         activeRecordingMode = mode
         preferencesStore.updateLastRecordingWasActive(true)
+        // Persist the *actual* mode so auto-restart restores what was really in use
+        // (e.g. a single-file ⌘R recording) rather than the clamped preference mode.
+        preferencesStore.updateLastActiveRecordingMode(mode)
 
+        let recordsStems = mode & 2 != 0
         if mode & 1 != 0 {
             connectionController.startMuxedRecording(folder: folder, format: format) { [weak self] result in
                 switch result {
                 case .success(let fileName):
-                    self?.announceWithVoiceOver(L10n.format("recording.announced.started", fileName))
+                    // "Both" (single + stems) gets its own announcement so ⌘⇧R is
+                    // distinct from ⌘R's plain single-file recording.
+                    let key = recordsStems ? "recording.announced.startedBoth" : "recording.announced.started"
+                    self?.announceWithVoiceOver(L10n.format(key, fileName))
                 case .failure:
                     self?.announceWithVoiceOver(L10n.text("recording.announced.error"))
                     self?.releaseRecordingFolderAccess()
                 }
             }
         }
-        if mode & 2 != 0 {
+        if recordsStems {
             connectionController.startSeparateRecording(folder: folder, format: format) { [weak self] result in
                 if case .failure = result {
                     self?.announceWithVoiceOver(L10n.text("recording.announced.error"))
@@ -1355,6 +1540,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func toggleHearMyself() {
         guard menuState.mode == .connectedServer else { return }
         connectionController.toggleHearMyself { [weak self] enabled in
+            self?.menuState.setHearMyselfEnabled(enabled)
             let key = enabled ? "shortcuts.hearMyself.announced.on" : "shortcuts.hearMyself.announced.off"
             self?.announceWithVoiceOver(L10n.text(key))
         }
@@ -1368,6 +1554,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func startStreamingMediaFromURL() {
         guard menuState.mode == .connectedServer, !menuState.isMediaStreamingActive else { return }
         promptMediaStreamURL()
+    }
+
+    func startStreamingMediaFromDevice() {
+        guard menuState.mode == .connectedServer, !menuState.isMediaStreamingActive else { return }
+        promptMediaStreamDevice()
     }
 
     func stopMediaStreaming() {
@@ -1433,6 +1624,73 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
             self.connectionController.startStreamingMediaURL(url) { [weak self] result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success:
+                        break
+                    case .failure(let error):
+                        self?.announceWithVoiceOver(L10n.text("mediaStream.announced.error"))
+                        let alert = NSAlert(error: error)
+                        alert.runModal()
+                    }
+                }
+            }
+        }
+    }
+
+    private func promptMediaStreamDevice() {
+        let devices = InputAudioDeviceResolver.availableInputDevices()
+        guard devices.isEmpty == false else {
+            announceWithVoiceOver(L10n.text("mediaStream.device.error.noDevices"))
+            let errorAlert = NSAlert()
+            errorAlert.messageText = L10n.text("mediaStream.device.prompt.title")
+            errorAlert.informativeText = L10n.text("mediaStream.device.error.noDevices")
+            errorAlert.runModal()
+            return
+        }
+
+        let alert = NSAlert()
+        alert.messageText = L10n.text("mediaStream.device.prompt.title")
+        alert.informativeText = L10n.text("mediaStream.device.prompt.message")
+        alert.addButton(withTitle: L10n.text("mediaStream.device.prompt.start"))
+        alert.addButton(withTitle: L10n.text("common.cancel"))
+
+        let devicePopUp = NSPopUpButton(frame: NSRect(x: 0, y: 32, width: 320, height: 26), pullsDown: false)
+        devicePopUp.addItems(withTitles: devices.map(\.name))
+        devicePopUp.setAccessibilityLabel(L10n.text("mediaStream.device.prompt.deviceLabel"))
+        let preferredUID = preferencesStore.preferences.deviceStreamLastDeviceUID
+            ?? InputAudioDeviceResolver.defaultInputDeviceUID()
+        if let preferredUID, let index = devices.firstIndex(where: { $0.uid == preferredUID }) {
+            devicePopUp.selectItem(at: index)
+        }
+
+        // Off by default on purpose: the source is usually audible locally
+        // already, and hearing it back a second time reads as an echo.
+        let monitorCheckbox = NSButton(
+            checkboxWithTitle: L10n.text("mediaStream.device.prompt.monitor"),
+            target: nil,
+            action: nil
+        )
+        monitorCheckbox.frame = NSRect(x: 0, y: 0, width: 320, height: 24)
+        monitorCheckbox.state = .off
+
+        let accessory = NSView(frame: NSRect(x: 0, y: 0, width: 320, height: 62))
+        accessory.addSubview(devicePopUp)
+        accessory.addSubview(monitorCheckbox)
+        alert.accessoryView = accessory
+        alert.window.initialFirstResponder = devicePopUp
+
+        guard let parentWindow = NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first else { return }
+        alert.beginSheetModal(for: parentWindow) { [weak self] response in
+            guard response == .alertFirstButtonReturn, let self else { return }
+            let index = devicePopUp.indexOfSelectedItem
+            guard index >= 0, index < devices.count else { return }
+            let device = devices[index]
+            self.preferencesStore.mutateDeviceStreamLastDeviceUID(device.uid)
+            self.connectionController.startStreamingAudioDevice(
+                deviceUID: device.uid,
+                monitorEnabled: monitorCheckbox.state == .on
+            ) { [weak self] result in
                 DispatchQueue.main.async {
                     switch result {
                     case .success:
@@ -1513,6 +1771,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         feedbackWindowController?.show()
     }
+
 
     // MARK: - Updates
 
@@ -1849,6 +2108,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             nickname: preferencesStore.preferences.defaultNickname,
             username: link.username,
             password: link.password,
+            useWebLogin: BearWareWebLogin.isWebLogin(link.username),
             initialChannelPath: link.channel,
             initialChannelPassword: link.channelPassword
         )
@@ -1864,6 +2124,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             encrypted: link.encrypted,
             nickname: preferencesStore.preferences.defaultNickname,
             username: link.username,
+            useWebLogin: BearWareWebLogin.isWebLogin(link.username),
             initialChannelPath: link.channel,
             initialChannelPassword: link.channelPassword
         )
@@ -1962,6 +2223,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             encrypted: payload.encrypted,
             nickname: nickname,
             username: payload.auth.username,
+            useWebLogin: BearWareWebLogin.isWebLogin(payload.auth.username),
             initialChannelPath: payload.join?.channelPath ?? "",
             initialChannelPassword: payload.join?.password ?? ""
         )
@@ -2149,8 +2411,14 @@ extension AppDelegate: TeamTalkConnectionControllerDelegate {
            !session.recordingActive,
            preferencesStore.preferences.autoRestartRecording,
            preferencesStore.preferences.lastRecordingWasActive,
+           // Don't auto-restart into a channel that forbids recording.
+           connectionController.isRecordingAllowedInCurrentChannel(),
            let folderURL = preferencesStore.resolveRecordingFolderURL() {
-            startRecordingToFolder(folderURL)
+            // Restore the mode that was actually in use (single-file, separate, or both);
+            // fall back to the preference only if we somehow have no recorded mode.
+            let savedMode = preferencesStore.preferences.lastActiveRecordingMode
+            let restartMode = savedMode != 0 ? savedMode : preferencesStore.preferences.recordingMode
+            startRecordingToFolder(folderURL, mode: restartMode)
         }
 
         if privateMessagesWindowController != nil {

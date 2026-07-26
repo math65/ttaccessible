@@ -12,16 +12,23 @@ struct PreferencesSoundsView: View {
     @State private var availablePacks = SoundPlayer.availablePacks
 
     var body: some View {
-        PreferencesPaneScrollView {
+        PreferencesPaneScrollView(accessibilityLabel: L10n.text("preferences.sounds.title")) {
             VStack(alignment: .leading, spacing: 18) {
                 Toggle(
-                    L10n.text("preferences.general.soundNotifications"),
                     isOn: Binding(
                         get: { store.state.soundNotificationsEnabled },
                         set: { store.updateSoundNotificationsEnabled($0) }
                     )
-                )
+                ) {
+                    // Visible label, but hidden from accessibility so macOS doesn't
+                    // expose it as a separate static-text stop next to the switch.
+                    // The switch keeps its native role; its name comes from
+                    // .accessibilityLabel below.
+                    Text(L10n.text("preferences.general.soundNotifications"))
+                        .accessibilityHidden(true)
+                }
                 .toggleStyle(.switch)
+                .accessibilityLabel(L10n.text("preferences.general.soundNotifications"))
 
                 HStack(spacing: 12) {
                     Picker(
@@ -92,13 +99,19 @@ struct PreferencesSoundsView: View {
 
                     ForEach(NotificationSound.allCases, id: \.self) { sound in
                         Toggle(
-                            L10n.text(sound.localizationKey),
                             isOn: Binding(
                                 get: { store.isSoundEventEnabled(sound) },
                                 set: { store.setSoundEventEnabled(sound, enabled: $0) }
                             )
-                        )
+                        ) {
+                            // Visible label hidden from accessibility so it isn't a
+                            // separate static-text stop; the switch keeps its native
+                            // role and gets its name from .accessibilityLabel below.
+                            Text(L10n.text(sound.localizationKey))
+                                .accessibilityHidden(true)
+                        }
                         .toggleStyle(.switch)
+                        .accessibilityLabel(L10n.text(sound.localizationKey))
                     }
                 }
             }

@@ -7,7 +7,7 @@ import AppKit
 
 final class ConnectedUsersWindowController: NSWindowController {
     init(contentViewController: NSViewController) {
-        let window = NSWindow(
+        let window = EscapeClosableWindow(
             contentRect: NSRect(x: 0, y: 0, width: 720, height: 420),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,

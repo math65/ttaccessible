@@ -1,6 +1,6 @@
 ---
 name: release
-description: End-to-end ttaccessible release — drafts the release notes (English RELEASE_NOTES.md + French RELEASE_NOTES.fr.md + optional AppleVis post) AND builds, signs, notarizes, staples, and publishes via `./build.sh --release` plus the Sparkle appcast. Use this whenever the user is cutting a release, says "ship it", "publish the new version", "release vX.Y.Z", "what changed since vX and release it", or wants to go from "code is on main" to "users get the update". User-triggered only — the publish half has irreversible side effects (binary publication, GitHub release, appcast push), so it never runs automatically.
+description: End-to-end ttaccessible release — drafts the release notes (English RELEASE_NOTES.md + French RELEASE_NOTES.fr.md + optional AppleVis post) AND builds, signs, notarizes, staples, and publishes via `./build.sh --release` plus the Sparkle appcast. Handles both stable releases and beta-channel releases (`./build.sh --release --beta`). Use this whenever the user is cutting a release, says "ship it", "publish the new version", "release vX.Y.Z", "ship a beta", "publish to the beta channel", "what changed since vX and release it", or wants to go from "code is on main" to "users get the update". User-triggered only — the publish half has irreversible side effects (binary publication, GitHub release, appcast push), so it never runs automatically.
 disable-model-invocation: true
 ---
 
@@ -13,7 +13,11 @@ public release. **Never run Phase B without an explicit go-ahead from the user.*
 **Scope control via arguments:**
 - Invoked with `notes` (e.g. `/release notes`) → run **Phase A only**, then stop.
 - Invoked with `publish` or no argument → run Phase A, then **pause and confirm**
-  before Phase B.
+  before Phase B (**stable** channel — reaches every user).
+- Invoked with `beta` (e.g. `/release beta`, `/release publish beta`) → run Phase A,
+  then **pause and confirm** before Phase B, publishing to the **beta** channel
+  via `./build.sh --release --beta` (see "Beta releases" below). Only users who
+  enabled "Include beta versions" in Preferences > General receive it.
 
 Do not rely on session memory for what shipped — always query git.
 
@@ -97,7 +101,17 @@ Sparkle shows localized release notes during updates: `build.sh` renders
 `<sparkle:releaseNotesLink xml:lang="fr">` automatically. French users see the
 French notes; everyone else falls back to the English `.html`.
 
-- Translate `RELEASE_NOTES.md` into `RELEASE_NOTES.fr.md` at the repo root.
+- **Write `RELEASE_NOTES.fr.md` from scratch in idiomatic French — do NOT translate
+  the English clause-by-clause.** Re-express each change the way a French native
+  would phrase it. A word-for-word calque reads as jarring translationese when
+  VoiceOver speaks it aloud, and Mathieu *will* reject it ("c'est tout sauf
+  naturel"). Read each sentence aloud: if it sounds like translated English,
+  rewrite it.
+  - Calques that have been rejected before: "une passe ciblée" (a focused pass) →
+    "entièrement consacrée à…"; "contribuée par" (contributed by) → "grâce à la
+    contribution de…"; "nom attaché" (run-together name) → "écrit d'un seul
+    tenant"; "interrupteurs par son" (per-sound switches) → "la liste des sons".
+  - Lead with the user-visible effect, same tone rules as the English (A4).
 - Use **vouvoiement** ("vous", never "tu") — same rule as app-shipped French strings.
 - Keep the structure and the same `.zip` filename in the Download section.
 - This file is **only** for the in-app Sparkle dialog. The GitHub release body and
@@ -149,6 +163,35 @@ appcast itself — it does not leave a draft despite older docs.
 
 If you only need to fix release notes **after** publish (no binary change): re-render
 the HTML and run `gh release edit` — no rebuild or re-notarize required.
+
+#### Beta releases (`./build.sh --release --beta`)
+
+For a beta-channel release, run:
+
+```bash
+./build.sh --release --beta
+```
+
+What `--beta` changes versus a stable release:
+- `generate_appcast` is passed `--channel beta`, so **only the new appcast item**
+  is tagged `<sparkle:channel>beta</sparkle:channel>`. Existing stable entries are
+  preserved untouched. The app's `allowedChannels(for:)` (`AppDelegate.swift`)
+  returns `["beta"]` only when the user enabled "Include beta versions"
+  (Preferences > General), so stable users never see the beta build.
+- The GitHub release is created with `--prerelease`.
+
+**Versioning caveat — avoid tag collisions.** The GitHub tag is `v${VERSION}` where
+`VERSION` = `CFBundleShortVersionString`. If a beta and the eventual stable share
+the same marketing version (e.g. both `1.7.0`), the tag `v1.7.0` collides and the
+second run uploads the asset onto the first release instead of creating a new one.
+Give betas a distinct `MARKETING_VERSION` such as `1.7.0-beta.1` (bump
+`CURRENT_PROJECT_VERSION`/build for every beta — Sparkle compares by build number).
+The stable release then uses `1.7.0`. Confirm the intended version with the user.
+
+**No beta channel has been published before** as of the BearWare web-login work, so
+expect essentially zero users on the beta channel initially — the announcement must
+tell testers to enable "Include beta versions" first, and you'll likely need to
+enable it yourself to receive your own beta.
 
 ### B2. Commit and push the appcast
 

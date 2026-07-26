@@ -31,8 +31,10 @@ final class SavedServersMenuState: ObservableObject {
     @Published private(set) var isSelectedUserMuted = false
     @Published private(set) var isSelectedUserMediaFileMuted = false
     @Published private(set) var isSelectedUserChannelOperator = false
+    @Published private(set) var isMicrophoneMuted = false
     @Published private(set) var isMasterMuted = false
     @Published private(set) var isRecordingActive = false
+    @Published private(set) var isHearMyselfEnabled = false
     @Published private(set) var isMediaStreamingActive = false
     @Published private(set) var selectedUserSubscriptionStates: [UserSubscriptionOption: Bool] = [:]
 
@@ -64,8 +66,10 @@ final class SavedServersMenuState: ObservableObject {
     func resetConnectedTransientState() {
         setCanSendBroadcast(false)
         setSelectedUsersState(hasSelectedUsers: false, hasSingleSelectedUser: false, hasSingleSelectedOtherUser: false, isSelectedUserMuted: false, isSelectedUserMediaFileMuted: false, isSelectedUserChannelOperator: false, states: [:])
+        setMicrophoneMuted(false)
         setMasterMuted(false)
         setRecordingActive(false)
+        setHearMyselfEnabled(false)
         setMediaStreamingActive(false)
     }
 
@@ -85,12 +89,20 @@ final class SavedServersMenuState: ObservableObject {
         if isStatusLocked != value { isStatusLocked = value }
     }
 
+    func setMicrophoneMuted(_ value: Bool) {
+        if isMicrophoneMuted != value { isMicrophoneMuted = value }
+    }
+
     func setMasterMuted(_ value: Bool) {
         if isMasterMuted != value { isMasterMuted = value }
     }
 
     func setRecordingActive(_ value: Bool) {
         if isRecordingActive != value { isRecordingActive = value }
+    }
+
+    func setHearMyselfEnabled(_ value: Bool) {
+        if isHearMyselfEnabled != value { isHearMyselfEnabled = value }
     }
 
     func setMediaStreamingActive(_ value: Bool) {

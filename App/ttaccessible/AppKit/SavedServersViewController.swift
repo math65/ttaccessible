@@ -338,7 +338,14 @@ final class SavedServersViewController: NSViewController {
     }
 
     func connectSelectedServer() {
-        guard let record = selectedRecord, isConnecting == false else {
+        guard let record = selectedRecord else {
+            return
+        }
+        connect(to: record)
+    }
+
+    func connect(to record: SavedServerRecord) {
+        guard isConnecting == false else {
             return
         }
 
@@ -947,17 +954,24 @@ extension SavedServersViewController: NSTableViewDelegate {
         }
 
         let identifier = NSUserInterfaceItemIdentifier("SavedServersCell-\(tableColumn.identifier.rawValue)")
-        let textField: NSTextField
+        let textField: PressActionTextField
 
-        if let cell = tableView.makeView(withIdentifier: identifier, owner: self) as? NSTextField {
+        if let cell = tableView.makeView(withIdentifier: identifier, owner: self) as? PressActionTextField {
             textField = cell
         } else {
-            textField = NSTextField(labelWithString: value)
+            textField = PressActionTextField(labelWithString: value)
             textField.identifier = identifier
             textField.lineBreakMode = .byTruncatingTail
         }
 
         textField.stringValue = value
+        // VO-Espace rejoint le serveur de CETTE ligne (celle sous le curseur VoiceOver),
+        // indépendamment de la sélection du tableau — sans interaction, le tableau n'a
+        // aucune ligne sélectionnée.
+        textField.onPress = { [weak self] in
+            guard let self, self.records.indices.contains(row) else { return }
+            self.connect(to: self.records[row])
+        }
         return textField
     }
 }

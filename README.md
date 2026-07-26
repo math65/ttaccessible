@@ -1,8 +1,8 @@
-# TTAccessible
+# tt-Accessible
 
 A native, fully accessible TeamTalk client for macOS, built with VoiceOver as a first-class citizen.
 
-The official TeamTalk Qt client on Mac has significant accessibility issues — broken navigation, unresponsive context menus, audio crackling, and sluggish VoiceOver announcements. TTAccessible is a from-scratch alternative that puts screen reader users first.
+The official TeamTalk Qt client on Mac has significant accessibility issues — broken navigation, unresponsive context menus, audio crackling, and sluggish VoiceOver announcements. tt-Accessible is a from-scratch alternative that puts screen reader users first.
 
 ## Features
 
@@ -12,6 +12,11 @@ The official TeamTalk Qt client on Mac has significant accessibility issues — 
 - **Channel browsing and joining** — tree view with users, subchannels, topics
 - **Channel and private chat** — with clickable links and VoiceOver announcements
 - **File sharing** — upload/download with progress, speed, ETA
+- **Push-to-talk** — any key, including a single key or a modifier-only chord; optionally active while another app is in front, plus a "Both" mode that combines muting with push-to-talk
+- **Per-user Channel Mixer** — voice volume, media volume, stereo placement, mute and solo for every person in the channel, entirely keyboard- and VoiceOver-driven (Cmd+5)
+- **Live audio-device streaming** — broadcast any input device (interface, virtual device, loopback) into the channel alongside your voice (Cmd+Option+A)
+- **Multiple profiles** — independent server lists and settings, with several instances side by side
+- **BearWare web login** — connect with a bearware.dk account on servers that support it
 - **Advanced audio engine** — custom dual-path capture (AVAudioEngine + standalone AUHAL), input gain, channel selection, echo cancellation
 - **WebRTC AEC3 echo cancellation** — with real speaker output capture via Core Audio taps (macOS 14.2+), cancels VoiceOver and system sounds
 - **Adaptive jitter buffer** — improves audio quality on unstable connections
@@ -24,12 +29,13 @@ The official TeamTalk Qt client on Mac has significant accessibility issues — 
 - **Auto-reconnect** — with last channel rejoin
 - **.tt file import/export** — and tt:// link support
 - **Automatic updates** — signed and notarized releases delivered in-app via [Sparkle](https://sparkle-project.org)
-- **English and French localization**
+- **English and French localization** — follows the system language, or force one in Preferences
+- **In-app feedback** — report a problem, with diagnostics and logs attached, without a GitHub account
 
 ## Requirements
 
-- **macOS 14.0** or later
-- **Apple Silicon** (M1, M2, M3, M4, or later)
+- **macOS 12.0 (Monterey)** or later
+- **Universal binary** — works on both Apple Silicon and Intel Macs
 - Echo cancellation with speaker tap requires **macOS 14.2+** (falls back to SDK-only reference on older systems)
 
 ## Building
@@ -87,7 +93,7 @@ The app is signed with a Developer ID certificate and notarized by Apple, so no 
 
 If you already use TeamTalk on your Mac, you can import your saved servers:
 
-1. Open TTAccessible
+1. Open tt-Accessible
 2. Go to **Server > Import TeamTalk Servers…**
 3. Select your `TeamTalk5.ini` file (the app navigates to the right folder automatically)
 
@@ -103,6 +109,9 @@ If you already use TeamTalk on your Mac, you can import your saved servers:
 | Cmd+E | Edit server (server list) / Open private messages (connected) |
 | Cmd+Shift+I | Import TeamTalk servers (server list) / Server stats (connected) |
 | Cmd+1/2/3/4 | Focus: tree / chat / message / history |
+| Cmd+5 | Focus the Channel Mixer |
+| Cmd+Shift+W | Connected users |
+| Cmd+Shift+N | New instance (another profile) |
 
 ### Identity & channels
 
@@ -132,8 +141,11 @@ If you already use TeamTalk on your Mac, you can import your saved servers:
 | Cmd+Shift+A | Toggle microphone |
 | Cmd+M | Mute / unmute master volume |
 | Cmd+Shift+H | Hear myself (loopback) |
-| Cmd+R | Start / stop recording |
+| Cmd+R | Start / stop recording (single mixed file) |
+| Cmd+Shift+R | Start / stop recording (per-person stems, or both) |
 | F9 | Announce audio state |
+
+The push-to-talk key is not fixed — set it yourself in **Preferences > Audio**. Cmd+Shift+A and push-to-talk can each be made to work while another app is in front.
 
 ### User actions
 
@@ -163,13 +175,18 @@ If you already use TeamTalk on your Mac, you can import your saved servers:
 |----------|--------|
 | Cmd+Option+S | Stream media from file |
 | Cmd+Option+U | Stream media from URL |
+| Cmd+Option+A | Stream a live audio device |
 | Cmd+Option+. | Stop media streaming |
 
 ## Architecture
 
-Native **macOS AppKit app** with SwiftUI preference panes. The audio pipeline uses a custom AUHAL capture engine (explicit CoreAudio device binding for every input, including system default) bypassing the TeamTalk SDK's built-in audio capture (which causes crackling on macOS). Captured PCM is resampled to the channel codec rate before injection via `TT_InsertAudioBlock` through a virtual sound device.
+Native **macOS AppKit app** with SwiftUI preference panes. Both ends of the audio path are custom, and the TeamTalk SDK is pointed at a virtual sound device so it never owns a physical one.
 
-Echo cancellation uses WebRTC AEC3 (from `webrtc-audio-processing` v2.0, WebRTC M131) with the actual speaker output captured via Core Audio taps as the reference signal — not just the decoded TeamTalk audio. This allows cancellation of VoiceOver, system sounds, and all other audio.
+**Capture** uses a dual-path engine, bypassing the SDK's built-in capture (which causes crackling on macOS): AVAudioEngine for the system default input, and a standalone AUHAL audio unit for any other device — AVAudioEngine cannot reliably bind to a non-default device. Captured PCM is resampled to the channel codec rate and injected via `TT_InsertAudioBlock`.
+
+**Playback** is a custom CoreAudio render engine that mixes each remote user separately, instead of playing the SDK's pre-mixed stream. That is what makes per-user volume, stereo placement, mute and solo possible, and it means switching output device is a fast rebind rather than an SDK teardown.
+
+**Echo cancellation** uses WebRTC AEC3 (from `webrtc-audio-processing` v2.0, WebRTC M131) with the actual speaker output captured via Core Audio taps as the reference signal — not just the decoded TeamTalk audio. This allows cancellation of VoiceOver, system sounds, and all other audio.
 
 ## Development
 
@@ -184,6 +201,12 @@ This project is licensed under the **GNU General Public License v3.0** — see t
 - **TeamTalk 5 SDK** — proprietary, see [BearWare](https://bearware.dk) for licensing terms
 - **WebRTC audio processing** — BSD-style license, from [freedesktop.org](https://gitlab.freedesktop.org/pulseaudio/webrtc-audio-processing)
 - **Abseil C++** — Apache 2.0 license
+
+## Contributors
+
+Special thanks to **[Rocco Fiorentino](https://github.com/rfiorentino1)**, by far the largest outside contributor: the rebuilt audio engine and per-user Channel Mixer, live audio-device streaming, the push-to-talk hotkey engine, faster and steadier connecting, and a great deal of accessibility work throughout.
+
+Thanks also to **[Casey Reeves](https://github.com/xogium)** (microphone transmit fixes, ongoing refactoring), **[Tobias Heath](https://github.com/heath-toby)** (multiple profiles, no-output-device option), **[Quinton Williams](https://github.com/Quinton1110)** (sound packs, `.tt` import, upload fixes) and **[Gruia Chiscop](https://github.com/GruiaChiscop)** (language preference).
 
 ## Acknowledgments
 

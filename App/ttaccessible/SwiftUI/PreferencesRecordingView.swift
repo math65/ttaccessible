@@ -9,7 +9,7 @@ struct PreferencesRecordingView: View {
     @ObservedObject var store: RecordingPreferencesStore
 
     var body: some View {
-        PreferencesPaneScrollView {
+        PreferencesPaneScrollView(accessibilityLabel: L10n.text("preferences.recording.title")) {
             VStack(alignment: .leading, spacing: 14) {
                 Text(L10n.text("preferences.recording.folder.label"))
                     .font(.headline)
@@ -78,14 +78,15 @@ struct PreferencesRecordingView: View {
 
                 Divider()
 
-                Toggle(
-                    L10n.text("preferences.recording.autoRestart"),
-                    isOn: Binding(
-                        get: { store.state.autoRestartRecording },
-                        set: { store.updateAutoRestartRecording($0) }
-                    )
-                )
+                Toggle(isOn: Binding(
+                    get: { store.state.autoRestartRecording },
+                    set: { store.updateAutoRestartRecording($0) }
+                )) {
+                    Text(L10n.text("preferences.recording.autoRestart"))
+                        .accessibilityHidden(true)
+                }
                 .toggleStyle(.switch)
+                .accessibilityLabel(L10n.text("preferences.recording.autoRestart"))
 
                 Text(L10n.text("preferences.recording.help"))
                     .font(.caption)

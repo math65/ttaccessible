@@ -102,14 +102,21 @@ extension ConnectedServerViewController: NSOutlineViewDelegate {
         guard let node = item as? ServerTreeNode else { return nil }
 
         let identifier = NSUserInterfaceItemIdentifier("ConnectedServerCell")
-        let textField: NSTextField
+        let textField: PressActionTextField
 
-        if let cell = outlineView.makeView(withIdentifier: identifier, owner: self) as? NSTextField {
+        if let cell = outlineView.makeView(withIdentifier: identifier, owner: self) as? PressActionTextField {
             textField = cell
         } else {
-            textField = NSTextField(labelWithString: "")
+            textField = PressActionTextField(labelWithString: "")
             textField.identifier = identifier
             textField.lineBreakMode = .byTruncatingTail
+        }
+
+        // VO-Espace effectue l'action par défaut sur CE nœud (rejoindre/quitter un salon,
+        // ouvrir un message privé), comme la touche Entrée — indépendamment de la
+        // sélection, car sans interaction l'arbre n'a aucune ligne sélectionnée.
+        textField.onPress = { [weak self] in
+            self?.performDefaultAction(for: node)
         }
 
         let accessLabel = accessibilityText(for: node)

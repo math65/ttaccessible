@@ -16,14 +16,15 @@ struct PreferencesGeneralView: View {
     @State private var autoAwayCommitTask: Task<Void, Never>?
 
     var body: some View {
-        PreferencesPaneScrollView {
+        PreferencesPaneScrollView(accessibilityLabel: L10n.text("preferences.general.title")) {
             VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.text("preferences.general.defaultNickname"))
+                        .accessibilityHidden(true)
                     TextField("", text: $nicknameDraft)
                         .textFieldStyle(.roundedBorder)
                         .accessibilityLabel(L10n.text("preferences.general.defaultNickname"))
-                        .onChange(of: nicknameDraft) { _, newValue in
+                        .onChangeCompat(of: nicknameDraft) { newValue in
                             scheduleNicknameCommit(for: newValue)
                         }
                         .onSubmit { commitNicknameDraft() }
@@ -35,10 +36,11 @@ struct PreferencesGeneralView: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.text("preferences.connection.defaultStatusMessage"))
+                        .accessibilityHidden(true)
                     TextField("", text: $statusMessageDraft)
                         .textFieldStyle(.roundedBorder)
                         .accessibilityLabel(L10n.text("preferences.connection.defaultStatusMessage"))
-                        .onChange(of: statusMessageDraft) { _, newValue in
+                        .onChangeCompat(of: statusMessageDraft) { newValue in
                             scheduleStatusCommit(for: newValue)
                         }
                         .onSubmit { commitStatusDraft() }
@@ -46,6 +48,7 @@ struct PreferencesGeneralView: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.text("preferences.connection.defaultGender"))
+                        .accessibilityHidden(true)
                     Picker(
                         L10n.text("preferences.connection.defaultGender"),
                         selection: Binding(
@@ -65,6 +68,7 @@ struct PreferencesGeneralView: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.text("preferences.connection.autoAwayTimeout"))
+                        .accessibilityHidden(true)
                     HStack(alignment: .center, spacing: 8) {
                         TextField(
                             "",
@@ -89,10 +93,11 @@ struct PreferencesGeneralView: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.text("preferences.connection.autoAwayStatusMessage"))
+                        .accessibilityHidden(true)
                     TextField("", text: $autoAwayStatusMessageDraft)
                         .textFieldStyle(.roundedBorder)
                         .accessibilityLabel(L10n.text("preferences.connection.autoAwayStatusMessage"))
-                        .onChange(of: autoAwayStatusMessageDraft) { _, newValue in
+                        .onChangeCompat(of: autoAwayStatusMessageDraft) { newValue in
                             scheduleAutoAwayCommit(for: newValue)
                         }
                         .onSubmit { commitAutoAwayDraft() }
@@ -100,23 +105,49 @@ struct PreferencesGeneralView: View {
 
                 Divider()
 
-                Toggle(
-                    L10n.text("preferences.general.relativeTimestamps"),
-                    isOn: Binding(
-                        get: { rootStore.preferences.useRelativeTimestamps },
-                        set: { rootStore.updateUseRelativeTimestamps($0) }
-                    )
-                )
+                Toggle(isOn: Binding(
+                    get: { rootStore.preferences.useRelativeTimestamps },
+                    set: { rootStore.updateUseRelativeTimestamps($0) }
+                )) {
+                    Text(L10n.text("preferences.general.relativeTimestamps"))
+                        .accessibilityHidden(true)
+                }
                 .toggleStyle(.switch)
+                .accessibilityLabel(L10n.text("preferences.general.relativeTimestamps"))
 
-                Toggle(
-                    L10n.text("preferences.general.autoDetectImport"),
-                    isOn: Binding(
-                        get: { rootStore.preferences.prefersAutomaticTeamTalkConfigDetection },
-                        set: { rootStore.updatePrefersAutomaticTeamTalkConfigDetection($0) }
-                    )
-                )
+                Toggle(isOn: Binding(
+                    get: { rootStore.preferences.prefersAutomaticTeamTalkConfigDetection },
+                    set: { rootStore.updatePrefersAutomaticTeamTalkConfigDetection($0) }
+                )) {
+                    Text(L10n.text("preferences.general.autoDetectImport"))
+                        .accessibilityHidden(true)
+                }
                 .toggleStyle(.switch)
+                .accessibilityLabel(L10n.text("preferences.general.autoDetectImport"))
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(L10n.text("preferences.general.language.label"))
+                        .accessibilityHidden(true)
+                    Picker(
+                        L10n.text("preferences.general.language.label"),
+                        selection: Binding(
+                            get: { rootStore.preferences.languagePreference },
+                            set: { rootStore.updateLanguagePreference($0) }
+                        )
+                    ) {
+                        ForEach(AppLanguagePreference.allCases, id: \.self) { languagePreference in
+                            Text(L10n.text(languagePreference.localizationKey)).tag(languagePreference)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .accessibilityLabel(L10n.text("preferences.general.language.label"))
+
+                    Text(L10n.text("preferences.general.language.help"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
 
                 Divider()
 
@@ -124,24 +155,26 @@ struct PreferencesGeneralView: View {
                     .font(.headline)
                     .accessibilityAddTraits(.isHeader)
 
-                Toggle(
-                    L10n.text("preferences.updates.autoCheck"),
-                    isOn: Binding(
-                        get: { rootStore.preferences.autoCheckForUpdates },
-                        set: { rootStore.updateAutoCheckForUpdates($0) }
-                    )
-                )
+                Toggle(isOn: Binding(
+                    get: { rootStore.preferences.autoCheckForUpdates },
+                    set: { rootStore.updateAutoCheckForUpdates($0) }
+                )) {
+                    Text(L10n.text("preferences.updates.autoCheck"))
+                        .accessibilityHidden(true)
+                }
                 .toggleStyle(.switch)
+                .accessibilityLabel(L10n.text("preferences.updates.autoCheck"))
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Toggle(
-                        L10n.text("preferences.updates.includeBeta"),
-                        isOn: Binding(
-                            get: { rootStore.preferences.includeBetaUpdates },
-                            set: { rootStore.updateIncludeBetaUpdates($0) }
-                        )
-                    )
+                    Toggle(isOn: Binding(
+                        get: { rootStore.preferences.includeBetaUpdates },
+                        set: { rootStore.updateIncludeBetaUpdates($0) }
+                    )) {
+                        Text(L10n.text("preferences.updates.includeBeta"))
+                            .accessibilityHidden(true)
+                    }
                     .toggleStyle(.switch)
+                    .accessibilityLabel(L10n.text("preferences.updates.includeBeta"))
 
                     Text(L10n.text("preferences.updates.includeBeta.help"))
                         .font(.caption)
@@ -154,13 +187,13 @@ struct PreferencesGeneralView: View {
             statusMessageDraft = store.state.defaultStatusMessage
             autoAwayStatusMessageDraft = store.state.autoAwayStatusMessage
         }
-        .onChange(of: store.state.defaultNickname) { _, newValue in
+        .onChangeCompat(of: store.state.defaultNickname) { newValue in
             if nicknameDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { nicknameDraft = newValue }
         }
-        .onChange(of: store.state.defaultStatusMessage) { _, newValue in
+        .onChangeCompat(of: store.state.defaultStatusMessage) { newValue in
             if newValue != statusMessageDraft { statusMessageDraft = newValue }
         }
-        .onChange(of: store.state.autoAwayStatusMessage) { _, newValue in
+        .onChangeCompat(of: store.state.autoAwayStatusMessage) { newValue in
             if newValue != autoAwayStatusMessageDraft { autoAwayStatusMessageDraft = newValue }
         }
         .onDisappear {

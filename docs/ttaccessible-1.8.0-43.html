@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ttaccessible-1.8.0-43</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --code-bg: #f5f5f7;
+  --link: #0066cc;
+  --link-hover: #0040a0;
+  --rule: #e5e5ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #ececec;
+    --muted: #a0a0a0;
+    --code-bg: #2d2d2d;
+    --link: #4eaaff;
+    --link-hover: #82c4ff;
+    --rule: #3a3a3a;
+  }
+}
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  padding: 1rem 1.25rem 1.5rem;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.15rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.2em; }
+h3 { font-size: 1.02rem; }
+h4 { font-size: 0.95rem; color: var(--muted); }
+p { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; margin: 0.6em 0; }
+li { margin: 0.25em 0; }
+li > p { margin: 0.3em 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover, a:focus { color: var(--link-hover); text-decoration: underline; }
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.75em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+pre code { background: transparent; padding: 0; border-radius: 0; }
+blockquote {
+  border-left: 3px solid var(--rule);
+  margin: 0.8em 0;
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--muted);
+}
+hr { border: 0; border-top: 1px solid var(--rule); margin: 1.5em 0; }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<h2 id="v180-build-43--2026-07-22">v1.8.0 (build 43) — 2026-07-22</h2>
+<p>This release adds live audio-device streaming into a channel, brings
+back support for macOS 12 (Monterey), and fixes audio going silent in
+"no recording" channels — plus mixer and recording refinements.</p>
+<h3 id="highlights">Highlights</h3>
+<ul>
+<li><strong>Stream a live audio device into your channel.</strong> Pick
+any input device — an audio interface, a virtual device, loopback — and
+broadcast it into the channel as a media stream alongside your voice.
+Press <strong>⌘⌥A</strong>.</li>
+<li><strong>macOS 12 Monterey is supported again.</strong> The app now
+runs on macOS 12 and later.</li>
+<li><strong>Audio no longer goes silent in "no recording"
+channels.</strong></li>
+</ul>
+<h3 id="live-device-streaming">Live device streaming</h3>
+<ul>
+<li><strong>⌘⌥A</strong> streams the selected input device into the
+current channel as a media stream, alongside your voice.</li>
+<li>It starts fast without freezing the channel, and stays low-latency —
+the stream uses Opus with very small frames so the server's analysis is
+near-instant.</li>
+<li>If the device goes quiet, silence is filled in automatically so the
+stream never drops out.</li>
+</ul>
+<h3 id="audio">Audio</h3>
+<ul>
+<li><strong>"No recording" channels now play sound again.</strong> In a
+channel flagged as no-recording, other people's voices were silent for
+you — even though they worked fine for people on the Qt or iPhone
+clients. That's fixed: you hear everyone again. Recording itself stays
+blocked in those channels, exactly as the server intends.</li>
+</ul>
+<h3 id="channel-mixer">Channel Mixer</h3>
+<ul>
+<li><strong>Independent stereo placement (pan) for each person's voice
+and their media.</strong> You can position someone's voice and their
+media stream separately in the stereo field.</li>
+</ul>
+<h3 id="recording">Recording</h3>
+<ul>
+<li><strong>⌘R records a single mixed file; ⌘⇧R records per-person stems
+(or both).</strong> The two shortcuts now pick the recording layout
+directly.</li>
+<li>Note if you used recording before: if you were on "single file", the
+toolbar button now records <strong>both</strong> a single file and
+per-person stems. Use <strong>⌘R</strong> for single-file only.</li>
+</ul>
+<h3 id="administration">Administration</h3>
+<ul>
+<li><strong>Per-channel disk quota</strong>, editable with a KB / MB /
+GB unit picker.</li>
+<li><strong>Full server properties</strong> — TCP/UDP ports and version
+info — in the server properties window.</li>
+<li><strong>Online-nickname column</strong> in the user accounts
+list.</li>
+</ul>
+<h3 id="accessibility--polish">Accessibility &amp; polish</h3>
+<ul>
+<li>Clearer VoiceOver in the Channel Mixer: spoken region announcements
+and mute-state labels in the toolbar.</li>
+<li><strong>Escape closes auxiliary windows.</strong></li>
+<li>Smaller fixes: no false intercept sound during login sync, live
+disk-quota unit conversion, and file uploads are no longer wrongly
+rejected by a client-side quota check.</li>
+</ul>
+<h3 id="download">Download</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.8.0/ttaccessible-1.8.0-43.zip">ttaccessible-1.8.0-43.zip</a></p>
+<h2 id="v170-build-42--2026-07-08">v1.7.0 (build 42) — 2026-07-08</h2>
+<p>This is the stable release that brings everything from the 1.7.0 beta
+line to everyone. If you were on 1.6.0, here is what has changed.</p>
+<h3 id="highlights-1">Highlights</h3>
+<ul>
+<li><strong>A brand-new per-user Channel Mixer.</strong> Every person in
+your channel gets their own voice volume, media volume, left/right
+placement, mute, and solo — all reachable from the keyboard and
+VoiceOver.</li>
+<li><strong>Sign in with a BearWare account.</strong> Use a free
+bearware.dk login to connect to servers that support it, without
+creating a separate account on each one.</li>
+<li><strong>A rebuilt, faster, steadier audio engine.</strong>
+Connecting is near-instant again, switching headphones or speakers no
+longer freezes the sound, and crowded channels stay smooth.</li>
+</ul>
+<h3 id="the-channel-mixer">The Channel Mixer</h3>
+<ul>
+<li>Each user in the channel has their own strip: <strong>voice volume,
+media volume, stereo placement (pan), mute, and solo</strong>.</li>
+<li>Drive it entirely from the keyboard while focused on a person:
+Up/Down for voice volume, Command+Up/Down for their media volume,
+Left/Right to move them in the stereo field, and V, P, M, S to hear or
+reset volume, pan, mute, and solo.</li>
+<li><strong>New: press Command+5 to jump straight to the mixer</strong>
+— it joins the Command+1 to Command+4 area shortcuts as a fifth focus
+target. (Thanks to Matthew Whitaker for the suggestion.)</li>
+<li>Each person's settings are remembered and come back the next time
+they join.</li>
+</ul>
+<h3 id="audio-1">Audio</h3>
+<ul>
+<li><strong>Switching your output device no longer freezes the
+sound.</strong> Change headphones or speakers while connected and the
+audio simply follows.</li>
+<li><strong>Connecting is quick again.</strong> On Macs with a lot of
+audio gear, opening a connection used to stall for around 13 seconds
+while every device was checked — that scan is gone, and it is now baked
+into every build for good.</li>
+<li><strong>Crowded and high-quality channels stay smooth.</strong>
+Channels using larger audio packets could sound choppy for everyone; the
+playback path was reworked so it holds up under load.</li>
+<li><strong>Your chosen microphone and output are remembered
+reliably</strong>, surviving unplugging, replugging, and restarts
+instead of quietly landing on the wrong device.</li>
+<li><strong>Standalone noise reduction.</strong> A new Microphone
+processing setting (Preferences › Audio) lets you pick None, Noise
+reduction, or Echo cancellation with noise reduction — and it applies
+live, even mid-transmission.</li>
+<li><strong>You can now hear your own streamed media</strong> when you
+play an audio or video file into a channel.</li>
+<li><strong>Per-user volumes are now kept per server</strong>, so
+volumes set on one server no longer bleed into another. A new setting
+lets you choose whether these are remembered always, only for the
+session, or not at all.</li>
+</ul>
+<h3 id="accessibility">Accessibility</h3>
+<ul>
+<li>The app is now named <strong>tt-Accessible</strong> so VoiceOver and
+speech synthesizers pronounce it correctly.</li>
+<li><strong>Press VoiceOver+Space to join</strong> the selected server
+or channel.</li>
+<li><strong>Sliders and the microphone button now speak their
+values</strong> as you change them — gain, output volume, and the
+various Preferences sliders.</li>
+<li>Preferences reads more cleanly in VoiceOver: no duplicate labels,
+each section is a proper heading, scroll areas are named, and Escape
+closes the window.</li>
+</ul>
+<h3 id="fixes">Fixes</h3>
+<ul>
+<li><strong>BearWare web login connects reliably</strong> on servers
+that respond in slightly non-standard ways.</li>
+<li><strong>An empty nickname</strong> now falls back to your default
+instead of failing to connect.</li>
+<li>The app <strong>launches faster</strong>.</li>
+</ul>
+<h3 id="thanks">Thanks</h3>
+<p>Huge thanks to <strong>Rocco Fiorentino</strong>, who designed and
+built the audio rewrite and the Channel Mixer, the accessibility and
+VoiceOver improvements, and the faster, steadier connecting in this
+release. Thanks to <strong>Matthew Whitaker</strong> for the Command+5
+suggestion — and to everyone who tested the betas and sent feedback.</p>
+<h3 id="install">Install</h3>
+<p>tt-Accessible will install this update for you automatically. To
+install by hand:</p>
+<ol type="1">
+<li>Download <code>ttaccessible-1.7.0-42.zip</code> below.</li>
+<li>Unzip and drag <code>ttaccessible.app</code> into your
+<code>/Applications</code> folder, replacing the previous version.</li>
+<li>Double-click — no Gatekeeper warning thanks to notarization.</li>
+</ol>
+<h3 id="download-1">Download</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.7.0/ttaccessible-1.7.0-42.zip">ttaccessible-1.7.0-42.zip</a></p>
+</body>
+</html>

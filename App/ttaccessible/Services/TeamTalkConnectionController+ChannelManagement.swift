@@ -86,7 +86,8 @@ extension TeamTalkConnectionController {
             isSoloTransmit: (chanType & UInt32(CHANNEL_SOLO_TRANSMIT.rawValue)) != 0,
             isNoVoiceActivation: (chanType & UInt32(CHANNEL_NO_VOICEACTIVATION.rawValue)) != 0,
             isNoRecording: (chanType & UInt32(CHANNEL_NO_RECORDING.rawValue)) != 0,
-            opusCodec: codec
+            opusCodec: codec,
+            diskQuotaBytes: channel.nDiskQuota
         )
     }
 
@@ -110,6 +111,7 @@ extension TeamTalkConnectionController {
             self.copyTTString(properties.topic, into: &chan.szTopic)
             self.copyTTString(properties.password, into: &chan.szPassword)
             chan.nMaxUsers = properties.maxUsers
+            chan.nDiskQuota = properties.diskQuotaBytes
 
             var chanType: UInt32 = UInt32(CHANNEL_DEFAULT.rawValue)
             if properties.isPermanent { chanType |= UInt32(CHANNEL_PERMANENT.rawValue) }
@@ -195,6 +197,7 @@ extension TeamTalkConnectionController {
             self.copyTTString(properties.topic, into: &chan.szTopic)
             self.copyTTString(properties.password, into: &chan.szPassword)
             chan.nMaxUsers = properties.maxUsers
+            chan.nDiskQuota = properties.diskQuotaBytes
 
             var chanType: UInt32 = chan.uChannelType
             // Clear the flags we manage

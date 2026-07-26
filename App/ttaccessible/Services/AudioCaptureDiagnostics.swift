@@ -11,7 +11,9 @@ final class AudioCaptureDiagnostics {
 
     private let lock = NSLock()
     private var lastLogTime: CFAbsoluteTime = 0
-    private let logInterval: CFAbsoluteTime = 1.0
+    // Heartbeat cadence. The counters are cumulative, so a sparse line still shows
+    // the full trend — keep it low-volume so a days-long session doesn't bloat the log.
+    private let logInterval: CFAbsoluteTime = 30.0
 
     private(set) var capturePath = "none"
     private(set) var captureSampleRate: Int = 0

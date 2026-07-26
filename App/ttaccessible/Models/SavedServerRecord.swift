@@ -17,6 +17,7 @@ struct SavedServerRecord: Codable, Identifiable, Equatable {
         case encrypted
         case nickname
         case username
+        case useWebLogin
         case initialChannelPath
         case initialChannelPassword
     }
@@ -29,6 +30,13 @@ struct SavedServerRecord: Codable, Identifiable, Equatable {
     var encrypted: Bool
     var nickname: String
     var username: String
+    /// When true, this server logs in via a bearware.dk web login (the username
+    /// is the `"bearware"` sentinel and the password is resolved at connect time
+    /// from the stored BearWare credential). Stored explicitly rather than
+    /// inferred from the username so a genuine local account named "bearware"
+    /// is not misclassified.
+    var useWebLogin: Bool
+
     var initialChannelPath: String
     var initialChannelPassword: String
 
@@ -41,6 +49,7 @@ struct SavedServerRecord: Codable, Identifiable, Equatable {
         encrypted: Bool,
         nickname: String,
         username: String,
+        useWebLogin: Bool = false,
         initialChannelPath: String = "",
         initialChannelPassword: String = ""
     ) {
@@ -52,6 +61,7 @@ struct SavedServerRecord: Codable, Identifiable, Equatable {
         self.encrypted = encrypted
         self.nickname = nickname
         self.username = username
+        self.useWebLogin = useWebLogin
         self.initialChannelPath = initialChannelPath
         self.initialChannelPassword = initialChannelPassword
     }
@@ -83,6 +93,7 @@ struct SavedServerRecord: Codable, Identifiable, Equatable {
         encrypted = try container.decode(Bool.self, forKey: .encrypted)
         nickname = try container.decode(String.self, forKey: .nickname)
         username = try container.decode(String.self, forKey: .username)
+        useWebLogin = try container.decodeIfPresent(Bool.self, forKey: .useWebLogin) ?? false
         initialChannelPath = try container.decodeIfPresent(String.self, forKey: .initialChannelPath) ?? ""
         initialChannelPassword = try container.decodeIfPresent(String.self, forKey: .initialChannelPassword) ?? ""
     }

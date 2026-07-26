@@ -39,6 +39,8 @@ extension TeamTalkConnectionController {
                 }
                 self.instance = instance
                 self.connectedRecord = record
+                self.userVolumeStore.setServerScope(Self.serverVolumeScope(for: record))
+                self.userVolumeStore.setMemoryMode(self.preferencesStore.preferences.userVolumeMemoryMode)
                 self.autoJoinAfterLoginLocked(instance: instance, options: options)
                 try self.applyPostLoginOptionsLocked(instance: instance, options: options)
                 self.applyDefaultSubscriptionPreferencesLocked(instance: instance, preferences: self.preferencesStore.preferences)
@@ -70,6 +72,8 @@ extension TeamTalkConnectionController {
             self.appendDisconnectedHistoryLocked()
             self.resetLocked()
             self.publishDisconnected(message: nil)
+            // No prewarm needed here — destroyLocked kept the warm instance in
+            // `reusableInstance`, so the next connect reuses it directly.
         }
     }
 
@@ -83,10 +87,63 @@ extension TeamTalkConnectionController {
     // MARK: - Instance creation
 
     func createInstanceLocked() throws -> UnsafeMutableRawPointer {
+        // Reuse a warm instance kept from a previous connection — it's already past
+        // the SDK's ~8 s device enumeration, so this connect is ~1 s instead of cold.
+        if let reusable = reusableInstance {
+            reusableInstance = nil
+            return reusable
+        }
+        // Reuse a background-prewarmed instance if one is ready or in flight — this
+        // is what keeps the ~12 s TT_InitTeamTalkPoll device-enumeration off the
+        // connect path. If a prewarm is in flight, wait for it (the probe queue
+        // signals the semaphore directly, so blocking `queue` here can't deadlock).
+        if prewarmInFlight {
+            prewarmReady.wait()
+            prewarmInFlight = false
+            prewarmBoxLock.lock()
+            let prewarmed = prewarmBoxedInstance
+            prewarmBoxedInstance = nil
+            prewarmBoxLock.unlock()
+            if let prewarmed {
+                return prewarmed
+            }
+        }
         guard let instance = TT_InitTeamTalkPoll() else {
             throw TeamTalkConnectionError.sdkUnavailable
         }
         return instance
+    }
+
+    /// Create the next TeamTalk instance ahead of time on the probe queue so the
+    /// SDK's ~12 s device-enumeration init never lands on the connect path. Safe to
+    /// call repeatedly; no-ops while connected, already prewarmed, or in flight.
+    func prewarmConnection() {
+        queue.async { [weak self] in
+            guard let self,
+                  self.instance == nil,
+                  self.reusableInstance == nil,
+                  self.prewarmInFlight == false else { return }
+            // Already have a boxed instance from a previous prewarm? Then we're ready.
+            self.prewarmBoxLock.lock()
+            let alreadyBoxed = self.prewarmBoxedInstance != nil
+            self.prewarmBoxLock.unlock()
+            if alreadyBoxed { return }
+
+            self.prewarmInFlight = true
+            AudioLogger.log("prewarm: creating instance in background")
+            self.soundDeviceProbeQueue.async { [weak self] in
+                let inst = TT_InitTeamTalkPoll()
+                guard let self else {
+                    if let inst { TT_CloseTeamTalk(inst) }
+                    return
+                }
+                self.prewarmBoxLock.lock()
+                self.prewarmBoxedInstance = inst
+                self.prewarmBoxLock.unlock()
+                self.prewarmReady.signal()
+                AudioLogger.log("prewarm: instance ready")
+            }
+        }
     }
 
     // MARK: - History suppression
@@ -158,6 +215,8 @@ extension TeamTalkConnectionController {
             try ensureOutputAudioReadyLocked(instance: instance)
             self.instance = instance
             self.connectedRecord = record
+            self.userVolumeStore.setServerScope(Self.serverVolumeScope(for: record))
+            self.userVolumeStore.setMemoryMode(self.preferencesStore.preferences.userVolumeMemoryMode)
 
             // Rejoindre le dernier canal si possible
             let shouldRejoinLastChannel = preferencesStore.preferences.rejoinLastChannelOnReconnect
@@ -316,9 +375,14 @@ extension TeamTalkConnectionController {
             switch message.nClientEvent {
             case CLIENTEVENT_CON_SUCCESS:
                 let nickname = effectiveNickname(for: record, override: options.nicknameOverride)
+                let (loginUsername, loginPassword) = try resolveLoginCredentialsLocked(
+                    instance: instance,
+                    record: record,
+                    password: password
+                )
                 loginCommandID = nickname.withCString { nicknamePointer in
-                    record.username.withCString { usernamePointer in
-                        password.withCString { passwordPointer in
+                    loginUsername.withCString { usernamePointer in
+                        loginPassword.withCString { passwordPointer in
                             clientName.withCString { clientNamePointer in
                                 TT_DoLoginEx(instance, nicknamePointer, usernamePointer, passwordPointer, clientNamePointer)
                             }
@@ -335,6 +399,9 @@ extension TeamTalkConnectionController {
 
             case CLIENTEVENT_CMD_ERROR:
                 if loginCommandID == -1 || message.nSource == loginCommandID {
+                    if message.clienterrormsg.nErrorNo == CMDERR_LOGINSERVICE_UNAVAILABLE.rawValue {
+                        throw TeamTalkConnectionError.webLoginFailed(L10n.text("teamtalk.connection.error.webLoginServiceUnavailable"))
+                    }
                     throw TeamTalkConnectionError.loginFailed(clientErrorMessage(from: message) ?? L10n.text("teamtalk.connection.error.loginFailed"))
                 }
 
@@ -353,6 +420,51 @@ extension TeamTalkConnectionController {
         }
 
         throw TeamTalkConnectionError.connectionTimeout
+    }
+
+    /// Resolves the username/password pair to pass to `TT_DoLoginEx`. For a
+    /// normal account this is the record's username and the stored password. For
+    /// a bearware web login it performs the bearware token handshake using the
+    /// server's `szAccessToken` and returns the bearware-confirmed username with
+    /// an empty password. Runs synchronously on the TeamTalk queue.
+    private func resolveLoginCredentialsLocked(
+        instance: UnsafeMutableRawPointer,
+        record: SavedServerRecord,
+        password: String
+    ) throws -> (username: String, password: String) {
+        guard record.useWebLogin else {
+            return (record.username, password)
+        }
+
+        guard let credential = bearWareCredentialStore.load(), credential.token.isEmpty == false else {
+            throw TeamTalkConnectionError.webLoginNotConfigured
+        }
+
+        var serverProperties = ServerProperties()
+        guard TT_GetServerProperties(instance, &serverProperties) != 0 else {
+            throw TeamTalkConnectionError.webLoginFailed(L10n.text("teamtalk.connection.error.webLoginFailed"))
+        }
+        let accessToken = ttString(from: serverProperties.szAccessToken)
+
+        // No access token from the server (e.g. a race where szAccessToken is read
+        // empty on CON_SUCCESS): skip the bearware round-trip entirely and fall back
+        // to the record username with an empty password.
+        guard accessToken.isEmpty == false else {
+            return (record.username, "")
+        }
+
+        // Best-effort, like the Qt client (mainwindow.cpp slotBearWareAuthReply:
+        // "connect even if auth failed. Otherwise user will not see progress"). A
+        // non-conforming bearware.dk response must never abort the connection: we
+        // fall back to the record username + empty password and let TT_DoLoginEx
+        // surface a real CMDERR if the server actually rejects the login.
+        let confirmedUsername = (try? bearWareWebLoginClient.clientAuth(
+            username: credential.username,
+            token: credential.token,
+            accessToken: accessToken
+        )) ?? ""
+        let loginUsername = confirmedUsername.isEmpty ? record.username : confirmedUsername
+        return (loginUsername, "")
     }
 
     // MARK: - Post-login options
@@ -401,8 +513,14 @@ extension TeamTalkConnectionController {
     func startPollingLocked() {
         stopPollingLocked()
 
+        // Poll at 10 ms (was 100 ms). The SDK delivers muxed playback audio blocks
+        // (~one per codec tx-interval, e.g. 20 ms) only through this message queue;
+        // a 100 ms poll drained ~5 blocks at once then starved the output render
+        // engine for the rest of the cycle, causing underrun crackle. A 10 ms poll
+        // delivers blocks smoothly as they're produced so a small jitter buffer
+        // suffices (no added latency). Drains are cheap no-ops when the queue is empty.
         let timer = DispatchSource.makeTimerSource(queue: queue)
-        timer.schedule(deadline: .now() + .milliseconds(100), repeating: .milliseconds(100))
+        timer.schedule(deadline: .now() + .milliseconds(20), repeating: .milliseconds(20), leeway: .milliseconds(4))
         timer.setEventHandler { [weak self] in
             self?.drainMessagesLocked()
         }
@@ -426,6 +544,13 @@ extension TeamTalkConnectionController {
         var waitMSec: INT32 = 0
         var publishInvalidation: SessionPublishInvalidation = []
         defer {
+            // Reconcile per-user audio events when channel membership changed, then
+            // top up the output mixer's ring for this tick.
+            if outputAudioReady, perUserAudioNeedsRefresh {
+                // Audio mixing now runs on the engine's own timer (engineQueue); the
+                // message loop only reconciles which per-user events are enabled.
+                refreshPerUserAudioEventsLocked(instance: instance)
+            }
             // Poll active transfers for current progress (SDK only fires CLIENTEVENT_FILETRANSFER
             // at start/end, not during the transfer — we must poll TT_GetFileTransferInfo)
             if !activeTransferProgress.isEmpty, let _ = connectedRecord {
@@ -454,11 +579,24 @@ extension TeamTalkConnectionController {
                     publishInvalidation = .all
                 }
             }
-            if publishInvalidation.contains(.activeTransfers),
-               publishInvalidation.intersection([.rootTree, .chat, .history, .privateConversations, .channelFiles, .audio, .identity, .permissions]).isEmpty {
+            // Coalesce the expensive full-session publish. The message poll is fast
+            // (20 ms) so per-user audio blocks arrive smoothly, but rebuilding the
+            // whole channel/user tree every tick during the connect flood made
+            // connecting slow. Accumulate invalidations and rebuild at most ~every
+            // 80 ms (the old ~100 ms cadence) — pending changes still flush within a
+            // few ticks since the timer fires regardless of message traffic. The
+            // lightweight transfer-progress publish stays immediate.
+            let heavyBits: SessionPublishInvalidation = [.rootTree, .chat, .history, .privateConversations, .channelFiles, .audio, .identity, .permissions]
+            pendingPublishInvalidation.formUnion(publishInvalidation)
+            if pendingPublishInvalidation.contains(.activeTransfers),
+               pendingPublishInvalidation.intersection(heavyBits).isEmpty {
                 publishActiveTransfersLocked(currentChannelID: TT_GetMyChannelID(instance))
-            } else if !publishInvalidation.isEmpty, let connectedRecord {
-                publishSessionLocked(instance: instance, record: connectedRecord, invalidation: publishInvalidation)
+                pendingPublishInvalidation = []
+            } else if !pendingPublishInvalidation.isEmpty, let connectedRecord,
+                      now - lastSnapshotPublishAt >= 0.08 {
+                publishSessionLocked(instance: instance, record: connectedRecord, invalidation: pendingPublishInvalidation)
+                pendingPublishInvalidation = []
+                lastSnapshotPublishAt = now
             }
         }
 
@@ -498,18 +636,8 @@ extension TeamTalkConnectionController {
             case CLIENTEVENT_AUDIOINPUT:
                 break
             case CLIENTEVENT_USER_AUDIOBLOCK:
-                // Feed muxed audio to echo canceller as far-end reference (fallback when speaker tap is unavailable).
-                if speakerTapCaptureStorage == nil,
-                   let aec = advancedMicrophoneEngine.echoCanceller,
-                   message.nSource == TT_MUXED_USERID {
-                    if let block = TT_AcquireUserAudioBlock(instance, UInt32(STREAMTYPE_VOICE.rawValue), TT_MUXED_USERID) {
-                        if let rawAudio = block.pointee.lpRawAudio {
-                            let int16Ptr = rawAudio.assumingMemoryBound(to: Int16.self)
-                            aec.feedReference(int16Ptr, count: Int(block.pointee.nSamples), channels: Int(block.pointee.nChannels), sampleRate: Int(block.pointee.nSampleRate))
-                        }
-                        TT_ReleaseUserAudioBlock(instance, block)
-                    }
-                }
+                // Per-user remote audio → our mixer (playback); muxed → AEC reference.
+                handleAudioBlockLocked(instance: instance, source: message.nSource)
             case CLIENTEVENT_CMD_MYSELF_KICKED:
                 if connectedRecord != nil {
                     appendKickHistoryLocked(message, instance: instance)
@@ -572,7 +700,8 @@ extension TeamTalkConnectionController {
                     let status = info.nStatus
                     switch status {
                     case MFS_STARTED:
-                        if info.uDurationMSec > 0 {
+                        // Device streams are endless — keep duration 0 (inert seek UI).
+                        if info.uDurationMSec > 0, deviceStreamSource == nil {
                             mediaStreamingDurationMSec = info.uDurationMSec
                         }
                         if let fileName = mediaStreamingFileName, !mediaStreamingStartedHistoryLogged {
@@ -647,14 +776,15 @@ extension TeamTalkConnectionController {
                         // Sound output device failed (e.g. unplugged). Reopen it.
                         AudioLogger.log("INTERNAL_ERROR: output device failure, reopening")
                         if outputAudioReady {
+                            teardownOutputRenderLocked(instance: instance)
                             _ = TT_CloseSoundOutputDevice(instance)
                             outputAudioReady = false
                         }
                         do {
+                            // Reopens the virtual output + muxed event and starts the
+                            // render engine directly (mute/gain reapplied from prefs
+                            // inside the ensure path).
                             try ensureDirectOutputAudioReadyLocked(instance: instance)
-                            if masterMuted {
-                                _ = TT_SetSoundOutputMute(instance, 1)
-                            }
                         } catch {
                             AudioLogger.log("INTERNAL_ERROR: failed to reopen output — %@", error.localizedDescription)
                         }
@@ -675,6 +805,8 @@ extension TeamTalkConnectionController {
                  CLIENTEVENT_CMD_USER_LEFT:
                 if connectedRecord != nil {
                     let currentUserID = TT_GetMyUserID(instance)
+                    // Channel membership may have changed → reconcile per-user audio.
+                    perUserAudioNeedsRefresh = true
                     switch message.nClientEvent {
                     case CLIENTEVENT_CMD_USER_LOGGEDIN:
                         if isSuppressingLoginHistoryLocked == false {
@@ -708,23 +840,11 @@ extension TeamTalkConnectionController {
                                 SoundPlayer.shared.play(.newUser)
                             }
                         }
-                        if message.user.nUserID == currentUserID,
-                           !voiceTransmissionEnabled,
-                           preferencesStore.preferences.lastVoiceTransmissionEnabled,
-                           AVCaptureDevice.authorizationStatus(for: .audio) == .authorized {
-                            do {
-                                try ensureAdvancedMicrophoneInputReadyLocked(instance: instance)
-                                voiceTransmissionEnabled = true
-                                SoundPlayer.shared.play(.voxMeEnable)
-                                if let connectedRecord {
-                                    publishSessionLocked(instance: instance, record: connectedRecord)
-                                }
-                            } catch {
-                                AudioLogger.log(
-                                    "auto-restore mic on join failed: %@",
-                                    error.localizedDescription
-                                )
-                            }
+                        if message.user.nUserID == currentUserID {
+                            armMicrophoneEngineOnJoinLocked(instance: instance)
+                        }
+                        if message.user.nUserID == currentUserID {
+                            restartMediaStreamForChannelChangeLocked(instance: instance)
                         }
                         let joinedUsername = ttString(from: message.user.szUsername)
                         if let storedVolume = userVolumeStore.volume(forUsername: joinedUsername) {
@@ -735,6 +855,22 @@ extension TeamTalkConnectionController {
                         }
                         if let storedBalance = userVolumeStore.stereoBalance(forUsername: joinedUsername) {
                             _ = TT_SetUserStereo(instance, message.user.nUserID, STREAMTYPE_VOICE, storedBalance.left ? 1 : 0, storedBalance.right ? 1 : 0)
+                        }
+                        // Continuous mixer pan lives in our own render engine (not the SDK),
+                        // so push it here too — otherwise the strip shows the saved pan while
+                        // the user plays centered until the slider is touched. Voice and media
+                        // pan independently (mirroring split volume). muted:false is the engine
+                        // default; an active SOLO is re-applied right after via the coordinator's
+                        // reapplySolo() on the next session update.
+                        if let storedVoicePan = userVolumeStore.voicePan(forUsername: joinedUsername) {
+                            outputRenderEngine.setUserSettings(
+                                OutputUserMixSettings(volume: 1, pan: storedVoicePan, muted: false),
+                                for: message.user.nUserID)
+                        }
+                        if let storedMediaPan = userVolumeStore.mediaPan(forUsername: joinedUsername) {
+                            outputRenderEngine.setUserSettings(
+                                OutputUserMixSettings(volume: 1, pan: storedMediaPan, muted: false),
+                                for: outputMediaSourceKey(message.user.nUserID))
                         }
                         applyJitterControlLocked(instance: instance, userID: message.user.nUserID)
                     case CLIENTEVENT_CMD_USER_LEFT:
@@ -790,12 +926,20 @@ extension TeamTalkConnectionController {
                 teamTalkVirtualInputReady = false
             }
             if outputAudioReady {
+                teardownOutputRenderLocked(instance: instance)
                 _ = TT_CloseSoundOutputDevice(instance)
             }
             TT_Disconnect(instance)
-            TT_CloseTeamTalk(instance)
+            // Keep the instance alive and WARM for reuse instead of closing it.
+            // TT_CloseTeamTalk would force the next connect to recreate the instance
+            // and re-run the SDK's ~8 s device enumeration; reuse keeps reconnects
+            // ~1 s. (Also avoids the documented TT_CloseTeamTalk-at-exit crash.)
+            reusableInstance = instance
         }
 
+        deviceStreamSource?.stop()
+        deviceStreamSource = nil
+        deviceStreamMonitorEnabled = false
         mediaStreamingSecurityScopedURL?.stopAccessingSecurityScopedResource()
         mediaStreamingSecurityScopedURL = nil
         mediaStreamingActive = false
@@ -824,6 +968,7 @@ extension TeamTalkConnectionController {
 
         instance = nil
         connectedRecord = nil
+        userVolumeStore.setServerScope(nil)
         channelChatHistory = []
         sessionHistory = []
         activeTransferProgress = [:]
@@ -845,11 +990,23 @@ extension TeamTalkConnectionController {
         selectedPrivateConversationUserID = nil
         visiblePrivateConversationUserID = nil
         isPrivateMessagesWindowVisible = false
+        outputRenderEngine.stop()
+        perUserAudioEnabled.removeAll()
+        perUserAudioNeedsRefresh = false
+        pendingPublishInvalidation = []
+        lastSnapshotPublishAt = 0
         outputAudioReady = false
         inputAudioReady = false
+        // Reset the device-preference dedup state too: the sound devices are closed
+        // above, so on the next connect (which may reuse this warm instance)
+        // applyAudioPreferences must re-initialize them. Leaving these set would let
+        // the `applied == new` dedup guard silently skip re-applying the device.
+        appliedInputPreference = nil
+        appliedOutputPreference = nil
         voiceTransmissionEnabled = false
         masterMuted = false
         hearMyselfEnabled = false
+        previewMonitorEnabled = false
         teamTalkVirtualInputReady = false
         advancedMicrophoneTargetFormat = nil
         isAutoAwayActive = false
@@ -956,6 +1113,8 @@ extension TeamTalkConnectionController {
                  CLIENTEVENT_CMD_USER_LEFT:
                 if let connectedRecord {
                     let currentUserID = TT_GetMyUserID(instance)
+                    // Channel membership may have changed → reconcile per-user audio.
+                    perUserAudioNeedsRefresh = true
                     switch message.nClientEvent {
                     case CLIENTEVENT_CMD_USER_LOGGEDIN:
                         if isSuppressingLoginHistoryLocked == false {
@@ -980,20 +1139,8 @@ extension TeamTalkConnectionController {
                             appendUserJoinedChannelHistoryLocked(message.user, currentUserID: currentUserID, instance: instance)
                         }
                         if message.user.nUserID == currentUserID {
-                            if !voiceTransmissionEnabled,
-                               preferencesStore.preferences.lastVoiceTransmissionEnabled,
-                               AVCaptureDevice.authorizationStatus(for: .audio) == .authorized {
-                                do {
-                                    try ensureAdvancedMicrophoneInputReadyLocked(instance: instance)
-                                    voiceTransmissionEnabled = true
-                                    SoundPlayer.shared.play(.voxMeEnable)
-                                } catch {
-                                    AudioLogger.log(
-                                        "auto-restore mic on channel join failed: %@",
-                                        error.localizedDescription
-                                    )
-                                }
-                            }
+                            armMicrophoneEngineOnJoinLocked(instance: instance)
+                            restartMediaStreamForChannelChangeLocked(instance: instance)
                             if recordingMuxedActive {
                                 restartMuxedRecordingForChannelChange()
                             }
@@ -1007,6 +1154,22 @@ extension TeamTalkConnectionController {
                         }
                         if let storedBalance = userVolumeStore.stereoBalance(forUsername: joinedUsername) {
                             _ = TT_SetUserStereo(instance, message.user.nUserID, STREAMTYPE_VOICE, storedBalance.left ? 1 : 0, storedBalance.right ? 1 : 0)
+                        }
+                        // Continuous mixer pan lives in our own render engine (not the SDK),
+                        // so push it here too — otherwise the strip shows the saved pan while
+                        // the user plays centered until the slider is touched. Voice and media
+                        // pan independently (mirroring split volume). muted:false is the engine
+                        // default; an active SOLO is re-applied right after via the coordinator's
+                        // reapplySolo() on the next session update.
+                        if let storedVoicePan = userVolumeStore.voicePan(forUsername: joinedUsername) {
+                            outputRenderEngine.setUserSettings(
+                                OutputUserMixSettings(volume: 1, pan: storedVoicePan, muted: false),
+                                for: message.user.nUserID)
+                        }
+                        if let storedMediaPan = userVolumeStore.mediaPan(forUsername: joinedUsername) {
+                            outputRenderEngine.setUserSettings(
+                                OutputUserMixSettings(volume: 1, pan: storedMediaPan, muted: false),
+                                for: outputMediaSourceKey(message.user.nUserID))
                         }
                         applyJitterControlLocked(instance: instance, userID: message.user.nUserID)
                     case CLIENTEVENT_CMD_USER_UPDATE:

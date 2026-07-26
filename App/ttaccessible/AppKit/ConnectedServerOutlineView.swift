@@ -29,6 +29,14 @@ final class ConnectedServerOutlineView: NSOutlineView {
         return actionDelegate?.connectedServerOutlineView(self, menuForRow: row)
     }
 
+    // VO-Espace sur l'arbre (sans interagir) effectue l'action par défaut sur la ligne
+    // sélectionnée, exactement comme la touche Entrée. Sans cela, VO-Espace n'agit que
+    // lorsqu'on a « interagi » avec l'arbre (curseur VoiceOver descendu sur une cellule).
+    override func accessibilityPerformPress() -> Bool {
+        actionDelegate?.connectedServerOutlineViewDidRequestDefaultAction(self)
+        return true
+    }
+
     override func keyDown(with event: NSEvent) {
         if event.modifierFlags.intersection(.deviceIndependentFlagsMask).isEmpty,
            event.keyCode == 36 || event.keyCode == 76 {
