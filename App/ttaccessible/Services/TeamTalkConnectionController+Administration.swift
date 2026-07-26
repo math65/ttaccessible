@@ -630,22 +630,10 @@ extension TeamTalkConnectionController {
         }
     }
 
-    /// Whether the local user may move people out of a SPECIFIC channel: either
-    /// the account-wide move right, or operator status on that very channel.
-    ///
-    /// `ConnectedServerUser.isChannelOperator` can't answer this — the snapshot
-    /// computes it as `TT_IsChannelOperator(…, user.nChannelID)`, i.e. the
-    /// user's OWN channel — so a check built on it enables moves the server
-    /// will reject whenever the operator isn't standing in the target channel.
-    func canMoveUsers(fromChannelID channelID: Int32) -> Bool {
-        guard let instance else { return false }
-        return queue.sync {
-            if (TT_GetMyUserRights(instance) & UInt32(USERRIGHT_MOVE_USERS.rawValue)) != 0 {
-                return true
-            }
-            return TT_IsChannelOperator(instance, TT_GetMyUserID(instance), channelID) != 0
-        }
-    }
+    // The per-channel "may I move people out of here" right lives on
+    // `ConnectedServerChannel.canMoveUsersOut`, computed in the session
+    // snapshot: the answer is needed while building outline cells, where a
+    // `queue.sync` per row would block the main thread on this queue.
 
     func hasOperatorEnableRight() -> Bool {
         guard let instance else { return false }

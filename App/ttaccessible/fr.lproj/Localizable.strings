@@ -689,10 +689,12 @@
 "moveUsers.noneAvailable" = "Aucun utilisateur à déplacer";
 "moveUsers.userItem" = "%1$@, %2$d sur %3$d";
 "moveUsers.allSelected" = "Les %d utilisateurs sont sélectionnés";
+"moveUsers.allSelected.one" = "%d utilisateur sélectionné";
 "moveUsers.allDeselected" = "Tous les utilisateurs sont désélectionnés";
 "moveUsers.result.success" = "%1$d utilisateurs déplacés vers %2$@";
 "moveUsers.result.success.one" = "1 utilisateur déplacé vers %@";
 "moveUsers.result.partial" = "%1$d utilisateurs sur %2$d déplacés vers %3$@";
+"moveUsers.result.partial.one" = "%1$d utilisateur sur %2$d déplacé vers %3$@";
 
 // VoiceOver custom actions
 "connectedServer.voAction.moveChannelUsers" = "Déplacer tout le monde vers un autre canal";

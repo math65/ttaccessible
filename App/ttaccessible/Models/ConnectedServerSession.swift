@@ -55,6 +55,17 @@ struct ConnectedServerChannel: Equatable, Identifiable {
     let pathComponents: [String]
     let children: [ConnectedServerChannel]
     let users: [ConnectedServerUser]
+    /// Whether the local user may move people OUT of this channel: the
+    /// account-wide move right, or operator status on this very channel.
+    ///
+    /// Carried in the snapshot rather than asked of the SDK on demand, because
+    /// the answer is needed while building outline cells — one `queue.sync` per
+    /// channel row, on the main thread, against the queue the message loop
+    /// occupies and a reconnect attempt can hold for ~10 s. Computed here it
+    /// costs one SDK call per channel on a thread that is already on the queue.
+    /// (`ConnectedServerUser.isChannelOperator` can't answer this: it is
+    /// computed against the user's OWN channel.)
+    let canMoveUsersOut: Bool
 
     var directUserCount: Int {
         users.count

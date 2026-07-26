@@ -410,7 +410,8 @@ extension ConnectedServerViewController {
             guard let self else { return }
             let message: String
             if succeeded != requested {
-                message = L10n.format("moveUsers.result.partial", succeeded, requested, channel.displayPath)
+                let key = succeeded == 1 ? "moveUsers.result.partial.one" : "moveUsers.result.partial"
+                message = L10n.format(key, succeeded, requested, channel.displayPath)
             } else if succeeded == 1 {
                 // The single-user move goes through here too — "Moved 1 users"
                 // is not what VoiceOver should be reading out.
@@ -493,9 +494,13 @@ extension ConnectedServerViewController {
 
     /// Whether the local user may move people out of `channel`. Target-aware on
     /// purpose: being an operator somewhere else doesn't grant it here.
+    ///
+    /// Reads the snapshot rather than asking the SDK: this is called while
+    /// building outline cells, and a `queue.sync` there would block the main
+    /// thread on the queue the message loop occupies — for as long as ~10 s
+    /// during a reconnect attempt, which is exactly when the tree is rebuilt.
     func canMoveUsers(from channel: ConnectedServerChannel) -> Bool {
-        if session.currentUser?.isAdministrator == true { return true }
-        return connectionController.canMoveUsers(fromChannelID: channel.id)
+        session.currentUser?.isAdministrator == true || channel.canMoveUsersOut
     }
 
     /// Move everyone in the selected channel to another channel, via the

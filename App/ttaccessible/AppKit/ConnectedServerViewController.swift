@@ -753,7 +753,8 @@ final class ConnectedServerViewController: NSViewController {
                 isCurrentChannel: channel.isCurrentChannel,
                 pathComponents: channel.pathComponents,
                 children: updatedChildren,
-                users: updatedUsers
+                users: updatedUsers,
+                canMoveUsersOut: channel.canMoveUsersOut
             )
         }
     }

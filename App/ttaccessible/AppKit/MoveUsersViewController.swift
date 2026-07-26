@@ -183,7 +183,8 @@ final class MoveUsersViewController: NSViewController {
         checkboxes.forEach { $0.state = .on }
         // Flipping the boxes silently would leave a blind admin to arrow
         // through every one of them to find out whether the button worked.
-        announce(L10n.format("moveUsers.allSelected", checkboxes.count))
+        let key = checkboxes.count == 1 ? "moveUsers.allSelected.one" : "moveUsers.allSelected"
+        announce(L10n.format(key, checkboxes.count))
     }
 
     @objc private func deselectAllUsers() {
