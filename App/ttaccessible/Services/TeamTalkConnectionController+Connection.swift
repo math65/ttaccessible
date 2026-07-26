@@ -27,6 +27,12 @@ extension TeamTalkConnectionController {
             }
 
             do {
+                // A reconnect armed for a PREVIOUS server must not survive a
+                // deliberate connect elsewhere: its timer would otherwise fire
+                // mid-session and either tear down this live instance (on
+                // failure) or overwrite this session with the old server's.
+                self.cancelReconnectLocked()
+                self.justKickedAt = nil
                 self.resetLocked()
                 let instance = try self.createInstanceLocked()
                 try self.withSuppressedLoginHistoryLocked {
@@ -132,59 +138,103 @@ extension TeamTalkConnectionController {
     /// so it never reaches here.) Centralizes what used to be three divergent
     /// paths, two of which booted the user unconditionally regardless of the
     /// preference.
-    func handleServerDropLocked(instance: UnsafeMutableRawPointer, reason: String) {
-        let willReconnect = preferencesStore.preferences.autoReconnect
-        AudioLogger.log("Connection drop (%@): autoReconnect=%d", reason, willReconnect ? 1 : 0)
+    /// Delay before each successive attempt. A server restart is usually back
+    /// within seconds, so the first retries are quick; a longer outage spaces
+    /// them out instead of hammering the host. Running off the end gives up and
+    /// tells the user the connection is lost.
+    static let reconnectBackoffSeconds: [Int] = [5, 10, 30, 60, 60, 60, 60, 60]
+
+    /// Returns whether a reconnect was armed — callers on the command path use
+    /// it to decide whether the failure still deserves an error dialog.
+    @discardableResult
+    func handleServerDropLocked(instance: UnsafeMutableRawPointer, reason: String) -> Bool {
+        // A server-side kick or ban lands as MYSELF_KICKED and *then* a
+        // MYSELF_LOGGEDOUT. Treating that logout as a drop would silently
+        // rejoin a kicked user seconds later, and make a banned one retry
+        // forever. The reference client draws the same line: it arms its
+        // reconnect timer on CON_LOST only, never on LOGGEDOUT.
+        let wasKicked = justKickedAt.map { Date().timeIntervalSince($0) < 5 } ?? false
+        let willReconnect = preferencesStore.preferences.autoReconnect && !wasKicked
+        AudioLogger.log("Connection drop (%@): autoReconnect=%d kicked=%d",
+                        reason, willReconnect ? 1 : 0, wasKicked ? 1 : 0)
         SoundPlayer.shared.play(.serverLost)
         appendConnectionLostHistoryLocked()
 
         // Capture everything the reconnect needs BEFORE destroyLocked() wipes it.
+        // On the LOGGEDOUT path the SDK has already cleared its own channel
+        // state, so TT_GetMyChannelID returns 0 — fall back to what the last
+        // session publish recorded while the channel was still valid.
         let record = connectedRecord
         let password = reconnectPassword
-        let lastChan = TT_GetMyChannelID(instance)
-        let lastChanPath = channelPathLocked(instance: instance, channelID: lastChan)
+        let liveChannelID = TT_GetMyChannelID(instance)
+        let lastChan = liveChannelID > 0 ? liveChannelID : lastKnownChannelID
+        let lastChanPath = liveChannelID > 0
+            ? channelPathLocked(instance: instance, channelID: liveChannelID)
+            : lastKnownChannelPath
         let lastChanPassword = channelPasswords[lastChan] ?? ""
         destroyLocked()
 
-        if willReconnect, let record, let password {
-            // Remember where we were by PATH (survives an ID-reassigning restart);
-            // keep the ID + password as a fallback for a same-process blip.
-            lastChannelID = lastChan
-            lastChannelPath = lastChanPath
-            lastChannelPassword = lastChanPassword
-            reconnectRecord = record
-            self.reconnectPassword = password
-            self.reconnectOptions = TeamTalkConnectOptions(
-                initialChannelPath: record.initialChannelPath,
-                initialChannelPassword: record.initialChannelPassword
-            )
-            startReconnectTimerLocked()
-            publishReconnecting()
-        } else {
+        guard willReconnect, let record, let password else {
             publishDisconnected(message: L10n.text("connectedServer.disconnect.connectionLost"))
+            return false
         }
+
+        // Remember where we were by PATH (survives an ID-reassigning restart);
+        // keep the ID + password as a fallback for a same-process blip.
+        lastChannelID = lastChan
+        lastChannelPath = lastChanPath
+        lastChannelPassword = lastChanPassword
+        reconnectRecord = record
+        self.reconnectPassword = password
+        self.reconnectOptions = TeamTalkConnectOptions(
+            initialChannelPath: record.initialChannelPath,
+            initialChannelPassword: record.initialChannelPassword
+        )
+        reconnectAttempt = 0
+        scheduleNextReconnectAttemptLocked()
+        publishReconnecting()
+        return true
     }
 
-    func startReconnectTimerLocked() {
-        // Cancel only an existing timer — NOT via cancelReconnectLocked(), which
-        // also clears reconnectRecord/reconnectPassword/reconnectOptions. The
-        // caller sets those immediately before calling us and attemptReconnect
-        // needs them; wiping them here made every reconnect attempt bail at its
-        // guard and boot the user (auto-reconnect never actually worked).
-        reconnectTimer?.setEventHandler {}
-        reconnectTimer?.cancel()
-        reconnectTimer = nil
+    /// Arm a ONE-SHOT timer for the next attempt. One-shot rather than
+    /// repeating because `connectAndLoginLocked` can block this serial queue
+    /// for ~10 s against a black-holed host: a repeating timer would fire
+    /// back-to-back attempts with no gap between them, and could keep
+    /// `disconnectSynchronously()` (a `queue.sync` from the main thread)
+    /// waiting that long.
+    func scheduleNextReconnectAttemptLocked() {
+        stopReconnectTimerLocked()
 
+        guard reconnectAttempt < Self.reconnectBackoffSeconds.count else {
+            AudioLogger.log("Reconnect: giving up after %d attempts", reconnectAttempt)
+            cancelReconnectLocked()
+            publishDisconnected(message: L10n.text("connectedServer.disconnect.connectionLost"))
+            return
+        }
+
+        let delay = Self.reconnectBackoffSeconds[reconnectAttempt]
         let timer = DispatchSource.makeTimerSource(queue: queue)
-        timer.schedule(deadline: .now() + .seconds(5), repeating: .seconds(5))
+        timer.schedule(deadline: .now() + .seconds(delay))
         timer.setEventHandler { [weak self] in
             self?.attemptReconnectLocked()
         }
         reconnectTimer = timer
         timer.resume()
+        AudioLogger.log("Reconnect: next attempt in %ds", delay)
+    }
+
+    /// Tear down the retry timer WITHOUT touching the stored credentials and
+    /// rejoin target. Splitting this out of `cancelReconnectLocked` is what lets
+    /// the attempt path re-arm itself, and lets the success path defer clearing
+    /// state until after it has used it.
+    func stopReconnectTimerLocked() {
+        reconnectTimer?.setEventHandler {}
+        reconnectTimer?.cancel()
+        reconnectTimer = nil
     }
 
     func attemptReconnectLocked() {
+        stopReconnectTimerLocked()
         guard let record = reconnectRecord, let password = reconnectPassword else {
             AudioLogger.log("Reconnect: no stored credentials, giving up")
             cancelReconnectLocked()
@@ -192,61 +242,71 @@ extension TeamTalkConnectionController {
             return
         }
 
-        // Snapshot the rejoin target + options BEFORE the do-block. On success we
-        // call cancelReconnectLocked(), which clears lastChannel*/reconnectOptions,
-        // and the rejoin runs AFTER that — reading them post-cancel is what dropped
-        // every reconnect into the root channel.
-        let rejoinPath = lastChannelPath
-        let rejoinPassword = lastChannelPassword
-        let rejoinChannelID = lastChannelID
-        let rejoinOptions = reconnectOptions
+        reconnectAttempt += 1
+        let options = reconnectOptions
         let shouldRejoinLastChannel = preferencesStore.preferences.rejoinLastChannelOnReconnect
 
-        AudioLogger.log("Reconnect attempt to %@…", record.host)
+        AudioLogger.log("Reconnect attempt %d to %@…", reconnectAttempt, record.host)
+        var newInstance: UnsafeMutableRawPointer?
         do {
             let instance = try createInstanceLocked()
+            newInstance = instance
             try withSuppressedLoginHistoryLocked {
                 try connectAndLoginLocked(
                     instance: instance,
                     record: record,
                     password: password,
-                    options: reconnectOptions
+                    options: options
                 )
             }
 
-            // Success — restore state
-            cancelReconnectLocked()
-            self.applyDefaultSubscriptionPreferencesLocked(instance: instance, preferences: self.preferencesStore.preferences)
+            // Success — restore state. The reconnect state is deliberately NOT
+            // cleared yet: the rejoin below reads it, and clearing early also
+            // meant a throw from ensureOutputAudioReadyLocked (output device
+            // gone during the outage) left the UI stuck on "reconnecting…"
+            // forever, with the timer and credentials already gone.
+            applyDefaultSubscriptionPreferencesLocked(instance: instance, preferences: preferencesStore.preferences)
             try ensureOutputAudioReadyLocked(instance: instance)
             self.instance = instance
             self.connectedRecord = record
 
             // Rejoin the channel we were in, by path (survives a restart that
-            // reassigns IDs); fall back to the server's normal auto-join. Uses the
-            // pre-cancel snapshot above, not the now-cleared fields.
+            // reassigns IDs); fall back to the server's normal auto-join.
             if !(shouldRejoinLastChannel && rejoinLastChannelLocked(
                 instance: instance,
-                path: rejoinPath,
-                password: rejoinPassword,
-                channelID: rejoinChannelID
+                path: lastChannelPath,
+                password: lastChannelPassword,
+                channelID: lastChannelID
             )) {
-                autoJoinAfterLoginLocked(instance: instance, options: rejoinOptions)
+                autoJoinAfterLoginLocked(instance: instance, options: options)
             }
 
+            cancelReconnectLocked()
+            // Re-arm for a FUTURE drop. cancelReconnectLocked clears the stored
+            // credentials and connect() is otherwise their only setter, so
+            // without this the whole feature works exactly once per session:
+            // the second drop finds no password and boots the user.
+            reconnectPassword = password
+            reconnectOptions = options
             publishSessionLocked(instance: instance, record: record)
             startPollingLocked()
             AudioLogger.log("Reconnect succeeded")
         } catch {
-            AudioLogger.log("Reconnect attempt failed, retrying in 5s")
+            // destroyLocked() only tears down self.instance, which is still nil
+            // on this path — close the instance this attempt created, or every
+            // retry orphans a full SDK instance with its threads and socket.
+            if let newInstance, newInstance != self.instance {
+                TT_Disconnect(newInstance)
+                TT_CloseTeamTalk(newInstance)
+            }
             destroyLocked()
-            // Le timer relancera une tentative dans 5 secondes
+            scheduleNextReconnectAttemptLocked()
         }
     }
 
     func cancelReconnectLocked() {
-        reconnectTimer?.setEventHandler {}
-        reconnectTimer?.cancel()
-        reconnectTimer = nil
+        stopReconnectTimerLocked()
+        reconnectAttempt = 0
         reconnectRecord = nil
         reconnectPassword = nil
         reconnectOptions = TeamTalkConnectOptions()
@@ -275,14 +335,24 @@ extension TeamTalkConnectionController {
             }
             AudioLogger.log("Reconnect: path %@ not found on server, falling back", path)
         }
-        if lastID > 0 {
-            var channel = Channel()
-            if TT_GetChannel(instance, lastID, &channel) != 0 {
+        // Numeric fallback, for a same-process blip where IDs are unchanged.
+        // Only safe when the ID still names the SAME channel: after a restart
+        // that reassigns IDs, joining a stale ID drops the user into an
+        // unrelated channel — the very thing the path lookup exists to avoid.
+        // If it doesn't match, say so and let the caller fall back to the
+        // server's normal auto-join.
+        var channel = Channel()
+        if lastID > 0, TT_GetChannel(instance, lastID, &channel) != 0 {
+            let currentPath = channelPathLocked(instance: instance, channelID: lastID)
+            if path.isEmpty || currentPath == path {
                 let pwd = channelPasswords[lastID] ?? password
+                channelPasswords[lastID] = pwd
                 _ = pwd.withCString { TT_DoJoinChannelByID(instance, lastID, $0) }
                 AudioLogger.log("Reconnect: rejoining channel by ID %d", lastID)
                 return true
             }
+            AudioLogger.log("Reconnect: channel %d is now %@, not %@ — not rejoining by ID",
+                            lastID, currentPath, path)
         }
         return false
     }
@@ -592,6 +662,12 @@ extension TeamTalkConnectionController {
                     }
                 }
             case CLIENTEVENT_CMD_MYSELF_KICKED:
+                // A kick from the SERVER is followed by MYSELF_LOGGEDOUT; mark
+                // it so the drop handler knows that logout was expected and
+                // doesn't reconnect us straight back in (or, for a ban, retry
+                // forever). A kick from a CHANNEL sends no logout, so the mark
+                // simply expires unused.
+                justKickedAt = Date()
                 if connectedRecord != nil {
                     appendKickHistoryLocked(message, instance: instance)
                     publishInvalidation = .all
@@ -1006,9 +1082,18 @@ extension TeamTalkConnectionController {
             case CLIENTEVENT_CON_LOST, CLIENTEVENT_CMD_MYSELF_LOGGEDOUT:
                 // A drop mid-command used to boot unconditionally; now it honors
                 // autoReconnect like the idle loop, then unwinds the command.
-                handleServerDropLocked(instance: instance, reason: "CON_LOST/LOGGEDOUT (command)")
+                // When a reconnect IS armed the UI has already been told we're
+                // reconnecting, so unwind with an error the presentation layer
+                // stays quiet about — otherwise a modal alert and a VoiceOver
+                // announcement land on top of the reconnecting state.
+                if handleServerDropLocked(instance: instance, reason: "CON_LOST/LOGGEDOUT (command)") {
+                    throw TeamTalkConnectionError.connectionLostReconnecting
+                }
                 throw TeamTalkConnectionError.connectionFailed
             case CLIENTEVENT_CMD_MYSELF_KICKED:
+                // See the idle loop's handler: marks the MYSELF_LOGGEDOUT that
+                // follows a server kick as expected, so it isn't reconnected.
+                justKickedAt = Date()
                 if let connectedRecord {
                     appendKickHistoryLocked(message, instance: instance)
                     publishSessionLocked(instance: instance, record: connectedRecord)

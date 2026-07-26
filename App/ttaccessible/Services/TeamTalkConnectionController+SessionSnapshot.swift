@@ -60,6 +60,15 @@ extension TeamTalkConnectionController {
         record: SavedServerRecord,
         invalidation: SessionPublishInvalidation = .all
     ) {
+        // Record where we are while the SDK still knows: it clears its own
+        // channel state before posting MYSELF_LOGGEDOUT, so the drop handler
+        // can't ask for it on that path and rejoins nothing.
+        let myChannelID = TT_GetMyChannelID(instance)
+        if myChannelID > 0 {
+            lastKnownChannelID = myChannelID
+            lastKnownChannelPath = channelPathLocked(instance: instance, channelID: myChannelID)
+        }
+
         let snapshot = makeSessionSnapshotLocked(instance: instance, record: record, invalidation: invalidation)
         lastBuiltSessionSnapshot = snapshot
 

@@ -125,6 +125,11 @@ enum TeamTalkConnectionError: LocalizedError {
     case connectionStartFailed
     case loginStartFailed
     case connectionFailed
+    /// The connection dropped mid-command AND an automatic reconnect was armed.
+    /// Unwinds the command without an error dialog: the UI is already showing
+    /// the reconnecting state, and stacking an alert on top of it is confusing
+    /// — most of all under VoiceOver.
+    case connectionLostReconnecting
     case connectionTimeout
     case loginFailed(String)
     case incorrectChannelPassword(String)
@@ -138,7 +143,7 @@ enum TeamTalkConnectionError: LocalizedError {
             return L10n.text("teamtalk.connection.error.connectionStartFailed")
         case .loginStartFailed:
             return L10n.text("teamtalk.connection.error.loginStartFailed")
-        case .connectionFailed:
+        case .connectionFailed, .connectionLostReconnecting:
             return L10n.text("teamtalk.connection.error.connectionFailed")
         case .connectionTimeout:
             return L10n.text("teamtalk.connection.error.timeout")

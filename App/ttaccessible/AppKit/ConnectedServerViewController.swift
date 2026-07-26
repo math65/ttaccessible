@@ -1068,6 +1068,18 @@ final class ConnectedServerViewController: NSViewController {
 
     // MARK: - User Actions (see ConnectedServerViewController+UserActions.swift)
 
+    /// Swallow the "dropped, but reconnecting" error. Any command in flight
+    /// when the connection drops unwinds with it, and the UI is already showing
+    /// the reconnecting state — a modal alert (and its VoiceOver announcement)
+    /// on top of that is noise, and there can be one per in-flight command.
+    override func presentError(_ error: Error) -> Bool {
+        if let error = error as? TeamTalkConnectionError,
+           case .connectionLostReconnecting = error {
+            return false
+        }
+        return super.presentError(error)
+    }
+
     @objc func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         let isUser = { if case .user? = self.selectedNode { return true }; return false }()
         let selectedUser: ConnectedServerUser? = { if case .user(let u) = self.selectedNode { return u }; return nil }()
