@@ -594,7 +594,7 @@
 "preferences.recording.help" = "Cmd+R always records a single mixed file. Cmd+Shift+R records using the mode selected above. Files are saved to the chosen folder.";
 "shortcuts.mediaStream.startFile" = "Stream Media File…";
 "shortcuts.mediaStream.startURL" = "Stream URL…";
-"shortcuts.mediaStream.startDevice" = "Stream Audio Device…";
+"shortcuts.mediaStream.startDevice" = "Stream a Device or Application…";
 "shortcuts.mediaStream.stop" = "Stop Streaming";
 "mediaStream.panel.title" = "Stream Media File";
 "mediaStream.panel.message" = "Choose an audio or video file to stream into the channel. Video support depends on what TeamTalk can open on your Mac. 10-bit video is not supported.";
@@ -615,7 +615,7 @@
 "mediaStream.error.unsupportedFormat.detail" = "This file cannot be streamed in TeamTalk. %@";
 "mediaStream.error.reason.sdkUnsupported" = "TeamTalk cannot open this file format.";
 "mediaStream.error.reason.tenBitVideo" = "10-bit video is not supported.";
-"mediaStream.device.prompt.title" = "Stream Audio Device";
+"mediaStream.device.prompt.title" = "Stream a Device or Application";
 "mediaStream.device.prompt.message" = "Choose an audio source to stream into the channel. The stream keeps going even while the source is silent.";
 "mediaStream.device.prompt.start" = "Stream";
 "mediaStream.device.prompt.sourceLabel" = "Audio source";

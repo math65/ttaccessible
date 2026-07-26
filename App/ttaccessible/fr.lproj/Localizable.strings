@@ -594,7 +594,7 @@
 "preferences.recording.help" = "Cmd+R enregistre toujours un seul fichier mixé. Cmd+Maj+R enregistre selon le mode sélectionné ci-dessus. Les fichiers sont sauvegardés dans le dossier choisi.";
 "shortcuts.mediaStream.startFile" = "Diffuser un fichier média…";
 "shortcuts.mediaStream.startURL" = "Diffuser une URL…";
-"shortcuts.mediaStream.startDevice" = "Diffuser un périphérique audio…";
+"shortcuts.mediaStream.startDevice" = "Diffuser un périphérique ou une application…";
 "shortcuts.mediaStream.stop" = "Arrêter la diffusion";
 "mediaStream.panel.title" = "Diffuser un fichier média";
 "mediaStream.panel.message" = "Choisissez un fichier audio ou vidéo à diffuser dans le canal. La prise en charge vidéo dépend des formats que TeamTalk peut décoder sur votre Mac. La vidéo 10 bits n'est pas prise en charge.";
@@ -615,7 +615,7 @@
 "mediaStream.error.unsupportedFormat.detail" = "Ce fichier ne peut pas être diffusé dans TeamTalk. %@";
 "mediaStream.error.reason.sdkUnsupported" = "TeamTalk ne peut pas ouvrir ce format de fichier.";
 "mediaStream.error.reason.tenBitVideo" = "La vidéo 10 bits n'est pas prise en charge.";
-"mediaStream.device.prompt.title" = "Diffuser un périphérique audio";
+"mediaStream.device.prompt.title" = "Diffuser un périphérique ou une application";
 "mediaStream.device.prompt.message" = "Choisissez une source audio à diffuser dans le canal. La diffusion continue même lorsque la source est silencieuse.";
 "mediaStream.device.prompt.start" = "Diffuser";
 "mediaStream.device.prompt.sourceLabel" = "Source audio";
