@@ -65,6 +65,38 @@ struct VirtualToggleConfig {
     let offAnnouncement: String
 }
 
+/// Ported from the Mixer app's `VirtualPickerConfig` (VirtualStripAccessibility.swift).
+/// This is the picker machinery the first port deliberately left out — see this file's
+/// header — which is why source pickers had to be hand-rolled as bare NSButtons and never
+/// announced as pop up buttons.
+///
+/// `options` is a FLAT list, as in Mixer: VoiceOver steps it with increment/decrement
+/// without opening anything, and press opens the menu positioned at the current item.
+/// `extraItems` are trailing actions that are not selectable sources (e.g. "Select
+/// Application…"), appended after a separator.
+struct VirtualPickerConfig {
+    let label: String
+    /// Closure rather than Mixer's plain array: ttaccessible's source list grows when
+    /// the user browses for an application that wasn't running.
+    let getOptions: @MainActor @Sendable () -> [String]
+    let getIndex: @MainActor @Sendable () -> Int?
+    let setIndex: @MainActor @Sendable (Int) -> Void
+    /// Title + handler for trailing non-source actions. Empty for a plain picker.
+    var extraItems: [(title: String, action: @MainActor @Sendable () -> Void)] = []
+
+    init(label: String,
+         getOptions: @escaping @MainActor @Sendable () -> [String],
+         getIndex: @escaping @MainActor @Sendable () -> Int?,
+         setIndex: @escaping @MainActor @Sendable (Int) -> Void,
+         extraItems: [(title: String, action: @MainActor @Sendable () -> Void)] = []) {
+        self.label = label
+        self.getOptions = getOptions
+        self.getIndex = getIndex
+        self.setIndex = setIndex
+        self.extraItems = extraItems
+    }
+}
+
 // MARK: - Virtual control view
 
 /// Invisible NSView providing VoiceOver with one interactive control. Configured via
@@ -73,10 +105,19 @@ final class VirtualControlView: NSView {
     enum Config {
         case slider(VirtualSliderConfig)
         case toggle(VirtualToggleConfig)
+        case picker(VirtualPickerConfig)
     }
 
     let config: Config
     private var announceToggle = false
+    private var cachedPickerController: VirtualPickerController?
+
+    private func pickerController(_ cfg: VirtualPickerConfig) -> VirtualPickerController {
+        if let cachedPickerController { return cachedPickerController }
+        let controller = VirtualPickerController(config: cfg)
+        cachedPickerController = controller
+        return controller
+    }
 
     init(config: Config) {
         self.config = config
@@ -96,6 +137,7 @@ final class VirtualControlView: NSView {
         switch config {
         case .slider: return .slider
         case .toggle: return .button
+        case .picker: return .popUpButton
         }
     }
 
@@ -103,6 +145,7 @@ final class VirtualControlView: NSView {
         switch config {
         case .slider: return L10n.text("mixer.control.slider.roleDescription")
         case .toggle: return L10n.text("mixer.control.button.roleDescription")
+        case .picker: return L10n.text("mixer.control.picker.roleDescription")
         }
     }
 
@@ -118,6 +161,7 @@ final class VirtualControlView: NSView {
                     return state ? cfg.onAnnouncement : cfg.offAnnouncement
                 }
                 return cfg.getLabel()
+            case .picker(let cfg): return cfg.label
             }
         }
     }
@@ -127,6 +171,10 @@ final class VirtualControlView: NSView {
             switch config {
             case .slider(let cfg): return cfg.getValue()
             case .toggle: return nil
+            case .picker(let cfg):
+                let options = cfg.getOptions()
+                guard let idx = cfg.getIndex(), options.indices.contains(idx) else { return nil }
+                return options[idx]
             }
         }
     }
@@ -137,7 +185,7 @@ final class VirtualControlView: NSView {
             case .slider(let cfg):
                 guard let value = cfg.getValue() else { return "Unknown" }
                 return cfg.getDisplayString(value)
-            case .toggle: return nil
+            case .toggle, .picker: return nil
             }
         }
     }
@@ -145,21 +193,21 @@ final class VirtualControlView: NSView {
     override func accessibilityHelp() -> String? {
         switch config {
         case .slider(let cfg): return cfg.help
-        case .toggle: return nil
+        case .toggle, .picker: return nil
         }
     }
 
     override func accessibilityMinValue() -> Any? {
         switch config {
         case .slider(let cfg): return cfg.minValue
-        case .toggle: return nil
+        case .toggle, .picker: return nil
         }
     }
 
     override func accessibilityMaxValue() -> Any? {
         switch config {
         case .slider(let cfg): return cfg.maxValue
-        case .toggle: return nil
+        case .toggle, .picker: return nil
         }
     }
 
@@ -169,6 +217,8 @@ final class VirtualControlView: NSView {
         switch config {
         case .slider: return [.increment, .decrement, .press]
         case .toggle: return [.press]
+        // Press opens the menu; increment/decrement step the selection without it.
+        case .picker: return [.increment, .decrement, .press]
         }
     }
 
@@ -199,7 +249,7 @@ final class VirtualControlView: NSView {
                 let desc = cfg.getDisplayString(resetValue)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                     NSAccessibility.post(element: NSApp as Any, notification: .announcementRequested,
-                                         userInfo: [.announcement: desc, .priority: NSAccessibilityPriorityLevel.high])
+                                         userInfo: [.announcement: desc, .priority: NSAccessibilityPriorityLevel.high.rawValue])
                 }
                 return true
             case .toggle(let cfg):
@@ -210,30 +260,125 @@ final class VirtualControlView: NSView {
                     self?.announceToggle = false
                 }
                 return true
+            case .picker(let cfg):
+                pickerController(cfg).showMenu(in: self)
+                return true
             }
         }
     }
 
     override func accessibilityPerformIncrement() -> Bool {
         MainActor.assumeIsolated {
+            if case .picker(let cfg) = config { return pickerController(cfg).step(by: 1) }
             guard case .slider(let cfg) = config, let current = cfg.getValue() else { return false }
             let newValue = cfg.incrementValue(current)
             cfg.setValue(newValue)
             NSAccessibility.post(element: NSApp as Any, notification: .announcementRequested,
-                                 userInfo: [.announcement: cfg.getDisplayString(newValue), .priority: NSAccessibilityPriorityLevel.high])
+                                 userInfo: [.announcement: cfg.getDisplayString(newValue), .priority: NSAccessibilityPriorityLevel.high.rawValue])
             return true
         }
     }
 
     override func accessibilityPerformDecrement() -> Bool {
         MainActor.assumeIsolated {
+            if case .picker(let cfg) = config { return pickerController(cfg).step(by: -1) }
             guard case .slider(let cfg) = config, let current = cfg.getValue() else { return false }
             let newValue = cfg.decrementValue(current)
             cfg.setValue(newValue)
             NSAccessibility.post(element: NSApp as Any, notification: .announcementRequested,
-                                 userInfo: [.announcement: cfg.getDisplayString(newValue), .priority: NSAccessibilityPriorityLevel.high])
+                                 userInfo: [.announcement: cfg.getDisplayString(newValue), .priority: NSAccessibilityPriorityLevel.high.rawValue])
             return true
         }
+    }
+
+}
+
+
+
+// MARK: - Picker behaviour (ported from Mixer's VirtualStripAccessibility)
+
+/// The picker half of Mixer's virtual-accessibility engine, factored out so it can be
+/// attached to ANY view — the invisible `VirtualControlView` (Channel Mixer) or a real,
+/// visible AppKit control. Mixer needs an invisible parallel tree because its visible
+/// layer is SwiftUI; where the visible control is already an NSView there is nothing to
+/// duplicate, so the behaviour lives here and the control adopts it.
+@MainActor
+final class VirtualPickerController: NSObject {
+    private let config: VirtualPickerConfig
+
+    init(config: VirtualPickerConfig) {
+        self.config = config
+    }
+
+    var label: String { config.label }
+
+    /// The selected option, which is what VoiceOver reads as the control's value.
+    var selectedOption: String? {
+        let options = config.getOptions()
+        guard let idx = config.getIndex(), options.indices.contains(idx) else { return nil }
+        return options[idx]
+    }
+
+    /// Step the selection WITHOUT opening the menu — VoiceOver's increment/decrement.
+    /// This is what lets every source be reached without entering a menu at all.
+    func step(by offset: Int) -> Bool {
+        let options = config.getOptions()
+        guard options.isEmpty == false, let idx = config.getIndex() else { return false }
+        let next = min(max(idx + offset, 0), options.count - 1)
+        guard next != idx else { return false }
+        config.setIndex(next)
+        announce(options[next])
+        return true
+    }
+
+    /// Flat menu, opened positioned at the current selection — exactly Mixer's picker.
+    /// Deliberately no submenus: no submenu-bearing menu has ever been navigable by
+    /// VoiceOver here (NSPopUpButton+submenu announces "pop up button group";
+    /// NSButton+submenu announces "button group" and bounces focus back to the sheet).
+    func showMenu(in view: NSView) {
+        let options = config.getOptions()
+        let idx = config.getIndex() ?? 0
+        let menu = NSMenu()
+        for (i, option) in options.enumerated() {
+            let item = NSMenuItem(title: option, action: #selector(itemSelected(_:)), keyEquivalent: "")
+            item.tag = i
+            item.target = self
+            if i == idx { item.state = .on }
+            menu.addItem(item)
+        }
+        if config.extraItems.isEmpty == false {
+            menu.addItem(.separator())
+            for (i, extra) in config.extraItems.enumerated() {
+                let item = NSMenuItem(title: extra.title, action: #selector(extraSelected(_:)), keyEquivalent: "")
+                item.tag = i
+                item.target = self
+                menu.addItem(item)
+            }
+        }
+        DispatchQueue.main.async { [weak view] in
+            guard let view else { return }
+            menu.popUp(positioning: menu.item(at: idx), at: NSPoint(x: 0, y: view.bounds.height), in: view)
+        }
+    }
+
+    @objc private func itemSelected(_ sender: NSMenuItem) {
+        let options = config.getOptions()
+        guard options.indices.contains(sender.tag) else { return }
+        config.setIndex(sender.tag)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            self?.announce(options[sender.tag])
+        }
+    }
+
+    @objc private func extraSelected(_ sender: NSMenuItem) {
+        guard config.extraItems.indices.contains(sender.tag) else { return }
+        config.extraItems[sender.tag].action()
+    }
+
+    private func announce(_ message: String) {
+        NSAccessibility.post(element: NSApp as Any, notification: .announcementRequested,
+                             userInfo: [.announcement: message,
+                                        .priority: NSAccessibilityPriorityLevel.high.rawValue])
     }
 }
 

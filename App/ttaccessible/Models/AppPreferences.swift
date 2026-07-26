@@ -136,6 +136,8 @@ struct AppPreferences: Codable, Equatable {
         case videoPanelExpanded
         case userVolumeMemoryMode
         case deviceStreamLastDeviceUID
+        case deviceStreamLastSource
+        case deviceStreamVoiceSyncTrimMSec
         case languagePreference
         case hasChosenInitialLanguage
     }
@@ -224,6 +226,14 @@ struct AppPreferences: Codable, Equatable {
     /// CoreAudio UID of the input device last streamed to a channel, so the
     /// device-stream dialog preselects it next time.
     var deviceStreamLastDeviceUID: String?
+    /// Last streamed capture source as a token ("device:<uid>", "app:<bundleID>",
+    /// "voiceover") — supersedes deviceStreamLastDeviceUID for preselection, which
+    /// is still written for devices so older builds keep their memory.
+    var deviceStreamLastSource: String?
+    /// Signed manual trim (ms) added to the measured voice-sync delay while a
+    /// live-capture stream runs. No UI — an escape hatch to absorb the voice
+    /// path's own capture latency on unusual setups.
+    var deviceStreamVoiceSyncTrimMSec: Int
     var languagePreference: AppLanguagePreference
     var hasChosenInitialLanguage: Bool
     init(
@@ -291,6 +301,8 @@ struct AppPreferences: Codable, Equatable {
         videoPanelExpanded: Bool = true,
         userVolumeMemoryMode: UserVolumeMemoryMode = .persistent,
         deviceStreamLastDeviceUID: String? = nil,
+        deviceStreamLastSource: String? = nil,
+        deviceStreamVoiceSyncTrimMSec: Int = 0,
         languagePreference: AppLanguagePreference = .system,
         hasChosenInitialLanguage: Bool = false
     ) {
@@ -358,6 +370,8 @@ struct AppPreferences: Codable, Equatable {
         self.videoPanelExpanded = videoPanelExpanded
         self.userVolumeMemoryMode = userVolumeMemoryMode
         self.deviceStreamLastDeviceUID = deviceStreamLastDeviceUID
+        self.deviceStreamLastSource = deviceStreamLastSource
+        self.deviceStreamVoiceSyncTrimMSec = deviceStreamVoiceSyncTrimMSec
         self.languagePreference = languagePreference
         self.hasChosenInitialLanguage = hasChosenInitialLanguage
     }
@@ -484,6 +498,8 @@ struct AppPreferences: Codable, Equatable {
         videoPanelExpanded = try container.decodeIfPresent(Bool.self, forKey: .videoPanelExpanded) ?? true
         userVolumeMemoryMode = try container.decodeIfPresent(UserVolumeMemoryMode.self, forKey: .userVolumeMemoryMode) ?? .persistent
         deviceStreamLastDeviceUID = try container.decodeIfPresent(String.self, forKey: .deviceStreamLastDeviceUID)
+        deviceStreamLastSource = try container.decodeIfPresent(String.self, forKey: .deviceStreamLastSource)
+        deviceStreamVoiceSyncTrimMSec = try container.decodeIfPresent(Int.self, forKey: .deviceStreamVoiceSyncTrimMSec) ?? 0
         languagePreference = try container.decodeIfPresent(AppLanguagePreference.self, forKey: .languagePreference) ?? .system
         hasChosenInitialLanguage = try container.decodeIfPresent(Bool.self, forKey: .hasChosenInitialLanguage) ?? false
     }
@@ -554,6 +570,8 @@ struct AppPreferences: Codable, Equatable {
         try container.encode(videoPanelExpanded, forKey: .videoPanelExpanded)
         try container.encode(userVolumeMemoryMode, forKey: .userVolumeMemoryMode)
         try container.encodeIfPresent(deviceStreamLastDeviceUID, forKey: .deviceStreamLastDeviceUID)
+        try container.encodeIfPresent(deviceStreamLastSource, forKey: .deviceStreamLastSource)
+        try container.encode(deviceStreamVoiceSyncTrimMSec, forKey: .deviceStreamVoiceSyncTrimMSec)
         try container.encode(languagePreference, forKey: .languagePreference)
         try container.encode(hasChosenInitialLanguage, forKey: .hasChosenInitialLanguage)
     }

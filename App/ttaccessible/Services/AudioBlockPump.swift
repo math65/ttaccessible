@@ -34,6 +34,17 @@
 import Foundation
 
 final class AudioBlockPump {
+
+    /// What the local-media (our OWN broadcast) subscription is for. Voice
+    /// sync needs the blocks drained for latency measurement even when the
+    /// user opted out of hearing their stream back — only `.monitor` also
+    /// feeds the output engine.
+    enum LocalMediaMode: Equatable {
+        case off
+        case measureOnly
+        case monitor
+    }
+
     private let queue = DispatchQueue(label: "com.ttaccessible.audio-block-pump", qos: .userInteractive)
     private var timer: DispatchSourceTimer?
     private var instance: UnsafeMutableRawPointer?
@@ -41,9 +52,12 @@ final class AudioBlockPump {
     /// Remote users whose per-user block events are enabled (mirrors the
     /// controller's `perUserAudioEnabled`).
     private var userIDs: [Int32] = []
-    /// Whether our OWN media-file stream (TT_LOCAL_USERID) is subscribed
-    /// (mirrors the controller's `localMediaAudioEnabled`).
-    private var localMediaEnabled = false
+    /// Local-media subscription mode (mirrors the controller's
+    /// `localMediaAudioEnabled` / voice-sync state).
+    private var localMediaMode: LocalMediaMode = .off
+    /// Receives every local-media block's stream position for the voice-sync
+    /// latency measurement (thread-safe; set once by the controller).
+    var mediaSyncEstimator: MediaSyncEstimator?
 
     /// Per engine-source sticky "has ever delivered genuinely stereo content" flag,
     /// for the mixer's "Center" vs "Stereo" announcement. The SDK's block nChannels
@@ -83,7 +97,7 @@ final class AudioBlockPump {
             instance = nil
             engine = nil
             userIDs = []
-            localMediaEnabled = false
+            localMediaMode = .off
             sawStereoByKey.removeAll()
         }
     }
@@ -108,14 +122,14 @@ final class AudioBlockPump {
         }
     }
 
-    /// Toggle draining of our own streamed media file (same ordering guarantee
-    /// as `setUsers` for the source's removal).
-    func setLocalMediaEnabled(_ enabled: Bool) {
+    /// Set the local-media drain mode (same ordering guarantee as `setUsers`
+    /// for the mix source's removal when leaving `.monitor`).
+    func setLocalMediaMode(_ mode: LocalMediaMode) {
         queue.async { [weak self] in
             guard let self else { return }
-            let wasEnabled = self.localMediaEnabled
-            self.localMediaEnabled = enabled
-            if wasEnabled, enabled == false {
+            let wasMonitoring = self.localMediaMode == .monitor
+            self.localMediaMode = mode
+            if wasMonitoring, mode != .monitor {
                 self.engine?.removeUser(TeamTalkConnectionController.localMediaEngineKey)
                 self.sawStereoByKey.removeValue(forKey: TeamTalkConnectionController.localMediaEngineKey)
             }
@@ -136,22 +150,27 @@ final class AudioBlockPump {
                   streamType: STREAMTYPE_MEDIAFILE_AUDIO,
                   engineKey: TeamTalkConnectionController.outputMediaSourceKey(userID), profile: .network)
         }
-        if localMediaEnabled {
+        if localMediaMode != .off {
             drain(instance: instance, engine: engine, userID: TT_LOCAL_USERID,
                   streamType: STREAMTYPE_MEDIAFILE_AUDIO,
-                  engineKey: TeamTalkConnectionController.localMediaEngineKey, profile: .localMedia)
+                  engineKey: TeamTalkConnectionController.localMediaEngineKey, profile: .localMedia,
+                  enqueueToEngine: localMediaMode == .monitor, feedEstimator: true)
         }
     }
 
     /// Acquire every queued block for one (user, stream) and hand the PCM to the
-    /// mix engine (which hops to its own serial queue).
+    /// mix engine (which hops to its own serial queue). The local-media stream
+    /// can be drained measure-only: the voice-sync estimator gets every block's
+    /// position, the engine only gets audio when the user monitors their stream.
     private func drain(
         instance: UnsafeMutableRawPointer,
         engine: OutputAudioRenderEngine,
         userID: Int32,
         streamType: StreamType,
         engineKey: Int32,
-        profile: OutputSourceBufferProfile
+        profile: OutputSourceBufferProfile,
+        enqueueToEngine: Bool = true,
+        feedEstimator: Bool = false
     ) {
         var drained = 0
         while drained < maxBlocksPerStreamPerTick,
@@ -161,18 +180,27 @@ final class AudioBlockPump {
             let channels = Int(block.pointee.nChannels)
             let sampleRate = Int(block.pointee.nSampleRate)
             if frames > 0, channels > 0, sampleRate > 0, let rawAudio = block.pointee.lpRawAudio {
-                // Copy the SDK PCM out before the block is released — the engine
-                // consumes it asynchronously on its own queue.
-                let samplePtr = rawAudio.assumingMemoryBound(to: Int16.self)
-                let pcm = Array(UnsafeBufferPointer(start: samplePtr, count: frames * channels))
-                engine.enqueueUser(
-                    engineKey,
-                    pcm: pcm,
-                    frames: frames, channels: channels, sampleRate: Double(sampleRate),
-                    profile: profile
-                )
-                updateStereoJudgement(pcm: pcm, frames: frames, channels: channels,
-                                      engineKey: engineKey, engine: engine)
+                if feedEstimator {
+                    mediaSyncEstimator?.ingest(
+                        sampleIndex: block.pointee.uSampleIndex,
+                        frames: frames,
+                        sampleRate: sampleRate
+                    )
+                }
+                if enqueueToEngine {
+                    // Copy the SDK PCM out before the block is released — the engine
+                    // consumes it asynchronously on its own queue.
+                    let samplePtr = rawAudio.assumingMemoryBound(to: Int16.self)
+                    let pcm = Array(UnsafeBufferPointer(start: samplePtr, count: frames * channels))
+                    engine.enqueueUser(
+                        engineKey,
+                        pcm: pcm,
+                        frames: frames, channels: channels, sampleRate: Double(sampleRate),
+                        profile: profile
+                    )
+                    updateStereoJudgement(pcm: pcm, frames: frames, channels: channels,
+                                          engineKey: engineKey, engine: engine)
+                }
             }
             TT_ReleaseUserAudioBlock(instance, block)
         }

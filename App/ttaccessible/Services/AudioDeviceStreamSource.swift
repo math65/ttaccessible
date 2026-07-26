@@ -13,6 +13,80 @@ enum AudioDeviceStreamSourceError: Error {
     case deviceUnavailable
     case captureStartFailed
     case serverStartFailed
+    case sourceUnsupportedOnThisOS
+}
+
+/// What a live-capture media stream captures.
+enum DeviceStreamCaptureSpec: Equatable {
+    /// A CoreAudio input device (the original "Stream Audio Device" source).
+    case inputDevice(InputAudioDeviceInfo)
+    /// The audio output of a set of processes (an application's audio, or
+    /// VoiceOver's). Captured via CoreAudio process taps on macOS 14.2+ and
+    /// ScreenCaptureKit audio on macOS 13.0–14.1; unavailable on macOS 12.
+    case processes(ProcessSelection)
+
+    struct ProcessSelection: Equatable {
+        /// Bundle-identifier prefixes to capture — prefix matching so an app's
+        /// helper processes (e.g. browser audio helpers) are included.
+        let bundleIDPrefixes: [String]
+        let displayName: String
+        /// Stable token stored in preferences ("voiceover" / "app:<bundleID>").
+        let persistenceToken: String
+    }
+
+    var displayName: String {
+        switch self {
+        case .inputDevice(let device): return device.name
+        case .processes(let selection): return selection.displayName
+        }
+    }
+
+    /// Token persisted as the last-used source ("device:<uid>" for devices).
+    var persistenceToken: String {
+        switch self {
+        case .inputDevice(let device): return "device:\(device.uid)"
+        case .processes(let selection): return selection.persistenceToken
+        }
+    }
+
+    static let voiceOverPersistenceToken = "voiceover"
+
+    /// Bundle prefixes that carry VoiceOver's audio output. VoiceOver itself
+    /// plus the speech-synthesis hosts — the process actually rendering VO
+    /// speech varies by macOS version, so the net is deliberately wide and the
+    /// capture logs which processes matched (see ProcessTapCaptureBackend).
+    static let voiceOverBundlePrefixes = [
+        "com.apple.VoiceOver",
+        "com.apple.speech",
+        "com.apple.SpeechSynthesis",
+        "com.apple.accessibility.speech",
+    ]
+
+    static func voiceOver() -> DeviceStreamCaptureSpec {
+        .processes(ProcessSelection(
+            bundleIDPrefixes: voiceOverBundlePrefixes,
+            displayName: L10n.text("mediaStream.device.source.voiceOver"),
+            persistenceToken: voiceOverPersistenceToken
+        ))
+    }
+
+    static func application(bundleID: String, displayName: String) -> DeviceStreamCaptureSpec {
+        .processes(ProcessSelection(
+            bundleIDPrefixes: [bundleID],
+            displayName: displayName,
+            persistenceToken: "app:\(bundleID)"
+        ))
+    }
+}
+
+/// A capture implementation that feeds 48 kHz stereo Int16 frames into the
+/// stream source's ring. Implementations must be safe to start off the main
+/// thread and must honor `setMuted` by writing silence (never by stopping —
+/// the ring must keep advancing in real time so the stream never starves).
+protocol DeviceStreamCaptureBackend: AnyObject {
+    func start() throws
+    func stop()
+    func setMuted(_ muted: Bool)
 }
 
 /// Captures a CoreAudio input device and serves it as an endless Ogg Opus
@@ -37,38 +111,52 @@ final class AudioDeviceStreamSource {
     nonisolated static let outputSampleRate = 48_000
     nonisolated static let outputChannels = 2
 
-    private let device: InputAudioDeviceInfo
+    private let spec: DeviceStreamCaptureSpec
+    private let muteSourceOutput: Bool
+    /// Passed to the process-tap backend so its transient aggregate device
+    /// doesn't trigger a sound-system restart. See `ProcessTapCaptureBackend`.
+    private let suppressDeviceChanges: ((TimeInterval) -> Void)?
     private let ring = PCMRing(capacityFrames: outputSampleRate * 2, channels: outputChannels)
     private let serverQueue = DispatchQueue(label: "com.ttaccessible.device-stream-server")
+    private var backend: DeviceStreamCaptureBackend?
 
-    // Capture state (mutated on start/stop only; callback reads via unmanaged self).
-    private var audioUnit: AudioUnit?
-    private var captureBufferList: UnsafeMutableRawPointer?
-    private var captureBufferCapacity: Int = 0
-    private var captureSampleRate: Double = 48_000
-    private var captureChannels: Int = 2
-    /// Pre-allocated stereo scratch reused by the RT input callback (sized to the
-    /// AUHAL's max frames), so `handleInput` doesn't heap-allocate per callback.
-    private var captureStereoScratch = [Int16]()
-    /// Pre-allocated resample target reused by the RT input callback (sized to the
-    /// worst-case 48 kHz output frame count), so resampling doesn't allocate either.
-    private var captureResampleScratch = [Int16]()
+    /// Media-position → capture-time mapping for the voice-sync feature: the
+    /// active connection publishes where its media timeline sits in the ring,
+    /// so the controller can measure how far behind live the broadcast runs.
+    let syncClock: MediaSyncClock
 
     // Server state (guarded by serverQueue).
     private var listener: NWListener?
     private var connections: [ObjectIdentifier: StreamConnection] = [:]
     private var stopped = false
+    /// Monotonic per-connection generation, for publisher election (guarded by
+    /// serverQueue). The SDK/FFmpeg can open the URL more than once (probe +
+    /// playback, channel-switch restart overlap); only the newest LIVE
+    /// connection publishes to the sync clock.
+    private var nextConnectionGeneration: UInt64 = 0
 
     private let stopLock = NSLock()
     private var didStop = false
-    /// When true the capture callback writes silence instead of the live audio —
-    /// used to "pause" a device stream without pausing the SDK (which desyncs a
-    /// live loopback). Plain Bool: a one-buffer-late transition is inaudible.
-    private var isMuted = false
 
-    init(device: InputAudioDeviceInfo) {
-        self.device = device
+    /// `muteSourceOutput`: process-tap sources only — silence the captured
+    /// app/VoiceOver on this Mac while it streams (CATapDescription's
+    /// muted-while-tapped behavior). Ignored for devices and the SCK backend.
+    init(
+        spec: DeviceStreamCaptureSpec,
+        muteSourceOutput: Bool = false,
+        suppressDeviceChanges: ((TimeInterval) -> Void)? = nil
+    ) {
+        self.spec = spec
+        self.muteSourceOutput = muteSourceOutput
+        self.suppressDeviceChanges = suppressDeviceChanges
+        self.syncClock = MediaSyncClock(ring: ring)
     }
+
+    convenience init(device: InputAudioDeviceInfo) {
+        self.init(spec: .inputDevice(device))
+    }
+
+    var displayName: String { spec.displayName }
 
     deinit {
         stop()
@@ -76,39 +164,97 @@ final class AudioDeviceStreamSource {
 
     /// Start capture and the loopback server. Returns the URL the SDK should stream.
     func start() throws -> URL {
-        guard let deviceID = InputAudioDeviceResolver.audioDeviceID(forUID: device.uid) else {
-            throw AudioDeviceStreamSourceError.deviceUnavailable
-        }
+        let backend = try makeBackend()
         let port = try startServer()
         do {
-            try startCapture(deviceID: deviceID)
+            try backend.start()
         } catch {
+            self.backend = backend  // so stop() tears it down
             stop()
             throw error
         }
+        self.backend = backend
         guard let url = URL(string: "http://127.0.0.1:\(port)/device-stream.ogg") else {
             stop()
             throw AudioDeviceStreamSourceError.serverStartFailed
         }
-        AudioLogger.log("device stream: source started device=%@ url=%@", device.name, url.absoluteString)
+        AudioLogger.log("device stream: source started source=%@ url=%@", spec.displayName, url.absoluteString)
         return url
     }
 
-    /// Pause/resume the device stream by muting the capture (see isMuted).
+    private func makeBackend() throws -> DeviceStreamCaptureBackend {
+        switch spec {
+        case .inputDevice(let device):
+            return DeviceInputCaptureBackend(device: device, ring: ring)
+        case .processes(let selection):
+            if #available(macOS 14.2, *) {
+                return ProcessTapCaptureBackend(
+                    selection: selection,
+                    ring: ring,
+                    muteLocalOutput: muteSourceOutput,
+                    suppressDeviceChanges: suppressDeviceChanges
+                )
+            }
+            if #available(macOS 13.0, *) {
+                return SCKAudioCaptureBackend(selection: selection, ring: ring)
+            }
+            throw AudioDeviceStreamSourceError.sourceUnsupportedOnThisOS
+        }
+    }
+
+    /// Pause/resume the stream by muting the capture — the backend keeps
+    /// feeding real-time silence so the SDK never sees a discontinuity.
     func setMuted(_ muted: Bool) {
-        isMuted = muted
+        backend?.setMuted(muted)
         AudioLogger.log("device stream: %@", muted ? "paused (muted)" : "resumed")
     }
 
     func stop() {
-        stopLock.lock()
-        let alreadyStopped = didStop
-        didStop = true
-        stopLock.unlock()
-        guard alreadyStopped == false else { return }
+        guard claimStop() else { return }
 
         // Capture first, so no more ring writes; then the server.
-        stopCapture()
+        backend?.stop()
+        backend = nil
+        shutdownServer()
+        AudioLogger.log("device stream: source stopped source=%@", spec.displayName)
+    }
+
+    /// Stop without blocking the caller on backend teardown.
+    ///
+    /// The controller tears streams down from its serial queue
+    /// (`finalizeMediaStreamingLocked`, `destroyLocked`), and backend teardown
+    /// is slow: `SCKAudioCaptureBackend` waits on a semaphore for up to 2 s,
+    /// and `ProcessTapCaptureBackend.stop()` takes `controlQueue`, which may be
+    /// mid-rebuild (a 0.1 s settle plus aggregate-device create/destroy). Held
+    /// on the SDK's serial queue that stalls the message loop — and
+    /// `disconnectSynchronously()` puts the main thread behind that same queue,
+    /// so the UI freezes with it.
+    ///
+    /// Teardown order is inverted relative to `stop()`: the server closes
+    /// first, so whatever the backend still writes to the ring while it winds
+    /// down simply has no reader.
+    func stopAsynchronously() {
+        guard claimStop() else { return }
+
+        let backend = self.backend
+        self.backend = nil
+        shutdownServer()
+        DispatchQueue.global(qos: .userInitiated).async { [spec] in
+            backend?.stop()
+            AudioLogger.log("device stream: source stopped source=%@", spec.displayName)
+        }
+    }
+
+    /// Returns true for the one caller that wins the stop race.
+    private func claimStop() -> Bool {
+        stopLock.lock()
+        defer { stopLock.unlock() }
+        guard didStop == false else { return false }
+        didStop = true
+        return true
+    }
+
+    private func shutdownServer() {
         serverQueue.sync {
             stopped = true
             // Snapshot + clear before cancelling: cancel() → finish() → onFinish
@@ -121,201 +267,6 @@ final class AudioDeviceStreamSource {
             }
             listener?.cancel()
             listener = nil
-        }
-        AudioLogger.log("device stream: source stopped device=%@", device.name)
-    }
-
-    // MARK: - Capture (standalone AUHAL, mirrors AdvancedMicrophoneAudioEngine)
-
-    private func startCapture(deviceID: AudioDeviceID) throws {
-        var componentDesc = AudioComponentDescription(
-            componentType: kAudioUnitType_Output,
-            componentSubType: kAudioUnitSubType_HALOutput,
-            componentManufacturer: kAudioUnitManufacturer_Apple,
-            componentFlags: 0,
-            componentFlagsMask: 0
-        )
-        guard let component = AudioComponentFindNext(nil, &componentDesc) else {
-            throw AudioDeviceStreamSourceError.captureStartFailed
-        }
-        var unit: AudioUnit?
-        guard AudioComponentInstanceNew(component, &unit) == noErr, let au = unit else {
-            throw AudioDeviceStreamSourceError.captureStartFailed
-        }
-
-        func fail() -> AudioDeviceStreamSourceError {
-            AudioComponentInstanceDispose(au)
-            return .captureStartFailed
-        }
-
-        var enableIO: UInt32 = 1
-        guard AudioUnitSetProperty(au, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Input, 1,
-                                   &enableIO, UInt32(MemoryLayout<UInt32>.size)) == noErr else { throw fail() }
-        var disableIO: UInt32 = 0
-        guard AudioUnitSetProperty(au, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Output, 0,
-                                   &disableIO, UInt32(MemoryLayout<UInt32>.size)) == noErr else { throw fail() }
-        var devID = deviceID
-        guard AudioUnitSetProperty(au, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0,
-                                   &devID, UInt32(MemoryLayout<AudioDeviceID>.size)) == noErr else { throw fail() }
-
-        var nativeASBD = AudioStreamBasicDescription()
-        var asbdSize = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
-        guard AudioUnitGetProperty(au, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 1,
-                                   &nativeASBD, &asbdSize) == noErr else { throw fail() }
-
-        let channelCount = max(Int(nativeASBD.mChannelsPerFrame), 1)
-        let sampleRate = nativeASBD.mSampleRate > 0 ? nativeASBD.mSampleRate : 48_000
-
-        // Int16 interleaved at the device's native rate (AUHAL converts format,
-        // never rate — resampling to 48 kHz happens in the input callback).
-        var outputASBD = AudioStreamBasicDescription(
-            mSampleRate: sampleRate,
-            mFormatID: kAudioFormatLinearPCM,
-            mFormatFlags: kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked,
-            mBytesPerPacket: UInt32(MemoryLayout<Int16>.size * channelCount),
-            mFramesPerPacket: 1,
-            mBytesPerFrame: UInt32(MemoryLayout<Int16>.size * channelCount),
-            mChannelsPerFrame: UInt32(channelCount),
-            mBitsPerChannel: UInt32(MemoryLayout<Int16>.size * 8),
-            mReserved: 0
-        )
-        guard AudioUnitSetProperty(au, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 1,
-                                   &outputASBD, UInt32(MemoryLayout<AudioStreamBasicDescription>.size)) == noErr else { throw fail() }
-
-        var maxFrames: UInt32 = 4096
-        AudioUnitSetProperty(au, kAudioUnitProperty_MaximumFramesPerSlice, kAudioUnitScope_Global, 0,
-                             &maxFrames, UInt32(MemoryLayout<UInt32>.size))
-
-        // Preallocate the render target (single interleaved buffer).
-        let byteCapacity = Int(maxFrames) * channelCount * MemoryLayout<Int16>.size
-        let ablSize = MemoryLayout<AudioBufferList>.size
-        let ablRawPtr = UnsafeMutableRawPointer.allocate(byteCount: ablSize, alignment: MemoryLayout<AudioBufferList>.alignment)
-        ablRawPtr.initializeMemory(as: UInt8.self, repeating: 0, count: ablSize)
-        let dataPtr = UnsafeMutableRawPointer.allocate(byteCount: byteCapacity, alignment: MemoryLayout<Int16>.alignment)
-        let ablPtr = ablRawPtr.assumingMemoryBound(to: AudioBufferList.self)
-        ablPtr.pointee.mNumberBuffers = 1
-        ablPtr.pointee.mBuffers.mNumberChannels = UInt32(channelCount)
-        ablPtr.pointee.mBuffers.mDataByteSize = UInt32(byteCapacity)
-        ablPtr.pointee.mBuffers.mData = dataPtr
-
-        captureBufferList = ablRawPtr
-        captureBufferCapacity = byteCapacity
-        captureSampleRate = sampleRate
-        captureChannels = channelCount
-        captureStereoScratch = [Int16](repeating: 0, count: Int(maxFrames) * 2)
-        // Worst case the device runs below 48 kHz, so resampling grows the frame
-        // count; size the scratch for that ceiling (+ margin) once, up front.
-        let worstCaseOutputFrames = Int(
-            (Double(maxFrames) * Double(Self.outputSampleRate) / max(sampleRate, 1)).rounded(.up)
-        ) + 8
-        captureResampleScratch = [Int16](repeating: 0, count: worstCaseOutputFrames * Self.outputChannels)
-
-        var callbackStruct = AURenderCallbackStruct(
-            inputProc: deviceStreamInputCallback,
-            inputProcRefCon: Unmanaged.passUnretained(self).toOpaque()
-        )
-        guard AudioUnitSetProperty(au, kAudioOutputUnitProperty_SetInputCallback, kAudioUnitScope_Global, 0,
-                                   &callbackStruct, UInt32(MemoryLayout<AURenderCallbackStruct>.size)) == noErr else {
-            freeCaptureBuffers()
-            throw fail()
-        }
-        guard AudioUnitInitialize(au) == noErr else {
-            freeCaptureBuffers()
-            throw fail()
-        }
-        guard AudioOutputUnitStart(au) == noErr else {
-            AudioUnitUninitialize(au)
-            freeCaptureBuffers()
-            throw fail()
-        }
-        audioUnit = au
-        AudioLogger.log("device stream: capture started device=%@ rate=%d ch=%d",
-                        device.name, Int(sampleRate.rounded()), channelCount)
-    }
-
-    private func stopCapture() {
-        guard let au = audioUnit else { return }
-        audioUnit = nil
-        AudioOutputUnitStop(au)
-        AudioUnitUninitialize(au)
-        AudioComponentInstanceDispose(au)
-        freeCaptureBuffers()
-    }
-
-    private func freeCaptureBuffers() {
-        if let ablRawPtr = captureBufferList {
-            let ablPtr = ablRawPtr.assumingMemoryBound(to: AudioBufferList.self)
-            ablPtr.pointee.mBuffers.mData?.deallocate()
-            ablRawPtr.deallocate()
-            captureBufferList = nil
-        }
-        captureBufferCapacity = 0
-    }
-
-    /// Called from the AUHAL input callback: render, map to stereo, resample to
-    /// 48 kHz and push into the ring.
-    fileprivate func handleInput(
-        ioActionFlags: UnsafeMutablePointer<AudioUnitRenderActionFlags>,
-        inTimeStamp: UnsafePointer<AudioTimeStamp>,
-        inBusNumber: UInt32,
-        inNumberFrames: UInt32
-    ) {
-        guard let au = audioUnit, let ablRawPtr = captureBufferList else { return }
-        let frames = Int(inNumberFrames)
-        let channels = captureChannels
-        let neededBytes = frames * channels * MemoryLayout<Int16>.size
-        guard neededBytes <= captureBufferCapacity else { return }
-
-        let ablPtr = ablRawPtr.assumingMemoryBound(to: AudioBufferList.self)
-        ablPtr.pointee.mBuffers.mDataByteSize = UInt32(neededBytes)
-        guard AudioUnitRender(au, ioActionFlags, inTimeStamp, inBusNumber, inNumberFrames, ablPtr) == noErr,
-              let rawData = ablPtr.pointee.mBuffers.mData else {
-            return
-        }
-        let input = rawData.assumingMemoryBound(to: Int16.self)
-
-        // Map to stereo into the pre-allocated scratch (no RT-thread allocation):
-        // mono duplicates, >2 channels keep the first two.
-        guard frames * 2 <= captureStereoScratch.count else { return }
-        if channels == 1 {
-            for frame in 0..<frames {
-                let sample = input[frame]
-                captureStereoScratch[frame * 2] = sample
-                captureStereoScratch[frame * 2 + 1] = sample
-            }
-        } else {
-            for frame in 0..<frames {
-                captureStereoScratch[frame * 2] = input[frame * channels]
-                captureStereoScratch[frame * 2 + 1] = input[frame * channels + 1]
-            }
-        }
-
-        // Resample to 48 kHz into the pre-allocated scratch (no RT-thread alloc).
-        let outputFrames = captureStereoScratch.withUnsafeBufferPointer { source -> Int in
-            captureResampleScratch.withUnsafeMutableBufferPointer { dest -> Int in
-                guard let sourceBase = source.baseAddress, let destBase = dest.baseAddress else { return 0 }
-                return AudioPCMResampler.resampleInterleaved(
-                    input: sourceBase,
-                    frameCount: frames,
-                    channels: 2,
-                    inputRate: captureSampleRate,
-                    outputRate: Double(Self.outputSampleRate),
-                    output: destBase,
-                    outputCapacityFrames: dest.count / 2
-                )
-            }
-        }
-        guard outputFrames > 0 else { return }
-
-        // "Pause" a live device stream by writing silence instead of the capture:
-        // the loopback keeps feeding the SDK real-time frames (no discontinuity),
-        // the channel just hears silence until resumed.
-        if isMuted {
-            for index in 0..<(outputFrames * 2) { captureResampleScratch[index] = 0 }
-        }
-        captureResampleScratch.withUnsafeBufferPointer { buffer in
-            guard let base = buffer.baseAddress else { return }
-            ring.write(base, frames: outputFrames)
         }
     }
 
@@ -375,11 +326,41 @@ final class AudioDeviceStreamSource {
             connection.cancel()
             return
         }
-        let stream = StreamConnection(connection: connection, ring: ring, queue: serverQueue) { [weak self] finished in
+        nextConnectionGeneration += 1
+        let stream = StreamConnection(
+            connection: connection,
+            ring: ring,
+            queue: serverQueue,
+            generation: nextConnectionGeneration,
+            clock: syncClock
+        ) { [weak self] finished in
             self?.connections.removeValue(forKey: ObjectIdentifier(finished))
+            self?.electSyncPublisherLocked()
         }
         connections[ObjectIdentifier(stream)] = stream
         stream.start()
+        electSyncPublisherLocked()
+    }
+
+    /// Elect the newest LIVE connection as the sync-clock publisher. Runs on
+    /// serverQueue (same queue as every connection's ticks), recomputed on both
+    /// accept and finish so a short-lived probe connection can't permanently
+    /// steal publishing from the surviving playback connection.
+    private func electSyncPublisherLocked() {
+        let publisher = connections.values.max(by: { $0.generation < $1.generation })
+        var changed = false
+        for connection in connections.values {
+            let shouldPublish = connection === publisher
+            if connection.isSyncPublisher != shouldPublish {
+                connection.isSyncPublisher = shouldPublish
+                changed = true
+            }
+        }
+        if changed || publisher == nil {
+            // Old mapping belongs to the previous publisher's timeline; drop it
+            // until the new publisher's first real send republishes.
+            syncClock.invalidate()
+        }
     }
 
     // MARK: - Per-connection realtime pump
@@ -394,10 +375,32 @@ final class AudioDeviceStreamSource {
         private let queue: DispatchQueue
         private let onFinish: (StreamConnection) -> Void
 
+        /// Monotonic accept order, for publisher election.
+        let generation: UInt64
+        /// Whether this connection publishes its media-position → capture-time
+        /// mapping to the sync clock. Set by the source's election; read in
+        /// tick() — both on `queue`, no synchronization needed.
+        var isSyncPublisher = false
+        private let clock: MediaSyncClock
+        /// PCM frames actually emitted into the media timeline (real sends +
+        /// silence pads) since this connection started. This — not the pacing
+        /// ledger `framesSent`, which also advances on skips — is the position
+        /// the SDK's decoder reports back in its audio blocks.
+        private var mediaFramesEmitted: UInt64 = 0
+        /// Media frame before which the (media → capture) mapping is broken for
+        /// this connection: any pad (media advanced without capture), skip, or
+        /// stall-reset (capture cursor jumped without media) moves it forward.
+        private var syncWatermark: UInt64 = 0
+
         private var timer: DispatchSourceTimer?
         private var cursor: UInt64 = 0
         private var framesSent: UInt64 = 0
         private var epoch: DispatchTime = .now()
+        /// ~5 s diagnostic cadence in ticks (drift investigations: a ramping
+        /// backlog = capture clock vs wall clock skew; ramping pendingSend =
+        /// the SDK consuming slower than wall; both shift the broadcast.
+        private var ticksSinceDiag = 0
+        private static let diagTickInterval = 250
         /// PCM frames' worth of encoded audio sitting in the socket, awaiting
         /// send completion. Media time, not bytes: AAC compresses silence to a
         /// few bytes per frame, so a byte cap would let a stalled reader build
@@ -423,10 +426,19 @@ final class AudioDeviceStreamSource {
 
         private static let tickMSec = 20
 
-        init(connection: NWConnection, ring: PCMRing, queue: DispatchQueue, onFinish: @escaping (StreamConnection) -> Void) {
+        init(
+            connection: NWConnection,
+            ring: PCMRing,
+            queue: DispatchQueue,
+            generation: UInt64,
+            clock: MediaSyncClock,
+            onFinish: @escaping (StreamConnection) -> Void
+        ) {
             self.connection = connection
             self.ring = ring
             self.queue = queue
+            self.generation = generation
+            self.clock = clock
             self.onFinish = onFinish
         }
 
@@ -517,6 +529,24 @@ final class AudioDeviceStreamSource {
         private func tick() {
             guard finished == false else { return }
 
+            ticksSinceDiag += 1
+            if ticksSinceDiag >= Self.diagTickInterval {
+                ticksSinceDiag = 0
+                let live = ring.liveEdge
+                let backlogMs = live > cursor
+                    ? Int((live - cursor) * 1000 / UInt64(AudioDeviceStreamSource.outputSampleRate))
+                    : 0
+                let wallSec = Double(DispatchTime.now().uptimeNanoseconds - epoch.uptimeNanoseconds) / 1_000_000_000
+                AudioLogger.log(
+                    "stream diag: backlog=%dms pendingSend=%dms emitted=%.1fs wall=%.1fs publisher=%d",
+                    backlogMs,
+                    pendingSendMediaFrames * 1000 / AudioDeviceStreamSource.outputSampleRate,
+                    Double(mediaFramesEmitted) / Double(AudioDeviceStreamSource.outputSampleRate),
+                    wallSec,
+                    isSyncPublisher ? 1 : 0
+                )
+            }
+
             let elapsedSec = Double(DispatchTime.now().uptimeNanoseconds - epoch.uptimeNanoseconds) / 1_000_000_000
             let targetFrames = UInt64(elapsedSec * Double(AudioDeviceStreamSource.outputSampleRate))
             guard targetFrames > framesSent else { return }
@@ -526,6 +556,7 @@ final class AudioDeviceStreamSource {
             if owed > AudioDeviceStreamSource.outputSampleRate * 2 {
                 framesSent = targetFrames + UInt64(Self.bufferFrames)
                 cursor = ring.liveEdge
+                syncWatermark = mediaFramesEmitted
                 return
             }
 
@@ -534,6 +565,7 @@ final class AudioDeviceStreamSource {
             if pendingSendMediaFrames > Self.maxPendingSendFrames {
                 framesSent = targetFrames + UInt64(Self.bufferFrames)
                 cursor = ring.liveEdge
+                syncWatermark = mediaFramesEmitted
                 return
             }
 
@@ -542,6 +574,7 @@ final class AudioDeviceStreamSource {
             let liveEdge = ring.liveEdge
             if liveEdge > cursor, Int(liveEdge - cursor) > Self.maxLagFrames + owed {
                 cursor = liveEdge - UInt64(Self.maxLagFrames)
+                syncWatermark = mediaFramesEmitted
             }
 
             let (samples, framesRead, newCursor) = ring.read(from: cursor, maxFrames: owed)
@@ -549,7 +582,17 @@ final class AudioDeviceStreamSource {
                 cursor = newCursor
                 framesSent += UInt64(framesRead)
                 owed -= framesRead
+                mediaFramesEmitted += UInt64(framesRead)
                 sendEncoded(samples, mediaFrames: framesRead)
+                // Real audio: media timeline and capture cursor advanced in
+                // lockstep, so the mapping at this instant is exact — publish it.
+                if isSyncPublisher {
+                    clock.update(
+                        mediaFrameBase: mediaFramesEmitted,
+                        captureCursorBase: cursor,
+                        watermark: syncWatermark
+                    )
+                }
             }
 
             // Capture isn't delivering (silent stall, unplug): pad silence so the
@@ -562,6 +605,9 @@ final class AudioDeviceStreamSource {
                                       count: padFrames * AudioDeviceStreamSource.outputChannels)
                 framesSent += UInt64(padFrames)
                 cursor = ring.liveEdge
+                mediaFramesEmitted += UInt64(padFrames)
+                // Padded frames occupy media time with no capture behind them.
+                syncWatermark = mediaFramesEmitted
                 sendEncoded(silence, mediaFrames: padFrames)
             }
         }
@@ -598,7 +644,10 @@ final class AudioDeviceStreamSource {
     /// then publishes the absolute write cursor with a release store. Readers load
     /// it with acquire, copy, then re-validate that the producer hasn't lapped and
     /// overwritten the copied region — a seqlock, so no lock touches the RT thread.
-    private final class PCMRing {
+    ///
+    /// Internal (not private): the capture backends in their own files write
+    /// into it, and MediaSyncClock reads its live edge.
+    final class PCMRing {
         private let bufferPtr: UnsafeMutablePointer<Int16>
         private let sampleCount: Int
         private let capacityFrames: Int
@@ -704,20 +753,58 @@ final class AudioDeviceStreamSource {
     }
 }
 
-private func deviceStreamInputCallback(
-    inRefCon: UnsafeMutableRawPointer,
-    ioActionFlags: UnsafeMutablePointer<AudioUnitRenderActionFlags>,
-    inTimeStamp: UnsafePointer<AudioTimeStamp>,
-    inBusNumber: UInt32,
-    inNumberFrames: UInt32,
-    ioData: UnsafeMutablePointer<AudioBufferList>?
-) -> OSStatus {
-    let source = Unmanaged<AudioDeviceStreamSource>.fromOpaque(inRefCon).takeUnretainedValue()
-    source.handleInput(
-        ioActionFlags: ioActionFlags,
-        inTimeStamp: inTimeStamp,
-        inBusNumber: inBusNumber,
-        inNumberFrames: inNumberFrames
-    )
-    return noErr
+
+/// Thread-safe media-position → capture-time mapping for voice sync.
+///
+/// The stream's publisher connection updates the mapping after every real send
+/// (media timeline and capture cursor advance in lockstep there, so the pair is
+/// exact at that instant); the voice-sync estimator asks, for a media position
+/// the SDK reports it is currently playing back locally, how far behind the
+/// capture live edge that audio is. Positions older than the watermark crossed
+/// a pad/skip discontinuity and cannot be mapped.
+final class MediaSyncClock {
+    private let lock = NSLock()
+    private let ring: AudioDeviceStreamSource.PCMRing
+    private var hasMapping = false
+    private var mediaFrameBase: UInt64 = 0
+    private var captureCursorBase: UInt64 = 0
+    private var watermark: UInt64 = 0
+
+    init(ring: AudioDeviceStreamSource.PCMRing) {
+        self.ring = ring
+    }
+
+    /// Drop the mapping (publisher changed; next real send republishes).
+    func invalidate() {
+        lock.lock()
+        hasMapping = false
+        lock.unlock()
+    }
+
+    func update(mediaFrameBase: UInt64, captureCursorBase: UInt64, watermark: UInt64) {
+        lock.lock()
+        self.mediaFrameBase = mediaFrameBase
+        self.captureCursorBase = captureCursorBase
+        self.watermark = watermark
+        hasMapping = true
+        lock.unlock()
+    }
+
+    /// Seconds behind the capture live edge for media frame `mediaFrame48k`
+    /// (a position on the stream's 48 kHz media timeline), or nil when the
+    /// position can't be mapped (no mapping yet, position crossed a
+    /// discontinuity, or position newer than the last publish).
+    func latencySeconds(forMediaFrame48k mediaFrame48k: UInt64) -> Double? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard hasMapping,
+              mediaFrame48k >= watermark,
+              mediaFrame48k <= mediaFrameBase else { return nil }
+        let framesBehindBase = mediaFrameBase - mediaFrame48k
+        guard captureCursorBase >= framesBehindBase else { return nil }
+        let captureFrame = captureCursorBase - framesBehindBase
+        let liveEdge = ring.liveEdge
+        guard liveEdge >= captureFrame else { return nil }
+        return Double(liveEdge - captureFrame) / Double(AudioDeviceStreamSource.outputSampleRate)
+    }
 }
