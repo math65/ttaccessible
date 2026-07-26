@@ -427,20 +427,6 @@ final class TeamTalkConnectionController {
         }
     }
 
-    func passwordForChannel(_ channelID: Int32) -> String {
-        guard channelID > 0 else {
-            return ""
-        }
-
-        if DispatchQueue.getSpecific(key: queueKey) != nil {
-            return channelPasswords[channelID] ?? ""
-        }
-
-        return queue.sync {
-            channelPasswords[channelID] ?? ""
-        }
-    }
-
     var isAnyMicrophoneEngineRunning: Bool {
         advancedMicrophoneEngine.isRunning
     }

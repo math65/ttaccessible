@@ -1068,7 +1068,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             channelContext = ServerExportChannelContext(
                 name: channel.name,
                 path: "/" + channel.pathComponents.joined(separator: "/"),
-                password: connectionController.passwordForChannel(session.currentChannelID)
+                password: connectionController.knownChannelPassword(forChannelID: session.currentChannelID)
             )
         } else {
             channelContext = nil
