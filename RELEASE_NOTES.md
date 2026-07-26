@@ -1,3 +1,48 @@
+## v1.10.0 (build 45) — 2026-07-26
+
+This release lets you stream an application's audio — or VoiceOver itself — into a channel, and keeps your voice in time with it. Auto-reconnect now reliably puts you back in the channel you were in, channel passwords are remembered, and moderators can move a whole channel's occupants in one go.
+
+### Highlights
+- **Stream any application's audio into your channel** — or VoiceOver's — not just an input device. Press **⌥⌘A**.
+- **Your voice stays in time with what you stream**, so listeners hear both together.
+- **Auto-reconnect actually brings you back**, into the same channel, however many times the connection drops.
+- **Channel passwords are remembered**, so a protected channel stops asking every time.
+
+### Streaming an application or VoiceOver
+- **⌥⌘A now offers three kinds of source**: an input device, VoiceOver, or a running application. Applications are grouped in their own submenu.
+- **You can pick an application that isn't running yet.** Capture attaches by itself the moment it starts playing audio, and survives it quitting and relaunching mid-stream.
+- **Optionally silence the source on your own Mac while you stream it**, so only the channel hears it. Off by default, and never remembered between streams.
+- **Your voice is delayed to match the stream.** Streaming carries close to a second of latency, so without this you would arrive ahead of your own music or instrument. The delay is measured live and tracks drift while you talk.
+- Applications and VoiceOver need macOS 14.2 or later. On macOS 13 to 14.1 only already-running applications can be captured, and macOS 12 offers input devices only.
+
+### Reconnecting
+- **A dropped connection now reliably reconnects, and puts you back in the channel you were in** — by path, so it still works when the server restarts and renumbers its channels.
+- **It works every time, not only once per session.** A second drop used to leave you disconnected.
+- **Being kicked or banned no longer reconnects you seconds later.**
+- Attempts space themselves out — 5 seconds, then 10, 30 and 60 — and give up after about five minutes rather than hammering a server that is gone.
+
+### Channel passwords
+- **A protected channel you have joined once stops asking.** The password is kept in your keychain, per channel and per server.
+- **This works at launch too**, so "rejoin last channel" no longer drops you in the root of the server because it had no password.
+- **"Forget Saved Password"** on a channel's context menu, shown only when there is one to forget.
+- **If the password changes on the server, the saved one is discarded** rather than being submitted again and pre-filled into the prompt.
+- Repointing a saved server at a different host or port clears its channel passwords, so they are never sent to another server.
+
+### Moderation
+- **Move everyone in a channel at once**, from the channel's context menu — with a checklist so you can leave people behind, and a VoiceOver action on the channel row.
+- The result is announced and reported once ("Moved 5 of 6 users to…"), instead of one dialog per person.
+- **Destination channels are listed by their full path**, so two channels with the same name under different parents can be told apart. This applies to the existing single-user move as well.
+
+### Fixes
+- **Channel Mixer announcements are no longer cut off.** Volume, pan and mute changes were announced at the wrong priority since 1.7.0, so VoiceOver could talk over them.
+- The mixer's announcements and the move dialog now read correctly when a channel holds a single person.
+
+### Thanks
+Nearly all of this was designed and built by **Rocco Fiorentino** — application and VoiceOver streaming, voice sync, reliable reconnection, channel passwords and bulk moves. Thanks as ever, and to everyone who keeps sending feedback.
+
+### Download
+[ttaccessible-1.10.0-45.zip](https://github.com/math65/ttaccessible/releases/download/v1.10.0/ttaccessible-1.10.0-45.zip)
+
 ## v1.9.0 (build 44) — 2026-07-24
 
 This release rebuilds push-to-talk from the ground up: any key can be your talk key, it can work while you are busy in another app, and a new microphone mode lets you combine muting with push-to-talk. You can also now pick the app's language instead of following your Mac's.

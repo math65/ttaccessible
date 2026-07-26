@@ -1,3 +1,48 @@
+## v1.10.0 (build 45) — 26/07/2026
+
+Cette version vous permet de diffuser dans un canal le son d'une application — ou celui de VoiceOver — en gardant votre voix calée dessus. La reconnexion automatique vous ramène désormais vraiment dans le canal que vous occupiez, les mots de passe de canaux sont mémorisés, et les modérateurs peuvent vider un canal en une seule opération.
+
+### L'essentiel
+- **Diffusez le son de n'importe quelle application** dans votre canal — ou celui de VoiceOver — et plus seulement celui d'un périphérique d'entrée. Raccourci : **⌥⌘A**.
+- **Votre voix reste calée sur ce que vous diffusez** : vos auditeurs entendent les deux ensemble.
+- **La reconnexion automatique vous ramène pour de bon**, dans le même canal, et autant de fois que la connexion tombe.
+- **Les mots de passe de canaux sont retenus** : un canal protégé cesse de vous les redemander.
+
+### Diffuser une application ou VoiceOver
+- **⌥⌘A propose maintenant trois types de sources** : un périphérique d'entrée, VoiceOver, ou une application en cours d'exécution. Les applications sont regroupées dans leur propre sous-menu.
+- **Vous pouvez désigner une application qui n'est pas encore lancée.** La capture s'y accroche d'elle-même dès qu'elle produit du son, et lui survit si vous la quittez puis la relancez en pleine diffusion.
+- **Vous pouvez couper le son de la source sur votre Mac pendant que vous la diffusez**, pour que seul le canal l'entende. Désactivé par défaut, et jamais retenu d'une diffusion à l'autre.
+- **Votre voix est retardée pour coller au flux.** Une diffusion accuse près d'une seconde de latence : sans cela, vous arriveriez en avance sur votre propre musique ou votre instrument. Le décalage est mesuré en direct et suit la dérive pendant que vous parlez.
+- Les applications et VoiceOver demandent macOS 14.2 ou plus récent. De macOS 13 à 14.1, seules les applications déjà lancées peuvent être captées ; sur macOS 12, seuls les périphériques d'entrée sont proposés.
+
+### Reconnexion
+- **Une coupure de connexion vous reconnecte réellement, et vous remet dans le canal que vous occupiez** — retrouvé par son chemin, ce qui fonctionne même quand le serveur redémarre et renumérote ses canaux.
+- **Et cela fonctionne à chaque fois, plus seulement une fois par session.** Une deuxième coupure vous laissait auparavant déconnecté.
+- **Une expulsion ou un bannissement ne vous reconnecte plus quelques secondes plus tard.**
+- Les tentatives s'espacent — 5 secondes, puis 10, 30 et 60 — et s'arrêtent au bout de cinq minutes environ, plutôt que de marteler un serveur qui ne répond plus.
+
+### Mots de passe de canaux
+- **Un canal protégé que vous avez rejoint une fois ne vous redemande plus rien.** Le mot de passe est conservé dans votre trousseau, par canal et par serveur.
+- **Cela vaut aussi au lancement** : « rejoindre le dernier canal » ne vous dépose plus à la racine du serveur faute de mot de passe.
+- **« Oublier le mot de passe enregistré »** dans le menu contextuel d'un canal, affiché uniquement lorsqu'il y a effectivement quelque chose à oublier.
+- **Si le mot de passe change côté serveur, celui qui était enregistré est écarté** au lieu d'être resoumis puis proposé à nouveau dans la zone de saisie.
+- Faire pointer un serveur enregistré vers un autre hôte ou un autre port efface ses mots de passe de canaux : ils ne partiront jamais vers un serveur différent.
+
+### Modération
+- **Déplacez tous les occupants d'un canal en une fois**, depuis le menu contextuel du canal — avec une liste à cocher pour en laisser certains sur place, et une action VoiceOver disponible sur la ligne du canal.
+- Le résultat est annoncé et signalé une seule fois (« 5 utilisateurs sur 6 déplacés vers… »), au lieu d'une boîte de dialogue par personne.
+- **Les canaux de destination sont désignés par leur chemin complet** : deux canaux portant le même nom sous des parents différents ne se confondent plus. Le déplacement d'un utilisateur seul en profite également.
+
+### Corrections
+- **Les annonces du mixeur de canal ne sont plus coupées.** Les changements de volume, de panoramique et de coupure du son étaient annoncés avec une priorité incorrecte depuis la version 1.7.0, si bien que VoiceOver pouvait parler par-dessus.
+- Les annonces du mixeur et la fenêtre de déplacement s'expriment correctement lorsqu'un canal ne compte qu'une seule personne.
+
+### Remerciements
+La quasi-totalité de cette version a été conçue et réalisée par **Rocco Fiorentino** : diffusion des applications et de VoiceOver, synchronisation de la voix, fiabilisation de la reconnexion, mots de passe de canaux et déplacements groupés. Merci à lui, comme toujours, ainsi qu'à toutes celles et ceux qui continuent d'envoyer leurs retours.
+
+### Téléchargement
+[ttaccessible-1.10.0-45.zip](https://github.com/math65/ttaccessible/releases/download/v1.10.0/ttaccessible-1.10.0-45.zip)
+
 ## v1.9.0 (build 44) — 24 juillet 2026
 
 Cette version remet complètement à plat le push-to-talk : n'importe quelle touche peut servir à parler, elle fonctionne même quand vous êtes occupé dans une autre application, et un nouveau mode permet de combiner la coupure du micro avec le push-to-talk. Vous pouvez aussi choisir la langue de l'application, sans dépendre de celle de votre Mac.
