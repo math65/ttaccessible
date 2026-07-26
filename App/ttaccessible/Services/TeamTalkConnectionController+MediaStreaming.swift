@@ -147,6 +147,7 @@ extension TeamTalkConnectionController {
             self?.startStreamingCaptureSource(
                 spec: .inputDevice(device),
                 monitorEnabled: monitorEnabled,
+                channelPreset: self?.preferencesStore.deviceStreamChannelPreset(for: deviceUID) ?? .auto,
                 completion: completion
             )
         }
@@ -157,10 +158,15 @@ extension TeamTalkConnectionController {
     /// served as endless Ogg Opus on a loopback URL, which the SDK broadcasts
     /// exactly like a URL stream — the source paces itself and pads silence,
     /// so a quiet source never ends the broadcast.
+    /// `channelPreset` picks which channels of an input-device source are
+    /// broadcast (mono channel N, the pair N/N+1, or their mono sum) — the
+    /// streaming counterpart of the microphone's input-channel preset. Ignored
+    /// by process/VoiceOver sources, which are always a stereo mixdown.
     func startStreamingCaptureSource(
         spec: DeviceStreamCaptureSpec,
         monitorEnabled: Bool,
         muteSourceOutput: Bool = false,
+        channelPreset: InputChannelPreset = .auto,
         completion: @escaping (Result<Void, Error>) -> Void
     ) {
         // Open the capture OFF the controller queue: capture setup and the
@@ -171,6 +177,7 @@ extension TeamTalkConnectionController {
 
             let source = AudioDeviceStreamSource(
                 spec: spec,
+                channelPreset: channelPreset,
                 muteSourceOutput: muteSourceOutput,
                 suppressDeviceChanges: { [weak self] duration in
                     self?.suppressNextDeviceChange(for: duration)

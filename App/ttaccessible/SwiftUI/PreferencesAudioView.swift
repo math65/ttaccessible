@@ -34,6 +34,28 @@ struct PreferencesAudioView: View {
                     }
                 }
 
+                // Only devices with more than one stereo pair get a routing
+                // picker — on a plain stereo output there is nothing to choose.
+                if store.offersOutputChannelSelection {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(L10n.text("preferences.audio.outputChannels"))
+                            .accessibilityHidden(true)
+                        Picker(
+                            "",
+                            selection: Binding(
+                                get: { store.outputChannelSelection },
+                                set: { store.updateOutputChannelSelection($0) }
+                            )
+                        ) {
+                            ForEach(store.outputChannelOptions) { option in
+                                Text(option.title).tag(option.selection)
+                            }
+                        }
+                        .labelsHidden()
+                        .accessibilityLabel(L10n.text("preferences.audio.outputChannels"))
+                    }
+                }
+
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.text("preferences.audio.inputDevice"))
                         .accessibilityHidden(true)
@@ -50,12 +72,35 @@ struct PreferencesAudioView: View {
                     }
                 }
 
+                // Same rule as the output side: shown only when the device has
+                // more inputs than a single stereo pair to choose between.
+                if store.offersInputChannelSelection {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(L10n.text("preferences.audio.advanced.preset.label"))
+                            .accessibilityHidden(true)
+                        Picker(
+                            "",
+                            selection: Binding(
+                                get: { store.advancedPreferences.preset },
+                                set: { store.updatePreset($0) }
+                            )
+                        ) {
+                            ForEach(store.presetOptions) { option in
+                                Text(option.title).tag(option.preset)
+                            }
+                        }
+                        .labelsHidden()
+                        .accessibilityLabel(L10n.text("preferences.audio.advanced.preset.label"))
+                    }
+                }
+
                 Button(L10n.text("preferences.audio.refreshDevices")) {
                     store.restartSoundSystem()
                 }
                 .disabled(store.state.isCatalogLoading)
 
-                // Microphone settings (processing mode, channel preset, preview).
+                // Microphone settings (processing mode, preview). The input
+                // channel picker lives with the input device picker above.
                 VStack(alignment: .leading, spacing: 12) {
                     Text(L10n.text("preferences.audio.advanced.title"))
                         .font(.headline)
@@ -85,24 +130,6 @@ struct PreferencesAudioView: View {
                     Text(L10n.text("preferences.audio.advanced.processing.help"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(L10n.text("preferences.audio.advanced.preset.label"))
-                            .accessibilityHidden(true)
-                        Picker(
-                            "",
-                            selection: Binding(
-                                get: { store.advancedPreferences.preset },
-                                set: { store.updatePreset($0) }
-                            )
-                        ) {
-                            ForEach(store.presetOptions) { option in
-                                Text(option.title).tag(option.preset)
-                            }
-                        }
-                        .labelsHidden()
-                        .accessibilityLabel(L10n.text("preferences.audio.advanced.preset.label"))
-                    }
 
                     Button(
                         store.isPreviewRunning

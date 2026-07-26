@@ -19,9 +19,10 @@ import UniformTypeIdentifiers
 
 final class MediaStreamSourceViewController: NSViewController {
 
-    /// Confirmed with the chosen source, whether to monitor it locally, and
-    /// whether to mute it on this Mac while streaming.
-    var onStream: ((DeviceStreamCaptureSpec, Bool, Bool) -> Void)?
+    /// Confirmed with the chosen source, which of its channels to broadcast,
+    /// whether to monitor it locally, and whether to mute it on this Mac while
+    /// streaming.
+    var onStream: ((DeviceStreamCaptureSpec, InputChannelPreset, Bool, Bool) -> Void)?
 
     private let devices: [InputAudioDeviceInfo]
     private var applicationSources: [DeviceStreamCaptureSpec]
@@ -29,6 +30,10 @@ final class MediaStreamSourceViewController: NSViewController {
     private let allowsApplicationBrowsing: Bool
     private let preselectedToken: String?
     private let fallbackDeviceUID: String?
+    /// This device's remembered channel routing, asked for as the selection
+    /// changes rather than passed up front — the answer depends on which device
+    /// the user lands on.
+    private let storedChannelPreset: (String?) -> InputChannelPreset
 
     /// An application picked by browsing that isn't in the running list — kept
     /// so it stays visible and checkable in the submenu.
@@ -36,9 +41,17 @@ final class MediaStreamSourceViewController: NSViewController {
     private var selectedSource: DeviceStreamCaptureSpec?
 
     private var sourceButton: NSButton!
+    private var channelButton: NSButton!
     private var monitorCheckbox: NSButton!
     private var muteSourceCheckbox: NSButton?
     private var streamButton: NSButton!
+
+    /// Channel routing for the selected device. Only devices with more than a
+    /// stereo pair have anything to choose between, so for anything else the
+    /// button is HIDDEN rather than disabled — VoiceOver still announces a
+    /// dimmed control, and there is nothing to say about this one.
+    private var channelOptions: [InputChannelPresetOption] = []
+    private var channelSelection: InputChannelPreset = .auto
 
     /// - Parameters:
     ///   - allowsApplicationBrowsing: browsing for a not-yet-running app needs
@@ -49,13 +62,15 @@ final class MediaStreamSourceViewController: NSViewController {
          voiceOverAvailable: Bool,
          allowsApplicationBrowsing: Bool,
          preselectedToken: String?,
-         fallbackDeviceUID: String?) {
+         fallbackDeviceUID: String?,
+         storedChannelPreset: @escaping (String?) -> InputChannelPreset = { _ in .auto }) {
         self.devices = devices
         self.applicationSources = applicationSources
         self.voiceOverAvailable = voiceOverAvailable
         self.allowsApplicationBrowsing = allowsApplicationBrowsing
         self.preselectedToken = preselectedToken
         self.fallbackDeviceUID = fallbackDeviceUID
+        self.storedChannelPreset = storedChannelPreset
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -119,6 +134,16 @@ final class MediaStreamSourceViewController: NSViewController {
         sourceButton.setAccessibilityRole(.popUpButton)
         sourceButton.setAccessibilityLabel(L10n.text("mediaStream.device.prompt.sourceLabel"))
 
+        // Which channels of a multi-channel device are broadcast: a 32-channel
+        // desk can send 5/6 rather than always 1/2. Same pop-up treatment as the
+        // source button, and it sits directly under it.
+        channelButton = NSButton(title: "", target: self, action: #selector(showChannelMenu))
+        channelButton.bezelStyle = .rounded
+        channelButton.translatesAutoresizingMaskIntoConstraints = false
+        channelButton.setAccessibilityRole(.popUpButton)
+        channelButton.setAccessibilityLabel(L10n.text("mediaStream.device.prompt.channelsLabel"))
+        channelButton.isHidden = true
+
         // Off by default on purpose: the source is usually audible locally
         // already, and hearing it back a second time reads as an echo.
         monitorCheckbox = NSButton(checkboxWithTitle: L10n.text("mediaStream.device.prompt.monitor"),
@@ -156,7 +181,16 @@ final class MediaStreamSourceViewController: NSViewController {
         streamButton.keyEquivalent = "\r"
         streamButton.translatesAutoresizingMaskIntoConstraints = false
 
-        [header, message, sourceButton, optionsStack, cancelButton, streamButton]
+        // A stack, so hiding the channel button closes its gap instead of
+        // leaving a hole where a control used to be.
+        let pickerStack = NSStackView(views: [sourceButton, channelButton])
+        pickerStack.orientation = .vertical
+        pickerStack.alignment = .leading
+        pickerStack.distribution = .fill
+        pickerStack.spacing = 8
+        pickerStack.translatesAutoresizingMaskIntoConstraints = false
+
+        [header, message, pickerStack, optionsStack, cancelButton, streamButton]
             .forEach { view.addSubview($0) }
 
         NSLayoutConstraint.activate([
@@ -168,11 +202,13 @@ final class MediaStreamSourceViewController: NSViewController {
             message.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 14),
             message.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -14),
 
-            sourceButton.topAnchor.constraint(equalTo: message.bottomAnchor, constant: 12),
-            sourceButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 14),
-            sourceButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -14),
+            pickerStack.topAnchor.constraint(equalTo: message.bottomAnchor, constant: 12),
+            pickerStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 14),
+            pickerStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -14),
+            sourceButton.widthAnchor.constraint(equalTo: pickerStack.widthAnchor),
+            channelButton.widthAnchor.constraint(equalTo: pickerStack.widthAnchor),
 
-            optionsStack.topAnchor.constraint(equalTo: sourceButton.bottomAnchor, constant: 12),
+            optionsStack.topAnchor.constraint(equalTo: pickerStack.bottomAnchor, constant: 12),
             optionsStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 14),
             optionsStack.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -14),
 
@@ -249,6 +285,7 @@ final class MediaStreamSourceViewController: NSViewController {
     private func applySelection(_ spec: DeviceStreamCaptureSpec) {
         selectedSource = spec
         sourceButton.title = spec.displayName
+        updateChannelOptions(for: spec)
         updateMuteAvailability()
         // The button's VALUE can't be overridden, so the selection is announced
         // explicitly — otherwise a VoiceOver user gets no feedback that the
@@ -277,6 +314,61 @@ final class MediaStreamSourceViewController: NSViewController {
             return
         }
         if let first = orderedSources.first { applySelection(first) }
+    }
+
+    /// Repopulates the channel picker for the newly-selected source. Only an
+    /// input device with more than a stereo pair offers a choice; app and
+    /// VoiceOver sources are already a stereo mixdown. A remembered routing that
+    /// no longer fits the device (it was swapped for a smaller one) falls back
+    /// to Auto rather than silently pointing at channels that aren't there.
+    private func updateChannelOptions(for spec: DeviceStreamCaptureSpec) {
+        guard case .inputDevice(let device) = spec, device.inputChannels > 2 else {
+            channelOptions = []
+            channelSelection = .auto
+            channelButton.isHidden = true
+            return
+        }
+        channelOptions = InputAudioDeviceResolver.availablePresetOptions(for: device)
+        let stored = storedChannelPreset(device.uid)
+        channelSelection = InputAudioDeviceResolver.contains(stored, for: device) ? stored : .auto
+        channelButton.isHidden = false
+        refreshChannelTitle()
+    }
+
+    private func refreshChannelTitle() {
+        channelButton.title = channelOptions.first { $0.preset == channelSelection }?.title
+            ?? InputAudioDeviceResolver.title(for: channelSelection)
+    }
+
+    @objc private func showChannelMenu() {
+        guard channelOptions.isEmpty == false else { return }
+        let menu = NSMenu()
+        for option in channelOptions {
+            let item = NSMenuItem(title: option.title, action: #selector(selectChannelOption(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = option.preset
+            item.state = option.preset == channelSelection ? .on : .off
+            menu.addItem(item)
+        }
+        menu.popUp(positioning: nil,
+                   at: NSPoint(x: 0, y: channelButton.bounds.height + 2),
+                   in: channelButton)
+    }
+
+    @objc private func selectChannelOption(_ sender: NSMenuItem) {
+        guard let preset = sender.representedObject as? InputChannelPreset else { return }
+        channelSelection = preset
+        refreshChannelTitle()
+        // Same reason as the source button: an NSButton's VALUE can't be
+        // overridden, so the new routing is announced explicitly.
+        NSAccessibility.post(
+            element: channelButton as Any,
+            notification: .announcementRequested,
+            userInfo: [
+                .announcement: channelButton.title,
+                .priority: NSAccessibilityPriorityLevel.high.rawValue
+            ]
+        )
     }
 
     private func updateMuteAvailability() {
@@ -311,7 +403,7 @@ final class MediaStreamSourceViewController: NSViewController {
     @objc private func confirm() {
         guard let spec = selectedSource else { return }
         dismiss(nil)
-        onStream?(spec, monitorCheckbox.state == .on, muteSourceCheckbox?.state == .on)
+        onStream?(spec, channelSelection, monitorCheckbox.state == .on, muteSourceCheckbox?.state == .on)
     }
 
     @objc private func cancel() {

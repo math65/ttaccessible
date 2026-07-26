@@ -1701,15 +1701,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             allowsApplicationBrowsing: allowsApplicationBrowsing,
             preselectedToken: preferencesStore.preferences.deviceStreamLastSource
                 ?? preferencesStore.preferences.deviceStreamLastDeviceUID.map { "device:\($0)" },
-            fallbackDeviceUID: InputAudioDeviceResolver.defaultInputDeviceUID()
+            fallbackDeviceUID: InputAudioDeviceResolver.defaultInputDeviceUID(),
+            storedChannelPreset: { [weak self] uid in
+                self?.preferencesStore.deviceStreamChannelPreset(for: uid) ?? .auto
+            }
         )
-        controller.onStream = { [weak self] spec, monitorEnabled, muteSourceOutput in
+        controller.onStream = { [weak self] spec, channelPreset, monitorEnabled, muteSourceOutput in
             guard let self else { return }
             self.preferencesStore.mutateDeviceStreamLastSource(spec)
+            // Remembered per device UID, so a desk always comes back on the pair
+            // the user chose for it.
+            if case .inputDevice(let device) = spec {
+                self.preferencesStore.updateDeviceStreamChannelPreset(channelPreset, for: device.uid)
+            }
             self.connectionController.startStreamingCaptureSource(
                 spec: spec,
                 monitorEnabled: monitorEnabled,
-                muteSourceOutput: muteSourceOutput
+                muteSourceOutput: muteSourceOutput,
+                channelPreset: channelPreset
             ) { [weak self] result in
                 DispatchQueue.main.async {
                     switch result {

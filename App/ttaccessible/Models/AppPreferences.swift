@@ -85,6 +85,8 @@ struct AppPreferences: Codable, Equatable {
         case preferredOutputDevice
         case advancedInputAudioProfiles
         case advancedInputAudio
+        case outputChannelSelections
+        case deviceStreamChannelPresets
         case voiceOverAnnouncements
         case inputGainDB
         case outputGainDB
@@ -186,6 +188,13 @@ struct AppPreferences: Codable, Equatable {
     var preferredInputDevice: AudioDevicePreference
     var preferredOutputDevice: AudioDevicePreference
     var advancedInputAudioProfiles: AdvancedInputAudioProfiles
+    /// Which physical output channels carry the mix, per output-device UID —
+    /// so a 32-out interface can keep TeamTalk on 5/6 while the built-in
+    /// speakers stay on their only pair. Absent = `.auto` (channels 1/2).
+    var outputChannelSelections: [String: OutputChannelSelection]
+    /// Which channels of a captured input device the "Stream Audio Device"
+    /// broadcast takes, per input-device UID. Absent = `.auto` (first pair).
+    var deviceStreamChannelPresets: [String: InputChannelPreset]
     var voiceOverAnnouncements: VoiceOverAnnouncementPreferences
     var inputGainDB: Double
     var outputGainDB: Double
@@ -250,6 +259,8 @@ struct AppPreferences: Codable, Equatable {
         preferredInputDevice: AudioDevicePreference = .systemDefault,
         preferredOutputDevice: AudioDevicePreference = .systemDefault,
         advancedInputAudioProfiles: AdvancedInputAudioProfiles = AdvancedInputAudioProfiles(),
+        outputChannelSelections: [String: OutputChannelSelection] = [:],
+        deviceStreamChannelPresets: [String: InputChannelPreset] = [:],
         voiceOverAnnouncements: VoiceOverAnnouncementPreferences = VoiceOverAnnouncementPreferences(),
         inputGainDB: Double = 0,
         outputGainDB: Double = 0,
@@ -319,6 +330,8 @@ struct AppPreferences: Codable, Equatable {
         self.preferredInputDevice = preferredInputDevice
         self.preferredOutputDevice = preferredOutputDevice
         self.advancedInputAudioProfiles = advancedInputAudioProfiles
+        self.outputChannelSelections = outputChannelSelections
+        self.deviceStreamChannelPresets = deviceStreamChannelPresets
         self.voiceOverAnnouncements = voiceOverAnnouncements
         self.inputGainDB = Self.clampGainDB(inputGainDB)
         self.outputGainDB = Self.clampGainDB(outputGainDB)
@@ -434,6 +447,8 @@ struct AppPreferences: Codable, Equatable {
                 )
             }
         }
+        outputChannelSelections = try container.decodeIfPresent([String: OutputChannelSelection].self, forKey: .outputChannelSelections) ?? [:]
+        deviceStreamChannelPresets = try container.decodeIfPresent([String: InputChannelPreset].self, forKey: .deviceStreamChannelPresets) ?? [:]
         voiceOverAnnouncements = try container.decodeIfPresent(VoiceOverAnnouncementPreferences.self, forKey: .voiceOverAnnouncements) ?? VoiceOverAnnouncementPreferences()
         inputGainDB = Self.clampGainDB(try container.decodeIfPresent(Double.self, forKey: .inputGainDB) ?? 0)
         outputGainDB = Self.clampGainDB(try container.decodeIfPresent(Double.self, forKey: .outputGainDB) ?? 0)
@@ -519,6 +534,8 @@ struct AppPreferences: Codable, Equatable {
         try container.encode(preferredInputDevice, forKey: .preferredInputDevice)
         try container.encode(preferredOutputDevice, forKey: .preferredOutputDevice)
         try container.encode(advancedInputAudioProfiles, forKey: .advancedInputAudioProfiles)
+        try container.encode(outputChannelSelections, forKey: .outputChannelSelections)
+        try container.encode(deviceStreamChannelPresets, forKey: .deviceStreamChannelPresets)
         try container.encode(voiceOverAnnouncements, forKey: .voiceOverAnnouncements)
         try container.encode(Self.clampGainDB(inputGainDB), forKey: .inputGainDB)
         try container.encode(Self.clampGainDB(outputGainDB), forKey: .outputGainDB)
