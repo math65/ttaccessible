@@ -278,8 +278,58 @@ final class TeamTalkConnectionController {
     var pendingPublishInvalidation: SessionPublishInvalidation = []
     var lastSnapshotPublishAt: CFAbsoluteTime = 0
 
-    init(preferencesStore: AppPreferencesStore) {
+    let passwordStore: ServerPasswordStore
+
+    /// Channel IDs with a password persisted in the keychain, mirrored in memory so the
+    /// UI can answer "is there a saved password here?" on the main thread without
+    /// keychain I/O or a hop onto this controller's serial queue — menu validation runs
+    /// every time a menu opens and must stay cheap. Guarded by its own lock rather than
+    /// the queue for exactly that reason.
+    private let savedChannelPasswordLock = NSLock()
+    private var savedChannelPasswordIDs: Set<Int32> = []
+
+    func hasSavedChannelPassword(forChannelID channelID: Int32) -> Bool {
+        savedChannelPasswordLock.lock()
+        defer { savedChannelPasswordLock.unlock() }
+        return savedChannelPasswordIDs.contains(channelID)
+    }
+
+    private func markSavedChannelPassword(_ channelID: Int32, saved: Bool) {
+        savedChannelPasswordLock.lock()
+        if saved { savedChannelPasswordIDs.insert(channelID) } else { savedChannelPasswordIDs.remove(channelID) }
+        savedChannelPasswordLock.unlock()
+    }
+
+    private func replaceSavedChannelPasswordIDs(_ ids: Set<Int32>) {
+        savedChannelPasswordLock.lock()
+        savedChannelPasswordIDs = ids
+        savedChannelPasswordLock.unlock()
+    }
+
+    /// Resolve the server's persisted channel paths to live channel IDs. Called once
+    /// after login (the channel tree exists by then), not on every session publish —
+    /// keychain reads are far too expensive for that.
+    func refreshSavedChannelPasswordIDsLocked(instance: UnsafeMutableRawPointer) {
+        guard let serverID = connectedRecord?.id,
+              let map = try? passwordStore.allChannelPasswords(for: serverID), map.isEmpty == false else {
+            replaceSavedChannelPasswordIDs([])
+            return
+        }
+        var ids: Set<Int32> = []
+        for path in map.keys {
+            let channelID = path.withCString { TT_GetChannelIDFromPath(instance, $0) }
+            if channelID > 0 { ids.insert(channelID) }
+        }
+        replaceSavedChannelPasswordIDs(ids)
+    }
+
+    func clearSavedChannelPasswordIDs() {
+        replaceSavedChannelPasswordIDs([])
+    }
+
+    init(preferencesStore: AppPreferencesStore, passwordStore: ServerPasswordStore) {
         self.preferencesStore = preferencesStore
+        self.passwordStore = passwordStore
         queue.setSpecific(key: queueKey, value: ())
         userVolumeStore.setMemoryMode(preferencesStore.preferences.userVolumeMemoryMode)
         // Seed the queue-side hotkey caches before any queue work runs; the
@@ -295,17 +345,85 @@ final class TeamTalkConnectionController {
         userVolumeStore.setMemoryMode(mode)
     }
 
-    func passwordForChannel(_ channelID: Int32) -> String {
-        guard channelID > 0 else {
-            return ""
-        }
+    // MARK: - Channel passwords
 
-        if DispatchQueue.getSpecific(key: queueKey) != nil {
-            return channelPasswords[channelID] ?? ""
+    /// THE accessor for "what password do we have for this channel": the
+    /// in-session map first, then the keychain. Every join path — manual,
+    /// auto-join, reconnect — resolves through here, so the two stores can't
+    /// drift apart.
+    ///
+    /// Keyed by the SDK's own channel path rather than the display path built
+    /// from `pathComponents`: that one is rooted at the SERVER's display name,
+    /// which changes when `TT_GetServerProperties` arrives mid-session and again
+    /// whenever an admin renames the server — orphaning every saved password.
+    func knownChannelPasswordLocked(instance: UnsafeMutableRawPointer, channelID: Int32) -> String {
+        guard channelID > 0 else { return "" }
+        if let remembered = channelPasswords[channelID], !remembered.isEmpty {
+            return remembered
         }
+        guard let serverID = connectedRecord?.id else { return "" }
+        let path = channelPathLocked(instance: instance, channelID: channelID)
+        guard !path.isEmpty else { return "" }
+        let saved = (try? passwordStore.channelPassword(for: serverID, channelPath: path)) ?? nil
+        if let saved {
+            channelPasswords[channelID] = saved
+        }
+        return saved ?? ""
+    }
 
-        return queue.sync {
-            channelPasswords[channelID] ?? ""
+    /// Record a password that the server accepted, in both stores. Skips the
+    /// keychain write when the persisted value is already identical — comparing
+    /// against the PERSISTED value, not the in-memory one, which the join path
+    /// has already updated by this point.
+    func rememberChannelPasswordLocked(instance: UnsafeMutableRawPointer, channelID: Int32, password: String) {
+        guard channelID > 0 else { return }
+        channelPasswords[channelID] = password
+        guard !password.isEmpty, let serverID = connectedRecord?.id else { return }
+        let path = channelPathLocked(instance: instance, channelID: channelID)
+        guard !path.isEmpty else { return }
+        markSavedChannelPassword(channelID, saved: true)
+        let persisted = (try? passwordStore.channelPassword(for: serverID, channelPath: path)) ?? nil
+        guard persisted != password else { return }
+        try? passwordStore.setChannelPassword(password, for: serverID, channelPath: path)
+    }
+
+    /// Forget a channel password everywhere. Called when the server rejects it:
+    /// without this a rotated password is re-submitted on every future join and
+    /// pre-filled into the prompt, and cancelling never clears it.
+    func forgetChannelPasswordLocked(instance: UnsafeMutableRawPointer, channelID: Int32) {
+        guard channelID > 0 else { return }
+        channelPasswords.removeValue(forKey: channelID)
+        markSavedChannelPassword(channelID, saved: false)
+        guard let serverID = connectedRecord?.id else { return }
+        let path = channelPathLocked(instance: instance, channelID: channelID)
+        guard !path.isEmpty else { return }
+        try? passwordStore.setChannelPassword(nil, for: serverID, channelPath: path)
+    }
+
+    // `channelPathLocked(instance:channelID:)` lives in `+Connection.swift`
+    // (added by the auto-reconnect work, which rejoins by path). This branch
+    // grew an identical copy while both were in flight; one is enough.
+
+    // Queue-safe wrappers for the UI layer.
+
+    func knownChannelPassword(forChannelID channelID: Int32) -> String {
+        queue.sync {
+            guard let instance else { return "" }
+            return knownChannelPasswordLocked(instance: instance, channelID: channelID)
+        }
+    }
+
+    func rememberChannelPassword(_ password: String, forChannelID channelID: Int32) {
+        queue.async { [weak self] in
+            guard let self, let instance = self.instance else { return }
+            self.rememberChannelPasswordLocked(instance: instance, channelID: channelID, password: password)
+        }
+    }
+
+    func forgetChannelPassword(forChannelID channelID: Int32) {
+        queue.async { [weak self] in
+            guard let self, let instance = self.instance else { return }
+            self.forgetChannelPasswordLocked(instance: instance, channelID: channelID)
         }
     }
 

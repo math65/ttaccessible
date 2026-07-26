@@ -30,7 +30,17 @@ final class DeviceStreamSourceTests: XCTestCase {
         //    stream is Opus rather than WAV/AAC — finish its analysis fast.
         //    Everything the analyzer consumes becomes permanent broadcast
         //    latency, so this bound is a real latency budget.
-        let controller = TeamTalkConnectionController(preferencesStore: AppPreferencesStore())
+        // The password store is a constructor dependency but is untouched by the
+        // probe; point it at a throwaway service + defaults suite so the test
+        // can't reach the real keychain items or the profile's defaults.
+        let passwordStore = ServerPasswordStore(
+            serviceName: "com.math65.ttaccessible.tests.DeviceStreamSourceTests",
+            defaults: UserDefaults(suiteName: "com.math65.ttaccessible.tests.DeviceStreamSourceTests")!
+        )
+        let controller = TeamTalkConnectionController(
+            preferencesStore: AppPreferencesStore(),
+            passwordStore: passwordStore
+        )
         let probeStart = Date()
         let probe = controller.probeMediaFileLocked(path: url.absoluteString)
         let probeSeconds = Date().timeIntervalSince(probeStart)

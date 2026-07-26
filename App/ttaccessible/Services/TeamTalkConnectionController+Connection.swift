@@ -47,6 +47,9 @@ extension TeamTalkConnectionController {
                 self.connectedRecord = record
                 self.userVolumeStore.setServerScope(Self.serverVolumeScope(for: record))
                 self.userVolumeStore.setMemoryMode(self.preferencesStore.preferences.userVolumeMemoryMode)
+                // Must precede the auto-join: it resolves the stored channel
+                // paths into IDs, and the auto-join looks a password up by ID.
+                self.refreshSavedChannelPasswordIDsLocked(instance: instance)
                 self.autoJoinAfterLoginLocked(instance: instance, options: options)
                 try self.applyPostLoginOptionsLocked(instance: instance, options: options)
                 self.applyDefaultSubscriptionPreferencesLocked(instance: instance, preferences: self.preferencesStore.preferences)
@@ -329,6 +332,9 @@ extension TeamTalkConnectionController {
             self.connectedRecord = record
             self.userVolumeStore.setServerScope(Self.serverVolumeScope(for: record))
             self.userVolumeStore.setMemoryMode(self.preferencesStore.preferences.userVolumeMemoryMode)
+            // Before the rejoin below: it resolves stored channel paths to IDs,
+            // and the rejoin looks a channel password up by ID.
+            refreshSavedChannelPasswordIDsLocked(instance: instance)
 
             // Rejoin the channel we were in, by path (survives a restart that
             // reassigns IDs); fall back to the server's normal auto-join.
@@ -446,7 +452,11 @@ extension TeamTalkConnectionController {
                 TT_GetChannelIDFromPath(instance, pathPointer)
             }
             if channelID > 0 {
-                let password = options.initialChannelPassword
+                // Explicit option wins; otherwise use whatever we already know
+                // for this channel (in-session or persisted).
+                let password = options.initialChannelPassword.isEmpty
+                    ? knownChannelPasswordLocked(instance: instance, channelID: channelID)
+                    : options.initialChannelPassword
                 channelPasswords[channelID] = password
                 _ = password.withCString { pwdPointer in
                     TT_DoJoinChannelByID(instance, channelID, pwdPointer)
@@ -463,7 +473,11 @@ extension TeamTalkConnectionController {
                         TT_GetChannelIDFromPath(instance, pathPointer)
                     }
                     if channelID > 0 {
-                        let pwd = channelPasswords[channelID] ?? ""
+                        // On a cold launch the in-session map is empty, so this
+                        // is exactly where the persisted password has to be
+                        // consulted — otherwise "join last channel" lands the
+                        // user in root despite a saved secret.
+                        let pwd = knownChannelPasswordLocked(instance: instance, channelID: channelID)
                         _ = pwd.withCString { pwdPointer in
                             TT_DoJoinChannelByID(instance, channelID, pwdPointer)
                         }
@@ -496,7 +510,10 @@ extension TeamTalkConnectionController {
                 TT_GetChannelIDFromPath(instance, pathPointer)
             }
             if channelID > 0 {
-                let password = connectedRecord?.initialChannelPassword ?? ""
+                let configured = connectedRecord?.initialChannelPassword ?? ""
+                let password = configured.isEmpty
+                    ? knownChannelPasswordLocked(instance: instance, channelID: channelID)
+                    : configured
                 channelPasswords[channelID] = password
                 _ = password.withCString { pwdPointer in
                     TT_DoJoinChannelByID(instance, channelID, pwdPointer)
@@ -1071,6 +1088,8 @@ extension TeamTalkConnectionController {
 
     func destroyLocked() {
         stopPollingLocked()
+        // Channel IDs only mean anything for a live connection.
+        clearSavedChannelPasswordIDs()
 
         if let instance {
             cleanupVideoLocked()

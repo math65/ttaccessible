@@ -236,6 +236,7 @@
 "connectedServer.menu.createChannel" = "Créer un canal";
 "connectedServer.menu.editChannel" = "Modifier le canal";
 "connectedServer.menu.deleteChannel" = "Supprimer le canal";
+"connectedServer.menu.forgetChannelPassword" = "Oublier le mot de passe enregistré";
 "connectedServer.channel.create.title" = "Créer un canal";
 "connectedServer.channel.create.success" = "Canal créé.";
 "connectedServer.channel.edit.title" = "Modifier %@";
@@ -307,6 +308,7 @@
 "subscriptions.error.updateFailed" = "Impossible de modifier l'abonnement.";
 "connectedServer.channelPassword.title" = "Rejoindre %@";
 "connectedServer.channelPassword.message" = "Ce canal est protégé. Saisissez son mot de passe.";
+"connectedServer.channelPassword.forgotten" = "Mot de passe enregistré pour %@ oublié";
 "connectedServer.channelPassword.error.incorrect" = "Mot de passe de canal incorrect. Réessayez.";
 "connectedServer.channelPassword.placeholder" = "Mot de passe du canal";
 "connectedServer.channelPassword.accessibilityLabel" = "Mot de passe du canal";

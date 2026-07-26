@@ -236,6 +236,7 @@
 "connectedServer.menu.createChannel" = "Create Channel";
 "connectedServer.menu.editChannel" = "Edit Channel";
 "connectedServer.menu.deleteChannel" = "Delete Channel";
+"connectedServer.menu.forgetChannelPassword" = "Forget Saved Password";
 "connectedServer.channel.create.title" = "Create a Channel";
 "connectedServer.channel.create.success" = "Channel created.";
 "connectedServer.channel.edit.title" = "Edit %@";
@@ -307,6 +308,7 @@
 "subscriptions.error.updateFailed" = "Unable to update the subscription.";
 "connectedServer.channelPassword.title" = "Join %@";
 "connectedServer.channelPassword.message" = "This channel is protected. Enter its password.";
+"connectedServer.channelPassword.forgotten" = "Saved password for %@ forgotten";
 "connectedServer.channelPassword.error.incorrect" = "Incorrect channel password. Please try again.";
 "connectedServer.channelPassword.placeholder" = "Channel password";
 "connectedServer.channelPassword.accessibilityLabel" = "Channel password";

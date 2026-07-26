@@ -1134,6 +1134,18 @@ final class ConnectedServerViewController: NSViewController {
         deleteItem.target = self
         menu.addItem(deleteItem)
 
+        // Saving a channel password is automatic on a successful join, which
+        // includes a one-off visit to a protected channel. This is the way back
+        // out — otherwise the only way to drop a saved channel secret is to
+        // delete the whole saved server.
+        let forgetPasswordItem = NSMenuItem(
+            title: L10n.text("connectedServer.menu.forgetChannelPassword"),
+            action: #selector(forgetChannelPasswordAction),
+            keyEquivalent: ""
+        )
+        forgetPasswordItem.target = self
+        menu.addItem(forgetPasswordItem)
+
         return menu
     }
 
@@ -1163,6 +1175,22 @@ final class ConnectedServerViewController: NSViewController {
             return me.isAdministrator || me.isChannelOperator
         }()
         switch menuItem.action {
+        case #selector(forgetChannelPasswordAction):
+            // Shown only when there really is a saved password to forget, and
+            // hidden rather than dimmed otherwise — a permanently disabled item
+            // is just one more thing to arrow past under VoiceOver.
+            //
+            // hasSavedChannelPassword reads an in-memory mirror behind a lock:
+            // menu validation runs every time a menu opens, so it must not do
+            // keychain I/O or hop onto the controller's serial queue.
+            guard case .channel(let channel)? = selectedNode,
+                  channel.isPasswordProtected,
+                  connectionController.hasSavedChannelPassword(forChannelID: channel.id) else {
+                menuItem.isHidden = true
+                return false
+            }
+            menuItem.isHidden = false
+            return true
         case #selector(toggleMuteUserAction):
             let muted = selectedUser.map { localMuteState[$0.id] ?? $0.isMuted } == true
             menuItem.title = muted ? L10n.text("connectedServer.menu.unmuteUser") : L10n.text("connectedServer.menu.muteUser")
