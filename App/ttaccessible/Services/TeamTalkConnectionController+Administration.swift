@@ -606,6 +606,11 @@ extension TeamTalkConnectionController {
         }
     }
 
+    // The per-channel "may I move people out of here" right lives on
+    // `ConnectedServerChannel.canMoveUsersOut`, computed in the session
+    // snapshot: the answer is needed while building outline cells, where a
+    // `queue.sync` per row would block the main thread on this queue.
+
     func hasOperatorEnableRight() -> Bool {
         guard let instance else { return false }
         return queue.sync {

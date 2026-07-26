@@ -808,7 +808,8 @@ final class ConnectedServerViewController: NSViewController {
                 isCurrentChannel: channel.isCurrentChannel,
                 pathComponents: channel.pathComponents,
                 children: updatedChildren,
-                users: updatedUsers
+                users: updatedUsers,
+                canMoveUsersOut: channel.canMoveUsersOut
             )
         }
     }
@@ -1099,6 +1100,14 @@ final class ConnectedServerViewController: NSViewController {
         moveItem.target = self
         menu.addItem(moveItem)
 
+        let moveChannelUsersItem = NSMenuItem(
+            title: L10n.text("connectedServer.menu.moveChannelUsers"),
+            action: #selector(moveChannelUsersAction),
+            keyEquivalent: ""
+        )
+        moveChannelUsersItem.target = self
+        menu.addItem(moveChannelUsersItem)
+
         menu.addItem(.separator())
 
         let createItem = NSMenuItem(
@@ -1181,6 +1190,14 @@ final class ConnectedServerViewController: NSViewController {
             guard !selectedUsers.isEmpty else { return false }
             let hasOthers = selectedUsers.contains { !$0.isCurrentUser }
             return !hasOthers || canModerate
+        case #selector(moveChannelUsersAction):
+            // Bulk-move a channel's occupants. Works whether a channel row or a
+            // user row is selected (resolves to the user's channel), as long as
+            // that channel has users and we may move people out of THAT channel
+            // — `canModerate` is target-blind and would offer the action on
+            // channels the server rejects.
+            guard let channel = bulkMoveTargetChannel(), !channel.users.isEmpty else { return false }
+            return canMoveUsers(from: channel)
         default:
             return true
         }

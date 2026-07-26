@@ -236,6 +236,12 @@ extension TeamTalkConnectionController {
                 )
             }
 
+            // Account-wide move right: constant across channels, so resolve it
+            // once instead of per channel. When it's absent the per-channel
+            // operator check below decides.
+            let hasGlobalMoveRight =
+                (TT_GetMyUserRights(instance) & UInt32(USERRIGHT_MOVE_USERS.rawValue)) != 0
+
             func buildChannelTree(parentID: Int32, parentPathComponents: [String]) -> [ConnectedServerChannel] {
                 let childChannels = channelsByParent[parentID] ?? []
 
@@ -255,7 +261,9 @@ extension TeamTalkConnectionController {
                         isCurrentChannel: channel.nChannelID == currentChannelID,
                         pathComponents: channelPathComponents,
                         children: buildChannelTree(parentID: channel.nChannelID, parentPathComponents: channelPathComponents),
-                        users: channelUsers
+                        users: channelUsers,
+                        canMoveUsersOut: hasGlobalMoveRight
+                            || TT_IsChannelOperator(instance, currentUserID, channel.nChannelID) != 0
                     )
                 }
 

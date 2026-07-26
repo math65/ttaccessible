@@ -760,6 +760,7 @@
 "connectedServer.menu.unmuteMediaFile" = "Rétablir le flux média localement";
 "connectedServer.menu.kickUser" = "Expulser du canal";
 "connectedServer.menu.moveUser" = "Déplacer vers un canal…";
+"connectedServer.menu.moveChannelUsers" = "Déplacer tout le monde…";
 "connectedServer.kick.title" = "Expulser %@ ?";
 "connectedServer.kick.message" = "L'utilisateur sera retiré de son canal actuel.";
 "connectedServer.kick.confirm" = "Expulser";
@@ -768,7 +769,26 @@
 "connectedServer.move.confirm" = "Déplacer";
 "connectedServer.move.noChannel" = "Aucun autre canal disponible";
 
+// Feuille de déplacement groupé d'utilisateurs
+"moveUsers.header" = "Sélectionnez les utilisateurs à déplacer depuis « %@ »";
+"moveUsers.usersList" = "Utilisateurs";
+"moveUsers.targetChannel" = "Déplacer vers le canal :";
+"moveUsers.selectAll" = "Tout sélectionner";
+"moveUsers.deselectAll" = "Tout désélectionner";
+"moveUsers.confirm" = "Déplacer";
+"moveUsers.noneSelected" = "Aucun utilisateur sélectionné";
+"moveUsers.noneAvailable" = "Aucun utilisateur à déplacer";
+"moveUsers.userItem" = "%1$@, %2$d sur %3$d";
+"moveUsers.allSelected" = "Les %d utilisateurs sont sélectionnés";
+"moveUsers.allSelected.one" = "%d utilisateur sélectionné";
+"moveUsers.allDeselected" = "Tous les utilisateurs sont désélectionnés";
+"moveUsers.result.success" = "%1$d utilisateurs déplacés vers %2$@";
+"moveUsers.result.success.one" = "1 utilisateur déplacé vers %@";
+"moveUsers.result.partial" = "%1$d utilisateurs sur %2$d déplacés vers %3$@";
+"moveUsers.result.partial.one" = "%1$d utilisateur sur %2$d déplacé vers %3$@";
+
 // VoiceOver custom actions
+"connectedServer.voAction.moveChannelUsers" = "Déplacer tout le monde vers un autre canal";
 "connectedServer.voAction.join" = "Rejoindre";
 "connectedServer.voAction.leave" = "Quitter";
 "connectedServer.voAction.privateMessage" = "Message privé";
