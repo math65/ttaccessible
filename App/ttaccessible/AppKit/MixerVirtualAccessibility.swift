@@ -249,7 +249,7 @@ final class VirtualControlView: NSView {
                 let desc = cfg.getDisplayString(resetValue)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                     NSAccessibility.post(element: NSApp as Any, notification: .announcementRequested,
-                                         userInfo: [.announcement: desc, .priority: NSAccessibilityPriorityLevel.high])
+                                         userInfo: [.announcement: desc, .priority: NSAccessibilityPriorityLevel.high.rawValue])
                 }
                 return true
             case .toggle(let cfg):
@@ -274,7 +274,7 @@ final class VirtualControlView: NSView {
             let newValue = cfg.incrementValue(current)
             cfg.setValue(newValue)
             NSAccessibility.post(element: NSApp as Any, notification: .announcementRequested,
-                                 userInfo: [.announcement: cfg.getDisplayString(newValue), .priority: NSAccessibilityPriorityLevel.high])
+                                 userInfo: [.announcement: cfg.getDisplayString(newValue), .priority: NSAccessibilityPriorityLevel.high.rawValue])
             return true
         }
     }
@@ -286,7 +286,7 @@ final class VirtualControlView: NSView {
             let newValue = cfg.decrementValue(current)
             cfg.setValue(newValue)
             NSAccessibility.post(element: NSApp as Any, notification: .announcementRequested,
-                                 userInfo: [.announcement: cfg.getDisplayString(newValue), .priority: NSAccessibilityPriorityLevel.high])
+                                 userInfo: [.announcement: cfg.getDisplayString(newValue), .priority: NSAccessibilityPriorityLevel.high.rawValue])
             return true
         }
     }
@@ -378,7 +378,7 @@ final class VirtualPickerController: NSObject {
     private func announce(_ message: String) {
         NSAccessibility.post(element: NSApp as Any, notification: .announcementRequested,
                              userInfo: [.announcement: message,
-                                        .priority: NSAccessibilityPriorityLevel.high])
+                                        .priority: NSAccessibilityPriorityLevel.high.rawValue])
     }
 }
 
