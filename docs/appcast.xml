@@ -3,6 +3,17 @@
     <channel>
         <title>ttaccessible</title>
         <item>
+            <title>1.10.0</title>
+            <pubDate>Sun, 26 Jul 2026 22:03:34 +0200</pubDate>
+            <link>https://github.com/math65/ttaccessible/releases/tag/v1.10.0</link>
+            <sparkle:version>45</sparkle:version>
+            <sparkle:shortVersionString>1.10.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
+            <sparkle:releaseNotesLink xml:lang="en">https://math65.github.io/ttaccessible/ttaccessible-1.10.0-45.html</sparkle:releaseNotesLink>
+            <sparkle:releaseNotesLink xml:lang="fr">https://math65.github.io/ttaccessible/ttaccessible-1.10.0-45.fr.html</sparkle:releaseNotesLink>
+            <enclosure url="https://github.com/math65/ttaccessible/releases/download/v1.10.0/ttaccessible-1.10.0-45.zip" length="43622806" type="application/octet-stream" sparkle:edSignature="MafMPwK+r6l9kg7La/CSClQsni0O5vu3Up/vBEThFgvMAMtiOwUScA/nUKnKzDQacvuMifRtVOzG+BAkFZrMAw=="/>
+        </item>
+        <item>
             <title>1.9.0</title>
             <pubDate>Fri, 24 Jul 2026 21:07:09 +0200</pubDate>
             <link>https://github.com/math65/ttaccessible/releases/tag/v1.9.0</link>

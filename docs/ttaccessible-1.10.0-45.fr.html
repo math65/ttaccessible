@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ttaccessible-1.10.0-45.fr</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --code-bg: #f5f5f7;
+  --link: #0066cc;
+  --link-hover: #0040a0;
+  --rule: #e5e5ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #ececec;
+    --muted: #a0a0a0;
+    --code-bg: #2d2d2d;
+    --link: #4eaaff;
+    --link-hover: #82c4ff;
+    --rule: #3a3a3a;
+  }
+}
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  padding: 1rem 1.25rem 1.5rem;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.15rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.2em; }
+h3 { font-size: 1.02rem; }
+h4 { font-size: 0.95rem; color: var(--muted); }
+p { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; margin: 0.6em 0; }
+li { margin: 0.25em 0; }
+li > p { margin: 0.3em 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover, a:focus { color: var(--link-hover); text-decoration: underline; }
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.75em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+pre code { background: transparent; padding: 0; border-radius: 0; }
+blockquote {
+  border-left: 3px solid var(--rule);
+  margin: 0.8em 0;
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--muted);
+}
+hr { border: 0; border-top: 1px solid var(--rule); margin: 1.5em 0; }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<h2 id="v1100-build-45--26072026">v1.10.0 (build 45) — 26/07/2026</h2>
+<p>Cette version vous permet de diffuser dans un canal le son d'une
+application — ou celui de VoiceOver — en gardant votre voix calée
+dessus. La reconnexion automatique vous ramène désormais vraiment dans
+le canal que vous occupiez, les mots de passe de canaux sont mémorisés,
+et les modérateurs peuvent vider un canal en une seule opération.</p>
+<h3 id="lessentiel">L'essentiel</h3>
+<ul>
+<li><strong>Diffusez le son de n'importe quelle application</strong>
+dans votre canal — ou celui de VoiceOver — et plus seulement celui d'un
+périphérique d'entrée. Raccourci : <strong>⌥⌘A</strong>.</li>
+<li><strong>Votre voix reste calée sur ce que vous diffusez</strong> :
+vos auditeurs entendent les deux ensemble.</li>
+<li><strong>La reconnexion automatique vous ramène pour de bon</strong>,
+dans le même canal, et autant de fois que la connexion tombe.</li>
+<li><strong>Les mots de passe de canaux sont retenus</strong> : un canal
+protégé cesse de vous les redemander.</li>
+</ul>
+<h3 id="diffuser-une-application-ou-voiceover">Diffuser une application
+ou VoiceOver</h3>
+<ul>
+<li><strong>⌥⌘A propose maintenant trois types de sources</strong> : un
+périphérique d'entrée, VoiceOver, ou une application en cours
+d'exécution. Les applications sont regroupées dans leur propre
+sous-menu.</li>
+<li><strong>Vous pouvez désigner une application qui n'est pas encore
+lancée.</strong> La capture s'y accroche d'elle-même dès qu'elle produit
+du son, et lui survit si vous la quittez puis la relancez en pleine
+diffusion.</li>
+<li><strong>Vous pouvez couper le son de la source sur votre Mac pendant
+que vous la diffusez</strong>, pour que seul le canal l'entende.
+Désactivé par défaut, et jamais retenu d'une diffusion à l'autre.</li>
+<li><strong>Votre voix est retardée pour coller au flux.</strong> Une
+diffusion accuse près d'une seconde de latence : sans cela, vous
+arriveriez en avance sur votre propre musique ou votre instrument. Le
+décalage est mesuré en direct et suit la dérive pendant que vous
+parlez.</li>
+<li>Les applications et VoiceOver demandent macOS 14.2 ou plus récent.
+De macOS 13 à 14.1, seules les applications déjà lancées peuvent être
+captées ; sur macOS 12, seuls les périphériques d'entrée sont
+proposés.</li>
+</ul>
+<h3 id="reconnexion">Reconnexion</h3>
+<ul>
+<li><strong>Une coupure de connexion vous reconnecte réellement, et vous
+remet dans le canal que vous occupiez</strong> — retrouvé par son
+chemin, ce qui fonctionne même quand le serveur redémarre et renumérote
+ses canaux.</li>
+<li><strong>Et cela fonctionne à chaque fois, plus seulement une fois
+par session.</strong> Une deuxième coupure vous laissait auparavant
+déconnecté.</li>
+<li><strong>Une expulsion ou un bannissement ne vous reconnecte plus
+quelques secondes plus tard.</strong></li>
+<li>Les tentatives s'espacent — 5 secondes, puis 10, 30 et 60 — et
+s'arrêtent au bout de cinq minutes environ, plutôt que de marteler un
+serveur qui ne répond plus.</li>
+</ul>
+<h3 id="mots-de-passe-de-canaux">Mots de passe de canaux</h3>
+<ul>
+<li><strong>Un canal protégé que vous avez rejoint une fois ne vous
+redemande plus rien.</strong> Le mot de passe est conservé dans votre
+trousseau, par canal et par serveur.</li>
+<li><strong>Cela vaut aussi au lancement</strong> : « rejoindre le
+dernier canal » ne vous dépose plus à la racine du serveur faute de mot
+de passe.</li>
+<li><strong>« Oublier le mot de passe enregistré »</strong> dans le menu
+contextuel d'un canal, affiché uniquement lorsqu'il y a effectivement
+quelque chose à oublier.</li>
+<li><strong>Si le mot de passe change côté serveur, celui qui était
+enregistré est écarté</strong> au lieu d'être resoumis puis proposé à
+nouveau dans la zone de saisie.</li>
+<li>Faire pointer un serveur enregistré vers un autre hôte ou un autre
+port efface ses mots de passe de canaux : ils ne partiront jamais vers
+un serveur différent.</li>
+</ul>
+<h3 id="modération">Modération</h3>
+<ul>
+<li><strong>Déplacez tous les occupants d'un canal en une fois</strong>,
+depuis le menu contextuel du canal — avec une liste à cocher pour en
+laisser certains sur place, et une action VoiceOver disponible sur la
+ligne du canal.</li>
+<li>Le résultat est annoncé et signalé une seule fois (« 5 utilisateurs
+sur 6 déplacés vers… »), au lieu d'une boîte de dialogue par
+personne.</li>
+<li><strong>Les canaux de destination sont désignés par leur chemin
+complet</strong> : deux canaux portant le même nom sous des parents
+différents ne se confondent plus. Le déplacement d'un utilisateur seul
+en profite également.</li>
+</ul>
+<h3 id="corrections">Corrections</h3>
+<ul>
+<li><strong>Les annonces du mixeur de canal ne sont plus
+coupées.</strong> Les changements de volume, de panoramique et de
+coupure du son étaient annoncés avec une priorité incorrecte depuis la
+version 1.7.0, si bien que VoiceOver pouvait parler par-dessus.</li>
+<li>Les annonces du mixeur et la fenêtre de déplacement s'expriment
+correctement lorsqu'un canal ne compte qu'une seule personne.</li>
+</ul>
+<h3 id="remerciements">Remerciements</h3>
+<p>La quasi-totalité de cette version a été conçue et réalisée par
+<strong>Rocco Fiorentino</strong> : diffusion des applications et de
+VoiceOver, synchronisation de la voix, fiabilisation de la reconnexion,
+mots de passe de canaux et déplacements groupés. Merci à lui, comme
+toujours, ainsi qu'à toutes celles et ceux qui continuent d'envoyer
+leurs retours.</p>
+<h3 id="téléchargement">Téléchargement</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.10.0/ttaccessible-1.10.0-45.zip">ttaccessible-1.10.0-45.zip</a></p>
+<h2 id="v190-build-44--24-juillet-2026">v1.9.0 (build 44) — 24 juillet
+2026</h2>
+<p>Cette version remet complètement à plat le push-to-talk : n'importe
+quelle touche peut servir à parler, elle fonctionne même quand vous êtes
+occupé dans une autre application, et un nouveau mode permet de combiner
+la coupure du micro avec le push-to-talk. Vous pouvez aussi choisir la
+langue de l'application, sans dépendre de celle de votre Mac.</p>
+<h3 id="en-bref">En bref</h3>
+<ul>
+<li><strong>Le push-to-talk a été refait.</strong> N'importe quelle
+touche convient : une touche seule, ou une combinaison de touches de
+modification.</li>
+<li><strong>Votre touche pour parler et le raccourci de coupure du micro
+fonctionnent depuis n'importe quelle application</strong>, et plus
+seulement quand tt-Accessible est au premier plan.</li>
+<li><strong>Choisissez la langue de l'application</strong> — français ou
+anglais — sans suivre celle de votre Mac.</li>
+</ul>
+<h3 id="push-to-talk">Push-to-talk</h3>
+<ul>
+<li><strong>N'importe quelle touche peut servir à parler</strong> : une
+touche seule, ou une combinaison de touches de modification comme
+Commande-Contrôle (appuyez dessus, puis relâchez). Tout tient en un
+bouton : activez-le, puis appuyez sur la touche voulue.</li>
+<li><strong>Le champ de saisie de la touche est enfin
+accessible.</strong> C'est un vrai bouton, annoncé par VoiceOver, et
+l'enregistrement d'une touche ne se laisse plus perturber par les
+touches Contrôle-Option de VoiceOver lui-même.</li>
+<li><strong>Nouveau mode de microphone : « Les deux ».</strong> ⌘⇧A
+coupe et réactive le micro, comme avant. En plus de ça, maintenir votre
+touche de push-to-talk vous permet de parler même micro coupé, et la
+relâcher vous remet en silence. À choisir dans Préférences › Audio.</li>
+<li><strong>Un son facultatif au début et à la fin de la
+transmission</strong>, pour entendre que votre touche a bien été prise
+en compte.</li>
+<li><strong>Les raccourcis peuvent fonctionner pendant que vous êtes
+dans une autre application.</strong> À activer séparément pour le
+push-to-talk et pour ⌘⇧A. macOS demande l'autorisation « Surveillance
+des saisies » la première fois.</li>
+<li>Bon à savoir : la touche continue d'arriver jusqu'à l'application où
+vous travaillez — tt-Accessible la voit passer, mais ne peut pas la
+garder pour lui. Préférez donc une combinaison de touches de
+modification seules, comme Commande-Contrôle, ou une touche de fonction
+entre F13 et F19 : ni l'une ni l'autre n'écrit quoi que ce soit. Évitez
+les lettres seules.</li>
+<li><strong>⌘⇧A ne se déclenche plus lorsque le Finder est au premier
+plan.</strong></li>
+<li>La touche de push-to-talk que vous utilisiez déjà est reprise
+automatiquement.</li>
+</ul>
+<h3 id="langue">Langue</h3>
+<ul>
+<li><strong>Préférences › Général propose désormais un réglage
+Langue</strong> : langue du système, anglais ou français. Redémarrez
+l'application pour l'appliquer partout.</li>
+<li><strong>Au tout premier lancement, l'application vous demande la
+langue que vous souhaitez.</strong></li>
+</ul>
+<h3 id="remerciements-1">Remerciements</h3>
+<p>Le push-to-talk a été conçu et développé par <strong>Rocco
+Fiorentino</strong>. Le réglage de langue nous vient de <strong>Gruia
+Chiscop</strong>. Merci à eux deux — et à toutes les personnes qui
+continuent d'envoyer leurs retours.</p>
+<h3 id="téléchargement-1">Téléchargement</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.9.0/ttaccessible-1.9.0-44.zip">ttaccessible-1.9.0-44.zip</a></p>
+<h2 id="v180-build-43--22-juillet-2026">v1.8.0 (build 43) — 22 juillet
+2026</h2>
+<p>Cette version permet de diffuser un périphérique audio en direct dans
+un canal, rétablit la prise en charge de macOS 12 (Monterey) et corrige
+le son qui disparaissait dans les canaux « enregistrement interdit » —
+avec, en prime, des améliorations de la table de mixage et de
+l'enregistrement.</p>
+<h3 id="en-bref-1">En bref</h3>
+<ul>
+<li><strong>Diffusez un périphérique audio en direct dans votre
+canal.</strong> Choisissez n'importe quelle entrée — une interface
+audio, un périphérique virtuel, du loopback — et diffusez-la dans le
+canal comme un flux média, en parallèle de votre voix. Avec
+<strong>⌘⌥A</strong>.</li>
+<li><strong>macOS 12 Monterey est de nouveau pris en charge.</strong>
+L'application fonctionne à partir de macOS 12.</li>
+<li><strong>Le son ne disparaît plus dans les canaux « enregistrement
+interdit ».</strong></li>
+</ul>
+<h3 id="diffusion-dun-périphérique-en-direct">Diffusion d'un
+périphérique en direct</h3>
+<ul>
+<li><strong>⌘⌥A</strong> diffuse le périphérique d'entrée choisi dans le
+canal courant, sous forme de flux média, en parallèle de votre
+voix.</li>
+<li>Le démarrage est rapide et ne fige plus le canal, avec une faible
+latence — le flux utilise Opus avec de très petites trames, ce qui rend
+l'analyse côté serveur quasi instantanée.</li>
+<li>Si le périphérique devient silencieux, du silence est injecté
+automatiquement pour que le flux ne se coupe jamais.</li>
+</ul>
+<h3 id="audio">Audio</h3>
+<ul>
+<li><strong>Les canaux « enregistrement interdit » rediffusent le
+son.</strong> Dans un canal marqué « enregistrement interdit », vous
+n'entendiez plus les autres — alors que tout fonctionnait pour les
+personnes sur les clients Qt ou iPhone. C'est corrigé : vous entendez de
+nouveau tout le monde. L'enregistrement, lui, reste bloqué dans ces
+canaux, exactement comme le serveur le prévoit.</li>
+</ul>
+<h3 id="table-de-mixage">Table de mixage</h3>
+<ul>
+<li><strong>Position stéréo indépendante pour la voix et les médias de
+chaque personne.</strong> Vous pouvez placer séparément, dans l'espace
+stéréo, la voix d'une personne et son flux média.</li>
+</ul>
+<h3 id="enregistrement">Enregistrement</h3>
+<ul>
+<li><strong>⌘R enregistre un fichier unique ; ⌘⇧R enregistre un fichier
+par personne (ou les deux).</strong> Les deux raccourcis choisissent
+désormais directement le format d'enregistrement.</li>
+<li>À noter si vous utilisiez déjà l'enregistrement : si vous étiez en «
+fichier unique », le bouton de la barre d'outils enregistre maintenant
+<strong>à la fois</strong> un fichier unique et un fichier par personne.
+Utilisez <strong>⌘R</strong> pour n'obtenir qu'un seul fichier.</li>
+</ul>
+<h3 id="administration">Administration</h3>
+<ul>
+<li><strong>Quota disque par canal</strong>, modifiable avec un
+sélecteur d'unité (Ko / Mo / Go).</li>
+<li><strong>Propriétés complètes du serveur</strong> — ports TCP/UDP et
+informations de version — dans la fenêtre des propriétés du
+serveur.</li>
+<li><strong>Colonne du pseudo en ligne</strong> dans la liste des
+comptes utilisateurs.</li>
+</ul>
+<h3 id="accessibilité-et-finitions">Accessibilité et finitions</h3>
+<ul>
+<li>VoiceOver plus clair dans la table de mixage : annonces de zone
+vocalisées et libellés d'état de coupure dans la barre d'outils.</li>
+<li><strong>Échap ferme les fenêtres auxiliaires.</strong></li>
+<li>Correctifs plus discrets : plus de son d'interception injustifié
+pendant la synchronisation de connexion, conversion d'unité du quota
+disque en direct, et les envois de fichiers ne sont plus refusés à tort
+par une vérification de quota côté client.</li>
+</ul>
+<h3 id="téléchargement-2">Téléchargement</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.8.0/ttaccessible-1.8.0-43.zip">ttaccessible-1.8.0-43.zip</a></p>
+<h2 id="v170-build-42--8-juillet-2026">v1.7.0 (build 42) — 8 juillet
+2026</h2>
+<p>Voici la version stable qui met entre toutes les mains ce qui a été
+mis au point tout au long des bêtas 1.7.0. Si vous veniez de la 1.6.0,
+voici ce qui a changé.</p>
+<h3 id="en-bref-2">En bref</h3>
+<ul>
+<li><strong>Une toute nouvelle table de mixage par personne.</strong>
+Pour chaque personne présente dans votre canal, vous réglez son volume
+de voix, son volume des médias, sa position gauche/droite, sa coupure et
+son solo — le tout au clavier et avec VoiceOver.</li>
+<li><strong>Connexion avec un compte BearWare.</strong> Un identifiant
+gratuit bearware.dk suffit désormais pour vous connecter aux serveurs
+compatibles, sans créer un compte différent sur chacun.</li>
+<li><strong>Un moteur audio reconstruit, plus rapide et plus
+stable.</strong> La connexion est de nouveau quasi instantanée, changer
+de casque ou d'enceintes ne fige plus le son, et les canaux chargés
+restent fluides.</li>
+</ul>
+<h3 id="la-table-de-mixage">La table de mixage</h3>
+<ul>
+<li>Chaque personne du canal a sa propre tranche : <strong>volume de la
+voix, volume des médias, position stéréo, coupure et solo</strong>.</li>
+<li>Tout se pilote au clavier lorsque vous êtes positionné sur une
+personne : Haut/Bas pour le volume de la voix, Commande+Haut/Bas pour
+son volume des médias, Gauche/Droite pour la déplacer dans l'espace
+stéréo, et V, P, M, S pour entendre ou réinitialiser le volume, la
+position, la coupure et le solo.</li>
+<li><strong>Nouveau : appuyez sur Commande+5 pour aller directement à la
+table de mixage</strong> — elle rejoint les raccourcis de zones
+Commande+1 à Commande+4 en tant que cinquième zone. (Merci à Matthew
+Whitaker pour l'idée.)</li>
+<li>Les réglages de chaque personne sont mémorisés et reviennent la
+prochaine fois qu'elle se connecte.</li>
+</ul>
+<h3 id="audio-1">Audio</h3>
+<ul>
+<li><strong>Changer de périphérique de sortie ne fige plus le
+son.</strong> Basculez de casque ou d'enceintes en cours de connexion,
+le son suit tout simplement.</li>
+<li><strong>La connexion est de nouveau rapide.</strong> Sur les Mac
+équipés de beaucoup de matériel audio, l'ouverture d'une connexion
+pouvait s'immobiliser une dizaine de secondes le temps d'inspecter
+chaque appareil — cette analyse a disparu, et le correctif est
+maintenant intégré à chaque version.</li>
+<li><strong>Les canaux chargés et en haute qualité restent
+fluides.</strong> Les canaux qui utilisent de gros paquets audio
+pouvaient hacher pour tout le monde ; la lecture a été revue pour tenir
+la charge.</li>
+<li><strong>Votre micro et votre sortie choisis sont retenus de façon
+fiable</strong>, même après un débranchement, un rebranchement ou un
+redémarrage, au lieu de retomber discrètement sur le mauvais
+appareil.</li>
+<li><strong>Réduction de bruit indépendante.</strong> Un nouveau réglage
+Traitement du microphone (Préférences › Audio) vous laisse choisir entre
+Aucun, Réduction de bruit, ou Annulation d'écho avec réduction de bruit
+— et le changement s'applique en direct, même pendant que vous
+parlez.</li>
+<li><strong>Vous entendez désormais vos propres médias diffusés</strong>
+lorsque vous jouez un fichier audio ou vidéo dans un canal.</li>
+<li><strong>Les volumes par personne sont maintenant conservés par
+serveur</strong> : un volume réglé sur un serveur ne déborde plus sur un
+autre. Un nouveau réglage vous laisse décider s'ils sont retenus en
+permanence, seulement le temps de la session, ou pas du tout.</li>
+</ul>
+<h3 id="accessibilité">Accessibilité</h3>
+<ul>
+<li>L'application s'appelle désormais <strong>tt-Accessible</strong>,
+pour que VoiceOver et les synthèses vocales la prononcent
+correctement.</li>
+<li><strong>Appuyez sur VoiceOver+Espace pour rejoindre</strong> le
+serveur ou le canal sélectionné.</li>
+<li><strong>Les curseurs et le bouton du microphone annoncent maintenant
+leur valeur</strong> au fur et à mesure que vous les modifiez — gain,
+volume de sortie et les différents curseurs des Préférences.</li>
+<li>Les Préférences se lisent plus proprement avec VoiceOver : plus
+d'étiquettes en double, chaque section est un vrai titre, les zones de
+défilement sont nommées, et Échap ferme la fenêtre.</li>
+</ul>
+<h3 id="corrections-1">Corrections</h3>
+<ul>
+<li><strong>La connexion web BearWare aboutit de façon fiable</strong>,
+y compris sur les serveurs qui répondent de manière un peu
+inhabituelle.</li>
+<li><strong>Un pseudo laissé vide</strong> revient maintenant à votre
+pseudo par défaut au lieu d'empêcher la connexion.</li>
+<li>L'application <strong>démarre plus vite</strong>.</li>
+</ul>
+<h3 id="remerciements-2">Remerciements</h3>
+<p>Un grand merci à <strong>Rocco Fiorentino</strong>, qui a conçu et
+réalisé la refonte audio et la table de mixage, les améliorations
+d'accessibilité et VoiceOver, ainsi que la connexion plus rapide et plus
+stable de cette version. Merci à <strong>Matthew Whitaker</strong> pour
+la suggestion du Commande+5 — et à toutes les personnes qui ont testé
+les bêtas et fait remonter leurs retours.</p>
+<h3 id="installation">Installation</h3>
+<p>tt-Accessible installe cette mise à jour pour vous automatiquement.
+Pour l'installer à la main :</p>
+<ol type="1">
+<li>Téléchargez <code>ttaccessible-1.7.0-42.zip</code> ci-dessous.</li>
+<li>Décompressez-le et glissez <code>ttaccessible.app</code> dans votre
+dossier <code>/Applications</code>, en remplaçant la version
+précédente.</li>
+<li>Double-cliquez — aucun avertissement Gatekeeper grâce à la
+notarisation.</li>
+</ol>
+<h3 id="téléchargement-3">Téléchargement</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.7.0/ttaccessible-1.7.0-42.zip">ttaccessible-1.7.0-42.zip</a></p>
+</body>
+</html>
