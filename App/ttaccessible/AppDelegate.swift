@@ -119,7 +119,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let muteHotkeyMonitor = HotkeyMonitor()
     /// One Accessibility prompt per launch (the grant lets the global taps
     /// consume the hotkey instead of letting it double-fire in other apps).
-    private var didPromptForAccessibility = false
+    /// Persisted, so the Accessibility prompt appears once for good rather than
+    /// on every launch. Preferences shows a standing hint regardless.
+    private var didPromptForAccessibility: Bool {
+        get { UserDefaults.standard.bool(forKey: "didPromptForAccessibility") }
+        set { UserDefaults.standard.set(newValue, forKey: "didPromptForAccessibility") }
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         ProfileInstanceLock.acquire(for: ProfileContext.current)
@@ -287,11 +292,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let pttActive = prefs.microphoneMode == .pushToTalk || prefs.microphoneMode == .both
 
         // With Accessibility granted the global taps CONSUME the hotkey
-        // (swallowed system-wide instead of double-firing in the frontmost
-        // app). Prompt once per launch when a global hotkey is in use.
+        // (swallowed system-wide instead of reaching the frontmost app too).
+        //
+        // Prompted ONCE, ever — not once per launch. A system permission dialog
+        // on every start is noise, and worse for a VoiceOver user who has to
+        // dismiss it before reaching the app. The flag is persisted; Preferences
+        // carries a permanent hint for anyone who dismissed it or later revokes
+        // the grant, so the prompt is a convenience rather than the only route.
         let wantsGlobalHotkey = (pttActive && prefs.pushToTalkGlobal && prefs.pushToTalkKey?.isValid == true)
             || prefs.muteHotkeyGlobal
-        if wantsGlobalHotkey, didPromptForAccessibility == false, AXIsProcessTrusted() == false {
+        if wantsGlobalHotkey,
+           AppSandboxState.isSandboxed == false,
+           didPromptForAccessibility == false,
+           AXIsProcessTrusted() == false {
             didPromptForAccessibility = true
             let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
             AXIsProcessTrustedWithOptions(options)
@@ -1498,7 +1511,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let parentWindow = NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first else { return }
         panel.beginSheetModal(for: parentWindow) { [weak self] response in
             guard response == .OK, let url = panel.url, let self else { return }
-            if let bookmark = try? url.bookmarkData(options: .withSecurityScope) {
+            // Plain bookmark when unsandboxed — .withSecurityScope throws there,
+            // which silently left the folder unremembered across launches.
+            if let bookmark = try? url.bookmarkData(options: AppSandboxState.bookmarkCreationOptions) {
                 self.preferencesStore.updateRecordingFolderBookmark(bookmark)
             }
             self.startRecordingToFolder(url, mode: mode)
@@ -1506,12 +1521,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func startRecordingToFolder(_ folder: URL, mode: Int) {
-        guard folder.startAccessingSecurityScopedResource() else {
+        // startAccessingSecurityScopedResource() returns false for an ordinary
+        // URL, which unsandboxed means "no scope needed", not "denied". Treating
+        // it as denial cleared the saved bookmark and re-prompted for the folder
+        // on every single recording.
+        guard AppSandboxState.canAccess(folder) else {
             preferencesStore.updateRecordingFolderBookmark(nil)
             promptRecordingFolder(mode: mode)
             return
         }
-        recordingAccessedFolder = folder
+        recordingAccessedFolder = AppSandboxState.isSandboxed ? folder : nil
         let format = AudioFileFormat(rawValue: UInt32(preferencesStore.preferences.recordingAudioFileFormat))
         activeRecordingMode = mode
         preferencesStore.updateLastRecordingWasActive(true)

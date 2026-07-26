@@ -52,6 +52,16 @@
 	<string>tt-Accessible can optionally control VoiceOver to read incoming messages while the app is in the background.</string>
 	<key>NSAudioCaptureUsageDescription</key>
 	<string>tt-Accessible can capture audio from other applications to stream it to TeamTalk channels.</string>
+	<!-- Outside the App Sandbox, reading or writing in these folders raises a TCC
+	     prompt. Without these strings macOS shows a bare, unexplained request;
+	     with them the user is told why. Reached when a recording folder, a sound
+	     file or a TeamTalk .tt config lives in one of them. -->
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>tt-Accessible needs access to save recordings, custom sounds or TeamTalk configuration files you choose on your Desktop.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>tt-Accessible needs access to save recordings, custom sounds or TeamTalk configuration files you choose in your Documents folder.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>tt-Accessible needs access to open TeamTalk configuration files or sounds you choose in your Downloads folder.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string></string>
 	<key>NSMicrophoneUsageDescription</key>

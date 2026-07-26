@@ -450,7 +450,7 @@
 "preferences.audio.pushToTalk.global.label" = "Push-to-talk works when another app is in front";
 "preferences.audio.muteHotkey.global.label" = "Microphone toggle hotkey works when another app is in front";
 "preferences.audio.muteHotkey.key.label" = "Global microphone toggle key";
-"preferences.audio.hotkey.global.help" = "Working from another app uses the Input Monitoring permission — macOS asks the first time. Note: while ttaccessible is sandboxed the hotkey is detected but still reaches the app in front (it can't be intercepted). The safest choices are a combination of modifier keys on their own, such as Command-Control, or a function key from F13 to F19: neither one types anything into the app you are working in. Avoid single letters and common shortcuts.";
+"preferences.audio.hotkey.global.help" = "Working from another app uses the Input Monitoring permission — macOS asks the first time. To stop the key ALSO reaching the app in front, tt-Accessible additionally needs Accessibility: grant it in System Settings > Privacy & Security > Accessibility. Until that is granted the hotkey still works but the key reaches the frontmost app as well, so until then prefer a combination of modifier keys on their own, such as Command-Control, or a function key from F13 to F19: neither one types anything into the app you are working in.";
 "preferences.audio.pushToTalk.warning.noShortcut" = "No hotkey configured — push-to-talk is inactive and the microphone keeps transmitting as in always-on mode. Activate the button above to set a key.";
 "preferences.audio.volumeMemory.section" = "Per-user volume memory";
 "preferences.audio.volumeMemory.label" = "Remember per-user volume adjustments";

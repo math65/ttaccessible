@@ -454,11 +454,11 @@ final class AppPreferencesStore: ObservableObject {
     func resolveRecordingFolderURL() -> URL? {
         guard let bookmark = preferences.recordingFolderBookmark else { return nil }
         var isStale = false
-        guard let url = try? URL(resolvingBookmarkData: bookmark, options: .withSecurityScope, bookmarkDataIsStale: &isStale) else {
+        guard let url = try? URL(resolvingBookmarkData: bookmark, options: AppSandboxState.bookmarkResolutionOptions, bookmarkDataIsStale: &isStale) else {
             return nil
         }
         if isStale {
-            if let fresh = try? url.bookmarkData(options: .withSecurityScope) {
+            if let fresh = try? url.bookmarkData(options: AppSandboxState.bookmarkCreationOptions) {
                 updateRecordingFolderBookmark(fresh)
             }
         }
@@ -1285,7 +1285,7 @@ final class RecordingPreferencesStore: ObservableObject {
         panel.message = L10n.text("recording.panel.message")
         panel.beginSheetModal(for: window) { [weak self] response in
             guard response == .OK, let url = panel.url, let self else { return }
-            if let bookmark = try? url.bookmarkData(options: .withSecurityScope) {
+            if let bookmark = try? url.bookmarkData(options: AppSandboxState.bookmarkCreationOptions) {
                 self.rootStore.updateRecordingFolderBookmark(bookmark)
             }
         }
@@ -1303,7 +1303,7 @@ final class RecordingPreferencesStore: ObservableObject {
         var folderURL: URL?
         if let bookmark = preferences.recordingFolderBookmark {
             var isStale = false
-            folderURL = try? URL(resolvingBookmarkData: bookmark, options: .withSecurityScope, bookmarkDataIsStale: &isStale)
+            folderURL = try? URL(resolvingBookmarkData: bookmark, options: AppSandboxState.bookmarkResolutionOptions, bookmarkDataIsStale: &isStale)
         }
         return State(
             folderBookmark: preferences.recordingFolderBookmark,

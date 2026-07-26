@@ -19,7 +19,7 @@ final class TeamTalkConfigAccessStore {
     }
 
     func saveBookmark(for url: URL) throws {
-        let data = try url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
+        let data = try url.bookmarkData(options: AppSandboxState.bookmarkCreationOptions, includingResourceValuesForKeys: nil, relativeTo: nil)
         userDefaults.set(data, forKey: Keys.bookmarkData)
     }
 
@@ -31,7 +31,7 @@ final class TeamTalkConfigAccessStore {
         var isStale = false
         guard let url = try? URL(
             resolvingBookmarkData: data,
-            options: [.withSecurityScope],
+            options: AppSandboxState.bookmarkResolutionOptions,
             relativeTo: nil,
             bookmarkDataIsStale: &isStale
         ) else {
