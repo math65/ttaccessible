@@ -210,9 +210,22 @@ macOS 26, bundle id `com.apple.helpviewer`; never hard-code a path to the old `H
   caches — `~/Library/Caches/com.apple.helpd/Generated/<id>*<version>` and a full private COPY of
   the book under `~/Library/Group Containers/group.com.apple.helpviewer.content/Library/Caches/`.
   Same version + changed content ⇒ the viewer serves the old pages. Bump the version on every
-  content change, use `--dev` while writing, and purge with **`sudo hiutil -P`** — deleting those
-  directories by hand leaves helpd in a state where every topic answers *"The selected content is
-  currently unavailable"* until `hiutil -P` is run.
+  content change and use `--dev` while writing.
+- **"The selected content is currently unavailable"** — the one failure that costs hours. It means
+  the private copy directory named `<app-id>.<book-id>*<version>.help` under
+  `~/Library/Group Containers/group.com.apple.helpviewer.content/Library/Caches/` exists but is
+  **empty**: an empty leftover shadows the real book and the viewer serves nothing. It happens when
+  that copy is deleted (or interrupted) while helpd holds it. Neither `sudo hiutil -P`, nor a fresh
+  login, nor bumping the version, nor moving the app to `/Applications` clears it. The fix is to
+  delete **the directory itself**, then reopen the help:
+
+  ```bash
+  find ~/Library/Group\ Containers/group.com.apple.helpviewer.content/Library/Caches \
+       -maxdepth 1 -name '*<your-app-id>*' -exec rm -rf {} +
+  ```
+
+  Diagnostic shortcut: a book that displays fine (OnyX, say) has **no** copy there at all, so an
+  empty directory bearing your identifier is the smoking gun.
 
 ### App Sandbox
 

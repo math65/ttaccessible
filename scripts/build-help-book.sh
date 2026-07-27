@@ -141,6 +141,8 @@ cat > "$BOOK/Contents/Info.plist" <<PLIST
 	<string>$LSM_INDEX_NAME</string>
 	<key>HPDBookIconPath</key>
 	<string>shrd/help-icon.png</string>
+	<key>HPDBookKBProduct</key>
+	<string>ttaccessible1</string>
 	<key>HPDBookTitle</key>
 	<string>$(title_for en)</string>
 	<key>HPDBookType</key>
