@@ -22,6 +22,8 @@
 	<string>index.html</string>
 	<key>HPDBookCSIndexPath</key>
 	<string>ttaccessible.cshelpindex</string>
+	<key>HPDBookIndexPath</key>
+	<string>ttaccessible.helpindex</string>
 	<key>HPDBookIconPath</key>
 	<string>shrd/help-icon.png</string>
 	<key>HPDBookTitle</key>

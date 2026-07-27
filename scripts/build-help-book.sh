@@ -27,6 +27,10 @@ BOOK="$ROOT_DIR/Help/ttaccessible.help"
 TEMPLATE="$SCRIPT_DIR/help-book-template.html"
 BUNDLE_ID="com.math65.ttaccessible.help"
 INDEX_NAME="ttaccessible.cshelpindex"
+# The legacy LSM index is still expected by the help viewer alongside the
+# CoreSpotlight one — shipping only the latter leaves it unable to display the
+# book at all (this is what OnyX and every working third-party book do).
+LSM_INDEX_NAME="ttaccessible.helpindex"
 
 LANGS=(en fr)
 
@@ -133,6 +137,8 @@ cat > "$BOOK/Contents/Info.plist" <<PLIST
 	<string>index.html</string>
 	<key>HPDBookCSIndexPath</key>
 	<string>$INDEX_NAME</string>
+	<key>HPDBookIndexPath</key>
+	<string>$LSM_INDEX_NAME</string>
 	<key>HPDBookIconPath</key>
 	<string>shrd/help-icon.png</string>
 	<key>HPDBookTitle</key>
@@ -184,10 +190,17 @@ STRINGS
     # -a: index anchors, required by NSHelpManager.openHelpAnchor(_:inBook:).
     # -m 3: minimum term length. -s/-l: stopword list and indexing locale, so a
     # French book indexes correctly from an English system.
-    rm -f "$LPROJ/$INDEX_NAME"
+    rm -f "$LPROJ/$INDEX_NAME" "$LPROJ/$LSM_INDEX_NAME"
     /usr/bin/hiutil \
         -I corespotlight \
         -Caf "$LPROJ/$INDEX_NAME" \
+        -m 3 \
+        -s "$lang" \
+        -l "$lang" \
+        "$LPROJ"
+    /usr/bin/hiutil \
+        -I lsm \
+        -Caf "$LPROJ/$LSM_INDEX_NAME" \
         -m 3 \
         -s "$lang" \
         -l "$lang" \
