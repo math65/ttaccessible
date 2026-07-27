@@ -89,6 +89,57 @@ struct HotkeyBinding: Codable, Equatable {
         return symbols + keyLabel
     }
 
+    // MARK: - Menu key equivalents
+
+    /// Virtual key codes AppKit expresses as a function-key unicode scalar
+    /// rather than a typed character. Anything a layout can type is resolved
+    /// through `KeyCodeResolver` instead, so this covers only the keys that
+    /// type nothing.
+    private static let menuFunctionKeyScalars: [Int: Int] = [
+        122: NSF1FunctionKey, 120: NSF2FunctionKey, 99: NSF3FunctionKey,
+        118: NSF4FunctionKey, 96: NSF5FunctionKey, 97: NSF6FunctionKey,
+        98: NSF7FunctionKey, 100: NSF8FunctionKey, 101: NSF9FunctionKey,
+        109: NSF10FunctionKey, 103: NSF11FunctionKey, 111: NSF12FunctionKey,
+        123: NSLeftArrowFunctionKey, 124: NSRightArrowFunctionKey,
+        125: NSDownArrowFunctionKey, 126: NSUpArrowFunctionKey,
+        115: NSHomeFunctionKey, 119: NSEndFunctionKey,
+        116: NSPageUpFunctionKey, 121: NSPageDownFunctionKey,
+        117: NSDeleteFunctionKey
+    ]
+
+    /// Keys AppKit matches by a plain control character.
+    private static let menuControlCharacters: [Int: String] = [
+        49: " ",         // Space
+        48: "\t",        // Tab
+        36: "\r",        // Return
+        76: "\u{3}",     // Enter
+        53: "\u{1B}",    // Esc
+        51: "\u{8}"      // Delete
+    ]
+
+    /// What a main-menu item must carry to answer this binding, or nil when the
+    /// chord cannot be a menu key equivalent — a pure-modifier chord types
+    /// nothing for AppKit to match, and an exotic key that neither the layout
+    /// nor the tables above can name has no representation either. Callers fall
+    /// back to the global tap in that case, which matches by key code and needs
+    /// no character at all.
+    var menuKeyEquivalent: (characters: String, modifiers: NSEvent.ModifierFlags)? {
+        guard let keyCode else { return nil }
+        if let scalarValue = Self.menuFunctionKeyScalars[keyCode],
+           let scalar = UnicodeScalar(UInt32(scalarValue)) {
+            return (String(Character(scalar)), modifiers)
+        }
+        if let control = Self.menuControlCharacters[keyCode] {
+            return (control, modifiers)
+        }
+        // Key equivalents are declared in lower case; the shift in a chord like
+        // ⌘⇧A lives in the modifier mask, not in the character.
+        // An unnameable key comes back as "Key 105", which is never one character.
+        let typed = KeyCodeResolver.label(forKeyCode: keyCode).lowercased()
+        guard typed.count == 1 else { return nil }
+        return (typed, modifiers)
+    }
+
     // MARK: - Key labels
 
     static let specialKeyLabels: [Int: String] = [

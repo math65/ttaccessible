@@ -74,6 +74,59 @@ final class HotkeyMenuOwnershipTests: XCTestCase {
         XCTAssertFalse(HotkeyMonitor.menu(makeMenu(), carries: "z", modifiers: [.command, .control]))
     }
 
+    // MARK: - Binding -> menu key equivalent
+
+    func testLetterBindingBecomesALowercaseKeyEquivalent() {
+        // The shift in ⌘⇧A belongs in the modifier mask, not in the character —
+        // an uppercase "A" would need ⇧ declared twice and match nothing.
+        let binding = HotkeyBinding.defaultMuteHotkey()
+        let equivalent = binding.menuKeyEquivalent
+        XCTAssertEqual(equivalent?.characters, "a")
+        XCTAssertEqual(equivalent?.modifiers, [.command, .shift])
+    }
+
+    func testFunctionKeyBindingBecomesItsUnicodeScalar() {
+        // keyCode 96 is F5; AppKit expects the scalar, not the string "F5".
+        let binding = HotkeyBinding(keyCode: 96, modifiers: [], keyLabel: "F5")
+        XCTAssertEqual(binding.menuKeyEquivalent?.characters,
+                       String(UnicodeScalar(UInt32(NSF5FunctionKey))!))
+    }
+
+    func testModifierOnlyChordHasNoMenuKeyEquivalent() {
+        // Nothing is typed, so no menu item can carry it — the tap owns it in
+        // every focus state instead.
+        let binding = HotkeyBinding(keyCode: nil, modifiers: [.command, .control], keyLabel: nil)
+        XCTAssertNil(binding.menuKeyEquivalent)
+    }
+
+    func testUnnameableKeyHasNoMenuKeyEquivalent() {
+        // keyCode 105 is F13, which the label tables don't name and no layout
+        // types — it must degrade to "the tap handles it", not to a bogus title.
+        let binding = HotkeyBinding(keyCode: 105, modifiers: [.command], keyLabel: nil)
+        XCTAssertNil(binding.menuKeyEquivalent)
+    }
+
+    func testSpaceBindingBecomesASpaceCharacter() {
+        let binding = HotkeyBinding(keyCode: 49, modifiers: [.option], keyLabel: "Space")
+        XCTAssertEqual(binding.menuKeyEquivalent?.characters, " ")
+        XCTAssertEqual(binding.menuKeyEquivalent?.modifiers, [.option])
+    }
+
+    func testMenuEquivalentRoundTripsThroughTheOwnershipCheck() {
+        // The two halves have to agree: whatever we put on the item must be what
+        // the tap then recognises as menu-owned, or the chord fires twice.
+        let binding = HotkeyBinding(keyCode: 46, modifiers: [.command, .option], keyLabel: "M")
+        guard let equivalent = binding.menuKeyEquivalent else {
+            return XCTFail("⌥⌘M must have a menu key equivalent")
+        }
+        let menu = NSMenu()
+        menu.addItem(withTitle: "Microphone", action: nil, keyEquivalent: equivalent.characters)
+            .keyEquivalentModifierMask = equivalent.modifiers
+        XCTAssertTrue(HotkeyMonitor.menu(menu,
+                                         carries: equivalent.characters.lowercased(),
+                                         modifiers: equivalent.modifiers))
+    }
+
     func testComparableModifiersDropsHardwareOnlyFlags() {
         // An F-key press carries .function and a keypad key .numericPad, neither
         // of which a menu declares — left in, nothing would ever match.
