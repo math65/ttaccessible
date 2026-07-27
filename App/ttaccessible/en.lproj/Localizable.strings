@@ -1052,7 +1052,6 @@
 "help.menu.userGuide" = "tt-Accessible Help";
 "help.menu.viewOnGitHub" = "View Project on GitHub";
 "help.menu.reportIssue" = "Report an Issue…";
-"help.button.accessibilityLabel" = "Open the user guide";
 "toolbar.connect" = "Connect";
 "toolbar.connect.tooltip" = "Connect to the selected server (F2)";
 "toolbar.disconnect" = "Disconnect";

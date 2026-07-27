@@ -1050,7 +1050,6 @@
 "help.menu.userGuide" = "Aide tt-Accessible";
 "help.menu.viewOnGitHub" = "Voir le projet sur GitHub";
 "help.menu.reportIssue" = "Signaler un problème…";
-"help.button.accessibilityLabel" = "Ouvrir le guide de l'utilisateur";
 "toolbar.connect" = "Connexion";
 "toolbar.connect.tooltip" = "Se connecter au serveur sélectionné (F2)";
 "toolbar.disconnect" = "Déconnexion";

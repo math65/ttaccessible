@@ -192,17 +192,18 @@ macOS 26, bundle id `com.apple.helpviewer`; never hard-code a path to the old `H
   French is written natively in **vouvoiement**, never translated from the English page.
 - **Generated bundle**: `Help/ttaccessible.help` is **committed**, so building the app never requires
   pandoc. Regenerate with `./scripts/build-help-book.sh <version> <build>` after editing the sources.
-  The script renders with pandoc, indexes each `.lproj` with `hiutil -I corespotlight -Caf … -a`, and
-  then checks every internal link and every `HelpAnchor` case against the index.
+  The script renders with pandoc, indexes each `.lproj` with `hiutil -I corespotlight -Caf … -a`
+  plus the legacy LSM index, and then checks that no internal link is dead and that every `anchor:`
+  from the front matter really landed in the search index.
 - **Xcode**: the bundle is referenced explicitly in the pbxproj as a folder reference
   (`explicitFileType = folder`, never `wrapper.cfbundle`) inside the *Recovered References* group, and
   copied by the app target's `Resources` phase — same pattern as `Vendor/`. It sits outside the
   file-system synchronized group so its `.lproj` structure is not flattened. **Never add a
   `_CodeSignature` inside the `.help`**: `build.sh` seals it as an ordinary resource.
-- **Code**: `Services/HelpBook.swift` (`HelpAnchor`, `HelpBook.open`, `openForKeyWindow`) plus
-  `AppKit/HelpAnchors.swift`, which maps each window onto its topic. `ttaccessibleApp.swift` uses
-  `CommandGroup(replacing: .help)` so the item title follows the app's language preference rather
-  than the system language.
+- **Code**: `Services/HelpBook.swift` — a single `HelpBook.open()` that shows the book's home page.
+  There is deliberately **no contextual help**: ⌘? always opens the table of contents, whatever
+  window is in front. `ttaccessibleApp.swift` uses `CommandGroup(replacing: .help)` so the item
+  title follows the app's language preference rather than the system language.
 - **Caveat**: the help viewer picks its `.lproj` from the **system** language, which no public API can
   override — a user running the app in French on an English system gets the English guide. Each home
   page therefore carries a link to the other language.

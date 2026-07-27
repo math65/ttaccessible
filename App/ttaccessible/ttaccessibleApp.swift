@@ -47,7 +47,7 @@ struct ttaccessibleApp: App {
             // French UI when the language preference overrides the system.
             CommandGroup(replacing: .help) {
                 Button(L10n.text("help.menu.userGuide")) {
-                    HelpBook.openForKeyWindow()
+                    HelpBook.open()
                 }
                 .keyboardShortcut("?", modifiers: [.command])
 

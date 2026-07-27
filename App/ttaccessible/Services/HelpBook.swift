@@ -3,51 +3,11 @@
 //  ttaccessible
 //
 //  Opens the bundled Apple Help Book (ttaccessible.help) in the system help
-//  viewer. Anchors are declared in the Markdown sources under Help/Source and
-//  indexed by scripts/build-help-book.sh, so every case below must match an
-//  `anchor:` in the front matter or an explicit <a id="…"> in a topic body.
+//  viewer. The guide always opens on its table of contents; navigation from
+//  there is the reader's, not the app's.
 //
 
 import AppKit
-
-/// A topic of the user guide. The raw value is the HTML anchor, except for
-/// `index`, which is the book's home page and is opened through its access path.
-enum HelpAnchor: String, CaseIterable {
-    case index = "help-index"
-    case gettingStarted = "getting-started"
-    case servers = "servers"
-    case mainWindow = "main-window"
-    case channels = "channels"
-    case talking = "talking"
-    case messages = "messages"
-    case mixer = "mixer"
-    case audioSetup = "audio-setup"
-    case recording = "recording"
-    case streaming = "streaming"
-    case users = "users"
-    case administration = "administration"
-    case preferences = "preferences"
-    case soundsAndAnnouncements = "sounds-announcements"
-    case profiles = "profiles"
-    case shortcuts = "shortcuts"
-    case troubleshooting = "troubleshooting"
-
-    // Sub-anchors inside the Preferences topic, one per pane, so a help button
-    // in Preferences lands on the pane the user is actually looking at.
-    case preferencesGeneral = "prefs-general"
-    case preferencesConnection = "prefs-connection"
-    case preferencesBearWare = "prefs-bearware"
-    case preferencesAudio = "prefs-audio"
-    case preferencesSounds = "prefs-sounds"
-    case preferencesAnnouncements = "prefs-announcements"
-    case preferencesRecording = "prefs-recording"
-}
-
-/// A window or view controller that knows which help topic describes it.
-@MainActor
-protocol HelpAnchorProviding: AnyObject {
-    var helpAnchor: HelpAnchor { get }
-}
 
 @MainActor
 enum HelpBook {
@@ -67,45 +27,12 @@ enum HelpBook {
         return FileManager.default.fileExists(atPath: resources.appendingPathComponent(folder).path)
     }
 
-    static func open(_ anchor: HelpAnchor = .index) {
-        guard isAvailable, let bookName else {
+    /// Opens the guide on the page declared by the book's HPDBookAccessPath.
+    static func open() {
+        guard isAvailable, bookName != nil else {
             NSWorkspace.shared.open(URL(string: "https://github.com/math65/ttaccessible")!)
             return
         }
-        if anchor == .index {
-            // The home page carries no anchor (it is excluded from the search
-            // index), so it is reached through the book's access path.
-            NSApp.showHelp(nil)
-        } else {
-            NSHelpManager.shared.openHelpAnchor(anchor.rawValue, inBook: bookName)
-        }
-    }
-
-    /// Opens the topic that describes the frontmost window, falling back to the
-    /// table of contents.
-    static func openForKeyWindow() {
-        guard let window = NSApp.keyWindow ?? NSApp.mainWindow else {
-            open()
-            return
-        }
-
-        var responder: NSResponder? = window.firstResponder
-        while let current = responder {
-            if let provider = current as? HelpAnchorProviding {
-                open(provider.helpAnchor)
-                return
-            }
-            responder = current.nextResponder
-        }
-
-        if let provider = window.windowController as? HelpAnchorProviding {
-            open(provider.helpAnchor)
-            return
-        }
-        if let provider = window.contentViewController as? HelpAnchorProviding {
-            open(provider.helpAnchor)
-            return
-        }
-        open()
+        NSApp.showHelp(nil)
     }
 }

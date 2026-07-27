@@ -236,31 +236,27 @@ for lang in "${LANGS[@]}"; do
     done
 done
 
-# 2. Every case of HelpAnchor must resolve to an indexed anchor, in both
-#    languages — otherwise NSHelpManager silently lands on nothing.
-HELP_BOOK_SWIFT="$ROOT_DIR/App/ttaccessible/Services/HelpBook.swift"
-if [[ -f "$HELP_BOOK_SWIFT" ]]; then
-    # `index` is the home page: it is reached through HPDBookAccessPath, not an anchor.
-    anchors=$(grep -oE '^\s*case [a-zA-Z]+ = "[^"]+"' "$HELP_BOOK_SWIFT" \
-        | sed 's/.*= "//; s/"//' | grep -v '^help-index$')
-    for lang in "${LANGS[@]}"; do
-        indexed=$(/usr/bin/hiutil -I corespotlight -Af \
-            "$BOOK/Contents/Resources/$lang.lproj/$INDEX_NAME")
-        while read -r anchor; do
-            [[ -z "$anchor" ]] && continue
-            if ! grep -qx "$anchor" <<< "$indexed"; then
-                echo "✗ $lang.lproj: HelpAnchor \"$anchor\" is not in the search index" >&2
-                broken=1
-            fi
-        done <<< "$anchors"
-    done
-fi
+# 2. Every anchor declared in the front matter must end up in the search index,
+#    in both languages — a page whose `robots` meta is wrong indexes no anchor
+#    at all, and the topic then answers nothing to a search.
+anchors=$(grep -h '^anchor:' "$SRC_DIR"/en/*.md | sed 's/^anchor:[[:space:]]*//')
+for lang in "${LANGS[@]}"; do
+    indexed=$(/usr/bin/hiutil -I corespotlight -Af \
+        "$BOOK/Contents/Resources/$lang.lproj/$INDEX_NAME")
+    while read -r anchor; do
+        [[ -z "$anchor" ]] && continue
+        if ! grep -qx "$anchor" <<< "$indexed"; then
+            echo "✗ $lang.lproj: anchor \"$anchor\" is not in the search index" >&2
+            broken=1
+        fi
+    done <<< "$anchors"
+done
 
 if [[ $broken -ne 0 ]]; then
     echo "✗ Help book built, but the checks above failed." >&2
     exit 1
 fi
-echo "✓ Links and HelpAnchor cases check out"
+echo "✓ Links and anchors check out"
 
 echo "✓ Built $BOOK (version $MARKETING_VERSION, build $BUILD_NUMBER)"
 echo
