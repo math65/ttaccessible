@@ -49,9 +49,12 @@ final class HotkeyMonitor {
 
     private var binding: HotkeyBinding?
     private var scope: Scope = .local
-    /// When true, the global tap ignores events while the app is frontmost — used
-    /// for the mute chord, whose focused case is handled by the menu shortcut.
-    private var globalOnlyWhenInactive = false
+    /// When true, the global tap defers to the main menu while the app is
+    /// frontmost — but only for a chord the menu actually carries. A menu key
+    /// equivalent is delivered to the focused app whatever the (listen-only) tap
+    /// does, so acting on it here too would double-fire; a chord no menu item
+    /// owns has no other handler, so the tap stays the one that answers it.
+    private var deferToMainMenuWhenActive = false
     private var wantsReleaseEvents = true
 
     private var localMonitor: Any?
@@ -67,13 +70,13 @@ final class HotkeyMonitor {
     func configure(
         binding: HotkeyBinding?,
         scope: Scope,
-        globalOnlyWhenInactive: Bool = false,
+        deferToMainMenuWhenActive: Bool = false,
         wantsReleaseEvents: Bool = true
     ) {
         stop()
         self.binding = binding
         self.scope = scope
-        self.globalOnlyWhenInactive = globalOnlyWhenInactive
+        self.deferToMainMenuWhenActive = deferToMainMenuWhenActive
         self.wantsReleaseEvents = wantsReleaseEvents
 
         guard let binding, binding.isValid else { return }
@@ -166,16 +169,18 @@ final class HotkeyMonitor {
             return
         }
         guard let binding else { return }
-        // The inactive-only guard (mute chord: the in-app menu shortcut owns
-        // the focused case) suppresses PRESSES only. Releases always run —
+        // The defer-to-menu guard suppresses PRESSES only. Releases always run —
         // if the app becomes active between down and up, eating the keyUp
         // would leave isPressed stuck and silently swallow the next toggle.
-        let suppressPress = globalOnlyWhenInactive && NSApp.isActive
+        // Evaluated only once the chord has already matched, so the menu walk
+        // never runs on ordinary typing.
+        let menuOwnsPress = { self.deferToMainMenuWhenActive && NSApp.isActive && Self.mainMenuOwns(event) }
 
         let mods = Self.modifierFlags(from: event.flags)
         if binding.isModifierOnly {
             let chordActive = mods == binding.modifiers
-            if chordActive, suppressPress { return }
+            // A pure-modifier chord can't be a menu key equivalent, so the menu
+            // never owns it and there is nothing to defer to.
             setPressed(chordActive)
             return
         }
@@ -183,7 +188,7 @@ final class HotkeyMonitor {
         switch type {
         case .keyDown:
             let autorepeat = event.getIntegerValueField(.keyboardEventAutorepeat) != 0
-            guard keyCode == binding.keyCode, mods == binding.modifiers, suppressPress == false else { return }
+            guard keyCode == binding.keyCode, mods == binding.modifiers, menuOwnsPress() == false else { return }
             if autorepeat == false { setPressed(true) }
         case .keyUp:
             guard keyCode == binding.keyCode else { return }
@@ -287,5 +292,45 @@ final class HotkeyMonitor {
         if cg.contains(.maskAlternate) { flags.insert(.option) }
         if cg.contains(.maskShift) { flags.insert(.shift) }
         return flags
+    }
+
+    /// True when a main-menu item carries this exact key equivalent. AppKit
+    /// delivers it to the focused app regardless of our listen-only tap, so the
+    /// menu is the handler and the tap must not act on top of it. Compares what
+    /// AppKit itself compares — `charactersIgnoringModifiers` against
+    /// `keyEquivalent` — so letters, punctuation and F-keys all match by the
+    /// same rule.
+    private static func mainMenuOwns(_ event: CGEvent) -> Bool {
+        guard let mainMenu = NSApp.mainMenu,
+              let nsEvent = NSEvent(cgEvent: event),
+              let characters = nsEvent.charactersIgnoringModifiers?.lowercased(),
+              characters.isEmpty == false else { return false }
+        return menu(mainMenu, carries: characters, modifiers: comparableModifiers(nsEvent.modifierFlags))
+    }
+
+    /// Menu key equivalents are declared without the layout/hardware-only flags,
+    /// so both sides are reduced to the same set before comparing.
+    static func comparableModifiers(_ flags: NSEvent.ModifierFlags) -> NSEvent.ModifierFlags {
+        flags.intersection(.deviceIndependentFlagsMask)
+            .subtracting([.capsLock, .numericPad, .function])
+    }
+
+    static func menu(
+        _ menu: NSMenu,
+        carries characters: String,
+        modifiers: NSEvent.ModifierFlags
+    ) -> Bool {
+        for item in menu.items {
+            if item.keyEquivalent.isEmpty == false,
+               item.keyEquivalent.lowercased() == characters,
+               comparableModifiers(item.keyEquivalentModifierMask) == modifiers {
+                return true
+            }
+            if let submenu = item.submenu,
+               self.menu(submenu, carries: characters, modifiers: modifiers) {
+                return true
+            }
+        }
+        return false
     }
 }

@@ -241,11 +241,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // stays muted forever in push-to-talk mode.
         pushToTalkMonitor.onPress = { [weak self] in self?.handlePushToTalkPress() }
         pushToTalkMonitor.onRelease = { [weak self] in self?.handlePushToTalkRelease() }
-        // The global ⌘⇧A tap fires only while another app is focused (the menu
-        // shortcut covers the focused case), so it mirrors the menu action —
-        // without restoring/focusing our window, which would steal focus.
+        // Mirrors the menu action without restoring/focusing our window, which
+        // would steal focus. The tap defers to the menu for a chord the menu
+        // carries (⌘⇧A by default), and answers any other binding itself,
+        // focused or not. Requires a channel for the same reason the menu item
+        // is disabled without one: transmission has no meaning outside a
+        // channel, and the SDK path would fail with "not in a channel" and pop
+        // an alert over whatever app the user is actually in.
         muteHotkeyMonitor.onPress = { [weak self] in
-            guard let self, self.menuState.mode == .connectedServer else { return }
+            guard let self,
+                  self.menuState.mode == .connectedServer,
+                  self.menuState.isInChannel else { return }
             self.connectedServerViewController?.performToggleMicrophoneShortcut(announceStatus: true)
         }
 
@@ -301,7 +307,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             muteHotkeyMonitor.configure(
                 binding: prefs.muteHotkeyBinding ?? HotkeyBinding.defaultMuteHotkey(),
                 scope: .global,
-                globalOnlyWhenInactive: true,
+                deferToMainMenuWhenActive: true,
                 wantsReleaseEvents: false
             )
         } else {
