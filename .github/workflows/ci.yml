@@ -1,0 +1,88 @@
+name: ci
+
+# Build the app and run the unit-test suite on every pull request, so a
+# contributor sees a red or green result without owning a Mac set up for this
+# project. Signing and notarization deliberately stay out: a fork PR has no
+# access to repository secrets, and build.sh already owns the release path.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A new push to the same branch supersedes the run in flight.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & test (macOS)
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      # The dylib is git-ignored (BearWare redistribution), so it is fetched
+      # per runner. Keyed on the SDK version and on both patchers, so a version
+      # bump or a change in either patch invalidates the cache.
+      - name: Cache TeamTalk SDK
+        id: sdk-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            Vendor/TeamTalk/libTeamTalk5.dylib
+            Vendor/TeamTalk/TeamTalk.h
+          key: ttsdk-${{ runner.os }}-${{ hashFiles('scripts/download-sdk.sh', 'scripts/patch-sdk-portaudio.py', 'scripts/patch-sdk-norecording.py') }}
+
+      - name: Install p7zip
+        if: steps.sdk-cache.outputs.cache-hit != 'true'
+        run: brew install p7zip
+
+      # download-sdk.sh prompts before overwriting an existing dylib, and a
+      # prompt with no stdin would abort under `set -e`. On a cache hit the
+      # files are already in place, so the script is simply skipped — the
+      # "Patch TeamTalk SDK" build phases re-verify the patches either way.
+      - name: Download TeamTalk SDK
+        if: steps.sdk-cache.outputs.cache-hit != 'true'
+        run: ./scripts/download-sdk.sh
+
+      - name: Build
+        run: |
+          xcodebuild build \
+            -project App/ttaccessible.xcodeproj \
+            -scheme ttaccessible \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            -quiet
+        # Ad-hoc signing rather than no signing at all: the app is sandboxed,
+        # and an unsigned bundle cannot carry entitlements or launch on Apple
+        # Silicon — which the test host has to do.
+
+      # The test target runs against a TEST_HOST, so this actually launches
+      # tt-Accessible on a machine with no audio hardware.
+      - name: Test
+        run: |
+          xcodebuild test \
+            -project App/ttaccessible.xcodeproj \
+            -scheme ttaccessible \
+            -destination 'platform=macOS' \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER=""
