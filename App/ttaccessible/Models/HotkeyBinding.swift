@@ -100,6 +100,9 @@ struct HotkeyBinding: Codable, Equatable {
         118: NSF4FunctionKey, 96: NSF5FunctionKey, 97: NSF6FunctionKey,
         98: NSF7FunctionKey, 100: NSF8FunctionKey, 101: NSF9FunctionKey,
         109: NSF10FunctionKey, 103: NSF11FunctionKey, 111: NSF12FunctionKey,
+        105: NSF13FunctionKey, 107: NSF14FunctionKey, 113: NSF15FunctionKey,
+        106: NSF16FunctionKey, 64: NSF17FunctionKey, 79: NSF18FunctionKey,
+        80: NSF19FunctionKey, 90: NSF20FunctionKey,
         123: NSLeftArrowFunctionKey, 124: NSRightArrowFunctionKey,
         125: NSDownArrowFunctionKey, 126: NSUpArrowFunctionKey,
         115: NSHomeFunctionKey, 119: NSEndFunctionKey,
@@ -159,7 +162,12 @@ struct HotkeyBinding: Codable, Equatable {
         116: "Page Up",
         121: "Page Down",
         122: "F1", 120: "F2", 99: "F3", 118: "F4", 96: "F5", 97: "F6",
-        98: "F7", 100: "F8", 101: "F9", 109: "F10", 103: "F11", 111: "F12"
+        98: "F7", 100: "F8", 101: "F9", 109: "F10", 103: "F11", 111: "F12",
+        // F13–F20 type nothing and carry no system function, which makes them
+        // the one genuinely safe global binding — they were showing as
+        // "Key 105" because the table stopped at F12.
+        105: "F13", 107: "F14", 113: "F15", 106: "F16",
+        64: "F17", 79: "F18", 80: "F19", 90: "F20"
     ]
 
     private static func keyLabel(for event: NSEvent) -> String {

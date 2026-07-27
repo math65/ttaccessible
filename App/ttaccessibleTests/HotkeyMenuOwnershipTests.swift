@@ -99,10 +99,19 @@ final class HotkeyMenuOwnershipTests: XCTestCase {
         XCTAssertNil(binding.menuKeyEquivalent)
     }
 
+    func testF13IsNamedAndHasAMenuKeyEquivalent() {
+        // F13–F19 are the one safe global binding (they type nothing), so they
+        // have to be nameable in the recorder and usable as a menu shortcut.
+        XCTAssertEqual(KeyCodeResolver.label(forKeyCode: 105), "F13")
+        let binding = HotkeyBinding(keyCode: 105, modifiers: [], keyLabel: "F13")
+        XCTAssertEqual(binding.menuKeyEquivalent?.characters,
+                       String(UnicodeScalar(UInt32(NSF13FunctionKey))!))
+    }
+
     func testUnnameableKeyHasNoMenuKeyEquivalent() {
-        // keyCode 105 is F13, which the label tables don't name and no layout
-        // types — it must degrade to "the tap handles it", not to a bogus title.
-        let binding = HotkeyBinding(keyCode: 105, modifiers: [.command], keyLabel: nil)
+        // A key no table names and no layout types must degrade to "the tap
+        // handles it", not to a bogus menu title.
+        let binding = HotkeyBinding(keyCode: 200, modifiers: [.command], keyLabel: nil)
         XCTAssertNil(binding.menuKeyEquivalent)
     }
 
