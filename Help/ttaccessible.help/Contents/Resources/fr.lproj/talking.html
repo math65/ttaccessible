@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prendre la parole</title>
+<meta name="description" content="Activer le micro, utiliser le push-to-talk, régler les volumes et s'entendre soi-même.">
+<meta name="keywords" content="micro, microphone, push-to-talk, PTT, sourdine, volume principal, retour audio, état audio">
+<meta name="robots" content="index, anchors">
+<link rel="stylesheet" href="../css/help.css">
+</head>
+<body>
+<nav class="crumb"><a href="index.html">Sommaire</a></nav>
+<a id="talking"></a>
+<h1>Prendre la parole</h1>
+<h2 id="activer-le-micro">Activer le micro</h2>
+<p><strong>Maj-Commande-A</strong> active ou coupe le micro. L'application confirme par <em>Micro activé.</em> ou <em>Micro coupé.</em>, et le bouton de la barre d'outils indique son état.</p>
+<p>Il faut d'abord être dans un canal : ailleurs, l'application répond <em>Vous devez rejoindre un canal avant d'activer le micro.</em></p>
+<h2 id="les-modes-du-microphone">Les modes du microphone</h2>
+<p><a href="preferences.html#prefs-audio">Préférences → Audio</a> propose trois façons de travailler, sous <strong>Mode du microphone</strong> :</p>
+<ul>
+<li><strong>Toujours actif</strong> — une fois activé, le micro reste ouvert. C'est le réglage par défaut.</li>
+<li><strong>Push-to-talk (maintenez une touche pour parler)</strong> — vous ne transmettez que pendant que vous maintenez une touche.</li>
+<li><strong>Les deux (coupure avec push-to-talk)</strong> — Maj-Commande-A ouvre une transmission continue, et maintenir la touche de push-to-talk transmet dans tous les cas. La relâcher recoupe le son, jusqu'à ce que vous appuyiez de nouveau sur Maj-Commande-A ou que vous mainteniez la touche.</li>
+</ul>
+<p>Pour le push-to-talk, il faut enregistrer une touche : activez <strong>Touche de push-to-talk</strong>, puis appuyez sur la touche à maintenir. N'importe quelle touche convient, même une seule ; une combinaison de touches de modification seule — Commande-Contrôle, par exemple — fonctionne aussi. La touche Supprimer efface le réglage. Tant qu'aucune touche n'est définie, l'application prévient que le push-to-talk est inactif et que le micro reste ouvert comme en mode « toujours actif ».</p>
+<p>Deux options complètent le tableau :</p>
+<ul>
+<li><strong>Jouer un son au début et à la fin de la transmission</strong> — activé par défaut.</li>
+<li><strong>Le push-to-talk fonctionne même quand une autre app est au premier plan</strong> — activé par défaut. Un réglage équivalent existe pour le raccourci d'activation du micro, désactivé par défaut. Tous deux reposent sur l'autorisation « Surveillance des saisies », que macOS demande la première fois. Comme l'application fonctionne en bac à sable, la touche est détectée mais atteint quand même l'application au premier plan : préférez donc une combinaison de touches de modification seules, ou une touche de fonction de F13 à F19 — ni l'une ni l'autre n'écrit quoi que ce soit là où vous travaillez.</li>
+</ul>
+<h2 id="les-volumes">Les volumes</h2>
+<p>Trois curseurs sont posés dans la fenêtre principale, chacun avec l'action VoiceOver <em>Réinitialiser à 50 %</em> :</p>
+<ul>
+<li><strong>Volume d'entrée</strong> — le niveau auquel votre micro est envoyé.</li>
+<li><strong>Volume de sortie</strong> — le niveau auquel vous entendez tout le monde.</li>
+<li><strong>Volume des effets sonores</strong> — le niveau des sons de notification.</li>
+</ul>
+<p><strong>Commande-M</strong> coupe et rétablit le volume principal, en annonçant <em>Volume principal coupé</em> ou <em>Volume principal rétabli</em>.</p>
+<p>Chaque personne se règle par ailleurs séparément : voir <a href="users.html">Les personnes que vous entendez</a> et <a href="mixer.html">Le mixeur du canal</a>.</p>
+<h2 id="sentendre-soi-même">S'entendre soi-même</h2>
+<p><strong>Maj-Commande-H</strong> active et désactive le retour audio : votre propre voix vous revient par le canal. C'est le moyen le plus rapide de vérifier que votre micro, votre gain et votre traitement sont bien réglés. L'application annonce <em>Retour audio activé</em> ou <em>Retour audio désactivé</em>.</p>
+<p>Pour un essai avant même de vous connecter, utilisez le bouton <strong>Aperçu audio</strong> de <a href="preferences.html#prefs-audio">Préférences → Audio</a>.</p>
+<h2 id="savoir-où-vous-en-êtes">Savoir où vous en êtes</h2>
+<p><strong>F9</strong> énonce l'état audio : sortie active ou non, micro prêt ou en train de transmettre, enregistrement en cours. C'est la façon la plus directe de répondre à la question « est-ce que je suis vraiment à l'antenne ? » sans quitter ce que vous faites.</p>
+<p>Si l'application annonce <em>Transmission bloquée par l'opérateur du canal</em>, un opérateur vous a retiré le droit de parler dans ce canal.</p>
+<hr>
+<p class="footer"><a href="index.html">Sommaire</a></p>
+</body>
+</html>

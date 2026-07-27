@@ -26,6 +26,10 @@ open ~/Library/Developer/Xcode/DerivedData/ttaccessible-*/Build/Products/Debug/t
 # Beta-channel release: appcast item tagged <sparkle:channel>beta</sparkle:channel>
 # (only delivered to users who enabled "Include beta versions") + GitHub prerelease
 ./build.sh --release --beta
+
+# Regenerate the Apple Help Book after editing Help/Source/**.md
+./scripts/build-help-book.sh <marketing-version> <build-number>
+./scripts/build-help-book.sh --dev     # timestamp version, defeats the helpd cache
 ```
 
 `build.sh` re-signs the Xcode-built .app with the `Developer ID Application` cert (the project itself still builds with Apple Development for convenience). Requires the notarytool keychain profile `ttaccessible-notary` to be stored (see notarization setup memory).
@@ -176,6 +180,39 @@ L10n.format("key", arg1, ...) // String(format:) wrapper
 ```
 
 String files: `App/ttaccessible/en.lproj/Localizable.strings`, `App/ttaccessible/fr.lproj/Localizable.strings`.
+
+### Help Book (user guide)
+
+The Help menu (`⌘?`) opens an **Apple Help Book** shown in the system help viewer — `Tips.app` on
+macOS 26, bundle id `com.apple.helpviewer`; never hard-code a path to the old `Help Viewer.app`.
+
+- **Sources**: Markdown in `Help/Source/{en,fr}/`, one file per topic, with a YAML front matter
+  (`title`, `description`, `keywords`, `anchor`). Both languages must expose the **same file names**
+  — the script fails otherwise, because the cross-language links and `HelpAnchor` depend on it.
+  French is written natively in **vouvoiement**, never translated from the English page.
+- **Generated bundle**: `Help/ttaccessible.help` is **committed**, so building the app never requires
+  pandoc. Regenerate with `./scripts/build-help-book.sh <version> <build>` after editing the sources.
+  The script renders with pandoc, indexes each `.lproj` with `hiutil -I corespotlight -Caf … -a`, and
+  then checks every internal link and every `HelpAnchor` case against the index.
+- **Xcode**: the bundle is referenced explicitly in the pbxproj as a folder reference
+  (`explicitFileType = folder`, never `wrapper.cfbundle`) inside the *Recovered References* group, and
+  copied by the app target's `Resources` phase — same pattern as `Vendor/`. It sits outside the
+  file-system synchronized group so its `.lproj` structure is not flattened. **Never add a
+  `_CodeSignature` inside the `.help`**: `build.sh` seals it as an ordinary resource.
+- **Code**: `Services/HelpBook.swift` (`HelpAnchor`, `HelpBook.open`, `openForKeyWindow`) plus
+  `AppKit/HelpAnchors.swift`, which maps each window onto its topic. `ttaccessibleApp.swift` uses
+  `CommandGroup(replacing: .help)` so the item title follows the app's language preference rather
+  than the system language.
+- **Caveat**: the help viewer picks its `.lproj` from the **system** language, which no public API can
+  override — a user running the app in French on an English system gets the English guide. Each home
+  page therefore carries a link to the other language.
+- **helpd cache**: keyed on the help bundle's `CFBundleShortVersionString`, and there are **two**
+  caches — `~/Library/Caches/com.apple.helpd/Generated/<id>*<version>` and a full private COPY of
+  the book under `~/Library/Group Containers/group.com.apple.helpviewer.content/Library/Caches/`.
+  Same version + changed content ⇒ the viewer serves the old pages. Bump the version on every
+  content change, use `--dev` while writing, and purge with **`sudo hiutil -P`** — deleting those
+  directories by hand leaves helpd in a state where every topic answers *"The selected content is
+  currently unavailable"* until `hiutil -P` is run.
 
 ### App Sandbox
 

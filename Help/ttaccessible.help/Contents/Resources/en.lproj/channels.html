@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Channels</title>
+<meta name="description" content="Join and leave channels, create or edit them, set the audio codec, and exchange files.">
+<meta name="keywords" content="channel, join, leave, create, edit, delete, password, codec, Opus, files, upload, download">
+<meta name="robots" content="index, anchors">
+<link rel="stylesheet" href="../css/help.css">
+</head>
+<body>
+<nav class="crumb"><a href="index.html">Table of contents</a></nav>
+<a id="channels"></a>
+<h1>Channels</h1>
+<h2 id="joining-and-leaving">Joining and leaving</h2>
+<ul>
+<li><strong>Command-J</strong> joins the channel selected in the tree; <strong>Return</strong> on the row does the same.</li>
+<li><strong>Command-L</strong> leaves the channel you are in.</li>
+</ul>
+<p>The app confirms out loud — <em>Joined channel: …</em> or <em>Left channel.</em> — and the session history keeps a record.</p>
+<p>If the channel is protected, the app asks for its password. Once you have entered the right one it is saved, so the next visit is silent. <strong>Forget Saved Password</strong>, in the tree's context menu, clears it again.</p>
+<p>Two options in <a href="preferences.html#prefs-connection">Preferences → Connection</a> automate this: <em>Automatically join the main channel on connect</em> and <em>Automatically rejoin the last channel after reconnecting</em>. A saved server can also carry a <strong>Channel to join</strong> of its own.</p>
+<h2 id="creating-and-editing-a-channel">Creating and editing a channel</h2>
+<table>
+<thead>
+<tr>
+<th>Shortcut</th>
+<th>Command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F7</td>
+<td>Create Channel</td>
+</tr>
+<tr>
+<td>Shift-F7</td>
+<td>Edit Channel</td>
+</tr>
+<tr>
+<td>F8</td>
+<td>Delete Channel</td>
+</tr>
+</tbody>
+</table>
+<p>Deleting is permanent: <em>The channel and all its subchannels will be deleted.</em></p>
+<p>The channel form contains:</p>
+<ul>
+<li><strong>Channel name</strong> and <strong>Topic</strong>.</li>
+<li><strong>Password</strong> — leave empty for an open channel.</li>
+<li><strong>Maximum users</strong>.</li>
+<li><strong>Disk quota for files</strong>, in KB, MB or GB. A quota of 0 means only administrators can upload.</li>
+<li><strong>Permanent channel</strong> — the channel survives when the last person leaves.</li>
+<li><strong>Solo transmit (one speaker at a time)</strong>.</li>
+<li><strong>Disable voice activation (push-to-talk only)</strong>.</li>
+<li><strong>No audio recording</strong> — see <a href="recording.html">Recording</a>.</li>
+<li><strong>Join channel after creation</strong>, when creating.</li>
+</ul>
+<h3 id="audio-codec">Audio codec</h3>
+<p>The <strong>Audio Codec</strong> section configures the Opus encoder used by everyone in the channel:</p>
+<ul>
+<li><strong>Audio channels</strong> — Mono or Stereo.</li>
+<li><strong>Sample rate</strong>.</li>
+<li><strong>Bitrate (kbps)</strong> — higher means better quality and more bandwidth.</li>
+<li><strong>Application mode</strong> — <strong>VoIP</strong> for speech, <strong>Music</strong> for music.</li>
+</ul>
+<p>Settings that the form does not show are preserved as they were when you edit an existing channel.</p>
+<h2 id="channel-files">Channel files</h2>
+<p><strong>Server → Channel Files</strong> (<strong>Shift-Command-F</strong>) opens the file list of the channel, with the <strong>Name</strong>, <strong>Size</strong> and <strong>Uploaded by</strong> of each file.</p>
+<ul>
+<li><strong>Upload…</strong> sends a file — also available as <strong>Server → Upload a File…</strong> (<strong>Shift-F5</strong>).</li>
+<li><strong>Download</strong> saves the selected file. <strong>Return</strong> does the same.</li>
+<li><strong>Delete</strong> removes it from the channel, after confirmation. The <strong>Delete</strong> key works too.</li>
+</ul>
+<p>Transfers report their progress and announce <em>Upload complete</em> or <em>Download complete</em> when they finish. If the channel has no room left, the app reports <em>This channel does not have enough storage.</em></p>
+<p>Files added or removed by other people appear in the session history and can be announced.</p>
+<hr>
+<p class="footer"><a href="index.html">Table of contents</a></p>
+</body>
+</html>

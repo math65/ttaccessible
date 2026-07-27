@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sounds and announcements</title>
+<meta name="description" content="Choose a sound pack, build your own, and decide what the app says out loud in the foreground and in the background.">
+<meta name="keywords" content="sounds, sound pack, notification, announcement, VoiceOver, text to speech, background">
+<meta name="robots" content="index, anchors">
+<link rel="stylesheet" href="../css/help.css">
+</head>
+<body>
+<nav class="crumb"><a href="index.html">Table of contents</a></nav>
+<a id="sounds-announcements"></a>
+<h1>Sounds and announcements</h1>
+<p>tt-Accessible tells you what happens in two ways: short sounds, and spoken announcements. Both are configured event by event.</p>
+<h2 id="sound-packs">Sound packs</h2>
+<p>Three packs are built in — <strong>Default</strong>, <strong>Majorly-G</strong> and <strong>Old</strong> — and are chosen with <strong>Sound pack</strong> in <a href="preferences.html#prefs-sounds">Preferences → Sounds</a>. <strong>Enable sound notifications</strong> turns every sound off in one move.</p>
+<p>To build your own:</p>
+<ol type="1">
+<li><strong>Required Files...</strong> lists every file name the app looks for and the event it is used for. Prepare a folder of WAV files with those names. Any file you leave out falls back to the Default pack.</li>
+<li><strong>New Pack...</strong> imports that folder. Its name becomes the name of the pack.</li>
+<li>Once your pack is selected, <strong>Edit selected pack</strong> appears: each event shows whether it is <strong>Custom</strong> or <strong>Default</strong>, with <strong>Choose...</strong> to point it at another file and <strong>Reset</strong> to go back.</li>
+<li><strong>Reveal Packs Folder</strong> opens the folder where your packs are stored, and <strong>Delete</strong> removes the selected one. Deleting a custom pack also deletes it from this Mac.</li>
+</ol>
+<p>The volume of these sounds follows the <strong>Sound effects volume</strong> slider of the main window.</p>
+<h2 id="the-twenty-six-sound-events">The twenty-six sound events</h2>
+<p>Each of these can be turned off on its own:</p>
+<table>
+<tbody>
+<tr>
+<td>User joined channel</td>
+<td>User left channel</td>
+</tr>
+<tr>
+<td>Private message received</td>
+<td>Private message sent</td>
+</tr>
+<tr>
+<td>Channel message received</td>
+<td>Channel message sent</td>
+</tr>
+<tr>
+<td>Connection lost</td>
+<td>Broadcast message</td>
+</tr>
+<tr>
+<td>User logged in</td>
+<td>User logged out</td>
+</tr>
+<tr>
+<td>File added or removed</td>
+<td>File transfer complete</td>
+</tr>
+<tr>
+<td>Question mode</td>
+<td>Hotkey pressed</td>
+</tr>
+<tr>
+<td>Voice activation on</td>
+<td>Voice activation off</td>
+</tr>
+<tr>
+<td>Mute all</td>
+<td>Unmute all</td>
+</tr>
+<tr>
+<td>Intercept started</td>
+<td>Intercept ended</td>
+</tr>
+<tr>
+<td>Transmit queue start</td>
+<td>Transmit queue stop</td>
+</tr>
+<tr>
+<td>VOX enabled</td>
+<td>VOX disabled</td>
+</tr>
+<tr>
+<td>Microphone activated</td>
+<td>Microphone deactivated</td>
+</tr>
+</tbody>
+</table>
+<h2 id="spoken-announcements">Spoken announcements</h2>
+<p><a href="preferences.html#prefs-announcements">Preferences → Announcements</a> separates two situations.</p>
+<h3 id="while-tt-accessible-is-in-front">While tt-Accessible is in front</h3>
+<p><strong>Event announcements</strong> covers what is spoken through VoiceOver:</p>
+<ul>
+<li><strong>Announce channel messages</strong>, <strong>Announce private messages</strong> and <strong>Announce broadcast messages</strong> — all on by default.</li>
+<li><strong>Announce system history</strong>, a list of twenty events you can enable or disable one by one, with <strong>Enable all</strong> and <strong>Disable all</strong>. They are grouped as <strong>Connection</strong> (connected, disconnected, connection lost), <strong>Own channel</strong> (joined, left), <strong>User presence</strong> (logged in and out, joined and left a channel), <strong>Moderation</strong> (kicked from the server or the channel, transmission blocked), <strong>Status</strong> (auto-away on and off), <strong>Subscriptions</strong> (subscription and intercept changes), <strong>Files</strong> (added, removed) and <strong>Media streaming</strong> (started, finished).</li>
+</ul>
+<p>Turning an event off only silences the announcement — the entry still appears in the session history.</p>
+<h3 id="while-another-app-is-in-front">While another app is in front</h3>
+<p><strong>Background message handling</strong> decides how you are told when tt-Accessible is not frontmost:</p>
+<ul>
+<li><strong>System notification</strong> — a standard macOS notification. This is the default.</li>
+<li><strong>macOS text to speech</strong> — the app speaks the message itself, with the <strong>Voice</strong>, <strong>Speech rate</strong> and <strong>Volume</strong> set below. <strong>Test voice</strong> tries the current settings.</li>
+<li><strong>VoiceOver via AppleScript</strong> — VoiceOver announces the message.</li>
+</ul>
+<p><strong>Use the same mode for all event types</strong> is on by default and applies one mode to everything. Turn it off to choose a different mode for private messages, channel messages, broadcast messages and TeamTalk history — for example a spoken alert for private messages and a silent notification for the rest.</p>
+<hr>
+<p class="footer"><a href="index.html">Table of contents</a></p>
+</body>
+</html>

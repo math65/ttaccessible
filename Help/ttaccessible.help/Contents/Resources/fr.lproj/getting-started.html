@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Premiers pas</title>
+<meta name="description" content="Installer tt-Accessible, choisir sa langue, se connecter pour la première fois et garder l'application à jour.">
+<meta name="keywords" content="installation, premier lancement, langue, autorisation micro, mise à jour, Sparkle, bêta">
+<meta name="robots" content="index, anchors">
+<link rel="stylesheet" href="../css/help.css">
+</head>
+<body>
+<nav class="crumb"><a href="index.html">Sommaire</a></nav>
+<a id="getting-started"></a>
+<h1>Premiers pas</h1>
+<h2 id="ce-quil-vous-faut">Ce qu'il vous faut</h2>
+<ul>
+<li><strong>macOS 12.0 (Monterey) ou une version plus récente.</strong> L'application est un binaire universel : elle tourne nativement sur les Mac Apple silicon comme sur les Mac Intel.</li>
+<li><strong>Un serveur TeamTalk 5</strong>, dont on vous a donné les coordonnées, ou bien un fichier <code>.tt</code> ou un lien <code>tt://</code> que quelqu'un vous a transmis.</li>
+<li><strong>Un micro</strong> si vous comptez parler. Pour écouter, il n'est pas nécessaire.</li>
+</ul>
+<p>Certaines fonctions demandent un système plus récent : à partir de macOS 14.2, l'annulation d'écho capte l'ensemble du son du Mac, et la diffusion du son d'une application ou de VoiceOver réclame elle aussi un macOS récent (voir <a href="streaming.html">Diffuser du son</a>).</p>
+<h2 id="installation">Installation</h2>
+<ol type="1">
+<li>Téléchargez la dernière archive depuis la page des versions du projet.</li>
+<li>Décompressez-la, puis glissez <strong>tt-Accessible</strong> dans votre dossier Applications.</li>
+<li>Ouvrez l'application. Le premier lancement peut prendre quelques instants, le temps que macOS vérifie le logiciel.</li>
+</ol>
+<h2 id="au-premier-lancement">Au premier lancement</h2>
+<p>L'application vous demande <strong>Choisissez votre langue</strong> : anglais ou français. Vous pourrez revenir sur ce choix dans <a href="preferences.html#prefs-general">Préférences → Général</a> ; il faut alors relancer l'application pour que le changement s'applique partout.</p>
+<p>La première fois que vous activez le micro, macOS demande l'autorisation de l'utiliser. Si vous refusez, l'application signale que <em>L'accès au micro a été refusé par macOS.</em> et il faut alors l'accorder dans Réglages Système → Confidentialité et sécurité → Microphone.</p>
+<h2 id="se-connecter-pour-la-première-fois">Se connecter pour la première fois</h2>
+<p>La fenêtre qui s'ouvre au lancement s'appelle <strong>Serveurs TeamTalk</strong>. Elle est vide tant que vous n'avez pas ajouté de serveur :</p>
+<ul>
+<li><strong>Commande-N</strong> pour saisir vous-même les coordonnées, ou</li>
+<li><strong>Serveur → Importer les serveurs TeamTalk…</strong> (Maj-Commande-I) si vous disposez d'un fichier de configuration, d'un fichier <code>.tt</code> ou d'un lien <code>tt://</code>.</li>
+</ul>
+<p>Sélectionnez ensuite le serveur dans la liste et appuyez sur <strong>Entrée</strong> ou sur <strong>F2</strong>.</p>
+<p>Tout ceci est détaillé dans <a href="servers.html">Les serveurs</a>.</p>
+<h2 id="rester-à-jour">Rester à jour</h2>
+<p>tt-Accessible vérifie les mises à jour de lui-même et vous propose de les installer.</p>
+<ul>
+<li><strong>tt-Accessible → Vérifier les mises à jour…</strong> lance une vérification immédiate.</li>
+<li>Dans <a href="preferences.html#prefs-general">Préférences → Général</a>, la section <strong>Mises à jour</strong> propose <strong>Vérifier les mises à jour automatiquement</strong> (activé par défaut) et <strong>Inclure les versions bêta</strong> (désactivé par défaut). Les versions bêta peuvent contenir des bugs ; laissez l'option désactivée pour ne recevoir que les versions stables.</li>
+</ul>
+<h2 id="trouver-de-laide">Trouver de l'aide</h2>
+<p>Le menu <strong>Aide</strong> propose également <strong>Voir le projet sur GitHub</strong>, <strong>Signaler un problème…</strong> et, quand la version le permet, <strong>Contacter le développeur…</strong> — un formulaire qui envoie directement un message au développeur, avec le journal audio en pièce jointe si vous le souhaitez. Voir <a href="troubleshooting.html">En cas de problème</a>.</p>
+<hr>
+<p class="footer"><a href="index.html">Sommaire</a></p>
+</body>
+</html>

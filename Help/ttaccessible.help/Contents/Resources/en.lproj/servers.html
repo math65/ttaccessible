@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Servers</title>
+<meta name="description" content="Add, edit, sort, import and export TeamTalk servers, and sign in with a BearWare account.">
+<meta name="keywords" content="server, saved servers, import, export, tt file, tt link, BearWare, web login, connect">
+<meta name="robots" content="index, anchors">
+<link rel="stylesheet" href="../css/help.css">
+</head>
+<body>
+<nav class="crumb"><a href="index.html">Table of contents</a></nav>
+<a id="servers"></a>
+<h1>Servers</h1>
+<p>The <strong>TeamTalk Servers</strong> window is where every session begins. It lists your saved servers with their <strong>Name</strong>, <strong>Host</strong>, <strong>TCP</strong> and <strong>UDP</strong> ports, and whether the connection is <strong>Secure</strong>.</p>
+<p>The window itself reminds you of the essentials: <em>Return or F2 to connect, Command-N to add, Command-E to edit, Delete to remove.</em></p>
+<h2 id="connecting">Connecting</h2>
+<p>Select a server with the arrow keys and press <strong>Return</strong> or <strong>F2</strong>. The same command appears as <strong>Server → Connect</strong>, and as the <strong>Connect</strong> button in the toolbar.</p>
+<p>Once connected, <strong>F2</strong> becomes <strong>Disconnect</strong>.</p>
+<p>If the server refuses your credentials, the app offers <strong>Edit Credentials…</strong> so you can correct the username or password and try again without retyping everything else.</p>
+<h2 id="adding-a-server-by-hand">Adding a server by hand</h2>
+<p>Press <strong>Command-N</strong>, or choose <strong>Server → New Server</strong>. The form asks for:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Name</td>
+<td>How the server appears in your list</td>
+</tr>
+<tr>
+<td>Host</td>
+<td>The server address</td>
+</tr>
+<tr>
+<td>TCP Port / UDP Port</td>
+<td>The server's ports</td>
+</tr>
+<tr>
+<td>Encrypted connection</td>
+<td>Turn on if the server requires encryption</td>
+</tr>
+<tr>
+<td>Nickname</td>
+<td>The name others see. Leave empty to use your default nickname</td>
+</tr>
+<tr>
+<td>Username / Password</td>
+<td>Your account on that server. Leave empty for a guest login</td>
+</tr>
+<tr>
+<td>Use BearWare web login</td>
+<td>Sign in with your BearWare account instead (see below)</td>
+</tr>
+<tr>
+<td>Channel to join</td>
+<td>A channel path to join automatically after connecting</td>
+</tr>
+<tr>
+<td>Channel password</td>
+<td>The password for that channel, if it has one</td>
+</tr>
+</tbody>
+</table>
+<p>Passwords are stored in your login keychain, not in the app's own files.</p>
+<p>To change a server later, select it and press <strong>Command-E</strong>. To remove it, press <strong>Delete</strong>; the app asks for confirmation.</p>
+<h2 id="sorting-the-list">Sorting the list</h2>
+<p>The <strong>Sort</strong> controls above the table order the list by <strong>Custom order</strong>, <strong>Name</strong>, <strong>Host</strong>, <strong>TCP Port</strong> or <strong>UDP Port</strong>, either <strong>Ascending</strong> or <strong>Descending</strong>. Custom order keeps the servers in the order you added them. The choice is remembered.</p>
+<h2 id="importing-servers">Importing servers</h2>
+<p>Choose <strong>Server → Import TeamTalk Servers…</strong> (<strong>Shift-Command-I</strong>). The app asks how to import:</p>
+<ul>
+<li><strong>Configuration File...</strong> — a configuration file from the official TeamTalk client. All its servers are imported at once. tt-Accessible can detect the file format on its own; the behaviour is controlled by <em>Automatically detect the TeamTalk file format during import</em> in <a href="preferences.html#prefs-general">Preferences → General</a>.</li>
+<li><strong>.tt File...</strong> — a single server file, the format usually shared by server owners.</li>
+<li><strong>Paste tt:// Link...</strong> — paste a link such as <code>tt://server.example.com?tcpport=10333</code>.</li>
+</ul>
+<p>If a server you are importing matches one you already have, the app asks whether to <strong>Replace</strong> it. When several entries collide, it asks once whether to <strong>Continue</strong>. At the end you get a summary: <em>n server(s) imported, n skipped.</em></p>
+<p>You can also simply open a <code>.tt</code> file from the Finder, or click a <code>tt://</code> link. If a session is already running, the app warns that <em>Opening "…" will disconnect the current session</em> before continuing. When the file also carries client settings — a nickname or a gender — the app lists what it can apply and lets you <strong>Apply</strong> or <strong>Ignore</strong> them.</p>
+<p>A server opened this way is not saved automatically. When you disconnect, the app offers to <strong>Save</strong> it under a name of your choice.</p>
+<h2 id="exporting-servers">Exporting servers</h2>
+<ul>
+<li><strong>Server → Export Server...</strong> exports the selected server as a <strong>.tt File...</strong> or copies a <strong>tt:// Link</strong> to the clipboard. When you are connected, the same command can <em>Include a direct path to</em> the channel you are in, so whoever opens the file lands in the right place.</li>
+<li><strong>Server → Export Server List…</strong> exports everything, either as a <strong>Single file</strong> or as <strong>One file per server</strong> in a folder you choose.</li>
+</ul>
+<p>While connected, <strong>Server → Copy Server Link</strong> (<strong>Shift-Command-L</strong>) puts a link to the current server on the clipboard.</p>
+<h2 id="bearware-web-login">BearWare web login</h2>
+<p>A free BearWare account (bearware.dk) lets you log in to servers that support web login, without a separate account on each one.</p>
+<ol type="1">
+<li>Open <a href="preferences.html#prefs-bearware">Preferences → BearWare</a>.</li>
+<li>Enter your <strong>BearWare username</strong> and <strong>BearWare password</strong>, then click <strong>Sign in</strong>. Once signed in, the pane shows <em>Signed in as …</em> and offers <strong>Sign out</strong>.</li>
+<li>In each server that supports it, turn on <strong>Use BearWare web login</strong>. The local username and password fields disappear — that server now signs in with your BearWare account.</li>
+</ol>
+<p>If a server is set to use web login while no BearWare account is configured, the connection fails with a message pointing you back to Preferences.</p>
+<hr>
+<p class="footer"><a href="index.html">Table of contents</a></p>
+</body>
+</html>

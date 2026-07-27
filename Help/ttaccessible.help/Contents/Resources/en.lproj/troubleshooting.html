@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Troubleshooting</title>
+<meta name="description" content="What to check when there is no sound, when the microphone stays silent, when there is echo, and how to reach the developer.">
+<meta name="keywords" content="problem, no sound, microphone, echo, permission, keychain, log, support, bug report">
+<meta name="robots" content="index, anchors">
+<link rel="stylesheet" href="../css/help.css">
+</head>
+<body>
+<nav class="crumb"><a href="index.html">Table of contents</a></nav>
+<a id="troubleshooting"></a>
+<h1>Troubleshooting</h1>
+<h2 id="i-cannot-hear-anything">I cannot hear anything</h2>
+<p>Work down this list; <strong>F9</strong> answers the first question for you by speaking the current audio status.</p>
+<ol type="1">
+<li>Is the master volume muted? <strong>Command-M</strong> toggles it.</li>
+<li>Is the <strong>Output volume</strong> slider of the main window turned down?</li>
+<li>In <a href="preferences.html#prefs-audio">Preferences → Audio</a>, is <strong>Output device</strong> set to <strong>No output device</strong>, or to a device you are no longer using? <strong>Refresh Devices</strong> rebuilds the list.</li>
+<li>Is that one person muted for you? Their row says <em>muted</em>, and <strong>Shift-Command-M</strong> brings them back. Check their level in <a href="mixer.html">the channel mixer</a> too.</li>
+<li>Are you still subscribed to their <strong>Voice</strong>? See <a href="users.html">People you hear</a>.</li>
+</ol>
+<h2 id="nobody-hears-me">Nobody hears me</h2>
+<ol type="1">
+<li>You must be <strong>in a channel</strong>. Outside one, the app answers <em>You must join a channel before enabling the microphone.</em></li>
+<li>Is the microphone on? <strong>Shift-Command-A</strong>, or the toolbar button.</li>
+<li>Are you in <strong>push-to-talk</strong> mode without a key recorded? The Audio pane warns about it, and until a key is set the microphone behaves as in always-on mode.</li>
+<li>Did macOS refuse access? The app reports <em>Microphone access was denied by macOS.</em> Grant it in System Settings → Privacy &amp; Security → Microphone.</li>
+<li>Is the right <strong>Input device</strong> selected, and the right <strong>Input channels</strong> preset? On an audio interface, the microphone is rarely on input 1.</li>
+<li>Has an operator blocked you? The app announces <em>Transmission blocked by the channel operator.</em></li>
+</ol>
+<p><strong>Shift-Command-H</strong> (<em>Hear myself</em>) settles the question: if you can hear yourself through the channel, you are on air.</p>
+<h2 id="everyone-hears-themselves-come-back">Everyone hears themselves come back</h2>
+<p>That is echo: your speakers are being picked up by your microphone. Either use headphones, or set <strong>Microphone processing</strong> to <strong>Echo cancellation + noise reduction</strong> in <a href="preferences.html#prefs-audio">Preferences → Audio</a>. On macOS 14.2 and later this also cancels VoiceOver and system sounds.</p>
+<h2 id="the-sound-broke-when-i-plugged-something-in">The sound broke when I plugged something in</h2>
+<p>The app detects device changes and restarts its audio engine on its own. If something is still wrong, use <strong>Refresh Devices</strong>. Should the microphone have stopped, the app says so — <em>Microphone stopped after an audio device change. Turn it on again.</em></p>
+<h2 id="recording-refuses-to-start">Recording refuses to start</h2>
+<p>The channel was probably created with <strong>No audio recording</strong>; the app then announces <em>Recording is not allowed in this channel.</em> Only an account with the right to record voice can override it. See <a href="recording.html">Recording</a>.</p>
+<h2 id="streaming-an-application-does-not-work">Streaming an application does not work</h2>
+<ul>
+<li>Streaming an application's or VoiceOver's audio requires <strong>macOS 13 or later</strong>, and browsing apps that are not running requires <strong>macOS 14.2 or later</strong>.</li>
+<li>If the app answers <em>The selected source has no audio to capture right now</em>, make sure the application is really running and playing something.</li>
+</ul>
+<p>See <a href="streaming.html">Streaming media</a>.</p>
+<h2 id="the-server-refuses-my-password">The server refuses my password</h2>
+<ul>
+<li>The <strong>Login Failed</strong> alert offers <strong>Edit Credentials…</strong> so you can correct the username or the password.</li>
+<li>If the server uses BearWare web login, check that your account is signed in under <a href="preferences.html#prefs-bearware">Preferences → BearWare</a>.</li>
+<li>If macOS refuses access to the stored password, the app explains it: open Keychain Access, delete the matching <strong>ttaccessible</strong> entry, then try again.</li>
+</ul>
+<h2 id="the-connection-keeps-dropping">The connection keeps dropping</h2>
+<p><strong>Adaptive jitter buffer</strong>, in <a href="preferences.html#prefs-connection">Preferences → Connection</a>, improves audio on unstable connections. Automatic reconnection and rejoining the last channel are both enabled by default in the same pane.</p>
+<h2 id="reporting-a-problem">Reporting a problem</h2>
+<p><strong>Help → Contact the Developer…</strong> opens a form where you choose a type — <strong>Report a problem</strong>, <strong>Suggestion</strong>, <strong>Question</strong> or <strong>Other</strong> — enter your email address and your message. The app version, the macOS version and your audio settings are attached to help with troubleshooting.</p>
+<p>The <strong>Attach the audio diagnostic log</strong> checkbox adds the technical audio log, which is what makes a sound problem diagnosable. Reproduce the problem first, then send the message: the log is cleared at every launch.</p>
+<p>That log lives in your home folder, under <code>Library/Containers/com.math65.ttaccessible/Data/Library/Logs/TTAccessible/audio.log</code>.</p>
+<p><strong>Help → Report an Issue…</strong> opens the project's issue tracker instead, which is the better place for anything public.</p>
+<hr>
+<p class="footer"><a href="index.html">Table of contents</a></p>
+</body>
+</html>

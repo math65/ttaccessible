@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The main window</title>
+<meta name="description" content="The areas of the session window, how to move between them with Command-1 to Command-5, and what the channel tree announces.">
+<meta name="keywords" content="main window, layout, focus, channel tree, session history, audio bar, nickname, status">
+<meta name="robots" content="index, anchors">
+<link rel="stylesheet" href="../css/help.css">
+</head>
+<body>
+<nav class="crumb"><a href="index.html">Table of contents</a></nav>
+<a id="main-window"></a>
+<h1>The main window</h1>
+<p>Once connected, the window is titled <strong>Connected Server:</strong> followed by the server name. It holds everything you need in a single place.</p>
+<h2 id="the-five-areas">The five areas</h2>
+<table>
+<thead>
+<tr>
+<th>Shortcut</th>
+<th>Area</th>
+<th>What it holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Command-1</td>
+<td>Main area</td>
+<td>The tree of channels and users</td>
+</tr>
+<tr>
+<td>Command-2</td>
+<td>Chat history</td>
+<td>Messages sent in your channel</td>
+</tr>
+<tr>
+<td>Command-3</td>
+<td>Message input</td>
+<td>Where you type, with a <strong>Send</strong> button</td>
+</tr>
+<tr>
+<td>Command-4</td>
+<td>Session history</td>
+<td>Everything that happened during the session</td>
+</tr>
+<tr>
+<td>Command-5</td>
+<td>Channel Mixer</td>
+<td>One strip per person you can hear</td>
+</tr>
+</tbody>
+</table>
+<p>These shortcuts move the keyboard focus — and with it the VoiceOver cursor — so you can jump straight to the part you need instead of walking through the window. They also work while the <strong>Private Messages</strong> window is in front, where Command-1, Command-2 and Command-3 focus its conversation list, its history and its input field. When no session is running, Command-1 brings back the <strong>TeamTalk Servers</strong> window and selects the server list.</p>
+<h2 id="the-channel-tree">The channel tree</h2>
+<p>The tree lists the server's channels and, under each one, the people in it. Arrow keys browse it; <strong>Return</strong> joins the selected channel. Right-clicking — or the VoiceOver actions rotor — opens the <strong>Channel</strong> menu with the actions described in <a href="channels.html">Channels</a> and <a href="users.html">People you hear</a>.</p>
+<p>Each row is announced with everything that matters about it:</p>
+<ul>
+<li>A channel adds <em>current channel</em>, <em>password protected</em> or <em>hidden</em> when they apply, and reads its topic when it has one.</li>
+<li>A person adds <em>you</em>, <em>administrator</em>, <em>channel operator</em>, <em>talking</em>, <em>away</em> or <em>question</em>.</li>
+</ul>
+<p>The order of channels follows <em>Sort channels by</em> in <a href="preferences.html#prefs-connection">Preferences → Connection</a>: by <strong>Name</strong>, or by <strong>User count (most populated first)</strong>.</p>
+<h2 id="session-history">Session history</h2>
+<p>The session history collects the events of the session: connections, people arriving and leaving, channel changes, kicks, subscription changes, files added or removed, automatic away, and media streaming. Each entry can be announced out loud or kept silent — see <a href="sounds-announcements.html">Sounds and announcements</a>.</p>
+<p>Timestamps can be shown as clock times or as relative times such as <em>2 min ago</em>, depending on <em>Use relative timestamps</em> in <a href="preferences.html#prefs-general">Preferences → General</a>.</p>
+<p><strong>Shift-Command-S</strong> exports the chat history to a file.</p>
+<h2 id="the-audio-bar">The audio bar</h2>
+<p>Below the lists you will find:</p>
+<ul>
+<li>The microphone button — <strong>Enable microphone</strong> or <strong>Mute microphone</strong>.</li>
+<li>Three sliders: <strong>Input volume</strong>, <strong>Output volume</strong> and <strong>Sound effects volume</strong>. Each one offers the VoiceOver action <em>Reset to 50%</em>.</li>
+</ul>
+<p><strong>F9</strong> speaks the current audio status at any time — whether output is active, whether the microphone is ready or transmitting, and whether recording is running.</p>
+<h2 id="your-identity-on-the-server">Your identity on the server</h2>
+<ul>
+<li><strong>F5</strong> — <em>Change Nickname</em>. Leave the field empty to fall back to your default nickname.</li>
+<li><strong>F6</strong> — <em>Change Status</em>: a status mode (<strong>Available</strong>, <strong>Away</strong> or <strong>Question</strong>), a gender, and an optional status message.</li>
+</ul>
+<p>Automatic away can also change your status for you when you stop touching the keyboard; see <a href="preferences.html#prefs-general">Preferences → General</a>.</p>
+<h2 id="video">Video</h2>
+<p>When someone streams a video file into the channel, a collapsible <strong>Video</strong> panel appears. It can be shown or hidden and reports <em>No video</em> when nothing is playing.</p>
+<h2 id="reconnecting">Reconnecting</h2>
+<p>If the connection drops, the window shows <strong>Reconnecting…</strong> and the app tries to bring the session back — including rejoining the channel you were in, when the matching options are enabled in <a href="preferences.html#prefs-connection">Preferences → Connection</a>.</p>
+<h2 id="leaving">Leaving</h2>
+<p><strong>F2</strong> disconnects. If the server was opened from a <code>.tt</code> file or a link and was never saved, the app offers to save it first.</p>
+<hr>
+<p class="footer"><a href="index.html">Table of contents</a></p>
+</body>
+</html>

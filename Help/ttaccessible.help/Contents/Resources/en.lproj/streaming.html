@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Streaming media</title>
+<meta name="description" content="Play a file, an internet stream, an audio device, another app or VoiceOver into the channel.">
+<meta name="keywords" content="streaming, media file, URL, radio, device, application, VoiceOver, media player, broadcast volume">
+<meta name="robots" content="index, anchors">
+<link rel="stylesheet" href="../css/help.css">
+</head>
+<body>
+<nav class="crumb"><a href="index.html">Table of contents</a></nav>
+<a id="streaming"></a>
+<h1>Streaming media</h1>
+<p>tt-Accessible can send audio into the channel alongside your voice — a music file, an internet radio, the output of another application, or even VoiceOver itself so that the channel hears what your screen reader is saying.</p>
+<p>All four commands live in the <strong>Shortcuts</strong> menu.</p>
+<h2 id="streaming-a-file">Streaming a file</h2>
+<p><strong>Option-Command-S</strong> — <em>Stream Media File…</em> — opens a file picker. Video support depends on what TeamTalk can open on your Mac; 10-bit video is not supported. When a file carries video, the collapsible <strong>Video</strong> panel of the main window shows it.</p>
+<h2 id="streaming-a-url">Streaming a URL</h2>
+<p><strong>Option-Command-U</strong> — <em>Stream URL…</em> — asks for the address of an audio stream, such as an internet radio. The <code>http</code>, <code>https</code>, <code>rtmp</code>, <code>rtmps</code>, <code>rtsp</code> and <code>mms</code> schemes are accepted.</p>
+<h2 id="streaming-a-device-an-application-or-voiceover">Streaming a device, an application or VoiceOver</h2>
+<p><strong>Option-Command-A</strong> — <em>Stream a Device or Application…</em> — opens a sheet with:</p>
+<ul>
+<li><strong>Audio source</strong> — an audio input of your Mac, <strong>VoiceOver</strong>, or an entry under <strong>Applications</strong>. <strong>Select Application…</strong> lets you browse any installed app, even one that is not running, on macOS 14.2 and later. Streaming an application's or VoiceOver's audio requires macOS 13 or later.</li>
+<li><strong>Play the streamed audio back to me</strong> — off by default, so you are not forced to listen to what you are broadcasting.</li>
+<li><strong>Mute this source on this Mac while streaming</strong> — silences the source locally while the channel keeps hearing it. Available on recent systems, and only for an application source.</li>
+</ul>
+<p>The stream keeps going even while the source is silent, so a pause in the music does not end the broadcast. Your last choice is preselected the next time.</p>
+<p>If the app you picked is not producing any audio, the app answers <em>The selected source has no audio to capture right now.</em></p>
+<h2 id="the-media-player">The media player</h2>
+<p>While a stream is running, the <strong>Media Player</strong> window shows <em>Playing:</em> followed by the source, and gives you:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Space</td>
+<td>Play or pause</td>
+</tr>
+<tr>
+<td>Escape</td>
+<td>Stop</td>
+</tr>
+<tr>
+<td>Left / Right arrow</td>
+<td>Seek 5 seconds back or forward</td>
+</tr>
+<tr>
+<td>Up / Down arrow</td>
+<td>Broadcast volume</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Broadcast volume</strong> sets how loud the stream is sent to the channel, independently of your own listening level.</p>
+<h2 id="stopping">Stopping</h2>
+<p><strong>Option-Command-.</strong> (Option-Command-period) — <em>Stop Streaming</em> — ends the stream. The app announces <em>Streaming finished</em>, and both the start and the end are recorded in the session history.</p>
+<h2 id="what-others-hear">What others hear</h2>
+<p>The stream reaches everyone subscribed to your <strong>Media File</strong> stream. Anyone can silence it on their side without silencing your voice, with <em>Mute media stream locally</em> — see <a href="users.html">People you hear</a>.</p>
+<hr>
+<p class="footer"><a href="index.html">Table of contents</a></p>
+</body>
+</html>

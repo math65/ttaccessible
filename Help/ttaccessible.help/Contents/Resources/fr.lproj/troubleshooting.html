@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>En cas de problème</title>
+<meta name="description" content="Que vérifier quand il n'y a pas de son, quand le micro reste muet, quand il y a de l'écho, et comment joindre le développeur.">
+<meta name="keywords" content="problème, pas de son, micro, écho, autorisation, trousseau, journal, assistance, bug">
+<meta name="robots" content="index, anchors">
+<link rel="stylesheet" href="../css/help.css">
+</head>
+<body>
+<nav class="crumb"><a href="index.html">Sommaire</a></nav>
+<a id="troubleshooting"></a>
+<h1>En cas de problème</h1>
+<h2 id="je-nentends-rien">Je n'entends rien</h2>
+<p>Déroulez cette liste ; <strong>F9</strong> répond déjà à la première question en énonçant l'état audio.</p>
+<ol type="1">
+<li>Le volume principal est-il coupé ? <strong>Commande-M</strong> le rétablit.</li>
+<li>Le curseur <strong>Volume de sortie</strong> de la fenêtre principale est-il au minimum ?</li>
+<li>Dans <a href="preferences.html#prefs-audio">Préférences → Audio</a>, le <strong>Périphérique de sortie</strong> est-il réglé sur <strong>Aucune sortie audio</strong>, ou sur un appareil que vous n'utilisez plus ? <strong>Actualiser les périphériques</strong> reconstruit la liste.</li>
+<li>Cette personne est-elle coupée pour vous ? Sa ligne indique <em>coupé</em>, et <strong>Maj-Commande-M</strong> la rétablit. Vérifiez aussi son niveau dans <a href="mixer.html">le mixeur</a>.</li>
+<li>Êtes-vous toujours abonné à son <strong>Audio</strong> ? Voir <a href="users.html">Les personnes que vous entendez</a>.</li>
+</ol>
+<h2 id="personne-ne-mentend">Personne ne m'entend</h2>
+<ol type="1">
+<li>Il faut être <strong>dans un canal</strong>. Ailleurs, l'application répond <em>Vous devez rejoindre un canal avant d'activer le micro.</em></li>
+<li>Le micro est-il activé ? <strong>Maj-Commande-A</strong>, ou le bouton de la barre d'outils.</li>
+<li>Êtes-vous en <strong>push-to-talk</strong> sans avoir défini de touche ? Le volet Audio le signale, et tant qu'aucune touche n'est enregistrée le micro se comporte comme en mode « toujours actif ».</li>
+<li>macOS a-t-il refusé l'accès ? L'application indique alors <em>L'accès au micro a été refusé par macOS.</em> Accordez-le dans Réglages Système → Confidentialité et sécurité → Microphone.</li>
+<li>Le bon <strong>Périphérique d'entrée</strong> est-il sélectionné, avec la bonne configuration de <strong>Canaux d'entrée</strong> ? Sur une interface audio, le micro est rarement sur l'entrée 1.</li>
+<li>Un opérateur vous a-t-il bloqué ? L'application annonce <em>Transmission bloquée par l'opérateur du canal.</em></li>
+</ol>
+<p><strong>Maj-Commande-H</strong> (le retour audio) tranche la question : si vous vous entendez par le canal, c'est que vous êtes bien à l'antenne.</p>
+<h2 id="tout-le-monde-sentend-revenir">Tout le monde s'entend revenir</h2>
+<p>C'est de l'écho : vos haut-parleurs sont repris par votre micro. Utilisez un casque, ou réglez <strong>Traitement du micro</strong> sur <strong>Annulation d'écho + réduction de bruit</strong> dans <a href="preferences.html#prefs-audio">Préférences → Audio</a>. À partir de macOS 14.2, cette option annule également VoiceOver et les sons du système.</p>
+<h2 id="le-son-sest-cassé-après-un-branchement">Le son s'est cassé après un branchement</h2>
+<p>L'application détecte les changements de périphérique et redémarre son moteur audio toute seule. Si quelque chose cloche malgré tout, utilisez <strong>Actualiser les périphériques</strong>. Si le micro s'est arrêté, l'application le dit : <em>Le micro s'est arrêté après un changement de périphérique audio. Réactivez-le.</em></p>
+<h2 id="lenregistrement-refuse-de-démarrer">L'enregistrement refuse de démarrer</h2>
+<p>Le canal a probablement été créé avec l'option <strong>Pas d'enregistrement audio</strong> ; l'application annonce alors <em>L'enregistrement n'est pas autorisé dans ce canal.</em> Seul un compte disposant du droit d'enregistrer la voix peut passer outre. Voir <a href="recording.html">Enregistrer</a>.</p>
+<h2 id="la-diffusion-dune-application-ne-marche-pas">La diffusion d'une application ne marche pas</h2>
+<ul>
+<li>Diffuser l'audio d'une application ou de VoiceOver demande <strong>macOS 13 ou une version ultérieure</strong>, et parcourir les applications qui ne sont pas lancées demande <strong>macOS 14.2 ou une version ultérieure</strong>.</li>
+<li>Si l'application répond <em>La source sélectionnée n'a aucun audio à capturer pour le moment</em>, vérifiez que l'application visée tourne réellement et produit du son.</li>
+</ul>
+<p>Voir <a href="streaming.html">Diffuser du son</a>.</p>
+<h2 id="le-serveur-refuse-mon-mot-de-passe">Le serveur refuse mon mot de passe</h2>
+<ul>
+<li>L'alerte <strong>Échec de la connexion</strong> propose <strong>Modifier les identifiants…</strong> pour corriger le nom d'utilisateur ou le mot de passe.</li>
+<li>Si le serveur utilise la connexion web BearWare, vérifiez que votre compte est bien connecté dans <a href="preferences.html#prefs-bearware">Préférences → BearWare</a>.</li>
+<li>Si macOS refuse l'accès au mot de passe enregistré, l'application vous l'explique : ouvrez Trousseau d'accès, supprimez l'entrée <strong>ttaccessible</strong> correspondante, puis réessayez.</li>
+</ul>
+<h2 id="la-connexion-tombe-sans-arrêt">La connexion tombe sans arrêt</h2>
+<p>Le <strong>Buffer de gigue adaptatif</strong>, dans <a href="preferences.html#prefs-connection">Préférences → Connexion</a>, améliore l'audio sur les connexions instables. La reconnexion automatique et le retour dans le dernier canal sont activés par défaut dans le même volet.</p>
+<h2 id="signaler-un-problème">Signaler un problème</h2>
+<p><strong>Aide → Contacter le développeur…</strong> ouvre un formulaire où vous choisissez un type — <strong>Signaler un problème</strong>, <strong>Suggestion</strong>, <strong>Question</strong> ou <strong>Autre</strong> —, votre adresse email et votre message. La version de l'application, la version de macOS et vos réglages audio sont joints pour faciliter le diagnostic.</p>
+<p>La case <strong>Joindre le journal de diagnostic audio</strong> ajoute le journal technique, sans lequel un problème de son reste difficile à diagnostiquer. Reproduisez d'abord le problème, puis envoyez le message : le journal est effacé à chaque lancement.</p>
+<p>Ce journal se trouve dans votre dossier de départ, sous <code>Library/Containers/com.math65.ttaccessible/Data/Library/Logs/TTAccessible/audio.log</code>.</p>
+<p><strong>Aide → Signaler un problème…</strong> ouvre plutôt le suivi de bugs du projet, qui reste le bon endroit pour tout ce qui est public.</p>
+<hr>
+<p class="footer"><a href="index.html">Sommaire</a></p>
+</body>
+</html>

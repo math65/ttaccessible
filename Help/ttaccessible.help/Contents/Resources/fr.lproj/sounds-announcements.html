@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sons et annonces</title>
+<meta name="description" content="Choisir un pack de sons, en composer un, et décider de ce que l'application dit à voix haute au premier plan comme en arrière-plan.">
+<meta name="keywords" content="sons, pack de sons, notification, annonce, VoiceOver, synthèse vocale, arrière-plan">
+<meta name="robots" content="index, anchors">
+<link rel="stylesheet" href="../css/help.css">
+</head>
+<body>
+<nav class="crumb"><a href="index.html">Sommaire</a></nav>
+<a id="sounds-announcements"></a>
+<h1>Sons et annonces</h1>
+<p>tt-Accessible vous tient au courant de deux façons : par de courts sons, et par des annonces vocales. Les deux se règlent événement par événement.</p>
+<h2 id="les-packs-de-sons">Les packs de sons</h2>
+<p>Trois packs sont fournis — <strong>Default</strong>, <strong>Majorly-G</strong> et <strong>Old</strong> — et se choisissent avec <strong>Pack de sons</strong>, dans <a href="preferences.html#prefs-sounds">Préférences → Sons</a>. <strong>Activer les notifications sonores</strong> coupe l'ensemble d'un seul geste.</p>
+<p>Pour composer le vôtre :</p>
+<ol type="1">
+<li><strong>Fichiers requis...</strong> énumère tous les noms de fichiers que l'application recherche et l'événement auquel chacun correspond. Préparez un dossier de fichiers WAV portant ces noms. Tout fichier absent est remplacé par celui du pack Default.</li>
+<li><strong>Nouveau pack...</strong> importe ce dossier. Son nom devient celui du pack.</li>
+<li>Une fois votre pack sélectionné, <strong>Modifier le pack sélectionné</strong> apparaît : chaque événement indique s'il est <strong>Personnalisé</strong> ou <strong>Défaut</strong>, avec <strong>Choisir...</strong> pour désigner un autre fichier et <strong>Réinitialiser</strong> pour revenir en arrière.</li>
+<li><strong>Afficher le dossier des packs</strong> ouvre le dossier où vos packs sont rangés, et <strong>Supprimer</strong> retire celui qui est sélectionné. Supprimer un pack personnalisé l'efface aussi de ce Mac.</li>
+</ol>
+<p>Le niveau de ces sons suit le curseur <strong>Volume des effets sonores</strong> de la fenêtre principale.</p>
+<h2 id="les-vingt-six-événements-sonores">Les vingt-six événements sonores</h2>
+<p>Chacun se désactive séparément :</p>
+<table>
+<tbody>
+<tr>
+<td>Un utilisateur a rejoint le canal</td>
+<td>Un utilisateur a quitté le canal</td>
+</tr>
+<tr>
+<td>Message privé reçu</td>
+<td>Message privé envoyé</td>
+</tr>
+<tr>
+<td>Message de canal reçu</td>
+<td>Message de canal envoyé</td>
+</tr>
+<tr>
+<td>Connexion perdue</td>
+<td>Message général</td>
+</tr>
+<tr>
+<td>Utilisateur connecté</td>
+<td>Utilisateur déconnecté</td>
+</tr>
+<tr>
+<td>Fichier ajouté ou supprimé</td>
+<td>Transfert de fichier terminé</td>
+</tr>
+<tr>
+<td>Mode question</td>
+<td>Raccourci clavier</td>
+</tr>
+<tr>
+<td>Activation vocale activée</td>
+<td>Activation vocale désactivée</td>
+</tr>
+<tr>
+<td>Tout couper</td>
+<td>Tout rétablir</td>
+</tr>
+<tr>
+<td>Interception démarrée</td>
+<td>Interception terminée</td>
+</tr>
+<tr>
+<td>File de transmission démarrée</td>
+<td>File de transmission arrêtée</td>
+</tr>
+<tr>
+<td>VOX activé</td>
+<td>VOX désactivé</td>
+</tr>
+<tr>
+<td>Microphone activé</td>
+<td>Microphone désactivé</td>
+</tr>
+</tbody>
+</table>
+<h2 id="les-annonces-vocales">Les annonces vocales</h2>
+<p><a href="preferences.html#prefs-announcements">Préférences → Annonces</a> distingue deux situations.</p>
+<h3 id="quand-tt-accessible-est-au-premier-plan">Quand tt-Accessible est au premier plan</h3>
+<p><strong>Annonces d'événements</strong> règle ce qui passe par VoiceOver :</p>
+<ul>
+<li><strong>Annoncer les messages de canal</strong>, <strong>Annoncer les messages privés</strong> et <strong>Annoncer les messages généraux</strong> — tous activés par défaut.</li>
+<li><strong>Annoncer l'historique système</strong>, une liste de vingt événements à activer ou désactiver un par un, avec <strong>Tout activer</strong> et <strong>Tout désactiver</strong>. Ils sont regroupés en <strong>Connexion</strong> (connecté, déconnecté, connexion perdue), <strong>Canal actuel</strong> (rejoint, quitté), <strong>Présence des utilisateurs</strong> (connexion et déconnexion, arrivée et départ d'un canal), <strong>Modération</strong> (expulsion du serveur ou du canal, transmission bloquée), <strong>Statut</strong> (absence automatique activée et désactivée), <strong>Abonnements</strong> (modification d'un abonnement ou d'une interception), <strong>Fichiers</strong> (ajouté, supprimé) et <strong>Diffusion média</strong> (démarrée, terminée).</li>
+</ul>
+<p>Désactiver un événement ne fait taire que l'annonce : la ligne reste inscrite dans l'historique de session.</p>
+<h3 id="quand-une-autre-application-est-au-premier-plan">Quand une autre application est au premier plan</h3>
+<p><strong>Messages reçus en arrière-plan</strong> détermine la façon dont vous êtes prévenu quand tt-Accessible n'est pas au premier plan :</p>
+<ul>
+<li><strong>Notification système</strong> — une notification macOS classique. C'est le réglage par défaut.</li>
+<li><strong>Synthèse vocale macOS</strong> — l'application énonce elle-même le message, avec la <strong>Voix</strong>, le <strong>Débit</strong> et le <strong>Volume</strong> réglés juste en dessous. <strong>Tester la voix</strong> essaie les réglages courants.</li>
+<li><strong>VoiceOver via AppleScript</strong> — c'est VoiceOver qui annonce le message.</li>
+</ul>
+<p><strong>Utiliser le même mode pour tous les types d'événements</strong> est activé par défaut et applique un mode unique à tout. Désactivez-le pour choisir un mode différent selon qu'il s'agit d'un message privé, d'un message de canal, d'un message général ou de l'historique TeamTalk — par exemple une annonce parlée pour les messages privés et une simple notification pour le reste.</p>
+<hr>
+<p class="footer"><a href="index.html">Sommaire</a></p>
+</body>
+</html>

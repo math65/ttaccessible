@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Administration</title>
+<meta name="description" content="Opérateurs de canal, expulsions, bannissements, déplacements, comptes utilisateurs, propriétés et statistiques du serveur.">
+<meta name="keywords" content="opérateur, expulser, bannir, déplacer, comptes, droits, propriétés du serveur, statistiques">
+<meta name="robots" content="index, anchors">
+<link rel="stylesheet" href="../css/help.css">
+</head>
+<body>
+<nav class="crumb"><a href="index.html">Sommaire</a></nav>
+<a id="administration"></a>
+<h1>Administration</h1>
+<p>Les commandes de cette page demandent les droits correspondants sur votre compte. Celles que vous n'avez pas le droit d'utiliser restent grisées.</p>
+<h2 id="lopérateur-de-canal">L'opérateur de canal</h2>
+<p><strong>Contrôle-Commande-O</strong> promeut la personne sélectionnée opérateur du canal, ou lui retire ce statut. Si vous n'êtes pas vous-même opérateur mais que le canal possède un mot de passe d'opérateur, celui-ci vous est demandé. Le changement est annoncé : <em>… est maintenant opérateur du canal</em>.</p>
+<h2 id="les-expulsions">Les expulsions</h2>
+<table>
+<thead>
+<tr>
+<th>Raccourci</th>
+<th>Commande</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Commande-K</td>
+<td>Expulser du canal — la personne est retirée de son canal actuel</td>
+</tr>
+<tr>
+<td>Maj-Commande-K</td>
+<td>Expulser du serveur — la personne est complètement déconnectée</td>
+</tr>
+<tr>
+<td>—</td>
+<td>Expulser et bannir — expulsion, puis bannissement par <strong>adresse IP</strong> ou par <strong>nom d'utilisateur</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Chacune demande confirmation. L'option <em>Ne pas demander de confirmation lors de l'expulsion</em>, dans <a href="preferences.html#prefs-connection">Préférences → Connexion</a>, supprime cette étape pour les deux premières ; « Expulser et bannir » demande toujours confirmation.</p>
+<h2 id="déplacer-des-personnes">Déplacer des personnes</h2>
+<ul>
+<li><strong>Option-Commande-X</strong> — <em>Déplacer vers un canal…</em> — déplace la personne sélectionnée vers le canal de votre choix.</li>
+<li><strong>Déplacer tout le monde…</strong>, dans le menu contextuel de l'arbre, déplace un canal entier d'un coup. La fenêtre liste chaque personne avec une case à cocher, propose <strong>Tout sélectionner</strong> et <strong>Tout désélectionner</strong>, ainsi qu'un menu <strong>Déplacer vers le canal :</strong>. Le résultat est annoncé une seule fois : <em>n utilisateurs sur n déplacés vers …</em></li>
+</ul>
+<h2 id="les-bannissements">Les bannissements</h2>
+<p><strong>Serveur → Utilisateurs bannis…</strong> (<strong>Maj-Commande-B</strong>) présente les bannissements du serveur : pseudo, nom d'utilisateur, type, date, auteur, canal et adresse IP. Vous pouvez <strong>Rafraîchir</strong> la liste, <strong>Débannir</strong> l'entrée sélectionnée — <em>Cette personne pourra se reconnecter au serveur</em> — ou <strong>Ajouter…</strong> un bannissement par <strong>Adresse IP</strong> ou par <strong>Nom d'utilisateur</strong>.</p>
+<h2 id="les-comptes-utilisateurs">Les comptes utilisateurs</h2>
+<p><strong>Serveur → Comptes utilisateurs…</strong> (<strong>Maj-Commande-U</strong>) liste les comptes déclarés sur le serveur, avec leur nom d'utilisateur, le pseudo actuellement en ligne, le mot de passe, le type (<strong>Défaut</strong>, <strong>Administrateur</strong> ou <strong>Désactivé</strong>), une note et la dernière connexion.</p>
+<p><strong>Ajouter…</strong> et <strong>Modifier…</strong> ouvrent un formulaire à trois onglets :</p>
+<ul>
+<li><strong>Essentiel</strong> — nom d'utilisateur, mot de passe, type de compte, canal initial, note.</li>
+<li><strong>Droits</strong> — vingt-quatre interrupteurs, avec <strong>Tout activer</strong>, <strong>Tout désactiver</strong> et <strong>Droits par défaut</strong>. Ils couvrent les connexions multiples, la visibilité de tous les utilisateurs, la création de canaux temporaires, la modification des canaux, la diffusion de messages, l'expulsion, le bannissement, le déplacement, le fait de devenir opérateur, l'envoi et le téléchargement de fichiers, la modification des propriétés du serveur, la transmission de la voix, de la vidéo, du bureau et des fichiers média, le verrouillage du pseudo ou du statut, l'enregistrement de la voix, la visibilité des canaux masqués et l'envoi de messages privés ou de canal.</li>
+<li><strong>Avancé</strong> — limite de bande passante audio (0 signifie illimité), limite de commandes et intervalle.</li>
+</ul>
+<p>La suppression d'un compte est irréversible.</p>
+<h2 id="les-propriétés-du-serveur">Les propriétés du serveur</h2>
+<p><strong>Serveur → Propriétés du serveur…</strong> (<strong>Maj-Commande-P</strong>) ouvre les réglages du serveur lui-même, en trois sections :</p>
+<ul>
+<li><strong>Général</strong> — nom du serveur, message du jour, nombre maximal d'utilisateurs, timeout utilisateur, délai de connexion, nombre maximal de tentatives, nombre maximal de connexions par IP, sauvegarde automatique.</li>
+<li><strong>Limites de débit</strong> — débits maximaux pour la voix, la vidéo, les fichiers média, le bureau partagé et le total, en octets par seconde, où 0 signifie illimité.</li>
+<li><strong>Réseau et informations du serveur</strong> — ports TCP et UDP, version du serveur et version du protocole, donnés à titre d'information.</li>
+</ul>
+<p><strong>Serveur → Enregistrer la configuration du serveur</strong> écrit la configuration courante sur le serveur pour qu'elle survive à un redémarrage.</p>
+<h2 id="les-statistiques">Les statistiques</h2>
+<p><strong>Serveur → Statistiques du serveur</strong> (<strong>Maj-Commande-I</strong>) indique la durée de fonctionnement, le nombre total d'utilisateurs accueillis, le pic, les données émises et reçues au total et pour la voix, ainsi que les pings UDP et TCP.</p>
+<hr>
+<p class="footer"><a href="index.html">Sommaire</a></p>
+</body>
+</html>

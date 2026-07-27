@@ -1047,8 +1047,10 @@
 "user.menu.move" = "Déplacer vers un canal";
 
 "update.menu.checkForUpdates" = "Vérifier les mises à jour…";
+"help.menu.userGuide" = "Aide tt-Accessible";
 "help.menu.viewOnGitHub" = "Voir le projet sur GitHub";
 "help.menu.reportIssue" = "Signaler un problème…";
+"help.button.accessibilityLabel" = "Ouvrir le guide de l'utilisateur";
 "toolbar.connect" = "Connexion";
 "toolbar.connect.tooltip" = "Se connecter au serveur sélectionné (F2)";
 "toolbar.disconnect" = "Déconnexion";

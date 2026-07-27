@@ -119,7 +119,7 @@ final class PreferencesWindowController: NSWindowController {
 }
 
 @MainActor
-private final class PreferencesContainerViewController: NSViewController {
+private final class PreferencesContainerViewController: NSViewController, HelpAnchorProviding {
     private let preferencesStore: AppPreferencesStore
     private let connectionController: TeamTalkConnectionController
     private let advancedMicrophoneSettingsStore: AdvancedMicrophoneSettingsStore
@@ -133,6 +133,19 @@ private final class PreferencesContainerViewController: NSViewController {
     private let sidebarWidth: CGFloat = 200
     private var selectedPane: PreferencesWindowController.Pane = .general
     private var paneViewControllers = [PreferencesWindowController.Pane: NSViewController]()
+
+    /// Cmd+? in Preferences opens the section of the guide for the pane on screen.
+    var helpAnchor: HelpAnchor {
+        switch selectedPane {
+        case .general: return .preferencesGeneral
+        case .connection: return .preferencesConnection
+        case .bearWare: return .preferencesBearWare
+        case .audio: return .preferencesAudio
+        case .sounds: return .preferencesSounds
+        case .announcements: return .preferencesAnnouncements
+        case .recording: return .preferencesRecording
+        }
+    }
 
     init(
         preferencesStore: AppPreferencesStore,

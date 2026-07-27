@@ -11,6 +11,7 @@
 		94A4A5F93B941A8E00C01234 /* libTeamTalk5.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 94A4A5F63B941A8E00C01234 /* libTeamTalk5.dylib */; };
 		94BABE0100000000000000A1 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 94BABE0300000000000000A3 /* Sparkle */; };
 		94WEBRTC013B941A8E00C0AB /* libwebrtc-audio-processing.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 94WEBRTC003B941A8E00C0AB /* libwebrtc-audio-processing.a */; };
+		94HELP013B941A8E00C0HELP /* ttaccessible.help in Resources */ = {isa = PBXBuildFile; fileRef = 94HELP003B941A8E00C0HELP /* ttaccessible.help */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -60,6 +61,7 @@
 		943281C62F68C35A00682D6B /* ttaccessible.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ttaccessible.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		94A4A5F63B941A8E00C01234 /* libTeamTalk5.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libTeamTalk5.dylib; path = ../Vendor/TeamTalk/libTeamTalk5.dylib; sourceTree = SOURCE_ROOT; };
 		94WEBRTC003B941A8E00C0AB /* libwebrtc-audio-processing.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libwebrtc-audio-processing.a"; path = "../Vendor/WebRTC/libwebrtc-audio-processing.a"; sourceTree = SOURCE_ROOT; };
+		94HELP003B941A8E00C0HELP /* ttaccessible.help */ = {isa = PBXFileReference; explicitFileType = folder; name = ttaccessible.help; path = "../Help/ttaccessible.help"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -120,6 +122,7 @@
 			children = (
 				94A4A5F63B941A8E00C01234 /* libTeamTalk5.dylib */,
 				94WEBRTC003B941A8E00C0AB /* libwebrtc-audio-processing.a */,
+				94HELP003B941A8E00C0HELP /* ttaccessible.help */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -230,6 +233,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				94HELP013B941A8E00C0HELP /* ttaccessible.help in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enregistrer</title>
+<meta name="description" content="Enregistrer une conversation en un seul fichier mixé, en un fichier par personne, ou les deux.">
+<meta name="keywords" content="enregistrement, enregistrer, WAV, OGG, Opus, dossier, stems, canal sans enregistrement">
+<meta name="robots" content="index, anchors">
+<link rel="stylesheet" href="../css/help.css">
+</head>
+<body>
+<nav class="crumb"><a href="index.html">Sommaire</a></nav>
+<a id="recording"></a>
+<h1>Enregistrer</h1>
+<h2 id="démarrer-et-arrêter">Démarrer et arrêter</h2>
+<table>
+<thead>
+<tr>
+<th>Raccourci</th>
+<th>Ce qui est enregistré</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Commande-R</td>
+<td>Un seul fichier mixé, toujours</td>
+</tr>
+<tr>
+<td>Maj-Commande-R</td>
+<td>Ce que dit le <strong>Mode d'enregistrement</strong> des préférences</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Commande-R</strong> arrête également l'enregistrement, tout comme Maj-Commande-R. L'application annonce <em>Enregistrement démarré</em> puis <em>Enregistrement arrêté</em>, et l'état audio (<strong>F9</strong>) indique si un enregistrement est en cours. Un bouton de la barre d'outils fait la même chose.</p>
+<p>La première fois, si aucun dossier n'a été choisi, l'application vous demande où enregistrer.</p>
+<h2 id="le-mode-denregistrement">Le mode d'enregistrement</h2>
+<p><a href="preferences.html#prefs-recording">Préférences → Enregistrements</a> définit ce que fait <strong>Maj-Commande-R</strong> :</p>
+<ul>
+<li><strong>Fichiers séparés (un par utilisateur)</strong> — un fichier par personne, y compris votre propre voix.</li>
+<li><strong>Les deux</strong> — un fichier mixé <em>et</em> les fichiers individuels. C'est le réglage par défaut.</li>
+</ul>
+<p><strong>Commande-R</strong> n'est pas concerné : il produit toujours le fichier mixé unique. C'est toute la raison d'être des deux raccourcis.</p>
+<h2 id="format-et-dossier">Format et dossier</h2>
+<ul>
+<li><strong>Format audio</strong> — <strong>WAV</strong> (par défaut, non compressé) ou <strong>OGG (Opus)</strong> (compressé, bien plus léger).</li>
+<li><strong>Dossier d'enregistrement</strong> — désigné par <strong>Choisir…</strong>, retiré par <strong>Effacer</strong>. L'application conserve d'un lancement à l'autre le droit d'y écrire.</li>
+</ul>
+<h2 id="les-canaux-qui-interdisent-lenregistrement">Les canaux qui interdisent l'enregistrement</h2>
+<p>Un canal peut être créé avec l'option <strong>Pas d'enregistrement audio</strong>. Dans un tel canal, Commande-R et Maj-Commande-R refusent de démarrer et l'application annonce <em>L'enregistrement n'est pas autorisé dans ce canal</em> — sauf si votre compte dispose du droit d'enregistrer la voix.</p>
+<h2 id="la-reprise-automatique">La reprise automatique</h2>
+<p><strong>Redémarrer automatiquement l'enregistrement en rejoignant un canal</strong> — désactivé par défaut — relance l'enregistrement quand vous changez de canal, quand la connexion revient, ou quand vous relancez l'application après une session qui enregistrait. Le mode réellement en cours est restauré : un enregistrement lancé par Commande-R revient donc en fichier unique, et non selon la préférence de Maj-Commande-R.</p>
+<p>Le changement de canal pendant un enregistrement mixé est géré pour vous : le fichier en cours est refermé et un nouveau démarre dans le nouveau canal.</p>
+<hr>
+<p class="footer"><a href="index.html">Sommaire</a></p>
+</body>
+</html>

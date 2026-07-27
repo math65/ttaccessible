@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Preferences</title>
+<meta name="description" content="Every setting of tt-Accessible, pane by pane, with its default value.">
+<meta name="keywords" content="preferences, settings, general, connection, BearWare, audio, sounds, announcements, recording">
+<meta name="robots" content="index, anchors">
+<link rel="stylesheet" href="../css/help.css">
+</head>
+<body>
+<nav class="crumb"><a href="index.html">Table of contents</a></nav>
+<a id="preferences"></a>
+<h1>Preferences</h1>
+<p><strong>Command-comma</strong> opens Preferences. The window has seven panes, listed in a sidebar: General, Connection, BearWare, Audio, Sounds, Announcements and Recording. Escape closes the window, and Command-question-mark opens the section of this guide that matches the pane you are in.</p>
+<p><a id="prefs-general"></a></p>
+<h2 id="general">General</h2>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Default nickname</strong> — used when a saved server has no specific nickname</td>
+<td>your macOS account name</td>
+</tr>
+<tr>
+<td><strong>Default status message</strong></td>
+<td>empty</td>
+</tr>
+<tr>
+<td><strong>Gender</strong></td>
+<td>Neutral</td>
+</tr>
+<tr>
+<td><strong>Away timeout</strong>, in minutes — 0 disables automatic Away</td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Away message</strong></td>
+<td>empty</td>
+</tr>
+<tr>
+<td><strong>Use relative timestamps (e.g. "2 min ago")</strong></td>
+<td>off</td>
+</tr>
+<tr>
+<td><strong>Automatically detect the TeamTalk file format during import</strong></td>
+<td>on</td>
+</tr>
+<tr>
+<td><strong>Language</strong> — System Default, English or French</td>
+<td>System Default</td>
+</tr>
+</tbody>
+</table>
+<p>Automatic away switches your status to <em>Away</em> once you stop touching the keyboard or the mouse for the chosen number of minutes, and switches it back as soon as you really touch them again. Announcements from VoiceOver or a braille display do not count as activity.</p>
+<p>Changing the language requires restarting the app for it to apply everywhere.</p>
+<p>The <strong>Updates</strong> section holds <strong>Check for updates automatically</strong> (on) and <strong>Include beta versions</strong> (off). Beta versions may contain bugs.</p>
+<p><a id="prefs-connection"></a></p>
+<h2 id="connection">Connection</h2>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Automatically join the main channel on connect</strong></td>
+<td>on</td>
+</tr>
+<tr>
+<td><strong>Automatically reconnect on connection loss</strong></td>
+<td>on</td>
+</tr>
+<tr>
+<td><strong>Automatically rejoin the last channel after reconnecting</strong></td>
+<td>on</td>
+</tr>
+<tr>
+<td><strong>Connect to the last used server on launch</strong></td>
+<td>off</td>
+</tr>
+<tr>
+<td><strong>Skip confirmation when kicking users</strong></td>
+<td>off</td>
+</tr>
+<tr>
+<td><strong>Adaptive jitter buffer (improves audio on unstable connections)</strong></td>
+<td>off</td>
+</tr>
+<tr>
+<td><strong>Sort channels by</strong> — Name, or User count (most populated first)</td>
+<td>Name</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Default subscriptions</strong> decides what you receive from everyone as soon as you connect: private messages, channel messages, broadcast messages, voice, desktop sessions and media file streams. All six are on by default.</p>
+<p><strong>Default intercepts</strong> — private messages, channel messages, voice, desktop sessions and media file streams — are all off, and need the matching rights on the server. Changing either list applies immediately to the running session.</p>
+<p>See <a href="users.html">People you hear</a> for the per-person version of these switches.</p>
+<p><a id="prefs-bearware"></a></p>
+<h2 id="bearware">BearWare</h2>
+<p>A free BearWare account (bearware.dk) lets you log in to servers that support web login. Enter your <strong>BearWare username</strong> and <strong>BearWare password</strong>, then <strong>Sign in</strong>; the pane then shows who you are signed in as and offers <strong>Sign out</strong>.</p>
+<p>Web login is then enabled per server, in that server's own settings. See <a href="servers.html">Servers</a>.</p>
+<p><a id="prefs-audio"></a></p>
+<h2 id="audio">Audio</h2>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Output device</strong> — System default, a specific device, or No output device</td>
+<td>System default</td>
+</tr>
+<tr>
+<td><strong>Input device</strong></td>
+<td>System default</td>
+</tr>
+<tr>
+<td><strong>Microphone processing</strong> — None, Noise reduction, or Echo cancellation + noise reduction</td>
+<td>None</td>
+</tr>
+<tr>
+<td><strong>Input channels</strong> — Auto, a mono input, a stereo pair or a mono mix</td>
+<td>Auto</td>
+</tr>
+<tr>
+<td><strong>Microphone mode</strong> — Always transmit, Push-to-talk, or Both</td>
+<td>Always transmit</td>
+</tr>
+<tr>
+<td><strong>Push-to-talk key</strong></td>
+<td>not set</td>
+</tr>
+<tr>
+<td><strong>Play a sound when transmission starts and stops</strong></td>
+<td>on</td>
+</tr>
+<tr>
+<td><strong>Push-to-talk works when another app is in front</strong></td>
+<td>on</td>
+</tr>
+<tr>
+<td><strong>Microphone toggle hotkey works when another app is in front</strong></td>
+<td>off</td>
+</tr>
+<tr>
+<td><strong>Global microphone toggle key</strong></td>
+<td>Command-Shift-A</td>
+</tr>
+<tr>
+<td><strong>Per-user volume memory</strong> — Off, This session only, or Always</td>
+<td>Always</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Refresh Devices</strong> rebuilds the device list, and <strong>Audio preview</strong> plays your microphone back to you for a test. The details are in <a href="audio-setup.html">Setting up audio</a> and <a href="talking.html">Talking</a>.</p>
+<p><a id="prefs-sounds"></a></p>
+<h2 id="sounds">Sounds</h2>
+<p><strong>Enable sound notifications</strong> (on) turns the whole set on or off, and <strong>Sound pack</strong> chooses which one is used. Below, the twenty-six sound events can each be turned off individually; all are on by default.</p>
+<p>The buttons <strong>New Pack...</strong>, <strong>Required Files...</strong>, <strong>Reveal Packs Folder</strong> and, for your own packs, <strong>Delete</strong> and the per-event <strong>Choose...</strong> / <strong>Reset</strong> let you build a pack of your own. See <a href="sounds-announcements.html">Sounds and announcements</a>.</p>
+<p><a id="prefs-announcements"></a></p>
+<h2 id="announcements">Announcements</h2>
+<p><strong>Background message handling</strong> decides what happens when a message or an event arrives while tt-Accessible is not the frontmost app. <strong>Use the same mode for all event types</strong> (on) applies a single <strong>Mode</strong> to everything; turn it off to set private messages, channel messages, broadcast messages and TeamTalk history separately. The three modes are <strong>System notification</strong> (the default), <strong>macOS text to speech</strong> and <strong>VoiceOver via AppleScript</strong>.</p>
+<p><strong>macOS text to speech</strong> configures that mode: <strong>Voice</strong>, <strong>Speech rate</strong>, <strong>Volume</strong> and a <strong>Test voice</strong> button.</p>
+<p><strong>Event announcements</strong> covers what is spoken while the app <em>is</em> in front: channel messages, private messages and broadcast messages, each on by default, plus <strong>Announce system history</strong> — twenty events grouped by theme, with <strong>Enable all</strong> and <strong>Disable all</strong>.</p>
+<p><a id="prefs-recording"></a></p>
+<h2 id="recording">Recording</h2>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Recording folder</strong></td>
+<td>none</td>
+</tr>
+<tr>
+<td><strong>Recording mode for Cmd+Shift+R</strong> — Separate files, or Both</td>
+<td>Both</td>
+</tr>
+<tr>
+<td><strong>Audio format</strong> — WAV or OGG (Opus)</td>
+<td>WAV</td>
+</tr>
+<tr>
+<td><strong>Automatically restart recording when joining a channel</strong></td>
+<td>off</td>
+</tr>
+</tbody>
+</table>
+<p>Command-R always records a single mixed file, whatever the mode above says. See <a href="recording.html">Recording</a>.</p>
+<hr>
+<p class="footer"><a href="index.html">Table of contents</a></p>
+</body>
+</html>
