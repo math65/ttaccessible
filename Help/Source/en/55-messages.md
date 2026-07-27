@@ -1,54 +1,53 @@
 ---
-title: Messages
-description: Send and read channel messages, private conversations and broadcasts, copy text and follow links.
+title: Send and read messages
+description: Write in the channel chat, hold private conversations, send a broadcast, and copy or export what was said.
 keywords: chat, message, private message, broadcast, copy, link, export chat
 anchor: messages
 ---
 
-## Channel chat
+You can write to everyone in your channel, to one person in private, or — with the right
+permission — to the whole server.
 
-The chat area of the main window shows what is said in your channel.
+## Send a message to the channel
 
-- **Command-3** puts the cursor in the input field. Type, then press **Return** or use the **Send**
-  button.
-- **Command-2** moves to the history to read back through it.
+1. Press Command-3 to put the cursor in the message field.
+2. Type your message.
+3. Press Return, or click Send.
 
-The app confirms *Message sent.* Incoming messages are announced as *New channel message from …*
-when the setting allows it, and always land in the history.
+To read back through the conversation, press Command-2.
 
-You must be in a channel to write: otherwise the app answers *You must join a channel to send a
-message.*
+You must be in a channel to write. Otherwise tt-Accessible answers *You must join a channel to send
+a message.*
 
-## Private messages
+## Send a private message
 
-**Command-E** — or **Server → Private Messages** (**Shift-Command-E**) — opens the **Private
-Messages** window, where *All private conversations from the active session are grouped here.*
+1. Select the person in the channel tree.
+2. Control-click, then choose **Send Private Message**. The command is also offered as a VoiceOver
+   action, and in the Connected Users window.
+3. Type your message, then press Return.
 
-The window has three parts, reachable with the same shortcuts as the main window: the
-**Conversations** list (Command-1), the **Private messages** history (Command-2) and the input field
-(Command-3). Each conversation reports whether the person is **Online** or **Offline**, and shows
-*unread* when messages are waiting.
+To reopen your private conversations later, press Command-E. In the Private Messages window,
+Command-1, Command-2 and Command-3 take you to the conversation list, the history and the message
+field. Each conversation shows whether the person is online, and marks unread messages.
 
-To start a conversation, select the person in the channel tree and choose **Send Private Message**
-from the context menu — it is also offered as a VoiceOver action. The same command exists in the
-**Connected Users** window.
+## Send a message to everyone on the server
 
-## Broadcasts
+1. Press Command-B.
+2. Type your message, then click Send.
 
-**Command-B** opens **Broadcast a Message**, which sends a message to everyone on the server. It
-requires the corresponding right on your account; broadcasts you receive are announced separately
-from ordinary messages.
+Broadcasting requires the matching right on your account. To stop receiving broadcasts from
+someone, see [Adjust what you hear from each person](users.html).
 
-You can also stop receiving them: **Broadcast Messages** is one of the subscriptions described in
-[People you hear](users.html).
+## Copy a message or follow a link
 
-## Copying and links
+- To copy the selected message, press Command-C. The command is also in the shortcut menu of both
+  chat lists.
+- Web addresses in messages are detected automatically. Click one to open it, or reach it with the
+  VoiceOver actions rotor, where each link is offered as *Open link*.
 
-- **Command-C** copies the selected message; the app confirms with *Message copied*. The same
-  command is in the context menu of both chat lists.
-- URLs in messages are detected automatically and are clickable. VoiceOver users reach them with the
-  actions rotor, where each link is offered as *Open link: …*.
+## Save a conversation
 
-## Saving a conversation
+Press Shift-Command-S, then choose where to save the file.
 
-**Shift-Command-S** — **Export chat history…** — writes the current chat to a file of your choice.
+**See also:** [Join and manage channels](channels.html) ·
+[Choose sounds and announcements](sounds-announcements.html)

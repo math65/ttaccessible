@@ -1,61 +1,52 @@
 ---
-title: Getting started
-description: Install tt-Accessible, choose your language, connect for the first time, and keep the app up to date.
+title: Set up tt-Accessible
+description: Install tt-Accessible, choose the language it uses, allow it to use your microphone, and keep it up to date.
 keywords: install, first launch, language, microphone permission, update, Sparkle, beta
 anchor: getting-started
 ---
 
-## What you need
+You can install tt-Accessible on any Mac running macOS 12 (Monterey) or later. To talk with other
+people you also need a microphone and the details of a TeamTalk 5 server — or a `.tt` file or
+`tt://` link that someone sent you. You can listen without a microphone.
 
-- **macOS 12.0 (Monterey) or later.** The app is a universal binary and runs natively on both Apple
-  silicon and Intel Macs.
-- **A TeamTalk 5 server** to connect to — either one you were given the details for, or a `.tt` file
-  or `tt://` link someone sent you.
-- A **microphone** if you want to talk. You can listen without one.
-
-Some features need a more recent system: echo cancellation captures the whole system output on
-macOS 14.2 and later, and streaming the audio of an application or of VoiceOver also requires a
-recent macOS (see [Streaming media](streaming.html)).
-
-## Installing
+## Install tt-Accessible
 
 1. Download the latest release archive from the project's releases page.
-2. Unarchive it, then drag **tt-Accessible** into your Applications folder.
-3. Open it. The first launch may take a moment while macOS checks the app.
+2. Unarchive it, then drag tt-Accessible into your Applications folder.
+3. Open tt-Accessible. The first launch may take a moment while macOS checks the app.
 
-## First launch
+## Choose the language of the app
 
-The app asks **Choose Your Language** — English or French. You can change this later in
-[Preferences → General](preferences.html#prefs-general); the app must be restarted for the change to
-apply everywhere.
+The first time you open tt-Accessible, it asks **Choose Your Language**. Select English or French.
 
-The first time you turn the microphone on, macOS asks for permission to use it. If you refuse, the
-app reports *Microphone access was denied by macOS.* and you have to grant access in System
-Settings → Privacy & Security → Microphone.
+To change your choice later:
 
-## Connecting for the first time
+1. In tt-Accessible, choose tt-Accessible > Preferences (or press Command-comma).
+2. Click General in the sidebar.
+3. Click the **Language** pop-up menu, then choose **System Default**, **English** or **French**.
+4. Quit tt-Accessible and open it again, so the change applies everywhere.
 
-The window that opens at launch is **TeamTalk Servers**. It is empty until you add a server:
+## Allow tt-Accessible to use your microphone
 
-- Press **Command-N** to fill in the details by hand, or
-- Choose **Server → Import TeamTalk Servers…** (Shift-Command-I) if you have a configuration file, a
-  `.tt` file or a `tt://` link.
+The first time you turn the microphone on, macOS asks for permission. Click OK.
 
-Then select the server in the list and press **Return** or **F2**.
+If you declined, tt-Accessible reports *Microphone access was denied by macOS.* To grant access,
+choose Apple menu > System Settings, click Privacy & Security, click Microphone, then turn on
+tt-Accessible.
 
-[Servers](servers.html) covers all of this in detail.
-
-## Keeping the app up to date
+## Keep tt-Accessible up to date
 
 tt-Accessible checks for updates on its own and offers to install them.
 
-- **tt-Accessible → Check for Updates…** checks immediately.
-- [Preferences → General](preferences.html#prefs-general), section **Updates**, has
-  **Check for updates automatically** (on by default) and **Include beta versions** (off by
-  default). Beta versions may contain bugs; turn the option off to receive only stable releases.
+- To check immediately, choose tt-Accessible > Check for Updates.
+- To change how updates work, open Preferences, click General, then use **Check for updates
+  automatically** and **Include beta versions** in the Updates section. Beta versions may contain
+  bugs, so leave that option turned off to receive only stable releases.
 
-## Getting help
+## Get help
 
-The **Help** menu also offers **View Project on GitHub**, **Report an Issue…** and, when the build
-includes it, **Contact the Developer…** — a form that sends a message straight to the developer,
-optionally with the audio diagnostic log attached. See [Troubleshooting](troubleshooting.html).
+The Help menu also offers **View Project on GitHub**, **Report an Issue**, and — when your copy
+includes it — **Contact the Developer**, a form that sends a message straight to the developer.
+
+**See also:** [Add a server and connect to it](servers.html) ·
+[If something doesn't work](troubleshooting.html)

@@ -1,57 +1,59 @@
 ---
-title: The channel mixer
-description: Balance a whole channel by ear — per-user volume, pan, mute and solo, driven entirely from the keyboard.
+title: Balance a channel with the mixer
+description: Set the volume, stereo position, mute and solo of each person in your channel, entirely from the keyboard.
 keywords: mixer, channel strip, volume, pan, mute, solo, keyboard, VoiceOver
 anchor: mixer
 ---
 
-The channel mixer turns the people in your channel into a small mixing desk: one **channel strip**
-per person, each with its own level, stereo position, mute and solo. Because the app builds the mix
-itself, you can place one person on the left and another on the right, or bring back someone who is
-too quiet, without touching anyone else.
+The channel mixer turns the people in your channel into a small mixing desk, with one channel strip
+per person. You can place someone on the left and someone else on the right, or bring back a person
+who is too quiet, without touching anyone else.
 
-**Command-5** moves the cursor into the mixer. When you are alone it simply says *No other users in
-this channel.*
+## Open the mixer
 
-## What a strip contains
+Press Command-5. When you're alone in the channel, the mixer reports *No other users in this
+channel.*
 
-| Control | Range |
+## Adjust a person
+
+Each strip carries the following controls, and is named after the person, followed by their level
+and by *muted* when it applies.
+
+| Control | What it does |
 |---|---|
-| Volume | 0 to 100%, in steps of 2 |
-| Pan | Left to right, centre by default |
-| Media volume | The level of the media file that person streams |
-| Media pan | The stereo position of that stream |
-| Mute | Silences both the voice and the media of that person |
-| Solo | Silences everyone who is not soloed |
+| Volume | Sets how loud you hear their voice, from 0 to 100% |
+| Pan | Places their voice between the left and right speaker |
+| Media volume | Sets the level of the media file they stream |
+| Media pan | Places that stream between the speakers |
+| Mute | Silences both their voice and their media |
+| Solo | Silences everyone who isn't soloed |
 
-Each strip is named after the person, followed by their level and by *muted* when it applies, so
-moving from strip to strip already tells you the state of the channel.
+## Use the mixer from the keyboard
 
-## Keyboard control
+While the cursor is in the mixer, these keys drive it directly. They're ignored while you type in a
+text field, so the chat is never affected.
 
-While the cursor is in the mixer, single keys drive it directly. They are ignored while you are
-typing in a text field, so the chat is never affected.
-
-| Key | Effect |
+| Key | Action |
 |---|---|
-| Up / Down arrow | Voice volume of the focused person |
-| Left / Right arrow | Voice pan |
-| Command-Up / Command-Down | Media volume — or the master volume when no strip is focused |
-| Command-Left / Command-Right | Media pan |
-| V | Speaks the volume; press twice to reset it to 50% |
-| P | Speaks the pan; press twice to re-centre it |
-| M | Speaks the mute state; press twice to toggle it |
-| S | Speaks the solo state; press twice to toggle it |
-| Command-P | Speaks the media pan; press twice to re-centre it |
+| Up Arrow or Down Arrow | Change the voice volume |
+| Left Arrow or Right Arrow | Change the voice pan |
+| Command-Up Arrow or Command-Down Arrow | Change the media volume, or the master volume outside a strip |
+| Command-Left Arrow or Command-Right Arrow | Change the media pan |
+| V | Speak the volume; press twice to reset it to 50% |
+| P | Speak the pan; press twice to centre it |
+| M | Speak the mute state; press twice to change it |
+| S | Speak the solo state; press twice to change it |
+| Command-P | Speak the media pan; press twice to centre it |
 
-The two presses must follow each other quickly. Holding an arrow repeats it, slowly at first and
-then faster, so a long move stays controllable.
+Press the two presses quickly, one after the other. Hold an arrow key to repeat it, slowly at first
+and then faster.
 
-Every action is spoken immediately, which means you can balance a channel entirely by ear without
-ever reading the screen.
+Every action is spoken as you make it, so you can balance a channel entirely by ear.
 
-## Where the values are kept
+## Keep your levels
 
-Mixer levels are the same per-user levels as the ones in *Adjust volume…* (see
-[People you hear](users.html)). Whether they survive a reconnection or a relaunch depends on
-*Per-user volume memory* in [Preferences → Audio](preferences.html#prefs-audio).
+The mixer sets the same per-person levels as **Adjust volume** does. To choose whether they survive
+a reconnection or a relaunch, open Preferences, click Audio, then use **Per-user volume memory**.
+
+**See also:** [Adjust what you hear from each person](users.html) ·
+[Set up your audio devices](audio-setup.html)

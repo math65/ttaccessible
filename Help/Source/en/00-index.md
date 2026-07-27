@@ -1,45 +1,45 @@
 ---
-title: tt-Accessible Help
-description: User guide for tt-Accessible, an accessible TeamTalk 5 client for macOS.
+title: tt-Accessible User Guide
+description: Learn how to use tt-Accessible, an accessible TeamTalk 5 client for macOS.
 keywords: tt-Accessible, TeamTalk, help, guide, VoiceOver, accessibility
 index: true
 robots: noindex
 ---
 
 tt-Accessible is a TeamTalk 5 client for macOS built for VoiceOver users. Every window, list and
-control is reachable from the keyboard, the app announces what happens on the server, and each
-person you hear can be adjusted individually.
+control is reachable from the keyboard, the app announces what happens on the server, and you can
+adjust each person you hear.
 
 <p><a href="../fr.lproj/index.html" lang="fr" hreflang="fr">Lire ce guide en français</a></p>
 
-## First steps
+## Get started
 
-- [Getting started](getting-started.html) — install the app, set your language, keep it up to date
-- [Servers](servers.html) — add, import and export servers, BearWare web login
-- [The main window](main-window.html) — the five areas and how to move between them
+- [Set up tt-Accessible](getting-started.html)
+- [Add a server and connect to it](servers.html)
+- [Get to know the tt-Accessible window](main-window.html)
 
-## Everyday use
+## Talk with people
 
-- [Channels](channels.html) — join, create, edit, channel files
-- [Talking](talking.html) — microphone, push-to-talk, volumes, hearing yourself
-- [Messages](messages.html) — channel chat, private messages, broadcasts
-- [People you hear](users.html) — volume, muting, subscriptions
-- [The channel mixer](mixer.html) — per-user volume, pan, mute and solo
+- [Join and manage channels](channels.html)
+- [Talk in a channel](talking.html)
+- [Send and read messages](messages.html)
+- [Adjust what you hear from each person](users.html)
+- [Balance a channel with the mixer](mixer.html)
 
-## Audio and media
+## Work with audio and media
 
-- [Setting up audio](audio-setup.html) — devices, echo cancellation, microphone preview
-- [Recording](recording.html) — record a conversation to disk
-- [Streaming media](streaming.html) — play a file, a URL, a device, an app or VoiceOver into a channel
+- [Set up your audio devices](audio-setup.html)
+- [Record a conversation](recording.html)
+- [Stream audio into a channel](streaming.html)
 
-## Managing a server
+## Administer a server
 
-- [Administration](administration.html) — operators, kicks, bans, accounts, server properties
+- [Manage users, bans and server settings](administration.html)
 
 ## Settings and reference
 
-- [Preferences](preferences.html) — every setting, pane by pane
-- [Sounds and announcements](sounds-announcements.html) — sound packs and spoken events
-- [Profiles](profiles.html) — run several independent instances
-- [Keyboard shortcuts](shortcuts.html) — the full list
-- [Troubleshooting](troubleshooting.html) — when something does not work
+- [Change tt-Accessible settings](preferences.html)
+- [Choose sounds and announcements](sounds-announcements.html)
+- [Use several profiles at once](profiles.html)
+- [Keyboard shortcuts](shortcuts.html)
+- [If something doesn't work](troubleshooting.html)

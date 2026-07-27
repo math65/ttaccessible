@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Talking</title>
-<meta name="description" content="Turn the microphone on, use push-to-talk, adjust the volumes, and hear yourself.">
+<title>Talk in a channel</title>
+<meta name="description" content="Turn your microphone on, use push-to-talk, adjust the volumes, and check that you're on air.">
 <meta name="keywords" content="microphone, push-to-talk, PTT, mute, master volume, hear myself, audio status, gain">
 <meta name="robots" content="index, anchors">
 <link rel="stylesheet" href="../css/help.css">
@@ -12,38 +12,45 @@
 <body>
 <nav class="crumb"><a href="index.html">Table of contents</a></nav>
 <a id="talking"></a>
-<h1>Talking</h1>
-<h2 id="turning-the-microphone-on">Turning the microphone on</h2>
-<p><strong>Shift-Command-A</strong> toggles the microphone. The app confirms with <em>Microphone enabled.</em> or <em>Microphone muted.</em>, and the toolbar button reports its state.</p>
-<p>You must be in a channel first: outside one, the app answers <em>You must join a channel before enabling the microphone.</em></p>
-<h2 id="microphone-modes">Microphone modes</h2>
-<p><a href="preferences.html#prefs-audio">Preferences → Audio</a> offers three ways to work, under <strong>Microphone mode</strong>:</p>
+<h1>Talk in a channel</h1>
+<p>You can talk as soon as you join a channel. tt-Accessible can keep your microphone open, or send your voice only while you hold a key.</p>
+<h2 id="turn-the-microphone-on-or-off">Turn the microphone on or off</h2>
+<p>Press Shift-Command-A. tt-Accessible confirms with <em>Microphone enabled</em> or <em>Microphone muted</em>, and the toolbar button shows its state.</p>
+<p>You must be in a channel first. Outside one, tt-Accessible answers <em>You must join a channel before enabling the microphone.</em></p>
+<h2 id="choose-how-your-microphone-transmits">Choose how your microphone transmits</h2>
+<ol type="1">
+<li>Open Preferences, then click Audio in the sidebar.</li>
+<li>Click the <strong>Microphone mode</strong> pop-up menu, then choose one of the following:
 <ul>
-<li><strong>Always transmit</strong> — the microphone stays open once you turn it on. This is the default.</li>
-<li><strong>Push-to-talk (hold a key to transmit)</strong> — you transmit only while a key is held.</li>
-<li><strong>Both (mute-gated with push-to-talk)</strong> — Shift-Command-A opens a permanent gate, and holding the push-to-talk key transmits regardless. Releasing the key goes silent again until you press Shift-Command-A or hold the key once more.</li>
-</ul>
-<p>For push-to-talk you must record a key: activate <strong>Push-to-talk key</strong>, then press the key to hold. Any key works, including a single one; a modifier combination on its own — Command-Control, for instance — works as well. Press Delete to clear it. Until a key is set, the app warns that push-to-talk is inactive and the microphone keeps transmitting as in always-on mode.</p>
-<p>Two related options:</p>
+<li><strong>Always transmit</strong> — the microphone stays open once you turn it on.</li>
+<li><strong>Push-to-talk</strong> — you transmit only while you hold a key.</li>
+<li><strong>Both</strong> — Shift-Command-A opens a permanent gate, and holding the push-to-talk key transmits whatever the gate is set to.</li>
+</ul></li>
+<li>For push-to-talk, click <strong>Push-to-talk key</strong>, then press the key you want to hold. Any key works, including a single one or a combination of modifier keys on their own, such as Command-Control. Press Delete to clear it.</li>
+</ol>
+<p>Until you record a key, push-to-talk stays inactive and the microphone keeps transmitting as in always-on mode. tt-Accessible warns you in the same pane.</p>
+<p>Two related options sit just below:</p>
 <ul>
-<li><strong>Play a sound when transmission starts and stops</strong> — on by default.</li>
-<li><strong>Push-to-talk works when another app is in front</strong> — on by default. There is a matching option for the microphone toggle, off by default. Both rely on the Input Monitoring permission, which macOS asks for the first time. Because the app is sandboxed, the key is detected but still reaches the app you are working in, so prefer a combination of modifiers on their own or a function key from F13 to F19 — neither types anything into another app.</li>
+<li><strong>Play a sound when transmission starts and stops</strong>, which is on.</li>
+<li><strong>Push-to-talk works when another app is in front</strong>, which is on. A matching option exists for the microphone toggle, and is off. Both use the Input Monitoring permission, which macOS asks for the first time. Because tt-Accessible runs in a sandbox, the key still reaches the app you're working in, so prefer modifier keys on their own or a function key from F13 to F19.</li>
 </ul>
-<h2 id="volumes">Volumes</h2>
-<p>Three sliders sit in the main window, each with a <em>Reset to 50%</em> VoiceOver action:</p>
+<h2 id="adjust-the-volumes">Adjust the volumes</h2>
+<p>The main window has three sliders, each with a <em>Reset to 50%</em> VoiceOver action:</p>
 <ul>
 <li><strong>Input volume</strong> — how loud your microphone is sent.</li>
 <li><strong>Output volume</strong> — how loud you hear everyone.</li>
 <li><strong>Sound effects volume</strong> — how loud the notification sounds are.</li>
 </ul>
-<p><strong>Command-M</strong> mutes and unmutes the master volume, announcing <em>Master volume muted</em> or <em>Master volume unmuted</em>.</p>
-<p>Individual people can be adjusted separately — see <a href="users.html">People you hear</a> and <a href="mixer.html">The channel mixer</a>.</p>
-<h2 id="hearing-yourself">Hearing yourself</h2>
-<p><strong>Shift-Command-H</strong> turns <em>Hear myself</em> on and off. Your own voice is then played back to you through the channel, which is the quickest way to check that your microphone, gain and processing are set correctly. The app announces <em>Hear myself enabled</em> or <em>Hear myself disabled</em>.</p>
-<p>For a check before connecting, use the <strong>Audio preview</strong> button in <a href="preferences.html#prefs-audio">Preferences → Audio</a>.</p>
-<h2 id="knowing-where-you-stand">Knowing where you stand</h2>
-<p><strong>F9</strong> speaks the audio status: whether the output is active, whether the microphone is ready or transmitting, and whether recording is running. It is the fastest way to answer <em>am I actually on air?</em> without leaving what you are doing.</p>
-<p>If the app reports <em>Transmission blocked by the channel operator</em>, an operator has taken your right to speak in that channel.</p>
+<p>To mute or unmute everything at once, press Command-M.</p>
+<p>To set the level of one person, see <a href="users.html">Adjust what you hear from each person</a> and <a href="mixer.html">Balance a channel with the mixer</a>.</p>
+<h2 id="check-that-people-can-hear-you">Check that people can hear you</h2>
+<ul>
+<li>To hear your own voice through the channel, press Shift-Command-H. If you can hear yourself, you're on air.</li>
+<li>To hear a summary of the audio status, press F9.</li>
+<li>To test your microphone before connecting, open Preferences, click Audio, then click <strong>Audio preview</strong>.</li>
+</ul>
+<p>If tt-Accessible announces <em>Transmission blocked by the channel operator</em>, an operator has taken your right to speak in that channel.</p>
+<p><strong>See also:</strong> <a href="audio-setup.html">Set up your audio devices</a> · <a href="troubleshooting.html">If something doesn't work</a></p>
 <hr>
 <p class="footer"><a href="index.html">Table of contents</a></p>
 </body>

@@ -1,56 +1,57 @@
 ---
-title: Les messages
-description: Écrire et lire les messages de canal, les conversations privées et les messages généraux, copier du texte et suivre les liens.
+title: Envoyer et lire des messages
+description: Écrire dans le chat du canal, tenir des conversations privées, envoyer un message général et copier ou exporter les échanges.
 keywords: chat, message, message privé, message général, diffusion, copier, lien, export
 anchor: messages
 ---
 
-## Le chat du canal
+Vous pouvez écrire à tout votre canal, à une seule personne en privé, ou — avec le droit
+correspondant — à tout le serveur.
 
-La zone de chat de la fenêtre principale affiche ce qui s'écrit dans votre canal.
+## Envoyer un message au canal
 
-- **Commande-3** place le curseur dans le champ de saisie. Tapez, puis appuyez sur **Entrée** ou
-  utilisez le bouton **Envoyer**.
-- **Commande-2** amène à l'historique pour relire ce qui précède.
+1. Appuyez sur Commande + 3 pour placer le curseur dans le champ de saisie.
+2. Saisissez votre message.
+3. Appuyez sur Retour, ou cliquez sur Envoyer.
 
-L'application confirme par *Message envoyé.* Les messages entrants sont annoncés — *Nouveau message
-du canal de …* — quand le réglage le permet, et se retrouvent toujours dans l'historique.
+Pour relire la conversation, appuyez sur Commande + 2.
 
-Il faut être dans un canal pour écrire ; sinon l'application répond *Vous devez rejoindre un canal
+Il faut être dans un canal pour écrire. Sinon, tt-Accessible répond *Vous devez rejoindre un canal
 pour envoyer un message.*
 
-## Les messages privés
+## Envoyer un message privé
 
-**Commande-E** — ou **Serveur → Messages privés** (**Maj-Commande-E**) — ouvre la fenêtre **Messages
-privés**, où *Toutes les conversations privées de la session active sont regroupées ici.*
+1. Sélectionnez la personne dans l'arbre des canaux.
+2. Cliquez dessus en maintenant la touche Contrôle enfoncée, puis choisissez **Écrire un message
+   privé**. La commande est aussi proposée comme action VoiceOver, et dans la fenêtre Utilisateurs
+   connectés.
+3. Saisissez votre message, puis appuyez sur Retour.
 
-La fenêtre compte trois parties, atteintes avec les mêmes raccourcis que la fenêtre principale : la
-liste des **Conversations** (Commande-1), l'historique des **Messages privés** (Commande-2) et le
-champ de saisie (Commande-3). Chaque conversation indique si la personne est **En ligne** ou **Hors
-ligne**, et affiche *non lu* quand des messages attendent.
+Pour rouvrir vos conversations privées plus tard, appuyez sur Commande + E. Dans la fenêtre Messages
+privés, Commande + 1, Commande + 2 et Commande + 3 atteignent la liste des conversations,
+l'historique et le champ de saisie. Chaque conversation indique si la personne est en ligne et
+signale les messages non lus.
 
-Pour engager une conversation, sélectionnez la personne dans l'arbre des canaux et choisissez
-**Écrire un message privé** dans le menu contextuel — la commande est aussi proposée comme action
-VoiceOver. Elle existe également dans la fenêtre **Utilisateurs connectés**.
+## Envoyer un message à tout le serveur
 
-## Les messages généraux
+1. Appuyez sur Commande + B.
+2. Saisissez votre message, puis cliquez sur Envoyer.
 
-**Commande-B** ouvre **Diffuser un message**, qui envoie un message à tout le serveur. Cela demande
-le droit correspondant sur votre compte ; les messages généraux que vous recevez sont annoncés
-séparément des messages ordinaires.
+La diffusion demande le droit correspondant sur votre compte. Pour cesser de recevoir les messages
+généraux de quelqu'un, consultez
+[Régler ce que vous entendez de chaque personne](users.html).
 
-Vous pouvez aussi cesser de les recevoir : **Messages généraux** fait partie des abonnements décrits
-dans [Les personnes que vous entendez](users.html).
+## Copier un message ou suivre un lien
 
-## Copier et suivre les liens
-
-- **Commande-C** copie le message sélectionné ; l'application confirme par *Message copié*. La
-  commande figure aussi dans le menu contextuel des deux listes de messages.
-- Les adresses web contenues dans les messages sont détectées automatiquement et deviennent
-  cliquables. Sous VoiceOver, elles sont proposées dans le rotor d'actions sous la forme *Ouvrir le
-  lien : …*.
+- Pour copier le message sélectionné, appuyez sur Commande + C. La commande figure aussi dans le
+  menu contextuel des deux listes de messages.
+- Les adresses web contenues dans les messages sont détectées automatiquement. Cliquez sur l'une
+  d'elles pour l'ouvrir, ou atteignez-la avec le rotor d'actions de VoiceOver, où chaque lien est
+  proposé sous la forme *Ouvrir le lien*.
 
 ## Conserver une conversation
 
-**Maj-Commande-S** — **Exporter l'historique du chat…** — enregistre la conversation courante dans un
-fichier de votre choix.
+Appuyez sur Maj + Commande + S, puis choisissez où enregistrer le fichier.
+
+**Voir aussi :** [Rejoindre et gérer des canaux](channels.html) ·
+[Choisir les sons et les annonces](sounds-announcements.html)

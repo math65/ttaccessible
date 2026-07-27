@@ -1,85 +1,71 @@
 ---
-title: Sons et annonces
-description: Choisir un pack de sons, en composer un, et décider de ce que l'application dit à voix haute au premier plan comme en arrière-plan.
+title: Choisir les sons et les annonces
+description: Choisir un pack de sons ou composer le vôtre, et décider de ce que tt-Accessible dit à voix haute au premier plan comme en arrière-plan.
 keywords: sons, pack de sons, notification, annonce, VoiceOver, synthèse vocale, arrière-plan
 anchor: sounds-announcements
 ---
 
-tt-Accessible vous tient au courant de deux façons : par de courts sons, et par des annonces vocales.
-Les deux se règlent événement par événement.
+tt-Accessible vous tient au courant de deux façons : par de courts sons, et par des annonces
+vocales. Vous pouvez régler les deux événement par événement.
 
-## Les packs de sons
+## Choisir un pack de sons
 
-Trois packs sont fournis — **Default**, **Majorly-G** et **Old** — et se choisissent avec **Pack de
-sons**, dans [Préférences → Sons](preferences.html#prefs-sounds). **Activer les notifications
-sonores** coupe l'ensemble d'un seul geste.
+1. Ouvrez les Préférences, puis cliquez sur Sons dans la barre latérale.
+2. Cliquez sur le menu local **Pack de sons**, puis choisissez **Default**, **Majorly-G** ou
+   **Old**.
 
-Pour composer le vôtre :
-
-1. **Fichiers requis...** énumère tous les noms de fichiers que l'application recherche et
-   l'événement auquel chacun correspond. Préparez un dossier de fichiers WAV portant ces noms. Tout
-   fichier absent est remplacé par celui du pack Default.
-2. **Nouveau pack...** importe ce dossier. Son nom devient celui du pack.
-3. Une fois votre pack sélectionné, **Modifier le pack sélectionné** apparaît : chaque événement
-   indique s'il est **Personnalisé** ou **Défaut**, avec **Choisir...** pour désigner un autre
-   fichier et **Réinitialiser** pour revenir en arrière.
-4. **Afficher le dossier des packs** ouvre le dossier où vos packs sont rangés, et **Supprimer**
-   retire celui qui est sélectionné. Supprimer un pack personnalisé l'efface aussi de ce Mac.
+Pour couper tous les sons d'un coup, désélectionnez **Activer les notifications sonores**.
 
 Le niveau de ces sons suit le curseur **Volume des effets sonores** de la fenêtre principale.
 
-## Les vingt-six événements sonores
+## Désactiver certains sons
 
-Chacun se désactive séparément :
+Dans le volet Sons, désélectionnez les événements sonores voulus, parmi les vingt-six proposés. Ils
+couvrent les arrivées et les départs, les messages envoyés et reçus, la perte de connexion, les
+fichiers, les transferts, le mode question, les raccourcis, l'activation vocale, les mises en
+sourdine, les interceptions, la file de transmission, le VOX et votre propre micro.
 
-| | |
-|---|---|
-| Un utilisateur a rejoint le canal | Un utilisateur a quitté le canal |
-| Message privé reçu | Message privé envoyé |
-| Message de canal reçu | Message de canal envoyé |
-| Connexion perdue | Message général |
-| Utilisateur connecté | Utilisateur déconnecté |
-| Fichier ajouté ou supprimé | Transfert de fichier terminé |
-| Mode question | Raccourci clavier |
-| Activation vocale activée | Activation vocale désactivée |
-| Tout couper | Tout rétablir |
-| Interception démarrée | Interception terminée |
-| File de transmission démarrée | File de transmission arrêtée |
-| VOX activé | VOX désactivé |
-| Microphone activé | Microphone désactivé |
+## Composer votre pack de sons
 
-## Les annonces vocales
+1. Ouvrez les Préférences, puis cliquez sur Sons.
+2. Cliquez sur **Fichiers requis** pour connaître tous les noms de fichiers que tt-Accessible
+   recherche et l'événement auquel chacun correspond.
+3. Préparez un dossier de fichiers WAV portant ces noms. Tout fichier absent est remplacé par celui
+   du pack Default.
+4. Cliquez sur **Nouveau pack**, puis sélectionnez votre dossier. Son nom devient celui du pack.
+5. Une fois votre pack sélectionné, utilisez **Modifier le pack sélectionné** pour remplacer un son :
+   cliquez sur **Choisir** en face d'un événement pour désigner un autre fichier, ou sur
+   **Réinitialiser** pour revenir au son par défaut.
 
-[Préférences → Annonces](preferences.html#prefs-announcements) distingue deux situations.
+Pour savoir où sont rangés vos packs, cliquez sur **Afficher le dossier des packs**. Pour en retirer
+un, sélectionnez-le puis cliquez sur Supprimer — un pack personnalisé est aussi effacé de votre Mac.
 
-### Quand tt-Accessible est au premier plan
+## Choisir ce qu'annonce VoiceOver
 
-**Annonces d'événements** règle ce qui passe par VoiceOver :
-
-- **Annoncer les messages de canal**, **Annoncer les messages privés** et **Annoncer les messages
-  généraux** — tous activés par défaut.
-- **Annoncer l'historique système**, une liste de vingt événements à activer ou désactiver un par
-  un, avec **Tout activer** et **Tout désactiver**. Ils sont regroupés en **Connexion** (connecté,
-  déconnecté, connexion perdue), **Canal actuel** (rejoint, quitté), **Présence des utilisateurs**
-  (connexion et déconnexion, arrivée et départ d'un canal), **Modération** (expulsion du serveur ou
-  du canal, transmission bloquée), **Statut** (absence automatique activée et désactivée),
-  **Abonnements** (modification d'un abonnement ou d'une interception), **Fichiers** (ajouté,
-  supprimé) et **Diffusion média** (démarrée, terminée).
+1. Ouvrez les Préférences, puis cliquez sur Annonces dans la barre latérale.
+2. Sous Annonces d'événements, sélectionnez ou désélectionnez **Annoncer les messages de canal**,
+   **Annoncer les messages privés** et **Annoncer les messages généraux**.
+3. Cliquez sur **Annoncer l'historique système** pour déplier vingt événements supplémentaires,
+   regroupés en Connexion, Canal actuel, Présence des utilisateurs, Modération, Statut, Abonnements,
+   Fichiers et Diffusion média. Utilisez **Tout activer** ou **Tout désactiver** pour les régler
+   ensemble.
 
 Désactiver un événement ne fait taire que l'annonce : la ligne reste inscrite dans l'historique de
 session.
 
-### Quand une autre application est au premier plan
+## Choisir ce qui se passe quand une autre app est au premier plan
 
-**Messages reçus en arrière-plan** détermine la façon dont vous êtes prévenu quand tt-Accessible
-n'est pas au premier plan :
+1. Ouvrez les Préférences, puis cliquez sur Annonces.
+2. Cliquez sur le menu local **Mode**, puis choisissez l'une des options suivantes :
+   - **Notification système** — une notification macOS classique.
+   - **Synthèse vocale macOS** — tt-Accessible énonce lui-même le message.
+   - **VoiceOver via AppleScript** — c'est VoiceOver qui annonce le message.
+3. Pour utiliser des modes différents selon ce qui arrive, désélectionnez **Utiliser le même mode
+   pour tous les types d'événements**, puis réglez séparément les messages privés, les messages de
+   canal, les messages généraux et l'historique TeamTalk.
 
-- **Notification système** — une notification macOS classique. C'est le réglage par défaut.
-- **Synthèse vocale macOS** — l'application énonce elle-même le message, avec la **Voix**, le
-  **Débit** et le **Volume** réglés juste en dessous. **Tester la voix** essaie les réglages courants.
-- **VoiceOver via AppleScript** — c'est VoiceOver qui annonce le message.
+Si vous avez choisi la synthèse vocale macOS, réglez la **Voix**, le **Débit** et le **Volume** juste
+en dessous, puis cliquez sur **Tester la voix** pour entendre le résultat.
 
-**Utiliser le même mode pour tous les types d'événements** est activé par défaut et applique un mode
-unique à tout. Désactivez-le pour choisir un mode différent selon qu'il s'agit d'un message privé,
-d'un message de canal, d'un message général ou de l'historique TeamTalk — par exemple une annonce
-parlée pour les messages privés et une simple notification pour le reste.
+**Voir aussi :** [Découvrir la fenêtre de tt-Accessible](main-window.html) ·
+[Modifier les réglages de tt-Accessible](preferences.html#prefs-announcements)

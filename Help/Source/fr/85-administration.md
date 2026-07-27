@@ -1,86 +1,89 @@
 ---
-title: Administration
-description: Opérateurs de canal, expulsions, bannissements, déplacements, comptes utilisateurs, propriétés et statistiques du serveur.
+title: Gérer les utilisateurs, les bannissements et les réglages du serveur
+description: Promouvoir des opérateurs, expulser ou bannir, déplacer des personnes, et modifier les comptes et les propriétés du serveur.
 keywords: opérateur, expulser, bannir, déplacer, comptes, droits, propriétés du serveur, statistiques
 anchor: administration
 ---
 
-Les commandes de cette page demandent les droits correspondants sur votre compte. Celles que vous
-n'avez pas le droit d'utiliser restent grisées.
+Si votre compte dispose des droits correspondants, vous pouvez modérer les canaux d'un serveur et
+modifier ses réglages. Les commandes que vous n'avez pas le droit d'utiliser restent grisées.
 
-## L'opérateur de canal
+## Promouvoir quelqu'un opérateur de canal
 
-**Contrôle-Commande-O** promeut la personne sélectionnée opérateur du canal, ou lui retire ce statut.
-Si vous n'êtes pas vous-même opérateur mais que le canal possède un mot de passe d'opérateur, celui-ci
-vous est demandé. Le changement est annoncé : *… est maintenant opérateur du canal*.
+Sélectionnez la personne dans l'arbre des canaux, puis appuyez sur Contrôle + Commande + O. Appuyez
+de nouveau pour lui retirer ce statut. Si vous n'êtes pas vous-même opérateur et que le canal
+possède un mot de passe d'opérateur, tt-Accessible vous le demande.
 
-## Les expulsions
+## Retirer quelqu'un d'un canal ou du serveur
 
-| Raccourci | Commande |
-|---|---|
-| Commande-K | Expulser du canal — la personne est retirée de son canal actuel |
-| Maj-Commande-K | Expulser du serveur — la personne est complètement déconnectée |
-| — | Expulser et bannir — expulsion, puis bannissement par **adresse IP** ou par **nom d'utilisateur** |
+Sélectionnez la personne, puis effectuez l'une des opérations suivantes :
 
-Chacune demande confirmation. L'option *Ne pas demander de confirmation lors de l'expulsion*, dans
-[Préférences → Connexion](preferences.html#prefs-connection), supprime cette étape pour les deux
-premières ; « Expulser et bannir » demande toujours confirmation.
+- **La retirer de son canal :** appuyez sur Commande + K.
+- **La déconnecter du serveur :** appuyez sur Maj + Commande + K.
+- **La déconnecter et la bannir :** choisissez Utilisateur > Expulser et bannir, puis choisissez de
+  bannir l'adresse IP ou le nom d'utilisateur.
 
-## Déplacer des personnes
+Chaque commande demande confirmation. Pour supprimer cette étape sur les deux premières, ouvrez les
+Préférences, cliquez sur Connexion, puis sélectionnez **Ne pas demander de confirmation lors de
+l'expulsion**. « Expulser et bannir » demande toujours confirmation.
 
-- **Option-Commande-X** — *Déplacer vers un canal…* — déplace la personne sélectionnée vers le canal
-  de votre choix.
-- **Déplacer tout le monde…**, dans le menu contextuel de l'arbre, déplace un canal entier d'un coup.
-  La fenêtre liste chaque personne avec une case à cocher, propose **Tout sélectionner** et **Tout
-  désélectionner**, ainsi qu'un menu **Déplacer vers le canal :**. Le résultat est annoncé une seule
-  fois : *n utilisateurs sur n déplacés vers …*
+## Déplacer des personnes vers un autre canal
 
-## Les bannissements
+- Pour déplacer une personne, sélectionnez-la, appuyez sur Option + Commande + X, puis choisissez le
+  canal de destination.
+- Pour déplacer tout un canal, cliquez dessus en maintenant la touche Contrôle enfoncée, puis
+  choisissez **Déplacer tout le monde**. Sélectionnez les personnes à déplacer — **Tout
+  sélectionner** et **Tout désélectionner** vous y aident —, choisissez la destination dans le menu
+  local **Déplacer vers le canal**, puis cliquez sur Déplacer.
 
-**Serveur → Utilisateurs bannis…** (**Maj-Commande-B**) présente les bannissements du serveur :
-pseudo, nom d'utilisateur, type, date, auteur, canal et adresse IP. Vous pouvez **Rafraîchir** la
-liste, **Débannir** l'entrée sélectionnée — *Cette personne pourra se reconnecter au serveur* — ou
-**Ajouter…** un bannissement par **Adresse IP** ou par **Nom d'utilisateur**.
+## Gérer les bannissements
 
-## Les comptes utilisateurs
+1. Choisissez Serveur > Utilisateurs bannis, ou appuyez sur Maj + Commande + B.
+2. Effectuez l'une des opérations suivantes :
+   - **Lever un bannissement :** sélectionnez-le, puis cliquez sur Débannir. La personne pourra se
+     reconnecter.
+   - **Ajouter un bannissement :** cliquez sur Ajouter, puis choisissez **Adresse IP** ou **Nom
+     d'utilisateur** et saisissez la valeur.
+   - **Mettre la liste à jour :** cliquez sur Rafraîchir.
 
-**Serveur → Comptes utilisateurs…** (**Maj-Commande-U**) liste les comptes déclarés sur le serveur,
-avec leur nom d'utilisateur, le pseudo actuellement en ligne, le mot de passe, le type (**Défaut**,
-**Administrateur** ou **Désactivé**), une note et la dernière connexion.
+## Gérer les comptes utilisateurs
 
-**Ajouter…** et **Modifier…** ouvrent un formulaire à trois onglets :
+1. Choisissez Serveur > Comptes utilisateurs, ou appuyez sur Maj + Commande + U.
+2. Cliquez sur Ajouter, ou sélectionnez un compte et cliquez sur Modifier.
+3. Dans l'onglet Essentiel, définissez le nom d'utilisateur, le mot de passe, le type de compte —
+   **Défaut**, **Administrateur** ou **Désactivé** —, un canal initial et une note.
+4. Dans l'onglet Droits, sélectionnez ce que le compte a le droit de faire. Vingt-quatre droits sont
+   disponibles : connexions multiples, visibilité de tous les utilisateurs, création et modification
+   de canaux, diffusion de messages, expulsion, bannissement, déplacement, qualité d'opérateur,
+   envoi et téléchargement de fichiers, modification des propriétés du serveur, transmission de la
+   voix, de la vidéo, du bureau et des fichiers média, verrouillage du pseudo ou du statut,
+   enregistrement de la voix, visibilité des canaux masqués, et envoi de messages privés ou de
+   canal. **Tout activer**, **Tout désactiver** et **Droits par défaut** les règlent d'un clic.
+5. Dans l'onglet Avancé, définissez la limite de bande passante audio, où 0 signifie illimité, et
+   les limites de commandes.
+6. Cliquez sur Enregistrer.
 
-- **Essentiel** — nom d'utilisateur, mot de passe, type de compte, canal initial, note.
-- **Droits** — vingt-quatre interrupteurs, avec **Tout activer**, **Tout désactiver** et **Droits par
-  défaut**. Ils couvrent les connexions multiples, la visibilité de tous les utilisateurs, la
-  création de canaux temporaires, la modification des canaux, la diffusion de messages, l'expulsion,
-  le bannissement, le déplacement, le fait de devenir opérateur, l'envoi et le téléchargement de
-  fichiers, la modification des propriétés du serveur, la transmission de la voix, de la vidéo, du
-  bureau et des fichiers média, le verrouillage du pseudo ou du statut, l'enregistrement de la voix,
-  la visibilité des canaux masqués et l'envoi de messages privés ou de canal.
-- **Avancé** — limite de bande passante audio (0 signifie illimité), limite de commandes et
-  intervalle.
+Pour supprimer un compte, sélectionnez-le et cliquez sur Supprimer. Cette action est irréversible.
 
-La suppression d'un compte est irréversible.
+## Modifier les réglages du serveur
 
-## Les propriétés du serveur
+1. Choisissez Serveur > Propriétés du serveur, ou appuyez sur Maj + Commande + P.
+2. Dans la section Général, définissez le nom du serveur, le message du jour, le nombre maximal
+   d'utilisateurs, les délais d'expiration et les limites de connexion.
+3. Dans la section Limites de débit, définissez les débits maximaux pour la voix, la vidéo, les
+   fichiers média, le bureau partagé et le total, en octets par seconde, où 0 signifie illimité.
+4. Cliquez sur Enregistrer.
 
-**Serveur → Propriétés du serveur…** (**Maj-Commande-P**) ouvre les réglages du serveur lui-même, en
-trois sections :
+La section Réseau et informations du serveur affiche les ports et les versions, à titre indicatif.
 
-- **Général** — nom du serveur, message du jour, nombre maximal d'utilisateurs, timeout utilisateur,
-  délai de connexion, nombre maximal de tentatives, nombre maximal de connexions par IP, sauvegarde
-  automatique.
-- **Limites de débit** — débits maximaux pour la voix, la vidéo, les fichiers média, le bureau
-  partagé et le total, en octets par seconde, où 0 signifie illimité.
-- **Réseau et informations du serveur** — ports TCP et UDP, version du serveur et version du
-  protocole, donnés à titre d'information.
+Pour que la configuration courante survive à un redémarrage du serveur, choisissez Serveur >
+Enregistrer la configuration du serveur.
 
-**Serveur → Enregistrer la configuration du serveur** écrit la configuration courante sur le serveur
-pour qu'elle survive à un redémarrage.
+## Consulter l'activité du serveur
 
-## Les statistiques
+Choisissez Serveur > Statistiques du serveur, ou appuyez sur Maj + Commande + I, pour connaître la
+durée de fonctionnement, le nombre d'utilisateurs accueillis, le pic, les données émises et reçues,
+et les pings UDP et TCP.
 
-**Serveur → Statistiques du serveur** (**Maj-Commande-I**) indique la durée de fonctionnement, le
-nombre total d'utilisateurs accueillis, le pic, les données émises et reçues au total et pour la
-voix, ainsi que les pings UDP et TCP.
+**Voir aussi :** [Régler ce que vous entendez de chaque personne](users.html) ·
+[Rejoindre et gérer des canaux](channels.html)

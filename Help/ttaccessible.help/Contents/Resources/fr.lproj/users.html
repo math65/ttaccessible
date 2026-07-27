@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Les personnes que vous entendez</title>
-<meta name="description" content="Régler le volume de quelqu'un, le couper localement, consulter ses informations et choisir ce que vous recevez de lui.">
+<title>Régler ce que vous entendez de chaque personne</title>
+<meta name="description" content="Régler le volume de quelqu'un, le couper pour vous seul, consulter ses informations et choisir ce que vous recevez de lui.">
 <meta name="keywords" content="utilisateur, volume, balance, sourdine, abonnements, interception, informations, utilisateurs connectés">
 <meta name="robots" content="index, anchors">
 <link rel="stylesheet" href="../css/help.css">
@@ -12,25 +12,28 @@
 <body>
 <nav class="crumb"><a href="index.html">Sommaire</a></nav>
 <a id="users"></a>
-<h1>Les personnes que vous entendez</h1>
-<p>Toutes les commandes de cette page s'appliquent à la personne sélectionnée dans l'arbre des canaux, et se trouvent aussi bien dans le menu <strong>Utilisateur</strong> que dans le menu contextuel de l'arbre.</p>
-<h2 id="volume-et-balance">Volume et balance</h2>
-<p><strong>Commande-U</strong> — <em>Régler le volume…</em> — ouvre une fenêtre avec deux curseurs, <strong>Voix</strong> et <strong>Fichier média</strong>, ainsi que la balance stéréo entre le <strong>Haut-parleur gauche</strong> et le <strong>Haut-parleur droit</strong>. Les changements s'appliquent au fur et à mesure que vous déplacez le curseur : vous pouvez donc régler le niveau pendant que la personne parle. Annuler rétablit l'état initial.</p>
-<p>L'échelle est régulière d'un bout à l'autre : <em>0 % = silence · 50 % = volume par défaut · 100 % = volume maximum</em>.</p>
-<p>La conservation de ces réglages dépend de <em>Mémorisation des volumes par utilisateur</em>, dans <a href="preferences.html#prefs-audio">Préférences → Audio</a> : jamais, le temps de la session, ou toujours. Les niveaux sont propres à chaque serveur ; un réglage fait sur l'un ne se reporte pas sur l'autre.</p>
-<p>Pour équilibrer tout un canal plus rapidement, voir <a href="mixer.html">Le mixeur du canal</a>.</p>
-<h2 id="couper-quelquun-localement">Couper quelqu'un localement</h2>
+<h1>Régler ce que vous entendez de chaque personne</h1>
+<p>Toutes les commandes de cette page s'appliquent à la personne sélectionnée dans l'arbre des canaux. Vous les retrouvez dans le menu Utilisateur et dans le menu contextuel de l'arbre.</p>
+<h2 id="régler-le-volume-dune-personne">Régler le volume d'une personne</h2>
+<ol type="1">
+<li>Sélectionnez la personne dans l'arbre des canaux.</li>
+<li>Appuyez sur Commande + U.</li>
+<li>Déplacez les curseurs <strong>Voix</strong> et <strong>Fichier média</strong>, et réglez la balance entre le haut-parleur gauche et le droit. Les changements s'appliquent à mesure : vous pouvez régler le niveau pendant que la personne parle.</li>
+<li>Cliquez sur Appliquer. Pour revenir aux niveaux précédents, cliquez sur Annuler.</li>
+</ol>
+<p>L'échelle est régulière d'un bout à l'autre : 0 % correspond au silence, 50 % au volume par défaut et 100 % au volume maximum.</p>
+<p>Pour équilibrer tout un canal plus rapidement, consultez <a href="mixer.html">Équilibrer un canal avec le mixeur</a>.</p>
+<h2 id="couper-une-personne-pour-vous-seul">Couper une personne pour vous seul</h2>
 <ul>
-<li><strong>Maj-Commande-M</strong> — <em>Couper localement</em> / <em>Rétablir localement</em>. Vous seul cessez de l'entendre.</li>
-<li><strong>Contrôle-Maj-Commande-M</strong> — <em>Couper le flux média localement</em>, qui fait taire le fichier média diffusé par la personne tout en laissant sa voix audible.</li>
+<li>Pour la faire taire, appuyez sur Maj + Commande + M. Vous seul cessez de l'entendre, et elle n'en est pas informée.</li>
+<li>Pour ne faire taire que le fichier média qu'elle diffuse, appuyez sur Contrôle + Maj + Commande + M. Sa voix reste audible.</li>
 </ul>
-<p>Les deux sont annoncés, et les deux restent locaux à votre Mac : la personne n'en est pas informée.</p>
-<h2 id="les-informations-dune-personne">Les informations d'une personne</h2>
-<p><strong>Commande-I</strong> ouvre <strong>Informations utilisateur</strong> : identifiant, pseudo, nom d'utilisateur, mode et message de statut, genre, type de compte, qualité d'opérateur de canal, adresse IP, client, version et perte de paquets audio.</p>
-<h2 id="tout-le-monde-sur-le-serveur">Tout le monde sur le serveur</h2>
-<p><strong>Serveur → Utilisateurs connectés…</strong> (<strong>Maj-Commande-W</strong>) dresse la liste de toutes les personnes connectées, et pas seulement de votre canal, avec leur pseudo, leur message de statut, leur nom d'utilisateur, leur canal, leur adresse IP, leur version et leur identifiant. De là, vous pouvez consulter les informations d'une personne, les copier, lui écrire en privé ou — avec les droits nécessaires — la déplacer, l'expulser ou la bannir.</p>
-<h2 id="les-abonnements">Les abonnements</h2>
-<p>Le sous-menu <strong>Utilisateur → Abonnements</strong> détermine ce que vous recevez de la personne sélectionnée. Chaque entrée s'active ou se désactive :</p>
+<p>Appuyez de nouveau sur le même raccourci pour l'entendre à nouveau.</p>
+<h2 id="consulter-les-informations-dune-personne">Consulter les informations d'une personne</h2>
+<p>Appuyez sur Commande + I. La fenêtre Informations utilisateur affiche son pseudo, son nom d'utilisateur, son statut, son genre, son type de compte, sa qualité d'opérateur de canal, son adresse IP, son client et sa version, ainsi que sa perte de paquets voix.</p>
+<p>Pour voir toutes les personnes connectées au serveur, et pas seulement celles de votre canal, choisissez Serveur &gt; Utilisateurs connectés, ou appuyez sur Maj + Commande + W. De là, vous pouvez consulter les informations d'une personne, les copier, lui écrire en privé ou — avec les droits nécessaires — la déplacer, l'expulser ou la bannir.</p>
+<h2 id="choisir-ce-que-vous-recevez-dune-personne">Choisir ce que vous recevez d'une personne</h2>
+<p>Le sous-menu Utilisateur &gt; Abonnements détermine ce qu'une personne peut vous envoyer. Chaque entrée est un interrupteur.</p>
 <table>
 <thead>
 <tr>
@@ -40,65 +43,35 @@
 </thead>
 <tbody>
 <tr>
-<td>Contrôle-1</td>
+<td>Contrôle + 1</td>
 <td>Messages privés</td>
 </tr>
 <tr>
-<td>Contrôle-2</td>
+<td>Contrôle + 2</td>
 <td>Messages de canal</td>
 </tr>
 <tr>
-<td>Contrôle-3</td>
+<td>Contrôle + 3</td>
 <td>Messages généraux</td>
 </tr>
 <tr>
-<td>Contrôle-4</td>
+<td>Contrôle + 4</td>
 <td>Audio</td>
 </tr>
 <tr>
-<td>Contrôle-5</td>
+<td>Contrôle + 5</td>
 <td>Partage d'écran</td>
 </tr>
 <tr>
-<td>Contrôle-6</td>
+<td>Contrôle + 6</td>
 <td>Fichier média</td>
 </tr>
 </tbody>
 </table>
-<p>Désactiver <strong>Audio</strong> pour quelqu'un est un désabonnement côté serveur : sa voix ne vous est plus envoyée du tout, contrairement à une simple sourdine locale.</p>
-<h3 id="les-interceptions">Les interceptions</h3>
-<p>Le même sous-menu propose ensuite les interceptions, qui demandent les droits correspondants et permettent à un administrateur de recevoir ce qui ne lui est pas destiné :</p>
-<table>
-<thead>
-<tr>
-<th>Raccourci</th>
-<th>Interception</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Contrôle-Maj-1</td>
-<td>Intercepter les messages privés</td>
-</tr>
-<tr>
-<td>Contrôle-Maj-2</td>
-<td>Intercepter les messages de canal</td>
-</tr>
-<tr>
-<td>Contrôle-Maj-4</td>
-<td>Intercepter l'audio</td>
-</tr>
-<tr>
-<td>Contrôle-Maj-5</td>
-<td>Intercepter le partage d'écran</td>
-</tr>
-<tr>
-<td>Contrôle-Maj-6</td>
-<td>Intercepter le fichier média</td>
-</tr>
-</tbody>
-</table>
-<p>Les abonnements appliqués à tout le monde dès la connexion se règlent dans <a href="preferences.html#prefs-connection">Préférences → Connexion</a>, sous <strong>Abonnements par défaut</strong> et <strong>Interceptions par défaut</strong>.</p>
+<p>Désactiver <strong>Audio</strong> vous désabonne côté serveur : sa voix ne vous est plus envoyée du tout, contrairement à une simple sourdine locale.</p>
+<p>Le même sous-menu propose les interceptions — messages privés, messages de canal, audio, partage d'écran et fichier média — sur Contrôle + Maj + 1, 2, 4, 5 et 6. Elles permettent à un administrateur de recevoir ce qui ne lui est pas destiné et demandent les droits correspondants.</p>
+<p>Pour définir ce que tout le monde peut vous envoyer dès la connexion, ouvrez les Préférences, cliquez sur Connexion, puis utilisez <strong>Abonnements par défaut</strong> et <strong>Interceptions par défaut</strong>.</p>
+<p><strong>Voir aussi :</strong> <a href="mixer.html">Équilibrer un canal avec le mixeur</a> · <a href="messages.html">Envoyer et lire des messages</a></p>
 <hr>
 <p class="footer"><a href="index.html">Sommaire</a></p>
 </body>

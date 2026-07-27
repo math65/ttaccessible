@@ -1,52 +1,55 @@
 ---
-title: Recording
-description: Record a conversation as a single mixed file, as one file per person, or both.
+title: Record a conversation
+description: Record a channel as a single mixed file, as one file per person, or both, and choose where the files go.
 keywords: recording, record, WAV, OGG, Opus, folder, stems, no recording, auto restart
 anchor: recording
 ---
 
-## Starting and stopping
+You can record what's said in a channel. tt-Accessible can mix everyone into a single file, write
+one file per person, or do both at once.
 
-| Shortcut | What it records |
-|---|---|
-| Command-R | A single mixed file, always |
-| Shift-Command-R | Whatever **Recording mode** is set to in Preferences |
+## Start and stop a recording
 
-**Command-R** stops the recording again, and so does Shift-Command-R. The app announces *Recording
-started* and *Recording stopped*, and the audio status (**F9**) reports whether a recording is
-running. The toolbar has a matching button.
+- To record a single mixed file, press Command-R.
+- To record using the mode set in Preferences, press Shift-Command-R.
 
-The first time, if no folder has been chosen, the app asks where to save the files.
+Press the same shortcut again to stop. tt-Accessible announces *Recording started* and *Recording
+stopped*, and F9 tells you whether a recording is running. The toolbar has a matching button.
 
-## Recording mode
+The first time, if you haven't chosen a folder, tt-Accessible asks where to save the files.
 
-[Preferences → Recording](preferences.html#prefs-recording) sets what **Shift-Command-R** does:
+## Choose what Shift-Command-R records
 
-- **Separate files (one per user)** — one file per person, including your own voice.
-- **Both** — a mixed file *and* the individual files. This is the default.
+1. Open Preferences, then click Recording in the sidebar.
+2. Click the **Recording mode** pop-up menu, then choose one of the following:
+   - **Separate files** — one file per person, including your own voice.
+   - **Both** — a mixed file and the individual files.
 
-**Command-R** is unaffected and always produces the single mixed file, which is why the two
-shortcuts exist.
+Command-R is unaffected: it always produces the single mixed file. That's why there are two
+shortcuts.
 
-## Format and folder
+## Choose the format and the folder
 
-- **Audio format** — **WAV** (the default, uncompressed) or **OGG (Opus)** (compressed, much
-  smaller).
-- **Recording folder** — chosen with **Choose…**, cleared with **Clear**. The app keeps its
-  permission to write there across launches.
+1. Open Preferences, then click Recording.
+2. Click the **Audio format** pop-up menu, then choose **WAV** for uncompressed files or **OGG
+   (Opus)** for much smaller ones.
+3. Click **Choose**, then select the folder where recordings should go. tt-Accessible keeps its
+   permission to write there from one launch to the next.
 
-## Channels that forbid recording
+## Resume recording on its own
 
-A channel can be created with **No audio recording**. In such a channel, Command-R and
-Shift-Command-R refuse to start and the app announces *Recording is not allowed in this channel* —
-unless your account has the right to record voice.
-
-## Restarting on its own
-
-**Automatically restart recording when joining a channel** — off by default — resumes recording
-when you join another channel, reconnect, or relaunch the app after a session that was being
-recorded. The mode that was actually running is restored, so a Command-R recording comes back as a
-single file rather than as the Shift-Command-R preference.
+Select **Automatically restart recording when joining a channel** to pick recording back up when you
+change channel, when the connection returns, or when you open tt-Accessible after a session that was
+being recorded. The mode that was actually running is restored.
 
 Changing channel during a mixed recording is handled for you: the current file is closed and a new
-one is started in the new channel.
+one starts in the new channel.
+
+## If a channel forbids recording
+
+A channel can be created with **No audio recording**. There, Command-R and Shift-Command-R refuse to
+start and tt-Accessible announces *Recording is not allowed in this channel* — unless your account
+has the right to record voice.
+
+**See also:** [Join and manage channels](channels.html) ·
+[Change tt-Accessible settings](preferences.html#prefs-recording)

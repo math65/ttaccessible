@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Le mixeur du canal</title>
-<meta name="description" content="Équilibrer tout un canal à l'oreille — volume, panoramique, sourdine et solo par personne, entièrement au clavier.">
+<title>Équilibrer un canal avec le mixeur</title>
+<meta name="description" content="Régler le volume, la position stéréo, la sourdine et le solo de chaque personne de votre canal, entièrement au clavier.">
 <meta name="keywords" content="mixeur, tranche, volume, panoramique, sourdine, solo, clavier, VoiceOver">
 <meta name="robots" content="index, anchors">
 <link rel="stylesheet" href="../css/help.css">
@@ -12,97 +12,99 @@
 <body>
 <nav class="crumb"><a href="index.html">Sommaire</a></nav>
 <a id="mixer"></a>
-<h1>Le mixeur du canal</h1>
-<p>Le mixeur transforme les personnes présentes dans votre canal en une petite console : une <strong>tranche</strong> par personne, avec son niveau, sa position stéréo, sa sourdine et son solo. Comme l'application fabrique elle-même le mélange, vous pouvez placer quelqu'un à gauche et quelqu'un d'autre à droite, ou remonter une personne trop faible, sans toucher aux autres.</p>
-<p><strong>Commande-5</strong> amène le curseur dans le mixeur. Quand vous êtes seul, il annonce simplement <em>Aucun autre utilisateur dans ce canal.</em></p>
-<h2 id="ce-que-contient-une-tranche">Ce que contient une tranche</h2>
+<h1>Équilibrer un canal avec le mixeur</h1>
+<p>Le mixeur du canal transforme les personnes présentes en une petite console, avec une tranche par personne. Vous pouvez placer quelqu'un à gauche et quelqu'un d'autre à droite, ou remonter une personne trop faible, sans toucher aux autres.</p>
+<h2 id="ouvrir-le-mixeur">Ouvrir le mixeur</h2>
+<p>Appuyez sur Commande + 5. Quand vous êtes seul dans le canal, le mixeur indique <em>Aucun autre utilisateur dans ce canal.</em></p>
+<h2 id="régler-une-personne">Régler une personne</h2>
+<p>Chaque tranche comporte les commandes suivantes. Elle porte le nom de la personne, suivi de son niveau et de la mention <em>coupé</em> le cas échéant.</p>
 <table>
 <thead>
 <tr>
 <th>Commande</th>
-<th>Plage</th>
+<th>Rôle</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Volume</td>
-<td>de 0 à 100 %, par pas de 2</td>
+<td>Règle le niveau auquel vous entendez sa voix, de 0 à 100 %</td>
 </tr>
 <tr>
 <td>Panoramique</td>
-<td>de gauche à droite, centré par défaut</td>
+<td>Place sa voix entre le haut-parleur gauche et le droit</td>
 </tr>
 <tr>
 <td>Volume du média</td>
-<td>le niveau du fichier média que la personne diffuse</td>
+<td>Règle le niveau du fichier média qu'elle diffuse</td>
 </tr>
 <tr>
 <td>Panoramique du média</td>
-<td>la position stéréo de cette diffusion</td>
+<td>Place cette diffusion entre les haut-parleurs</td>
 </tr>
 <tr>
 <td>Sourdine</td>
-<td>coupe à la fois la voix et le média de cette personne</td>
+<td>Coupe à la fois sa voix et son média</td>
 </tr>
 <tr>
 <td>Solo</td>
-<td>coupe tous ceux qui ne sont pas en solo</td>
+<td>Coupe toutes les personnes qui ne sont pas en solo</td>
 </tr>
 </tbody>
 </table>
-<p>Chaque tranche porte le nom de la personne, suivi de son niveau et de la mention <em>coupé</em> le cas échéant : passer d'une tranche à l'autre suffit donc à connaître l'état du canal.</p>
-<h2 id="le-pilotage-au-clavier">Le pilotage au clavier</h2>
-<p>Tant que le curseur est dans le mixeur, des touches simples le commandent directement. Elles sont ignorées pendant que vous écrivez dans un champ de texte : le chat n'est jamais perturbé.</p>
+<h2 id="piloter-le-mixeur-au-clavier">Piloter le mixeur au clavier</h2>
+<p>Tant que le curseur est dans le mixeur, ces touches le commandent directement. Elles sont ignorées pendant que vous écrivez dans un champ de texte : le chat n'est jamais perturbé.</p>
 <table>
 <thead>
 <tr>
 <th>Touche</th>
-<th>Effet</th>
+<th>Action</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Flèche haut / bas</td>
-<td>Volume de la voix de la personne sélectionnée</td>
+<td>Flèche haut ou Flèche bas</td>
+<td>Modifier le volume de la voix</td>
 </tr>
 <tr>
-<td>Flèche gauche / droite</td>
-<td>Panoramique de la voix</td>
+<td>Flèche gauche ou Flèche droite</td>
+<td>Modifier le panoramique de la voix</td>
 </tr>
 <tr>
-<td>Commande-Haut / Commande-Bas</td>
-<td>Volume du média — ou le volume principal hors d'une tranche</td>
+<td>Commande + Flèche haut ou Flèche bas</td>
+<td>Modifier le volume du média, ou le volume principal hors d'une tranche</td>
 </tr>
 <tr>
-<td>Commande-Gauche / Commande-Droite</td>
-<td>Panoramique du média</td>
+<td>Commande + Flèche gauche ou Flèche droite</td>
+<td>Modifier le panoramique du média</td>
 </tr>
 <tr>
 <td>V</td>
-<td>Annonce le volume ; deux appuis le remettent à 50 %</td>
+<td>Annoncer le volume ; deux appuis le remettent à 50 %</td>
 </tr>
 <tr>
 <td>P</td>
-<td>Annonce le panoramique ; deux appuis le recentrent</td>
+<td>Annoncer le panoramique ; deux appuis le recentrent</td>
 </tr>
 <tr>
 <td>M</td>
-<td>Annonce l'état de la sourdine ; deux appuis la basculent</td>
+<td>Annoncer l'état de la sourdine ; deux appuis le changent</td>
 </tr>
 <tr>
 <td>S</td>
-<td>Annonce l'état du solo ; deux appuis le basculent</td>
+<td>Annoncer l'état du solo ; deux appuis le changent</td>
 </tr>
 <tr>
-<td>Commande-P</td>
-<td>Annonce le panoramique du média ; deux appuis le recentrent</td>
+<td>Commande + P</td>
+<td>Annoncer le panoramique du média ; deux appuis le recentrent</td>
 </tr>
 </tbody>
 </table>
-<p>Les deux appuis doivent se suivre rapidement. Maintenir une flèche la répète, d'abord lentement puis plus vite, pour qu'un déplacement long reste maîtrisable.</p>
-<p>Chaque action est annoncée immédiatement : vous pouvez équilibrer un canal entièrement à l'oreille, sans jamais lire l'écran.</p>
-<h2 id="où-vont-ces-réglages">Où vont ces réglages</h2>
-<p>Les niveaux du mixeur sont les mêmes que ceux de <em>Régler le volume…</em> (voir <a href="users.html">Les personnes que vous entendez</a>). Leur conservation après une reconnexion ou un redémarrage dépend du réglage <em>Mémorisation des volumes par utilisateur</em>, dans <a href="preferences.html#prefs-audio">Préférences → Audio</a>.</p>
+<p>Les deux appuis doivent se suivre rapidement. Maintenez une flèche pour la répéter, d'abord lentement puis plus vite.</p>
+<p>Chaque action est annoncée à mesure : vous pouvez équilibrer un canal entièrement à l'oreille.</p>
+<h2 id="conserver-vos-réglages">Conserver vos réglages</h2>
+<p>Le mixeur règle les mêmes niveaux par personne que la commande <strong>Régler le volume</strong>. Pour choisir s'ils survivent à une reconnexion ou à un redémarrage, ouvrez les Préférences, cliquez sur Audio, puis utilisez <strong>Mémorisation des volumes par utilisateur</strong>.</p>
+<p><strong>Voir aussi :</strong> <a href="users.html">Régler ce que vous entendez de chaque personne</a> · <a href="audio-setup.html">Configurer vos périphériques audio</a></p>
 <hr>
 <p class="footer"><a href="index.html">Sommaire</a></p>
 </body>

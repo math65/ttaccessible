@@ -1,98 +1,102 @@
 ---
-title: En cas de problème
-description: Que vérifier quand il n'y a pas de son, quand le micro reste muet, quand il y a de l'écho, et comment joindre le développeur.
+title: Si quelque chose ne fonctionne pas
+description: Que vérifier quand vous n'entendez personne, quand personne ne vous entend, quand il y a de l'écho, et comment joindre le développeur.
 keywords: problème, pas de son, micro, écho, autorisation, trousseau, journal, assistance, bug
 anchor: troubleshooting
 ---
 
-## Je n'entends rien
+La plupart des problèmes audio tiennent à quelques réglages. Appuyez sur F9 à tout moment pour
+connaître l'état audio : cela répond déjà à la première question.
 
-Déroulez cette liste ; **F9** répond déjà à la première question en énonçant l'état audio.
+## Si vous n'entendez personne
 
-1. Le volume principal est-il coupé ? **Commande-M** le rétablit.
-2. Le curseur **Volume de sortie** de la fenêtre principale est-il au minimum ?
-3. Dans [Préférences → Audio](preferences.html#prefs-audio), le **Périphérique de sortie** est-il
-   réglé sur **Aucune sortie audio**, ou sur un appareil que vous n'utilisez plus ? **Actualiser les
-   périphériques** reconstruit la liste.
-4. Cette personne est-elle coupée pour vous ? Sa ligne indique *coupé*, et **Maj-Commande-M** la
-   rétablit. Vérifiez aussi son niveau dans [le mixeur](mixer.html).
-5. Êtes-vous toujours abonné à son **Audio** ? Voir [Les personnes que vous entendez](users.html).
+1. Vérifiez que le volume principal n'est pas coupé : appuyez sur Commande + M.
+2. Vérifiez le curseur **Volume de sortie** dans la fenêtre principale.
+3. Ouvrez les Préférences, cliquez sur Audio, puis vérifiez que **Périphérique de sortie** n'est pas
+   réglé sur **Aucune sortie audio** ni sur un appareil que vous n'utilisez plus. Cliquez sur
+   **Actualiser les périphériques** pour reconstruire la liste.
+4. Vérifiez si cette personne est coupée pour vous : sa ligne indique *coupé*, et Maj + Commande + M
+   la rétablit. Vérifiez aussi son niveau dans [le mixeur](mixer.html).
+5. Vérifiez que vous êtes toujours abonné à son audio — consultez
+   [Régler ce que vous entendez de chaque personne](users.html).
 
-## Personne ne m'entend
+## Si personne ne vous entend
 
-1. Il faut être **dans un canal**. Ailleurs, l'application répond *Vous devez rejoindre un canal
-   avant d'activer le micro.*
-2. Le micro est-il activé ? **Maj-Commande-A**, ou le bouton de la barre d'outils.
-3. Êtes-vous en **push-to-talk** sans avoir défini de touche ? Le volet Audio le signale, et tant
-   qu'aucune touche n'est enregistrée le micro se comporte comme en mode « toujours actif ».
-4. macOS a-t-il refusé l'accès ? L'application indique alors *L'accès au micro a été refusé par
-   macOS.* Accordez-le dans Réglages Système → Confidentialité et sécurité → Microphone.
-5. Le bon **Périphérique d'entrée** est-il sélectionné, avec la bonne configuration de **Canaux
-   d'entrée** ? Sur une interface audio, le micro est rarement sur l'entrée 1.
-6. Un opérateur vous a-t-il bloqué ? L'application annonce *Transmission bloquée par l'opérateur du
-   canal.*
+1. Vérifiez que vous avez rejoint un canal. Ailleurs, tt-Accessible répond *Vous devez rejoindre un
+   canal avant d'activer le micro.*
+2. Vérifiez que le micro est activé : appuyez sur Maj + Commande + A.
+3. Si vous utilisez le push-to-talk, vérifiez que vous avez enregistré une touche. Tant que ce n'est
+   pas fait, le micro se comporte comme en mode « toujours actif ».
+4. Si tt-Accessible indique *L'accès au micro a été refusé par macOS*, choisissez le menu Pomme >
+   Réglages Système, cliquez sur Confidentialité et sécurité, cliquez sur Microphone, puis activez
+   tt-Accessible.
+5. Ouvrez les Préférences, cliquez sur Audio, puis vérifiez le **Périphérique d'entrée** et la
+   configuration **Canaux d'entrée**. Sur une interface audio, le micro est rarement sur l'entrée 1.
+6. Si tt-Accessible annonce *Transmission bloquée par l'opérateur du canal*, un opérateur vous a
+   retiré le droit de parler.
 
-**Maj-Commande-H** (le retour audio) tranche la question : si vous vous entendez par le canal, c'est
-que vous êtes bien à l'antenne.
+Pour trancher, appuyez sur Maj + Commande + H : si vous vous entendez par le canal, vous êtes à
+l'antenne.
 
-## Tout le monde s'entend revenir
+## Si tout le monde s'entend revenir
 
-C'est de l'écho : vos haut-parleurs sont repris par votre micro. Utilisez un casque, ou réglez
-**Traitement du micro** sur **Annulation d'écho + réduction de bruit** dans
-[Préférences → Audio](preferences.html#prefs-audio). À partir de macOS 14.2, cette option annule
-également VoiceOver et les sons du système.
+Vos haut-parleurs sont repris par votre micro. Utilisez un casque, ou ouvrez les Préférences,
+cliquez sur Audio, puis réglez **Traitement du micro** sur **Annulation d'écho + réduction de
+bruit**. À partir de macOS 14.2, cette option annule aussi VoiceOver et les sons du système.
 
-## Le son s'est cassé après un branchement
+## Si le son s'arrête après un branchement
 
-L'application détecte les changements de périphérique et redémarre son moteur audio toute seule. Si
-quelque chose cloche malgré tout, utilisez **Actualiser les périphériques**. Si le micro s'est arrêté,
-l'application le dit : *Le micro s'est arrêté après un changement de périphérique audio. Réactivez-le.*
+tt-Accessible détecte les changements de périphérique et redémarre son moteur audio tout seul. Si
+quelque chose cloche malgré tout, ouvrez les Préférences, cliquez sur Audio, puis cliquez sur
+**Actualiser les périphériques**. Si le micro s'est arrêté, tt-Accessible indique *Le micro s'est
+arrêté après un changement de périphérique audio. Réactivez-le.*
 
-## L'enregistrement refuse de démarrer
+## Si l'enregistrement refuse de démarrer
 
-Le canal a probablement été créé avec l'option **Pas d'enregistrement audio** ; l'application annonce
-alors *L'enregistrement n'est pas autorisé dans ce canal.* Seul un compte disposant du droit
-d'enregistrer la voix peut passer outre. Voir [Enregistrer](recording.html).
+Le canal a probablement été créé avec l'option **Pas d'enregistrement audio**, et tt-Accessible
+annonce *L'enregistrement n'est pas autorisé dans ce canal.* Seul un compte disposant du droit
+d'enregistrer la voix peut passer outre. Consultez [Enregistrer une conversation](recording.html).
 
-## La diffusion d'une application ne marche pas
+## Si la diffusion d'une app ne fonctionne pas
 
-- Diffuser l'audio d'une application ou de VoiceOver demande **macOS 13 ou une version ultérieure**,
-  et parcourir les applications qui ne sont pas lancées demande **macOS 14.2 ou une version
-  ultérieure**.
-- Si l'application répond *La source sélectionnée n'a aucun audio à capturer pour le moment*,
-  vérifiez que l'application visée tourne réellement et produit du son.
+- La diffusion de l'audio d'une app ou de VoiceOver nécessite macOS 13 ou une version ultérieure, et
+  parcourir les apps qui ne sont pas lancées nécessite macOS 14.2 ou une version ultérieure.
+- Si tt-Accessible répond *La source sélectionnée n'a aucun audio à capturer pour le moment*,
+  vérifiez que l'app visée tourne réellement et produit du son.
 
-Voir [Diffuser du son](streaming.html).
+Consultez [Diffuser du son dans un canal](streaming.html).
 
-## Le serveur refuse mon mot de passe
+## Si le serveur refuse votre mot de passe
 
-- L'alerte **Échec de la connexion** propose **Modifier les identifiants…** pour corriger le nom
-  d'utilisateur ou le mot de passe.
-- Si le serveur utilise la connexion web BearWare, vérifiez que votre compte est bien connecté dans
-  [Préférences → BearWare](preferences.html#prefs-bearware).
-- Si macOS refuse l'accès au mot de passe enregistré, l'application vous l'explique : ouvrez
-  Trousseau d'accès, supprimez l'entrée **ttaccessible** correspondante, puis réessayez.
+- Cliquez sur **Modifier les identifiants** dans l'alerte pour corriger votre nom d'utilisateur ou
+  votre mot de passe.
+- Si le serveur utilise la connexion web BearWare, vérifiez que votre compte est connecté : ouvrez
+  les Préférences, puis cliquez sur BearWare.
+- Si macOS refuse l'accès au mot de passe enregistré, ouvrez Trousseau d'accès, supprimez l'entrée
+  **ttaccessible** correspondant à ce serveur, puis réessayez.
 
-## La connexion tombe sans arrêt
+## Si la connexion tombe sans arrêt
 
-Le **Buffer de gigue adaptatif**, dans
-[Préférences → Connexion](preferences.html#prefs-connection), améliore l'audio sur les connexions
-instables. La reconnexion automatique et le retour dans le dernier canal sont activés par défaut dans
-le même volet.
+Ouvrez les Préférences, cliquez sur Connexion, puis sélectionnez **Buffer de gigue adaptatif**, qui
+améliore l'audio sur les connexions instables. La reconnexion automatique et le retour dans votre
+dernier canal sont déjà activés dans le même volet.
 
 ## Signaler un problème
 
-**Aide → Contacter le développeur…** ouvre un formulaire où vous choisissez un type — **Signaler un
-problème**, **Suggestion**, **Question** ou **Autre** —, votre adresse email et votre message. La
-version de l'application, la version de macOS et vos réglages audio sont joints pour faciliter le
-diagnostic.
+1. Choisissez Aide > Contacter le développeur.
+2. Cliquez sur le menu local **Type**, puis choisissez **Signaler un problème**, **Suggestion**,
+   **Question** ou **Autre**.
+3. Saisissez votre adresse e-mail et votre message.
+4. Pour qu'un problème de son soit diagnosticable, sélectionnez **Joindre le journal de diagnostic
+   audio**. Reproduisez d'abord le problème, puis envoyez le message : le journal est effacé à
+   chaque ouverture de l'app.
+5. Cliquez sur Envoyer.
 
-La case **Joindre le journal de diagnostic audio** ajoute le journal technique, sans lequel un
-problème de son reste difficile à diagnostiquer. Reproduisez d'abord le problème, puis envoyez le
-message : le journal est effacé à chaque lancement.
-
-Ce journal se trouve dans votre dossier de départ, sous
+La version de l'app, la version de macOS et vos réglages audio sont joints pour faciliter le
+diagnostic. Le journal lui-même se trouve dans votre dossier de départ, sous
 `Library/Containers/com.math65.ttaccessible/Data/Library/Logs/TTAccessible/audio.log`.
 
-**Aide → Signaler un problème…** ouvre plutôt le suivi de bugs du projet, qui reste le bon endroit
-pour tout ce qui est public.
+Pour signaler quelque chose publiquement, choisissez plutôt Aide > Signaler un problème.
+
+**Voir aussi :** [Configurer vos périphériques audio](audio-setup.html) ·
+[Parler dans un canal](talking.html)

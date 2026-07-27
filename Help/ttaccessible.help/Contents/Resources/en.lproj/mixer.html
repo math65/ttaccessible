@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The channel mixer</title>
-<meta name="description" content="Balance a whole channel by ear — per-user volume, pan, mute and solo, driven entirely from the keyboard.">
+<title>Balance a channel with the mixer</title>
+<meta name="description" content="Set the volume, stereo position, mute and solo of each person in your channel, entirely from the keyboard.">
 <meta name="keywords" content="mixer, channel strip, volume, pan, mute, solo, keyboard, VoiceOver">
 <meta name="robots" content="index, anchors">
 <link rel="stylesheet" href="../css/help.css">
@@ -12,97 +12,99 @@
 <body>
 <nav class="crumb"><a href="index.html">Table of contents</a></nav>
 <a id="mixer"></a>
-<h1>The channel mixer</h1>
-<p>The channel mixer turns the people in your channel into a small mixing desk: one <strong>channel strip</strong> per person, each with its own level, stereo position, mute and solo. Because the app builds the mix itself, you can place one person on the left and another on the right, or bring back someone who is too quiet, without touching anyone else.</p>
-<p><strong>Command-5</strong> moves the cursor into the mixer. When you are alone it simply says <em>No other users in this channel.</em></p>
-<h2 id="what-a-strip-contains">What a strip contains</h2>
+<h1>Balance a channel with the mixer</h1>
+<p>The channel mixer turns the people in your channel into a small mixing desk, with one channel strip per person. You can place someone on the left and someone else on the right, or bring back a person who is too quiet, without touching anyone else.</p>
+<h2 id="open-the-mixer">Open the mixer</h2>
+<p>Press Command-5. When you're alone in the channel, the mixer reports <em>No other users in this channel.</em></p>
+<h2 id="adjust-a-person">Adjust a person</h2>
+<p>Each strip carries the following controls, and is named after the person, followed by their level and by <em>muted</em> when it applies.</p>
 <table>
 <thead>
 <tr>
 <th>Control</th>
-<th>Range</th>
+<th>What it does</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Volume</td>
-<td>0 to 100%, in steps of 2</td>
+<td>Sets how loud you hear their voice, from 0 to 100%</td>
 </tr>
 <tr>
 <td>Pan</td>
-<td>Left to right, centre by default</td>
+<td>Places their voice between the left and right speaker</td>
 </tr>
 <tr>
 <td>Media volume</td>
-<td>The level of the media file that person streams</td>
+<td>Sets the level of the media file they stream</td>
 </tr>
 <tr>
 <td>Media pan</td>
-<td>The stereo position of that stream</td>
+<td>Places that stream between the speakers</td>
 </tr>
 <tr>
 <td>Mute</td>
-<td>Silences both the voice and the media of that person</td>
+<td>Silences both their voice and their media</td>
 </tr>
 <tr>
 <td>Solo</td>
-<td>Silences everyone who is not soloed</td>
+<td>Silences everyone who isn't soloed</td>
 </tr>
 </tbody>
 </table>
-<p>Each strip is named after the person, followed by their level and by <em>muted</em> when it applies, so moving from strip to strip already tells you the state of the channel.</p>
-<h2 id="keyboard-control">Keyboard control</h2>
-<p>While the cursor is in the mixer, single keys drive it directly. They are ignored while you are typing in a text field, so the chat is never affected.</p>
+<h2 id="use-the-mixer-from-the-keyboard">Use the mixer from the keyboard</h2>
+<p>While the cursor is in the mixer, these keys drive it directly. They're ignored while you type in a text field, so the chat is never affected.</p>
 <table>
 <thead>
 <tr>
 <th>Key</th>
-<th>Effect</th>
+<th>Action</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Up / Down arrow</td>
-<td>Voice volume of the focused person</td>
+<td>Up Arrow or Down Arrow</td>
+<td>Change the voice volume</td>
 </tr>
 <tr>
-<td>Left / Right arrow</td>
-<td>Voice pan</td>
+<td>Left Arrow or Right Arrow</td>
+<td>Change the voice pan</td>
 </tr>
 <tr>
-<td>Command-Up / Command-Down</td>
-<td>Media volume — or the master volume when no strip is focused</td>
+<td>Command-Up Arrow or Command-Down Arrow</td>
+<td>Change the media volume, or the master volume outside a strip</td>
 </tr>
 <tr>
-<td>Command-Left / Command-Right</td>
-<td>Media pan</td>
+<td>Command-Left Arrow or Command-Right Arrow</td>
+<td>Change the media pan</td>
 </tr>
 <tr>
 <td>V</td>
-<td>Speaks the volume; press twice to reset it to 50%</td>
+<td>Speak the volume; press twice to reset it to 50%</td>
 </tr>
 <tr>
 <td>P</td>
-<td>Speaks the pan; press twice to re-centre it</td>
+<td>Speak the pan; press twice to centre it</td>
 </tr>
 <tr>
 <td>M</td>
-<td>Speaks the mute state; press twice to toggle it</td>
+<td>Speak the mute state; press twice to change it</td>
 </tr>
 <tr>
 <td>S</td>
-<td>Speaks the solo state; press twice to toggle it</td>
+<td>Speak the solo state; press twice to change it</td>
 </tr>
 <tr>
 <td>Command-P</td>
-<td>Speaks the media pan; press twice to re-centre it</td>
+<td>Speak the media pan; press twice to centre it</td>
 </tr>
 </tbody>
 </table>
-<p>The two presses must follow each other quickly. Holding an arrow repeats it, slowly at first and then faster, so a long move stays controllable.</p>
-<p>Every action is spoken immediately, which means you can balance a channel entirely by ear without ever reading the screen.</p>
-<h2 id="where-the-values-are-kept">Where the values are kept</h2>
-<p>Mixer levels are the same per-user levels as the ones in <em>Adjust volume…</em> (see <a href="users.html">People you hear</a>). Whether they survive a reconnection or a relaunch depends on <em>Per-user volume memory</em> in <a href="preferences.html#prefs-audio">Preferences → Audio</a>.</p>
+<p>Press the two presses quickly, one after the other. Hold an arrow key to repeat it, slowly at first and then faster.</p>
+<p>Every action is spoken as you make it, so you can balance a channel entirely by ear.</p>
+<h2 id="keep-your-levels">Keep your levels</h2>
+<p>The mixer sets the same per-person levels as <strong>Adjust volume</strong> does. To choose whether they survive a reconnection or a relaunch, open Preferences, click Audio, then use <strong>Per-user volume memory</strong>.</p>
+<p><strong>See also:</strong> <a href="users.html">Adjust what you hear from each person</a> · <a href="audio-setup.html">Set up your audio devices</a></p>
 <hr>
 <p class="footer"><a href="index.html">Table of contents</a></p>
 </body>

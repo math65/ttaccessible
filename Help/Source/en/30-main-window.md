@@ -1,35 +1,36 @@
 ---
-title: The main window
-description: The areas of the session window, how to move between them with Command-1 to Command-5, and what the channel tree announces.
+title: Get to know the tt-Accessible window
+description: Move between the five areas of the session window, read the channel tree, and change your nickname or status.
 keywords: main window, layout, focus, channel tree, session history, audio bar, nickname, status
 anchor: main-window
 ---
 
-Once connected, the window is titled **Connected Server:** followed by the server name. It holds
-everything you need in a single place.
+When you're connected, the window is titled Connected Server followed by the name of the server. It
+holds the channel tree, the chat, the session history, the audio controls and the channel mixer, so
+you never have to leave it.
 
-## The five areas
+## Move between the areas
 
-| Shortcut | Area | What it holds |
-|---|---|---|
-| Command-1 | Main area | The tree of channels and users |
-| Command-2 | Chat history | Messages sent in your channel |
-| Command-3 | Message input | Where you type, with a **Send** button |
-| Command-4 | Session history | Everything that happened during the session |
-| Command-5 | Channel Mixer | One strip per person you can hear |
+Press one of these shortcuts to put the keyboard focus — and the VoiceOver cursor — where you need
+it:
 
-These shortcuts move the keyboard focus — and with it the VoiceOver cursor — so you can jump
-straight to the part you need instead of walking through the window. They also work while the
-**Private Messages** window is in front, where Command-1, Command-2 and Command-3 focus its
-conversation list, its history and its input field. When no session is running, Command-1 brings
-back the **TeamTalk Servers** window and selects the server list.
+| Shortcut | Area |
+|---|---|
+| Command-1 | Main area: the tree of channels and users |
+| Command-2 | Chat history |
+| Command-3 | Message input |
+| Command-4 | Session history |
+| Command-5 | Channel Mixer |
 
-## The channel tree
+These shortcuts also work while the Private Messages window is in front, where Command-1,
+Command-2 and Command-3 take you to its conversation list, its history and its input field. When no
+session is open, Command-1 brings back the TeamTalk Servers window.
 
-The tree lists the server's channels and, under each one, the people in it. Arrow keys browse it;
-**Return** joins the selected channel. Right-clicking — or the VoiceOver actions rotor — opens the
-**Channel** menu with the actions described in [Channels](channels.html) and
-[People you hear](users.html).
+## Read the channel tree
+
+The tree lists the channels of the server and, under each one, the people in it. Use the arrow keys
+to browse it and press Return to join the selected channel. To see the actions available for a row,
+Control-click it, or use the VoiceOver actions rotor.
 
 Each row is announced with everything that matters about it:
 
@@ -37,54 +38,48 @@ Each row is announced with everything that matters about it:
   topic when it has one.
 - A person adds *you*, *administrator*, *channel operator*, *talking*, *away* or *question*.
 
-The order of channels follows *Sort channels by* in
-[Preferences → Connection](preferences.html#prefs-connection): by **Name**, or by **User count (most
-populated first)**.
+To change the order of the channels, open Preferences, click Connection, then use the **Sort
+channels by** pop-up menu.
 
-## Session history
+## Follow what happens in the session
 
 The session history collects the events of the session: connections, people arriving and leaving,
-channel changes, kicks, subscription changes, files added or removed, automatic away, and media
-streaming. Each entry can be announced out loud or kept silent — see
-[Sounds and announcements](sounds-announcements.html).
+channel changes, kicks, subscription changes, files added or removed, automatic away and media
+streaming. To choose which of them are spoken, see
+[Choose sounds and announcements](sounds-announcements.html).
 
-Timestamps can be shown as clock times or as relative times such as *2 min ago*, depending on *Use
-relative timestamps* in [Preferences → General](preferences.html#prefs-general).
+To save the conversation, press Shift-Command-S.
 
-**Shift-Command-S** exports the chat history to a file.
+## Use the audio controls
 
-## The audio bar
+Below the lists you'll find the microphone button and three sliders: **Input volume**, **Output
+volume** and **Sound effects volume**. Each slider offers the VoiceOver action *Reset to 50%*.
 
-Below the lists you will find:
+To hear the current audio status at any time — whether output is active, whether the microphone is
+transmitting, and whether a recording is running — press F9.
 
-- The microphone button — **Enable microphone** or **Mute microphone**.
-- Three sliders: **Input volume**, **Output volume** and **Sound effects volume**. Each one offers
-  the VoiceOver action *Reset to 50%*.
+## Change your nickname or status
 
-**F9** speaks the current audio status at any time — whether output is active, whether the
-microphone is ready or transmitting, and whether recording is running.
+- To change your nickname, press F5. Leave the field empty to go back to your default nickname.
+- To change your status, press F6, then choose **Available**, **Away** or **Question**, a gender,
+  and a status message if you want one.
 
-## Your identity on the server
+tt-Accessible can also set your status to Away on its own when you stop using the keyboard. See
+[Change tt-Accessible settings](preferences.html#prefs-general).
 
-- **F5** — *Change Nickname*. Leave the field empty to fall back to your default nickname.
-- **F6** — *Change Status*: a status mode (**Available**, **Away** or **Question**), a gender, and an
-  optional status message.
+## Watch a video
 
-Automatic away can also change your status for you when you stop touching the keyboard; see
-[Preferences → General](preferences.html#prefs-general).
+When someone streams a video file into the channel, a Video panel appears, which you can show or
+hide. It reports *No video* when nothing is playing.
 
-## Video
+## If the connection drops
 
-When someone streams a video file into the channel, a collapsible **Video** panel appears. It can be
-shown or hidden and reports *No video* when nothing is playing.
+The window shows **Reconnecting**, and tt-Accessible tries to bring the session back — including
+rejoining the channel you were in. To turn these behaviours on or off, open Preferences and click
+Connection.
 
-## Reconnecting
+To leave the server, press F2. If you opened the server from a `.tt` file or a link without saving
+it, tt-Accessible offers to save it first.
 
-If the connection drops, the window shows **Reconnecting…** and the app tries to bring the session
-back — including rejoining the channel you were in, when the matching options are enabled in
-[Preferences → Connection](preferences.html#prefs-connection).
-
-## Leaving
-
-**F2** disconnects. If the server was opened from a `.tt` file or a link and was never saved, the app
-offers to save it first.
+**See also:** [Join and manage channels](channels.html) · [Talk in a channel](talking.html) ·
+[Keyboard shortcuts](shortcuts.html)

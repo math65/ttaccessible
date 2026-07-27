@@ -1,58 +1,60 @@
 ---
-title: Le mixeur du canal
-description: Équilibrer tout un canal à l'oreille — volume, panoramique, sourdine et solo par personne, entièrement au clavier.
+title: Équilibrer un canal avec le mixeur
+description: Régler le volume, la position stéréo, la sourdine et le solo de chaque personne de votre canal, entièrement au clavier.
 keywords: mixeur, tranche, volume, panoramique, sourdine, solo, clavier, VoiceOver
 anchor: mixer
 ---
 
-Le mixeur transforme les personnes présentes dans votre canal en une petite console : une **tranche**
-par personne, avec son niveau, sa position stéréo, sa sourdine et son solo. Comme l'application
-fabrique elle-même le mélange, vous pouvez placer quelqu'un à gauche et quelqu'un d'autre à droite,
-ou remonter une personne trop faible, sans toucher aux autres.
+Le mixeur du canal transforme les personnes présentes en une petite console, avec une tranche par
+personne. Vous pouvez placer quelqu'un à gauche et quelqu'un d'autre à droite, ou remonter une
+personne trop faible, sans toucher aux autres.
 
-**Commande-5** amène le curseur dans le mixeur. Quand vous êtes seul, il annonce simplement *Aucun
-autre utilisateur dans ce canal.*
+## Ouvrir le mixeur
 
-## Ce que contient une tranche
+Appuyez sur Commande + 5. Quand vous êtes seul dans le canal, le mixeur indique *Aucun autre
+utilisateur dans ce canal.*
 
-| Commande | Plage |
+## Régler une personne
+
+Chaque tranche comporte les commandes suivantes. Elle porte le nom de la personne, suivi de son
+niveau et de la mention *coupé* le cas échéant.
+
+| Commande | Rôle |
 |---|---|
-| Volume | de 0 à 100 %, par pas de 2 |
-| Panoramique | de gauche à droite, centré par défaut |
-| Volume du média | le niveau du fichier média que la personne diffuse |
-| Panoramique du média | la position stéréo de cette diffusion |
-| Sourdine | coupe à la fois la voix et le média de cette personne |
-| Solo | coupe tous ceux qui ne sont pas en solo |
+| Volume | Règle le niveau auquel vous entendez sa voix, de 0 à 100 % |
+| Panoramique | Place sa voix entre le haut-parleur gauche et le droit |
+| Volume du média | Règle le niveau du fichier média qu'elle diffuse |
+| Panoramique du média | Place cette diffusion entre les haut-parleurs |
+| Sourdine | Coupe à la fois sa voix et son média |
+| Solo | Coupe toutes les personnes qui ne sont pas en solo |
 
-Chaque tranche porte le nom de la personne, suivi de son niveau et de la mention *coupé* le cas
-échéant : passer d'une tranche à l'autre suffit donc à connaître l'état du canal.
+## Piloter le mixeur au clavier
 
-## Le pilotage au clavier
+Tant que le curseur est dans le mixeur, ces touches le commandent directement. Elles sont ignorées
+pendant que vous écrivez dans un champ de texte : le chat n'est jamais perturbé.
 
-Tant que le curseur est dans le mixeur, des touches simples le commandent directement. Elles sont
-ignorées pendant que vous écrivez dans un champ de texte : le chat n'est jamais perturbé.
-
-| Touche | Effet |
+| Touche | Action |
 |---|---|
-| Flèche haut / bas | Volume de la voix de la personne sélectionnée |
-| Flèche gauche / droite | Panoramique de la voix |
-| Commande-Haut / Commande-Bas | Volume du média — ou le volume principal hors d'une tranche |
-| Commande-Gauche / Commande-Droite | Panoramique du média |
-| V | Annonce le volume ; deux appuis le remettent à 50 % |
-| P | Annonce le panoramique ; deux appuis le recentrent |
-| M | Annonce l'état de la sourdine ; deux appuis la basculent |
-| S | Annonce l'état du solo ; deux appuis le basculent |
-| Commande-P | Annonce le panoramique du média ; deux appuis le recentrent |
+| Flèche haut ou Flèche bas | Modifier le volume de la voix |
+| Flèche gauche ou Flèche droite | Modifier le panoramique de la voix |
+| Commande + Flèche haut ou Flèche bas | Modifier le volume du média, ou le volume principal hors d'une tranche |
+| Commande + Flèche gauche ou Flèche droite | Modifier le panoramique du média |
+| V | Annoncer le volume ; deux appuis le remettent à 50 % |
+| P | Annoncer le panoramique ; deux appuis le recentrent |
+| M | Annoncer l'état de la sourdine ; deux appuis le changent |
+| S | Annoncer l'état du solo ; deux appuis le changent |
+| Commande + P | Annoncer le panoramique du média ; deux appuis le recentrent |
 
-Les deux appuis doivent se suivre rapidement. Maintenir une flèche la répète, d'abord lentement puis
-plus vite, pour qu'un déplacement long reste maîtrisable.
+Les deux appuis doivent se suivre rapidement. Maintenez une flèche pour la répéter, d'abord
+lentement puis plus vite.
 
-Chaque action est annoncée immédiatement : vous pouvez équilibrer un canal entièrement à l'oreille,
-sans jamais lire l'écran.
+Chaque action est annoncée à mesure : vous pouvez équilibrer un canal entièrement à l'oreille.
 
-## Où vont ces réglages
+## Conserver vos réglages
 
-Les niveaux du mixeur sont les mêmes que ceux de *Régler le volume…* (voir
-[Les personnes que vous entendez](users.html)). Leur conservation après une reconnexion ou un
-redémarrage dépend du réglage *Mémorisation des volumes par utilisateur*, dans
-[Préférences → Audio](preferences.html#prefs-audio).
+Le mixeur règle les mêmes niveaux par personne que la commande **Régler le volume**. Pour choisir
+s'ils survivent à une reconnexion ou à un redémarrage, ouvrez les Préférences, cliquez sur Audio,
+puis utilisez **Mémorisation des volumes par utilisateur**.
+
+**Voir aussi :** [Régler ce que vous entendez de chaque personne](users.html) ·
+[Configurer vos périphériques audio](audio-setup.html)

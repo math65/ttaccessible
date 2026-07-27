@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>People you hear</title>
-<meta name="description" content="Adjust someone's volume, mute them locally, read their details, and choose what you receive from them.">
+<title>Adjust what you hear from each person</title>
+<meta name="description" content="Set someone's volume, mute them for yourself, read their details, and choose what you receive from them.">
 <meta name="keywords" content="user, volume, balance, mute, subscriptions, intercept, user information, connected users">
 <meta name="robots" content="index, anchors">
 <link rel="stylesheet" href="../css/help.css">
@@ -12,25 +12,28 @@
 <body>
 <nav class="crumb"><a href="index.html">Table of contents</a></nav>
 <a id="users"></a>
-<h1>People you hear</h1>
-<p>Every command on this page applies to the person selected in the channel tree, and is available both from the <strong>User</strong> menu and from the tree's context menu.</p>
-<h2 id="volume-and-balance">Volume and balance</h2>
-<p><strong>Command-U</strong> — <em>Adjust volume…</em> — opens a dialog with two sliders, <strong>Voice</strong> and <strong>Media file</strong>, plus the stereo balance between the <strong>Left speaker</strong> and the <strong>Right speaker</strong>. Changes are applied as you move the slider, so you can set the level while the person is talking. Cancel restores what was there before.</p>
-<p>The scale is even from end to end: <em>0% = silence · 50% = normal volume · 100% = maximum volume</em>.</p>
-<p>Whether these adjustments are remembered is up to <em>Per-user volume memory</em> in <a href="preferences.html#prefs-audio">Preferences → Audio</a>: never, for the session only, or always. Levels are kept per server, so a setting made on one server never carries over to another.</p>
-<p>For a faster, hands-on way to balance a whole channel, see <a href="mixer.html">The channel mixer</a>.</p>
-<h2 id="muting-someone-locally">Muting someone locally</h2>
+<h1>Adjust what you hear from each person</h1>
+<p>Every command on this page applies to the person selected in the channel tree. You'll find them all in the User menu, and in the shortcut menu of the tree.</p>
+<h2 id="set-someones-volume">Set someone's volume</h2>
+<ol type="1">
+<li>Select the person in the channel tree.</li>
+<li>Press Command-U.</li>
+<li>Drag the <strong>Voice</strong> and <strong>Media file</strong> sliders, and set the balance between the left and right speaker. Changes apply as you drag, so you can set the level while the person is talking.</li>
+<li>Click Apply. To go back to the previous levels, click Cancel.</li>
+</ol>
+<p>The scale is even from end to end: 0% is silence, 50% is the normal volume, and 100% is the maximum.</p>
+<p>To balance a whole channel more quickly, see <a href="mixer.html">Balance a channel with the mixer</a>.</p>
+<h2 id="mute-someone-for-yourself">Mute someone for yourself</h2>
 <ul>
-<li><strong>Shift-Command-M</strong> — <em>Mute locally</em> / <em>Unmute locally</em>. Only you stop hearing them.</li>
-<li><strong>Control-Shift-Command-M</strong> — <em>Mute media stream locally</em>, which silences the media file someone is streaming while leaving their voice audible.</li>
+<li>To silence a person, press Shift-Command-M. Only you stop hearing them, and they aren't told.</li>
+<li>To silence only the media file they're streaming, press Control-Shift-Command-M. Their voice stays audible.</li>
 </ul>
-<p>Both are announced, and both are local to your Mac: the person is not told.</p>
-<h2 id="user-information">User information</h2>
-<p><strong>Command-I</strong> opens <strong>User Information</strong> for the selected person: ID, nickname, username, status mode and message, gender, user type, whether they are a channel operator, IP address, client, version, and voice packet loss.</p>
-<h2 id="everyone-on-the-server">Everyone on the server</h2>
-<p><strong>Server → Connected Users…</strong> (<strong>Shift-Command-W</strong>) lists everyone connected, not just your channel, with their nickname, status message, username, channel, IP address, version and ID. From there you can view a person's information, copy it, send a private message, or — with the right permissions — move, kick or ban them.</p>
-<h2 id="subscriptions">Subscriptions</h2>
-<p>The <strong>User → Subscriptions</strong> submenu decides what you receive from the selected person. Each entry is a switch you can turn on or off:</p>
+<p>Press the same shortcut again to hear them again.</p>
+<h2 id="see-someones-details">See someone's details</h2>
+<p>Press Command-I. The User Information window shows their nickname, user name, status, gender, account type, whether they're a channel operator, their IP address, their client and version, and their voice packet loss.</p>
+<p>To see everyone connected to the server rather than just your channel, choose Server &gt; Connected Users, or press Shift-Command-W. From there you can view a person's information, copy it, send them a private message, or — with the right permissions — move, kick or ban them.</p>
+<h2 id="choose-what-you-receive-from-a-person">Choose what you receive from a person</h2>
+<p>The User &gt; Subscriptions submenu decides what a person can send you. Each entry is a switch.</p>
 <table>
 <thead>
 <tr>
@@ -41,15 +44,15 @@
 <tbody>
 <tr>
 <td>Control-1</td>
-<td>Private Messages</td>
+<td>Private messages</td>
 </tr>
 <tr>
 <td>Control-2</td>
-<td>Channel Messages</td>
+<td>Channel messages</td>
 </tr>
 <tr>
 <td>Control-3</td>
-<td>Broadcast Messages</td>
+<td>Broadcast messages</td>
 </tr>
 <tr>
 <td>Control-4</td>
@@ -61,44 +64,14 @@
 </tr>
 <tr>
 <td>Control-6</td>
-<td>Media File</td>
+<td>Media file</td>
 </tr>
 </tbody>
 </table>
-<p>Turning <strong>Voice</strong> off for someone is a server-side unsubscribe: their audio is no longer sent to you at all, unlike a local mute.</p>
-<h3 id="intercepts">Intercepts</h3>
-<p>Below them, the same submenu offers the intercepts, which require the corresponding rights and let an administrator receive what is not addressed to them:</p>
-<table>
-<thead>
-<tr>
-<th>Shortcut</th>
-<th>Intercept</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Control-Shift-1</td>
-<td>Intercept Private Messages</td>
-</tr>
-<tr>
-<td>Control-Shift-2</td>
-<td>Intercept Channel Messages</td>
-</tr>
-<tr>
-<td>Control-Shift-4</td>
-<td>Intercept Voice</td>
-</tr>
-<tr>
-<td>Control-Shift-5</td>
-<td>Intercept Desktop</td>
-</tr>
-<tr>
-<td>Control-Shift-6</td>
-<td>Intercept Media File</td>
-</tr>
-</tbody>
-</table>
-<p>The subscriptions applied to everyone when you connect are set in <a href="preferences.html#prefs-connection">Preferences → Connection</a>, under <strong>Default subscriptions</strong> and <strong>Default intercepts</strong>.</p>
+<p>Turning <strong>Voice</strong> off unsubscribes you on the server: their audio is no longer sent to you at all, unlike muting them locally.</p>
+<p>The same submenu offers the intercepts — private messages, channel messages, voice, desktop and media file — on Control-Shift-1, 2, 4, 5 and 6. They let an administrator receive what isn't addressed to them, and require the matching rights.</p>
+<p>To set what everyone sends you as soon as you connect, open Preferences, click Connection, then use <strong>Default subscriptions</strong> and <strong>Default intercepts</strong>.</p>
+<p><strong>See also:</strong> <a href="mixer.html">Balance a channel with the mixer</a> · <a href="messages.html">Send and read messages</a></p>
 <hr>
 <p class="footer"><a href="index.html">Table of contents</a></p>
 </body>

@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Streaming media</title>
-<meta name="description" content="Play a file, an internet stream, an audio device, another app or VoiceOver into the channel.">
+<title>Stream audio into a channel</title>
+<meta name="description" content="Send a file, an internet radio, an audio device, another app or VoiceOver into the channel alongside your voice.">
 <meta name="keywords" content="streaming, media file, URL, radio, device, application, VoiceOver, media player, broadcast volume">
 <meta name="robots" content="index, anchors">
 <link rel="stylesheet" href="../css/help.css">
@@ -12,24 +12,31 @@
 <body>
 <nav class="crumb"><a href="index.html">Table of contents</a></nav>
 <a id="streaming"></a>
-<h1>Streaming media</h1>
-<p>tt-Accessible can send audio into the channel alongside your voice — a music file, an internet radio, the output of another application, or even VoiceOver itself so that the channel hears what your screen reader is saying.</p>
-<p>All four commands live in the <strong>Shortcuts</strong> menu.</p>
-<h2 id="streaming-a-file">Streaming a file</h2>
-<p><strong>Option-Command-S</strong> — <em>Stream Media File…</em> — opens a file picker. Video support depends on what TeamTalk can open on your Mac; 10-bit video is not supported. When a file carries video, the collapsible <strong>Video</strong> panel of the main window shows it.</p>
-<h2 id="streaming-a-url">Streaming a URL</h2>
-<p><strong>Option-Command-U</strong> — <em>Stream URL…</em> — asks for the address of an audio stream, such as an internet radio. The <code>http</code>, <code>https</code>, <code>rtmp</code>, <code>rtmps</code>, <code>rtsp</code> and <code>mms</code> schemes are accepted.</p>
-<h2 id="streaming-a-device-an-application-or-voiceover">Streaming a device, an application or VoiceOver</h2>
-<p><strong>Option-Command-A</strong> — <em>Stream a Device or Application…</em> — opens a sheet with:</p>
-<ul>
-<li><strong>Audio source</strong> — an audio input of your Mac, <strong>VoiceOver</strong>, or an entry under <strong>Applications</strong>. <strong>Select Application…</strong> lets you browse any installed app, even one that is not running, on macOS 14.2 and later. Streaming an application's or VoiceOver's audio requires macOS 13 or later.</li>
-<li><strong>Play the streamed audio back to me</strong> — off by default, so you are not forced to listen to what you are broadcasting.</li>
-<li><strong>Mute this source on this Mac while streaming</strong> — silences the source locally while the channel keeps hearing it. Available on recent systems, and only for an application source.</li>
-</ul>
-<p>The stream keeps going even while the source is silent, so a pause in the music does not end the broadcast. Your last choice is preselected the next time.</p>
-<p>If the app you picked is not producing any audio, the app answers <em>The selected source has no audio to capture right now.</em></p>
-<h2 id="the-media-player">The media player</h2>
-<p>While a stream is running, the <strong>Media Player</strong> window shows <em>Playing:</em> followed by the source, and gives you:</p>
+<h1>Stream audio into a channel</h1>
+<p>You can send audio into the channel at the same time as your voice — a music file, an internet radio, the sound of another app, or VoiceOver itself, so the channel hears what your screen reader is saying. All four commands are in the Shortcuts menu.</p>
+<h2 id="stream-a-file">Stream a file</h2>
+<ol type="1">
+<li>Choose Shortcuts &gt; Stream Media File, or press Option-Command-S.</li>
+<li>Select an audio or video file, then click Stream.</li>
+</ol>
+<p>Video support depends on what TeamTalk can open on your Mac, and 10-bit video isn't supported. When a file carries video, the Video panel of the main window shows it.</p>
+<h2 id="stream-an-internet-radio-or-another-url">Stream an internet radio or another URL</h2>
+<ol type="1">
+<li>Choose Shortcuts &gt; Stream URL, or press Option-Command-U.</li>
+<li>Enter the address of the stream, then click Stream. You can use the <code>http</code>, <code>https</code>, <code>rtmp</code>, <code>rtmps</code>, <code>rtsp</code> and <code>mms</code> schemes.</li>
+</ol>
+<h2 id="stream-a-device-an-app-or-voiceover">Stream a device, an app or VoiceOver</h2>
+<ol type="1">
+<li>Choose Shortcuts &gt; Stream a Device or Application, or press Option-Command-A.</li>
+<li>Click the <strong>Audio source</strong> pop-up menu, then choose an audio input of your Mac, <strong>VoiceOver</strong>, or an app under Applications. To pick an app that isn't running, choose <strong>Select Application</strong> — this requires macOS 14.2 or later. Streaming the audio of an app or of VoiceOver requires macOS 13 or later.</li>
+<li>Select <strong>Play the streamed audio back to me</strong> if you want to hear what you're sending. It's off, so you aren't forced to listen to it.</li>
+<li>Select <strong>Mute this source on this Mac while streaming</strong> to silence the source for yourself while the channel keeps hearing it. This option appears for apps on recent versions of macOS.</li>
+<li>Click Stream.</li>
+</ol>
+<p>The stream keeps going even while the source is silent, so a pause in the music doesn't end it. Your last choice is selected again next time.</p>
+<p>If the app you picked isn't producing any sound, tt-Accessible answers <em>The selected source has no audio to capture right now.</em></p>
+<h2 id="control-whats-playing">Control what's playing</h2>
+<p>While a stream is running, the Media Player window shows what's playing and offers these keys:</p>
 <table>
 <thead>
 <tr>
@@ -47,20 +54,20 @@
 <td>Stop</td>
 </tr>
 <tr>
-<td>Left / Right arrow</td>
-<td>Seek 5 seconds back or forward</td>
+<td>Left Arrow or Right Arrow</td>
+<td>Skip 5 seconds back or forward</td>
 </tr>
 <tr>
-<td>Up / Down arrow</td>
-<td>Broadcast volume</td>
+<td>Up Arrow or Down Arrow</td>
+<td>Change the broadcast volume</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Broadcast volume</strong> sets how loud the stream is sent to the channel, independently of your own listening level.</p>
-<h2 id="stopping">Stopping</h2>
-<p><strong>Option-Command-.</strong> (Option-Command-period) — <em>Stop Streaming</em> — ends the stream. The app announces <em>Streaming finished</em>, and both the start and the end are recorded in the session history.</p>
-<h2 id="what-others-hear">What others hear</h2>
-<p>The stream reaches everyone subscribed to your <strong>Media File</strong> stream. Anyone can silence it on their side without silencing your voice, with <em>Mute media stream locally</em> — see <a href="users.html">People you hear</a>.</p>
+<p>The broadcast volume sets how loud the stream is sent to the channel, independently of the level you listen at.</p>
+<h2 id="stop-streaming">Stop streaming</h2>
+<p>Choose Shortcuts &gt; Stop Streaming, or press Option-Command-Period. tt-Accessible announces <em>Streaming finished</em>, and both the start and the end appear in the session history.</p>
+<p>Everyone subscribed to your media file stream hears it. Each person can silence it without silencing your voice — see <a href="users.html">Adjust what you hear from each person</a>.</p>
+<p><strong>See also:</strong> <a href="talking.html">Talk in a channel</a> · <a href="recording.html">Record a conversation</a></p>
 <hr>
 <p class="footer"><a href="index.html">Table of contents</a></p>
 </body>

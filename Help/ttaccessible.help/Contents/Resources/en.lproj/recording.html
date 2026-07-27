@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Recording</title>
-<meta name="description" content="Record a conversation as a single mixed file, as one file per person, or both.">
+<title>Record a conversation</title>
+<meta name="description" content="Record a channel as a single mixed file, as one file per person, or both, and choose where the files go.">
 <meta name="keywords" content="recording, record, WAV, OGG, Opus, folder, stems, no recording, auto restart">
 <meta name="robots" content="index, anchors">
 <link rel="stylesheet" href="../css/help.css">
@@ -12,45 +12,37 @@
 <body>
 <nav class="crumb"><a href="index.html">Table of contents</a></nav>
 <a id="recording"></a>
-<h1>Recording</h1>
-<h2 id="starting-and-stopping">Starting and stopping</h2>
-<table>
-<thead>
-<tr>
-<th>Shortcut</th>
-<th>What it records</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Command-R</td>
-<td>A single mixed file, always</td>
-</tr>
-<tr>
-<td>Shift-Command-R</td>
-<td>Whatever <strong>Recording mode</strong> is set to in Preferences</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Command-R</strong> stops the recording again, and so does Shift-Command-R. The app announces <em>Recording started</em> and <em>Recording stopped</em>, and the audio status (<strong>F9</strong>) reports whether a recording is running. The toolbar has a matching button.</p>
-<p>The first time, if no folder has been chosen, the app asks where to save the files.</p>
-<h2 id="recording-mode">Recording mode</h2>
-<p><a href="preferences.html#prefs-recording">Preferences → Recording</a> sets what <strong>Shift-Command-R</strong> does:</p>
+<h1>Record a conversation</h1>
+<p>You can record what's said in a channel. tt-Accessible can mix everyone into a single file, write one file per person, or do both at once.</p>
+<h2 id="start-and-stop-a-recording">Start and stop a recording</h2>
 <ul>
-<li><strong>Separate files (one per user)</strong> — one file per person, including your own voice.</li>
-<li><strong>Both</strong> — a mixed file <em>and</em> the individual files. This is the default.</li>
+<li>To record a single mixed file, press Command-R.</li>
+<li>To record using the mode set in Preferences, press Shift-Command-R.</li>
 </ul>
-<p><strong>Command-R</strong> is unaffected and always produces the single mixed file, which is why the two shortcuts exist.</p>
-<h2 id="format-and-folder">Format and folder</h2>
+<p>Press the same shortcut again to stop. tt-Accessible announces <em>Recording started</em> and <em>Recording stopped</em>, and F9 tells you whether a recording is running. The toolbar has a matching button.</p>
+<p>The first time, if you haven't chosen a folder, tt-Accessible asks where to save the files.</p>
+<h2 id="choose-what-shift-command-r-records">Choose what Shift-Command-R records</h2>
+<ol type="1">
+<li>Open Preferences, then click Recording in the sidebar.</li>
+<li>Click the <strong>Recording mode</strong> pop-up menu, then choose one of the following:
 <ul>
-<li><strong>Audio format</strong> — <strong>WAV</strong> (the default, uncompressed) or <strong>OGG (Opus)</strong> (compressed, much smaller).</li>
-<li><strong>Recording folder</strong> — chosen with <strong>Choose…</strong>, cleared with <strong>Clear</strong>. The app keeps its permission to write there across launches.</li>
-</ul>
-<h2 id="channels-that-forbid-recording">Channels that forbid recording</h2>
-<p>A channel can be created with <strong>No audio recording</strong>. In such a channel, Command-R and Shift-Command-R refuse to start and the app announces <em>Recording is not allowed in this channel</em> — unless your account has the right to record voice.</p>
-<h2 id="restarting-on-its-own">Restarting on its own</h2>
-<p><strong>Automatically restart recording when joining a channel</strong> — off by default — resumes recording when you join another channel, reconnect, or relaunch the app after a session that was being recorded. The mode that was actually running is restored, so a Command-R recording comes back as a single file rather than as the Shift-Command-R preference.</p>
-<p>Changing channel during a mixed recording is handled for you: the current file is closed and a new one is started in the new channel.</p>
+<li><strong>Separate files</strong> — one file per person, including your own voice.</li>
+<li><strong>Both</strong> — a mixed file and the individual files.</li>
+</ul></li>
+</ol>
+<p>Command-R is unaffected: it always produces the single mixed file. That's why there are two shortcuts.</p>
+<h2 id="choose-the-format-and-the-folder">Choose the format and the folder</h2>
+<ol type="1">
+<li>Open Preferences, then click Recording.</li>
+<li>Click the <strong>Audio format</strong> pop-up menu, then choose <strong>WAV</strong> for uncompressed files or <strong>OGG (Opus)</strong> for much smaller ones.</li>
+<li>Click <strong>Choose</strong>, then select the folder where recordings should go. tt-Accessible keeps its permission to write there from one launch to the next.</li>
+</ol>
+<h2 id="resume-recording-on-its-own">Resume recording on its own</h2>
+<p>Select <strong>Automatically restart recording when joining a channel</strong> to pick recording back up when you change channel, when the connection returns, or when you open tt-Accessible after a session that was being recorded. The mode that was actually running is restored.</p>
+<p>Changing channel during a mixed recording is handled for you: the current file is closed and a new one starts in the new channel.</p>
+<h2 id="if-a-channel-forbids-recording">If a channel forbids recording</h2>
+<p>A channel can be created with <strong>No audio recording</strong>. There, Command-R and Shift-Command-R refuse to start and tt-Accessible announces <em>Recording is not allowed in this channel</em> — unless your account has the right to record voice.</p>
+<p><strong>See also:</strong> <a href="channels.html">Join and manage channels</a> · <a href="preferences.html#prefs-recording">Change tt-Accessible settings</a></p>
 <hr>
 <p class="footer"><a href="index.html">Table of contents</a></p>
 </body>

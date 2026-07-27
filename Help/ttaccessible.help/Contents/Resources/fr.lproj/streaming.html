@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Diffuser du son</title>
-<meta name="description" content="Envoyer dans le canal un fichier, une radio internet, un périphérique, une autre application ou VoiceOver.">
+<title>Diffuser du son dans un canal</title>
+<meta name="description" content="Envoyer un fichier, une radio internet, un périphérique, une autre app ou VoiceOver dans le canal, en même temps que votre voix.">
 <meta name="keywords" content="diffusion, fichier média, URL, radio, périphérique, application, VoiceOver, lecteur média">
 <meta name="robots" content="index, anchors">
 <link rel="stylesheet" href="../css/help.css">
@@ -12,24 +12,31 @@
 <body>
 <nav class="crumb"><a href="index.html">Sommaire</a></nav>
 <a id="streaming"></a>
-<h1>Diffuser du son</h1>
-<p>tt-Accessible peut envoyer du son dans le canal en même temps que votre voix : un fichier de musique, une radio internet, la sortie d'une autre application, ou même VoiceOver, pour que le canal entende ce que dit votre lecteur d'écran.</p>
-<p>Les quatre commandes se trouvent dans le menu <strong>Raccourcis</strong>.</p>
+<h1>Diffuser du son dans un canal</h1>
+<p>Vous pouvez envoyer du son dans le canal en même temps que votre voix : un fichier de musique, une radio internet, le son d'une autre app, ou VoiceOver lui-même, pour que le canal entende ce que dit votre lecteur d'écran. Les quatre commandes se trouvent dans le menu Raccourcis.</p>
 <h2 id="diffuser-un-fichier">Diffuser un fichier</h2>
-<p><strong>Option-Commande-S</strong> — <em>Diffuser un fichier média…</em> — ouvre un sélecteur de fichiers. La prise en charge vidéo dépend des formats que TeamTalk sait décoder sur votre Mac ; la vidéo 10 bits n'est pas prise en charge. Quand un fichier contient de la vidéo, le panneau <strong>Vidéo</strong> repliable de la fenêtre principale l'affiche.</p>
-<h2 id="diffuser-une-url">Diffuser une URL</h2>
-<p><strong>Option-Commande-U</strong> — <em>Diffuser une URL…</em> — demande l'adresse d'un flux audio, une radio internet par exemple. Les schémas <code>http</code>, <code>https</code>, <code>rtmp</code>, <code>rtmps</code>, <code>rtsp</code> et <code>mms</code> sont acceptés.</p>
-<h2 id="diffuser-un-périphérique-une-application-ou-voiceover">Diffuser un périphérique, une application ou VoiceOver</h2>
-<p><strong>Option-Commande-A</strong> — <em>Diffuser un périphérique ou une application…</em> — ouvre une fenêtre avec :</p>
-<ul>
-<li><strong>Source audio</strong> — une entrée audio de votre Mac, <strong>VoiceOver</strong>, ou une entrée du sous-menu <strong>Applications</strong>. <strong>Sélectionner une application…</strong> permet de parcourir n'importe quelle application installée, même si elle n'est pas lancée, à partir de macOS 14.2. La diffusion de l'audio d'une application ou de VoiceOver demande macOS 13 ou une version ultérieure.</li>
-<li><strong>Me faire entendre l'audio diffusé</strong> — décoché par défaut, pour ne pas vous imposer d'écouter ce que vous diffusez.</li>
-<li><strong>Couper le son de cette source sur ce Mac pendant la diffusion</strong> — la source devient silencieuse chez vous alors que le canal continue de l'entendre. Disponible sur les systèmes récents, et seulement pour une application.</li>
-</ul>
-<p>La diffusion continue même lorsque la source est silencieuse : une pause dans la musique n'interrompt donc rien. Votre dernier choix est resélectionné la fois suivante.</p>
-<p>Si l'application choisie ne produit aucun son, l'application répond que <em>La source sélectionnée n'a aucun audio à capturer pour le moment.</em></p>
-<h2 id="le-lecteur-média">Le lecteur média</h2>
-<p>Pendant une diffusion, la fenêtre <strong>Lecteur média</strong> affiche <em>Lecture :</em> suivi de la source, et vous donne :</p>
+<ol type="1">
+<li>Choisissez Raccourcis &gt; Diffuser un fichier média, ou appuyez sur Option + Commande + S.</li>
+<li>Sélectionnez un fichier audio ou vidéo, puis cliquez sur Diffuser.</li>
+</ol>
+<p>La prise en charge vidéo dépend des formats que TeamTalk sait décoder sur votre Mac, et la vidéo 10 bits n'est pas gérée. Quand un fichier contient de la vidéo, le panneau Vidéo de la fenêtre principale l'affiche.</p>
+<h2 id="diffuser-une-radio-internet-ou-une-autre-url">Diffuser une radio internet ou une autre URL</h2>
+<ol type="1">
+<li>Choisissez Raccourcis &gt; Diffuser une URL, ou appuyez sur Option + Commande + U.</li>
+<li>Saisissez l'adresse du flux, puis cliquez sur Diffuser. Les schémas <code>http</code>, <code>https</code>, <code>rtmp</code>, <code>rtmps</code>, <code>rtsp</code> et <code>mms</code> sont acceptés.</li>
+</ol>
+<h2 id="diffuser-un-périphérique-une-app-ou-voiceover">Diffuser un périphérique, une app ou VoiceOver</h2>
+<ol type="1">
+<li>Choisissez Raccourcis &gt; Diffuser un périphérique ou une application, ou appuyez sur Option + Commande + A.</li>
+<li>Cliquez sur le menu local <strong>Source audio</strong>, puis choisissez une entrée audio de votre Mac, <strong>VoiceOver</strong>, ou une app dans Applications. Pour désigner une app qui n'est pas lancée, choisissez <strong>Sélectionner une application</strong> — cela nécessite macOS 14.2 ou une version ultérieure. La diffusion de l'audio d'une app ou de VoiceOver nécessite macOS 13 ou une version ultérieure.</li>
+<li>Sélectionnez <strong>Me faire entendre l'audio diffusé</strong> si vous voulez entendre ce que vous envoyez. L'option est décochée, pour ne pas vous imposer cette écoute.</li>
+<li>Sélectionnez <strong>Couper le son de cette source sur ce Mac pendant la diffusion</strong> pour la faire taire chez vous alors que le canal continue de l'entendre. Cette option apparaît pour les apps sur les versions récentes de macOS.</li>
+<li>Cliquez sur Diffuser.</li>
+</ol>
+<p>La diffusion continue même lorsque la source est silencieuse : une pause dans la musique ne l'interrompt pas. Votre dernier choix est resélectionné la fois suivante.</p>
+<p>Si l'app choisie ne produit aucun son, tt-Accessible répond <em>La source sélectionnée n'a aucun audio à capturer pour le moment.</em></p>
+<h2 id="contrôler-la-lecture">Contrôler la lecture</h2>
+<p>Pendant une diffusion, la fenêtre Lecteur média affiche ce qui passe et propose ces touches :</p>
 <table>
 <thead>
 <tr>
@@ -47,20 +54,20 @@
 <td>Arrêt</td>
 </tr>
 <tr>
-<td>Flèche gauche / droite</td>
+<td>Flèche gauche ou Flèche droite</td>
 <td>Reculer ou avancer de 5 secondes</td>
 </tr>
 <tr>
-<td>Flèche haut / bas</td>
-<td>Volume diffusé</td>
+<td>Flèche haut ou Flèche bas</td>
+<td>Modifier le volume diffusé</td>
 </tr>
 </tbody>
 </table>
-<p>Le <strong>Volume diffusé</strong> règle le niveau auquel le flux part vers le canal, indépendamment du niveau auquel vous l'écoutez.</p>
-<h2 id="arrêter">Arrêter</h2>
-<p><strong>Option-Commande-.</strong> (Option-Commande-point) — <em>Arrêter la diffusion</em> — met fin au flux. L'application annonce <em>Diffusion terminée</em>, et le début comme la fin sont consignés dans l'historique de session.</p>
-<h2 id="ce-quentendent-les-autres">Ce qu'entendent les autres</h2>
-<p>Le flux atteint toutes les personnes abonnées à votre <strong>Fichier média</strong>. Chacune peut le faire taire de son côté sans faire taire votre voix, avec <em>Couper le flux média localement</em> — voir <a href="users.html">Les personnes que vous entendez</a>.</p>
+<p>Le volume diffusé règle le niveau auquel le flux part vers le canal, indépendamment du niveau auquel vous l'écoutez.</p>
+<h2 id="arrêter-la-diffusion">Arrêter la diffusion</h2>
+<p>Choisissez Raccourcis &gt; Arrêter la diffusion, ou appuyez sur Option + Commande + Point. tt-Accessible annonce <em>Diffusion terminée</em>, et le début comme la fin apparaissent dans l'historique de session.</p>
+<p>Toutes les personnes abonnées à votre fichier média l'entendent. Chacune peut le faire taire sans faire taire votre voix — consultez <a href="users.html">Régler ce que vous entendez de chaque personne</a>.</p>
+<p><strong>Voir aussi :</strong> <a href="talking.html">Parler dans un canal</a> · <a href="recording.html">Enregistrer une conversation</a></p>
 <hr>
 <p class="footer"><a href="index.html">Sommaire</a></p>
 </body>

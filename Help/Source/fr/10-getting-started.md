@@ -1,65 +1,58 @@
 ---
-title: Premiers pas
-description: Installer tt-Accessible, choisir sa langue, se connecter pour la première fois et garder l'application à jour.
+title: Configurer tt-Accessible
+description: Installer tt-Accessible, choisir sa langue, l'autoriser à utiliser votre micro et le tenir à jour.
 keywords: installation, premier lancement, langue, autorisation micro, mise à jour, Sparkle, bêta
 anchor: getting-started
 ---
 
-## Ce qu'il vous faut
+Vous pouvez installer tt-Accessible sur tout Mac équipé de macOS 12 (Monterey) ou d'une version
+ultérieure. Pour parler avec d'autres personnes, il vous faut aussi un micro et les coordonnées d'un
+serveur TeamTalk 5 — ou un fichier `.tt` ou un lien `tt://` que quelqu'un vous a transmis. Pour
+écouter, le micro n'est pas nécessaire.
 
-- **macOS 12.0 (Monterey) ou une version plus récente.** L'application est un binaire universel :
-  elle tourne nativement sur les Mac Apple silicon comme sur les Mac Intel.
-- **Un serveur TeamTalk 5**, dont on vous a donné les coordonnées, ou bien un fichier `.tt` ou un
-  lien `tt://` que quelqu'un vous a transmis.
-- **Un micro** si vous comptez parler. Pour écouter, il n'est pas nécessaire.
-
-Certaines fonctions demandent un système plus récent : à partir de macOS 14.2, l'annulation d'écho
-capte l'ensemble du son du Mac, et la diffusion du son d'une application ou de VoiceOver réclame elle
-aussi un macOS récent (voir [Diffuser du son](streaming.html)).
-
-## Installation
+## Installer tt-Accessible
 
 1. Téléchargez la dernière archive depuis la page des versions du projet.
-2. Décompressez-la, puis glissez **tt-Accessible** dans votre dossier Applications.
-3. Ouvrez l'application. Le premier lancement peut prendre quelques instants, le temps que macOS
-   vérifie le logiciel.
+2. Décompressez-la, puis glissez tt-Accessible dans votre dossier Applications.
+3. Ouvrez tt-Accessible. Le premier lancement peut prendre quelques instants, le temps que macOS
+   vérifie l'app.
 
-## Au premier lancement
+## Choisir la langue de l'app
 
-L'application vous demande **Choisissez votre langue** : anglais ou français. Vous pourrez revenir
-sur ce choix dans [Préférences → Général](preferences.html#prefs-general) ; il faut alors relancer
-l'application pour que le changement s'applique partout.
+À la première ouverture, tt-Accessible vous demande **Choisissez votre langue**. Sélectionnez
+l'anglais ou le français.
 
-La première fois que vous activez le micro, macOS demande l'autorisation de l'utiliser. Si vous
-refusez, l'application signale que *L'accès au micro a été refusé par macOS.* et il faut alors
-l'accorder dans Réglages Système → Confidentialité et sécurité → Microphone.
+Pour revenir sur ce choix :
 
-## Se connecter pour la première fois
+1. Dans tt-Accessible, choisissez tt-Accessible > Préférences (ou appuyez sur Commande + Virgule).
+2. Cliquez sur Général dans la barre latérale.
+3. Cliquez sur le menu local **Langue**, puis choisissez **Langue du système**, **Anglais** ou
+   **Français**.
+4. Quittez tt-Accessible puis rouvrez-le, pour que le changement s'applique partout.
 
-La fenêtre qui s'ouvre au lancement s'appelle **Serveurs TeamTalk**. Elle est vide tant que vous
-n'avez pas ajouté de serveur :
+## Autoriser tt-Accessible à utiliser votre micro
 
-- **Commande-N** pour saisir vous-même les coordonnées, ou
-- **Serveur → Importer les serveurs TeamTalk…** (Maj-Commande-I) si vous disposez d'un fichier de
-  configuration, d'un fichier `.tt` ou d'un lien `tt://`.
+La première fois que vous activez le micro, macOS vous demande l'autorisation. Cliquez sur OK.
 
-Sélectionnez ensuite le serveur dans la liste et appuyez sur **Entrée** ou sur **F2**.
+Si vous avez refusé, tt-Accessible indique *L'accès au micro a été refusé par macOS.* Pour
+l'autoriser, choisissez le menu Pomme > Réglages Système, cliquez sur Confidentialité et sécurité,
+cliquez sur Microphone, puis activez tt-Accessible.
 
-Tout ceci est détaillé dans [Les serveurs](servers.html).
-
-## Rester à jour
+## Tenir tt-Accessible à jour
 
 tt-Accessible vérifie les mises à jour de lui-même et vous propose de les installer.
 
-- **tt-Accessible → Vérifier les mises à jour…** lance une vérification immédiate.
-- Dans [Préférences → Général](preferences.html#prefs-general), la section **Mises à jour** propose
-  **Vérifier les mises à jour automatiquement** (activé par défaut) et **Inclure les versions bêta**
-  (désactivé par défaut). Les versions bêta peuvent contenir des bugs ; laissez l'option désactivée
-  pour ne recevoir que les versions stables.
+- Pour vérifier immédiatement, choisissez tt-Accessible > Vérifier les mises à jour.
+- Pour modifier ce comportement, ouvrez les Préférences, cliquez sur Général, puis utilisez
+  **Vérifier les mises à jour automatiquement** et **Inclure les versions bêta** dans la section
+  Mises à jour. Les versions bêta peuvent contenir des bugs : laissez cette option désactivée pour
+  ne recevoir que les versions stables.
 
-## Trouver de l'aide
+## Obtenir de l'aide
 
-Le menu **Aide** propose également **Voir le projet sur GitHub**, **Signaler un problème…** et, quand
-la version le permet, **Contacter le développeur…** — un formulaire qui envoie directement un message
-au développeur, avec le journal audio en pièce jointe si vous le souhaitez. Voir
-[En cas de problème](troubleshooting.html).
+Le menu Aide propose également **Voir le projet sur GitHub**, **Signaler un problème** et, quand
+votre exemplaire le permet, **Contacter le développeur**, un formulaire qui envoie directement un
+message au développeur.
+
+**Voir aussi :** [Ajouter un serveur et s'y connecter](servers.html) ·
+[Si quelque chose ne fonctionne pas](troubleshooting.html)

@@ -1,70 +1,69 @@
 ---
-title: Régler l'audio
-description: Choisir les périphériques d'entrée et de sortie, activer la réduction de bruit ou l'annulation d'écho, et tester son micro.
+title: Configurer vos périphériques audio
+description: Choisir vos périphériques d'entrée et de sortie, supprimer l'écho et le bruit de fond, et tester votre micro.
 keywords: périphérique audio, entrée, sortie, annulation d'écho, AEC, réduction de bruit, aperçu, canaux, casque
 anchor: audio-setup
 ---
 
-Tout ce qui suit se trouve dans [Préférences → Audio](preferences.html#prefs-audio). Les changements
-sont appliqués immédiatement, même en pleine session.
+Vous pouvez choisir les périphériques utilisés par tt-Accessible et la façon dont il traite votre
+micro. Les changements prennent effet immédiatement, même en pleine session.
 
-## Les périphériques
+## Choisir vos périphériques
 
-- **Périphérique de sortie** — **Par défaut du système**, une sortie précise de votre Mac, ou
-  **Aucune sortie audio** si vous voulez faire tourner l'application en silence.
-- **Périphérique d'entrée** — **Par défaut du système** ou un micro précis.
+1. Ouvrez les Préférences, puis cliquez sur Audio dans la barre latérale.
+2. Cliquez sur le menu local **Périphérique de sortie**, puis choisissez **Par défaut du système**,
+   un périphérique précis, ou **Aucune sortie audio** pour faire tourner tt-Accessible en silence.
+3. Cliquez sur le menu local **Périphérique d'entrée**, puis choisissez **Par défaut du système** ou
+   un micro précis.
 
-**Actualiser les périphériques** reconstruit la liste après un branchement ou un débranchement.
-L'application détecte de toute façon ces changements toute seule et redémarre son moteur audio : un
-casque connecté en cours de session est pris en compte sans que vous ayez à intervenir.
+Si vous branchez ou débranchez un appareil et qu'il n'apparaît pas, cliquez sur **Actualiser les
+périphériques**. tt-Accessible détecte de toute façon ces changements tout seul et redémarre son
+moteur audio : un casque connecté en cours de session est pris en compte sans que vous ayez à
+intervenir.
 
-## Le traitement du micro
+## Supprimer l'écho et le bruit de fond
 
-**Traitement du micro** propose trois réglages :
+1. Ouvrez les Préférences, puis cliquez sur Audio.
+2. Cliquez sur le menu local **Traitement du micro**, puis choisissez l'une des options suivantes :
+   - **Aucun** — votre micro part tel quel.
+   - **Réduction de bruit** — supprime le bruit de fond de votre microphone.
+   - **Annulation d'écho + réduction de bruit** — retire en plus le son de vos haut-parleurs de ce
+     que vous envoyez.
 
-- **Aucun** — votre micro part tel quel.
-- **Réduction de bruit** — supprime le bruit de fond de votre microphone.
-- **Annulation d'écho + réduction de bruit** — retire en plus le son de vos haut-parleurs de ce que
-  vous envoyez, et comprend toujours la réduction de bruit.
+C'est l'annulation d'écho qui permet de travailler sans casque : sans elle, tout le monde s'entend
+revenir par votre micro. À partir de macOS 14.2, tt-Accessible utilise comme référence le son
+réellement produit par votre Mac : VoiceOver et les sons du système sont donc annulés au même titre
+que les voix du canal. Sur les versions antérieures, seul l'audio de TeamTalk peut l'être.
 
-C'est l'annulation d'écho qui permet de travailler **sans casque** : sans elle, tout le monde
-s'entend revenir par votre micro. À partir de macOS 14.2, l'application utilise comme référence le
-son réellement produit par le Mac : VoiceOver et les sons système sont donc annulés au même titre que
-les voix du canal. Sur les systèmes plus anciens, seul l'audio de TeamTalk peut l'être.
+## Choisir les entrées utilisées
 
-## Les canaux d'entrée
+Cliquez sur le menu local **Canaux d'entrée**, puis choisissez **Auto**, une entrée mono, une paire
+stéréo, ou une somme mono de deux entrées. Ce réglage compte avec une interface audio, où le micro
+est rarement sur l'entrée 1.
 
-**Canaux d'entrée** détermine quelles entrées physiques du périphérique sont utilisées :
+Si vous changez de périphérique et que la configuration ne convient plus, tt-Accessible revient sur
+Auto et vous le signale.
 
-- **Auto** — l'application choisit.
-- **Entrée _n_ mono** — une entrée unique.
-- **Entrées _n_/_n_ stéréo** — une paire stéréo.
-- **Somme mono _n_+_n_** — deux entrées additionnées en mono.
+## Tester votre micro
 
-Le réglage prend tout son sens avec une interface audio multi-entrées, où le micro est rarement sur
-l'entrée 1. Si le périphérique change et que la configuration choisie ne convient plus, l'application
-revient sur **Auto** et vous le signale.
+1. Ouvrez les Préférences, puis cliquez sur Audio.
+2. Cliquez sur **Aperçu audio**. Votre micro vous est renvoyé avec le traitement sélectionné, sans
+   être connecté à quoi que ce soit.
+3. Cliquez sur **Arrêter l'aperçu** pour mettre fin à l'essai.
 
-## Se tester avant de parler
+En session, appuyez plutôt sur Maj + Commande + H pour vous entendre à travers le canal.
 
-**Aperçu audio** vous renvoie votre micro, avec le traitement sélectionné, sans être connecté à quoi
-que ce soit. Le même bouton — **Arrêter l'aperçu** — met fin à l'essai.
+## Conserver les niveaux réglés pour les autres
 
-En session, **Maj-Commande-H** (le retour audio) fait la même chose à travers le canal.
+Cliquez sur les boutons **Mémorisation des volumes par utilisateur**, puis choisissez l'une des
+options suivantes :
 
-## La mémorisation des volumes
+- **Désactivé** — tous les niveaux reviennent à 50 % à la reconnexion.
+- **Session en cours seulement** — les niveaux sont oubliés à la fermeture.
+- **Toujours** — les niveaux sont mémorisés d'un lancement à l'autre.
 
-**Mémorisation des volumes par utilisateur** décide du sort des niveaux que vous réglez pour chaque
-personne :
+Les niveaux sont propres à chaque serveur : un réglage fait sur l'un ne se reporte jamais sur
+l'autre.
 
-- **Désactivé** — tout revient à 50 % à la reconnexion.
-- **Session en cours seulement** — oublié à la fermeture.
-- **Toujours** — mémorisé d'un lancement à l'autre. C'est le réglage par défaut.
-
-Les réglages sont propres à chaque serveur : un niveau défini sur un serveur ne se reporte jamais sur
-un autre.
-
-## Si l'audio se comporte mal
-
-L'application tient un journal de diagnostic que vous pouvez consulter ou joindre à un message
-adressé au développeur ; voir [En cas de problème](troubleshooting.html).
+**Voir aussi :** [Parler dans un canal](talking.html) ·
+[Si quelque chose ne fonctionne pas](troubleshooting.html)

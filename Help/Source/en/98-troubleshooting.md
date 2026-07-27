@@ -1,93 +1,95 @@
 ---
-title: Troubleshooting
-description: What to check when there is no sound, when the microphone stays silent, when there is echo, and how to reach the developer.
+title: If something doesn't work
+description: What to check when you can't hear anyone, when nobody hears you, when there's echo, and how to reach the developer.
 keywords: problem, no sound, microphone, echo, permission, keychain, log, support, bug report
 anchor: troubleshooting
 ---
 
-## I cannot hear anything
+Most audio problems come down to a handful of settings. Press F9 at any time to hear the current
+audio status — it answers the first question for you.
 
-Work down this list; **F9** answers the first question for you by speaking the current audio status.
+## If you can't hear anyone
 
-1. Is the master volume muted? **Command-M** toggles it.
-2. Is the **Output volume** slider of the main window turned down?
-3. In [Preferences → Audio](preferences.html#prefs-audio), is **Output device** set to **No output
-   device**, or to a device you are no longer using? **Refresh Devices** rebuilds the list.
-4. Is that one person muted for you? Their row says *muted*, and **Shift-Command-M** brings them
-   back. Check their level in [the channel mixer](mixer.html) too.
-5. Are you still subscribed to their **Voice**? See [People you hear](users.html).
+1. Check that the master volume isn't muted: press Command-M.
+2. Check the **Output volume** slider in the main window.
+3. Open Preferences, click Audio, then check that **Output device** isn't set to **No output
+   device** or to a device you no longer use. Click **Refresh Devices** to rebuild the list.
+4. Check whether that person is muted for you: their row says *muted*, and Shift-Command-M brings
+   them back. Check their level in [the mixer](mixer.html) too.
+5. Check that you're still subscribed to their voice — see
+   [Adjust what you hear from each person](users.html).
 
-## Nobody hears me
+## If nobody hears you
 
-1. You must be **in a channel**. Outside one, the app answers *You must join a channel before
-   enabling the microphone.*
-2. Is the microphone on? **Shift-Command-A**, or the toolbar button.
-3. Are you in **push-to-talk** mode without a key recorded? The Audio pane warns about it, and until
-   a key is set the microphone behaves as in always-on mode.
-4. Did macOS refuse access? The app reports *Microphone access was denied by macOS.* Grant it in
-   System Settings → Privacy & Security → Microphone.
-5. Is the right **Input device** selected, and the right **Input channels** preset? On an audio
-   interface, the microphone is rarely on input 1.
-6. Has an operator blocked you? The app announces *Transmission blocked by the channel operator.*
+1. Check that you've joined a channel. Outside one, tt-Accessible answers *You must join a channel
+   before enabling the microphone.*
+2. Check that the microphone is on: press Shift-Command-A.
+3. If you use push-to-talk, check that you've recorded a key. Until you do, the microphone behaves
+   as in always-on mode.
+4. If tt-Accessible reports *Microphone access was denied by macOS*, choose Apple menu > System
+   Settings, click Privacy & Security, click Microphone, then turn on tt-Accessible.
+5. Open Preferences, click Audio, then check the **Input device** and the **Input channels** preset.
+   On an audio interface, the microphone is rarely on input 1.
+6. If tt-Accessible announces *Transmission blocked by the channel operator*, an operator has taken
+   your right to speak there.
 
-**Shift-Command-H** (*Hear myself*) settles the question: if you can hear yourself through the
-channel, you are on air.
+To settle it, press Shift-Command-H: if you can hear yourself through the channel, you're on air.
 
-## Everyone hears themselves come back
+## If everyone hears themselves come back
 
-That is echo: your speakers are being picked up by your microphone. Either use headphones, or set
-**Microphone processing** to **Echo cancellation + noise reduction** in
-[Preferences → Audio](preferences.html#prefs-audio). On macOS 14.2 and later this also cancels
-VoiceOver and system sounds.
+Your speakers are being picked up by your microphone. Either use headphones, or open Preferences,
+click Audio, then set **Microphone processing** to **Echo cancellation + noise reduction**. On
+macOS 14.2 and later this also cancels VoiceOver and system sounds.
 
-## The sound broke when I plugged something in
+## If the sound stops after plugging something in
 
-The app detects device changes and restarts its audio engine on its own. If something is still
-wrong, use **Refresh Devices**. Should the microphone have stopped, the app says so —
-*Microphone stopped after an audio device change. Turn it on again.*
+tt-Accessible notices device changes and restarts its audio engine on its own. If something is still
+wrong, open Preferences, click Audio, then click **Refresh Devices**. If the microphone stopped,
+tt-Accessible says *Microphone stopped after an audio device change. Turn it on again.*
 
-## Recording refuses to start
+## If recording won't start
 
-The channel was probably created with **No audio recording**; the app then announces *Recording is
-not allowed in this channel.* Only an account with the right to record voice can override it. See
-[Recording](recording.html).
+The channel was probably created with **No audio recording**, and tt-Accessible announces
+*Recording is not allowed in this channel.* Only an account with the right to record voice can
+override it. See [Record a conversation](recording.html).
 
-## Streaming an application does not work
+## If streaming an app doesn't work
 
-- Streaming an application's or VoiceOver's audio requires **macOS 13 or later**, and browsing apps
-  that are not running requires **macOS 14.2 or later**.
-- If the app answers *The selected source has no audio to capture right now*, make sure the
-  application is really running and playing something.
+- Streaming the audio of an app or of VoiceOver requires macOS 13 or later, and browsing apps that
+  aren't running requires macOS 14.2 or later.
+- If tt-Accessible answers *The selected source has no audio to capture right now*, make sure the
+  app is really running and playing something.
 
-See [Streaming media](streaming.html).
+See [Stream audio into a channel](streaming.html).
 
-## The server refuses my password
+## If the server refuses your password
 
-- The **Login Failed** alert offers **Edit Credentials…** so you can correct the username or the
-  password.
-- If the server uses BearWare web login, check that your account is signed in under
-  [Preferences → BearWare](preferences.html#prefs-bearware).
-- If macOS refuses access to the stored password, the app explains it: open Keychain Access, delete
-  the matching **ttaccessible** entry, then try again.
+- Click **Edit Credentials** in the alert to correct your user name or password.
+- If the server uses BearWare web login, check that your account is signed in: open Preferences,
+  then click BearWare.
+- If macOS refuses access to the stored password, open Keychain Access, delete the **ttaccessible**
+  entry for that server, then try again.
 
-## The connection keeps dropping
+## If the connection keeps dropping
 
-**Adaptive jitter buffer**, in [Preferences → Connection](preferences.html#prefs-connection),
-improves audio on unstable connections. Automatic reconnection and rejoining the last channel are
-both enabled by default in the same pane.
+Open Preferences, click Connection, then select **Adaptive jitter buffer**, which improves audio on
+unstable connections. Automatic reconnection and rejoining your last channel are already on in the
+same pane.
 
-## Reporting a problem
+## Report a problem
 
-**Help → Contact the Developer…** opens a form where you choose a type — **Report a problem**,
-**Suggestion**, **Question** or **Other** — enter your email address and your message. The app
-version, the macOS version and your audio settings are attached to help with troubleshooting.
+1. Choose Help > Contact the Developer.
+2. Click the **Type** pop-up menu, then choose **Report a problem**, **Suggestion**, **Question** or
+   **Other**.
+3. Enter your email address and your message.
+4. To make a sound problem diagnosable, select **Attach the audio diagnostic log**. Reproduce the
+   problem first, then send the message: the log is cleared every time you open the app.
+5. Click Send.
 
-The **Attach the audio diagnostic log** checkbox adds the technical audio log, which is what makes a
-sound problem diagnosable. Reproduce the problem first, then send the message: the log is cleared at
-every launch.
-
-That log lives in your home folder, under
+Your app version, macOS version and audio settings are attached to help with troubleshooting. The
+log itself is stored in your home folder, in
 `Library/Containers/com.math65.ttaccessible/Data/Library/Logs/TTAccessible/audio.log`.
 
-**Help → Report an Issue…** opens the project's issue tracker instead, which is the better place for
-anything public.
+To report something publicly instead, choose Help > Report an Issue.
+
+**See also:** [Set up your audio devices](audio-setup.html) · [Talk in a channel](talking.html)

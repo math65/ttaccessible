@@ -1,75 +1,65 @@
 ---
-title: Les canaux
-description: Rejoindre et quitter un canal, en créer ou en modifier un, régler le codec audio et échanger des fichiers.
+title: Rejoindre et gérer des canaux
+description: Rejoindre et quitter des canaux, en créer ou en modifier, régler le codec audio et échanger des fichiers.
 keywords: canal, rejoindre, quitter, créer, modifier, supprimer, mot de passe, codec, Opus, fichiers
 anchor: channels
 ---
 
-## Rejoindre et quitter
+Un canal est l'endroit où l'on parle. Vous pouvez rejoindre n'importe quel canal du serveur, créer
+le vôtre et échanger des fichiers avec les personnes qui s'y trouvent.
 
-- **Commande-J** rejoint le canal sélectionné dans l'arbre ; **Entrée** sur la ligne fait de même.
-- **Commande-L** quitte le canal où vous êtes.
+## Rejoindre ou quitter un canal
 
-L'application confirme à voix haute — *Canal rejoint : …* ou *Canal quitté.* — et l'historique de
-session en garde la trace.
+1. Sélectionnez un canal dans l'arbre.
+2. Appuyez sur Commande + J, ou sur Retour.
 
-Si le canal est protégé, son mot de passe vous est demandé. Une fois le bon mot de passe saisi, il
-est conservé : les visites suivantes se font sans rien demander. La commande **Oublier le mot de
-passe enregistré**, dans le menu contextuel de l'arbre, l'efface.
+Si le canal est protégé, saisissez son mot de passe. tt-Accessible le retient : votre visite
+suivante ne demande rien. Pour l'oublier, cliquez sur le canal en maintenant la touche Contrôle
+enfoncée, puis choisissez **Oublier le mot de passe enregistré**.
 
-Deux options de [Préférences → Connexion](preferences.html#prefs-connection) automatisent tout cela :
-*Rejoindre automatiquement le canal principal à la connexion* et *Rejoindre automatiquement le
-dernier canal après une reconnexion*. Un serveur enregistré peut par ailleurs définir son propre
-**Canal à rejoindre**.
+Pour quitter le canal où vous êtes, appuyez sur Commande + L.
 
-## Créer et modifier un canal
+Pour rejoindre un canal automatiquement, ouvrez les Préférences, cliquez sur Connexion, puis
+sélectionnez **Rejoindre automatiquement le canal principal à la connexion** ou **Rejoindre
+automatiquement le dernier canal après une reconnexion**. Un serveur enregistré peut aussi définir
+son propre canal — consultez [Ajouter un serveur](servers.html).
 
-| Raccourci | Commande |
-|---|---|
-| F7 | Créer un canal |
-| Maj-F7 | Modifier le canal |
-| F8 | Supprimer le canal |
+## Créer un canal
 
-La suppression est définitive : *Le canal et tous ses sous-canaux seront supprimés.*
+1. Appuyez sur F7.
+2. Saisissez un nom de canal et, si vous le souhaitez, un sujet.
+3. Pour protéger le canal, saisissez un mot de passe.
+4. Définissez le nombre maximal d'utilisateurs et le quota de stockage des fichiers. Un quota de 0
+   signifie que seuls les administrateurs peuvent envoyer des fichiers.
+5. Sélectionnez les options voulues :
+   - **Canal permanent** — le canal subsiste quand la dernière personne le quitte.
+   - **Transmission solo** — une seule personne parle à la fois.
+   - **Désactiver l'activation vocale** — chacun doit utiliser le push-to-talk.
+   - **Pas d'enregistrement audio** — consultez [Enregistrer une conversation](recording.html).
+6. Pour régler la qualité audio du canal, utilisez la section Codec audio : choisissez **Mono** ou
+   **Stéréo**, une fréquence d'échantillonnage, un débit en kbps, et **VoIP** ou **Musique** selon
+   ce qui va y circuler.
+7. Sélectionnez **Rejoindre le canal après sa création** si vous voulez y aller aussitôt, puis
+   cliquez sur Créer.
 
-Le formulaire d'un canal contient :
+Pour modifier un canal, sélectionnez-le et appuyez sur Maj + F7. Les réglages que le formulaire
+n'affiche pas sont conservés tels quels.
 
-- **Nom du canal** et **Sujet**.
-- **Mot de passe** — laissez vide pour un canal ouvert.
-- **Nombre max d'utilisateurs**.
-- **Quota de stockage des fichiers**, en Ko, Mo ou Go. Un quota de 0 signifie que seuls les
-  administrateurs peuvent envoyer des fichiers.
-- **Canal permanent** — le canal subsiste quand la dernière personne le quitte.
-- **Transmission solo (un seul à la fois)**.
-- **Désactiver l'activation vocale (PTT uniquement)**.
-- **Pas d'enregistrement audio** — voir [Enregistrer](recording.html).
-- **Rejoindre le canal après sa création**, à la création.
+Pour supprimer un canal, sélectionnez-le, appuyez sur F8, puis confirmez. Le canal et tous ses
+sous-canaux sont supprimés, et cette action est irréversible.
 
-### Le codec audio
+## Partager des fichiers avec le canal
 
-La section **Codec audio** règle l'encodeur Opus utilisé par tout le canal :
+1. Choisissez Serveur > Fichiers du canal, ou appuyez sur Maj + Commande + F.
+2. Effectuez l'une des opérations suivantes :
+   - **Envoyer un fichier :** cliquez sur Envoyer, ou choisissez Serveur > Envoyer un fichier
+     (Maj + F5).
+   - **Récupérer un fichier :** sélectionnez-le, puis cliquez sur Télécharger ou appuyez sur Retour.
+   - **Retirer un fichier :** sélectionnez-le, cliquez sur Supprimer ou appuyez sur la touche
+     Supprimer, puis confirmez.
 
-- **Canaux audio** — Mono ou Stéréo.
-- **Fréquence d'échantillonnage**.
-- **Débit (kbps)** — plus il est élevé, meilleure est la qualité et plus la bande passante augmente.
-- **Mode d'application** — **VoIP** pour la parole, **Musique** pour la musique.
+tt-Accessible annonce chaque transfert terminé. Si le canal n'a plus de place, il indique *Ce canal
+n'a pas assez d'espace de stockage.*
 
-Les réglages que le formulaire n'affiche pas sont conservés tels quels lorsque vous modifiez un canal
-existant.
-
-## Les fichiers du canal
-
-**Serveur → Fichiers du canal** (**Maj-Commande-F**) ouvre la liste des fichiers du canal, avec le
-**Nom**, la **Taille** et la mention **Envoyé par**.
-
-- **Envoyer…** dépose un fichier — la commande existe aussi dans **Serveur → Envoyer un fichier…**
-  (**Maj-F5**).
-- **Télécharger** récupère le fichier sélectionné ; **Entrée** fait la même chose.
-- **Supprimer** le retire du canal, après confirmation. La touche **Suppr** fonctionne également.
-
-Les transferts annoncent leur démarrage puis leur fin — *Envoi terminé* ou *Téléchargement terminé*.
-Si le canal n'a plus de place, l'application signale que *Ce canal n'a pas assez d'espace de
-stockage.*
-
-Les fichiers ajoutés ou supprimés par d'autres apparaissent dans l'historique de session et peuvent
-être annoncés.
+**Voir aussi :** [Parler dans un canal](talking.html) ·
+[Gérer les utilisateurs, les bannissements et les réglages du serveur](administration.html)

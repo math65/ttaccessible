@@ -1,42 +1,39 @@
 ---
-title: Les préférences
+title: Modifier les réglages de tt-Accessible
 description: Tous les réglages de tt-Accessible, volet par volet, avec leur valeur par défaut.
 keywords: préférences, réglages, général, connexion, BearWare, audio, sons, annonces, enregistrements
 anchor: preferences
 ---
 
-**Commande-virgule** ouvre les préférences. La fenêtre comporte sept volets, listés dans une barre
-latérale : Général, Connexion, BearWare, Audio, Sons, Annonces et Enregistrements. Échap referme la
-fenêtre, et Commande-point d'interrogation ouvre la section de ce guide qui correspond au volet
-affiché.
+Pour modifier vos réglages, choisissez tt-Accessible > Préférences, ou appuyez sur Commande +
+Virgule, puis cliquez sur l'un des sept volets de la barre latérale. Appuyez sur Échap pour fermer
+la fenêtre.
 
 <a id="prefs-general"></a>
 
-## Général
+## Réglages généraux
 
 | Réglage | Par défaut |
 |---|---|
-| **Pseudo par défaut** — utilisé quand un serveur enregistré n'a pas de pseudo spécifique | votre nom de compte macOS |
+| **Pseudo par défaut** — utilisé quand un serveur enregistré n'a pas de pseudo | votre nom de compte macOS |
 | **Message de statut par défaut** | vide |
 | **Genre** | Neutre |
 | **Délai avant absence automatique**, en minutes — 0 la désactive | 3 |
 | **Message d'absence** | vide |
-| **Utiliser des horodatages relatifs (ex. « il y a 2 min »)** | désactivé |
+| **Utiliser des horodatages relatifs**, du type « il y a 2 min » | désactivé |
 | **Utiliser la détection automatique du fichier TeamTalk lors de l'import** | activé |
 | **Langue** — Langue du système, Anglais ou Français | Langue du système |
 
-L'absence automatique passe votre statut en *Absent* dès que vous ne touchez plus au clavier ni à la
-souris pendant le nombre de minutes choisi, et le rétablit dès que vous y touchez réellement de
-nouveau. Les annonces de VoiceOver ou d'une plage braille ne comptent pas comme une activité.
+L'absence automatique vous passe en Absent dès que vous cessez d'utiliser le clavier ou la souris
+pendant le nombre de minutes choisi, et la lève dès que vous vous en servez réellement de nouveau.
+Les annonces de VoiceOver ou d'une plage braille ne comptent pas comme une activité.
 
-Changer de langue demande de relancer l'application pour que le choix s'applique partout.
-
-La section **Mises à jour** contient **Vérifier les mises à jour automatiquement** (activé) et
-**Inclure les versions bêta** (désactivé). Les versions bêta peuvent contenir des bugs.
+La section Mises à jour contient **Vérifier les mises à jour automatiquement**, activé, et
+**Inclure les versions bêta**, désactivé.
 
 <a id="prefs-connection"></a>
 
-## Connexion
+## Réglages de connexion
 
 | Réglage | Par défaut |
 |---|---|
@@ -45,34 +42,29 @@ La section **Mises à jour** contient **Vérifier les mises à jour automatiquem
 | **Rejoindre automatiquement le dernier canal après une reconnexion** | activé |
 | **Se connecter au dernier serveur utilisé au démarrage** | désactivé |
 | **Ne pas demander de confirmation lors de l'expulsion** | désactivé |
-| **Buffer de gigue adaptatif (améliore l'audio sur les connexions instables)** | désactivé |
-| **Trier les canaux par** — Nom, ou Nombre d'utilisateurs (les plus peuplés d'abord) | Nom |
+| **Buffer de gigue adaptatif**, qui améliore l'audio sur les connexions instables | désactivé |
+| **Trier les canaux par** — Nom, ou Nombre d'utilisateurs | Nom |
 
-**Abonnements par défaut** détermine ce que vous recevez de tout le monde dès la connexion : messages
-privés, messages de canal, messages généraux, audio, partages d'écran et fichiers médias. Les six
-sont activés par défaut.
+**Abonnements par défaut** détermine ce que tout le monde peut vous envoyer dès la connexion :
+messages privés, messages de canal, messages généraux, audio, partages d'écran et fichiers médias.
+Les six sont activés.
 
 **Interceptions par défaut** — messages privés, messages de canal, audio, partages d'écran et
 fichiers médias — sont toutes désactivées et demandent les droits correspondants sur le serveur.
 Modifier l'une ou l'autre liste s'applique immédiatement à la session en cours.
 
-La version « par personne » de ces interrupteurs est décrite dans
-[Les personnes que vous entendez](users.html).
-
 <a id="prefs-bearware"></a>
 
-## BearWare
+## Réglages BearWare
 
-Un compte BearWare gratuit (bearware.dk) permet de se connecter aux serveurs qui acceptent la
-connexion web. Saisissez votre **Identifiant BearWare** et votre **Mot de passe BearWare**, puis **Se
-connecter** ; le volet indique ensuite sous quel nom vous êtes connecté et propose **Se déconnecter**.
-
-La connexion web s'active ensuite serveur par serveur, dans les réglages de chacun. Voir
-[Les serveurs](servers.html).
+Un compte BearWare gratuit (bearware.dk) vous permet de vous connecter aux serveurs qui acceptent la
+connexion web. Saisissez votre **Identifiant BearWare** et votre **Mot de passe BearWare**, puis
+cliquez sur **Se connecter**. Consultez
+[Ajouter un serveur et s'y connecter](servers.html).
 
 <a id="prefs-audio"></a>
 
-## Audio
+## Réglages audio
 
 | Réglage | Par défaut |
 |---|---|
@@ -85,48 +77,38 @@ La connexion web s'active ensuite serveur par serveur, dans les réglages de cha
 | **Jouer un son au début et à la fin de la transmission** | activé |
 | **Le push-to-talk fonctionne même quand une autre app est au premier plan** | activé |
 | **Le raccourci d'activation du microphone fonctionne même quand une autre app est au premier plan** | désactivé |
-| **Touche globale d'activation du microphone** | Commande-Maj-A |
+| **Touche globale d'activation du microphone** | Commande + Maj + A |
 | **Mémorisation des volumes par utilisateur** — Désactivé, Session en cours seulement, ou Toujours | Toujours |
 
-**Actualiser les périphériques** reconstruit la liste, et **Aperçu audio** vous renvoie votre micro
-pour un essai. Les détails sont dans [Régler l'audio](audio-setup.html) et
-[Prendre la parole](talking.html).
+Consultez [Configurer vos périphériques audio](audio-setup.html) et
+[Parler dans un canal](talking.html).
 
 <a id="prefs-sounds"></a>
 
-## Sons
+## Réglages des sons
 
-**Activer les notifications sonores** (activé) commande l'ensemble, et **Pack de sons** choisit
-lequel est utilisé. En dessous, les vingt-six événements sonores se désactivent individuellement ;
-tous sont actifs par défaut.
-
-Les boutons **Nouveau pack...**, **Fichiers requis...**, **Afficher le dossier des packs** et, pour
-vos propres packs, **Supprimer** ainsi que **Choisir...** / **Réinitialiser** événement par
-événement, permettent de composer votre propre pack. Voir
-[Sons et annonces](sounds-announcements.html).
+**Activer les notifications sonores**, activé, commande l'ensemble des sons, et **Pack de sons**
+choisit lequel est utilisé. En dessous, les vingt-six événements sonores se désactivent
+individuellement. Consultez [Choisir les sons et les annonces](sounds-announcements.html).
 
 <a id="prefs-announcements"></a>
 
-## Annonces
+## Réglages des annonces
 
-**Messages reçus en arrière-plan** détermine ce qui se passe quand un message ou un événement arrive
-alors que tt-Accessible n'est pas au premier plan. **Utiliser le même mode pour tous les types
-d'événements** (activé) applique un **Mode** unique à tout ; désactivez-le pour régler séparément les
-messages privés, les messages de canal, les messages généraux et l'historique TeamTalk. Les trois
-modes sont **Notification système** (par défaut), **Synthèse vocale macOS** et **VoiceOver via
+**Messages reçus en arrière-plan** détermine ce qui se passe quand quelque chose arrive alors que
+tt-Accessible n'est pas au premier plan. **Utiliser le même mode pour tous les types d'événements**,
+activé, applique un mode unique à tout ; désactivez-le pour régler séparément les messages privés,
+les messages de canal, les messages généraux et l'historique TeamTalk. Les trois modes sont
+**Notification système**, le réglage par défaut, **Synthèse vocale macOS** et **VoiceOver via
 AppleScript**.
 
-**Synthèse vocale macOS** configure ce mode : **Voix**, **Débit**, **Volume** et un bouton **Tester
-la voix**.
-
-**Annonces d'événements** concerne ce qui est dit pendant que l'application *est* au premier plan :
-messages de canal, messages privés et messages généraux, activés par défaut, plus **Annoncer
-l'historique système** — vingt événements groupés par thème, avec **Tout activer** et **Tout
-désactiver**.
+**Annonces d'événements** concerne ce que dit VoiceOver pendant que l'app est au premier plan :
+messages de canal, privés et généraux, tous activés, plus **Annoncer l'historique système** — vingt
+événements à activer ou désactiver un par un.
 
 <a id="prefs-recording"></a>
 
-## Enregistrements
+## Réglages d'enregistrement
 
 | Réglage | Par défaut |
 |---|---|
@@ -135,5 +117,5 @@ désactiver**.
 | **Format audio** — WAV ou OGG (Opus) | WAV |
 | **Redémarrer automatiquement l'enregistrement en rejoignant un canal** | désactivé |
 
-Commande-R enregistre toujours un seul fichier mixé, quel que soit le mode ci-dessus. Voir
-[Enregistrer](recording.html).
+Commande + R enregistre toujours un seul fichier mixé, quel que soit ce mode. Consultez
+[Enregistrer une conversation](recording.html).

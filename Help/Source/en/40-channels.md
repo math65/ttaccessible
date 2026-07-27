@@ -1,70 +1,60 @@
 ---
-title: Channels
-description: Join and leave channels, create or edit them, set the audio codec, and exchange files.
+title: Join and manage channels
+description: Join and leave channels, create or edit them, set the audio codec, and exchange files with the people there.
 keywords: channel, join, leave, create, edit, delete, password, codec, Opus, files, upload, download
 anchor: channels
 ---
 
-## Joining and leaving
+A channel is where you talk. You can join any channel on the server, create your own, and exchange
+files with the people in it.
 
-- **Command-J** joins the channel selected in the tree; **Return** on the row does the same.
-- **Command-L** leaves the channel you are in.
+## Join or leave a channel
 
-The app confirms out loud — *Joined channel: …* or *Left channel.* — and the session history keeps
-a record.
+1. Select a channel in the tree.
+2. Press Command-J, or press Return.
 
-If the channel is protected, the app asks for its password. Once you have entered the right one it
-is saved, so the next visit is silent. **Forget Saved Password**, in the tree's context menu, clears
-it again.
+If the channel is protected, enter its password. tt-Accessible remembers it, so your next visit
+asks nothing. To forget it, Control-click the channel, then choose **Forget Saved Password**.
 
-Two options in [Preferences → Connection](preferences.html#prefs-connection) automate this:
-*Automatically join the main channel on connect* and *Automatically rejoin the last channel after
-reconnecting*. A saved server can also carry a **Channel to join** of its own.
+To leave the channel you're in, press Command-L.
 
-## Creating and editing a channel
+To join a channel automatically, open Preferences, click Connection, then select **Automatically
+join the main channel on connect** or **Automatically rejoin the last channel after reconnecting**.
+A saved server can also carry a channel of its own — see [Add a server](servers.html).
 
-| Shortcut | Command |
-|---|---|
-| F7 | Create Channel |
-| Shift-F7 | Edit Channel |
-| F8 | Delete Channel |
+## Create a channel
 
-Deleting is permanent: *The channel and all its subchannels will be deleted.*
+1. Press F7.
+2. Enter a channel name and, if you want one, a topic.
+3. To protect the channel, enter a password.
+4. Set the maximum number of users and the disk quota for files. A quota of 0 means only
+   administrators can upload files.
+5. Select any of the following options:
+   - **Permanent channel** — the channel survives when the last person leaves.
+   - **Solo transmit** — only one person speaks at a time.
+   - **Disable voice activation** — people must use push-to-talk.
+   - **No audio recording** — see [Record a conversation](recording.html).
+6. To set the audio quality of the channel, use the Audio Codec section: choose **Mono** or
+   **Stereo**, a sample rate, a bitrate in kbps, and **VoIP** or **Music** depending on what people
+   will send.
+7. Select **Join channel after creation** if you want to go there straight away, then click Create.
 
-The channel form contains:
+To change a channel, select it and press Shift-F7. Settings that the form doesn't show are kept as
+they were.
 
-- **Channel name** and **Topic**.
-- **Password** — leave empty for an open channel.
-- **Maximum users**.
-- **Disk quota for files**, in KB, MB or GB. A quota of 0 means only administrators can upload.
-- **Permanent channel** — the channel survives when the last person leaves.
-- **Solo transmit (one speaker at a time)**.
-- **Disable voice activation (push-to-talk only)**.
-- **No audio recording** — see [Recording](recording.html).
-- **Join channel after creation**, when creating.
+To delete a channel, select it and press F8, then confirm. The channel and all of its subchannels
+are deleted, and you can't undo this.
 
-### Audio codec
+## Share files with the channel
 
-The **Audio Codec** section configures the Opus encoder used by everyone in the channel:
+1. Choose Server > Channel Files, or press Shift-Command-F.
+2. Do any of the following:
+   - **Send a file:** click Upload, or choose Server > Upload a File (Shift-F5).
+   - **Get a file:** select it, then click Download or press Return.
+   - **Remove a file:** select it, then click Delete or press the Delete key, and confirm.
 
-- **Audio channels** — Mono or Stereo.
-- **Sample rate**.
-- **Bitrate (kbps)** — higher means better quality and more bandwidth.
-- **Application mode** — **VoIP** for speech, **Music** for music.
+tt-Accessible announces each transfer when it finishes. If the channel has no room left, it reports
+*This channel does not have enough storage.*
 
-Settings that the form does not show are preserved as they were when you edit an existing channel.
-
-## Channel files
-
-**Server → Channel Files** (**Shift-Command-F**) opens the file list of the channel, with the
-**Name**, **Size** and **Uploaded by** of each file.
-
-- **Upload…** sends a file — also available as **Server → Upload a File…** (**Shift-F5**).
-- **Download** saves the selected file. **Return** does the same.
-- **Delete** removes it from the channel, after confirmation. The **Delete** key works too.
-
-Transfers report their progress and announce *Upload complete* or *Download complete* when they
-finish. If the channel has no room left, the app reports *This channel does not have enough
-storage.*
-
-Files added or removed by other people appear in the session history and can be announced.
+**See also:** [Talk in a channel](talking.html) ·
+[Manage users, bans and server settings](administration.html)

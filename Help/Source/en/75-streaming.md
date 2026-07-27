@@ -1,67 +1,67 @@
 ---
-title: Streaming media
-description: Play a file, an internet stream, an audio device, another app or VoiceOver into the channel.
+title: Stream audio into a channel
+description: Send a file, an internet radio, an audio device, another app or VoiceOver into the channel alongside your voice.
 keywords: streaming, media file, URL, radio, device, application, VoiceOver, media player, broadcast volume
 anchor: streaming
 ---
 
-tt-Accessible can send audio into the channel alongside your voice — a music file, an internet
-radio, the output of another application, or even VoiceOver itself so that the channel hears what
-your screen reader is saying.
+You can send audio into the channel at the same time as your voice — a music file, an internet
+radio, the sound of another app, or VoiceOver itself, so the channel hears what your screen reader
+is saying. All four commands are in the Shortcuts menu.
 
-All four commands live in the **Shortcuts** menu.
+## Stream a file
 
-## Streaming a file
+1. Choose Shortcuts > Stream Media File, or press Option-Command-S.
+2. Select an audio or video file, then click Stream.
 
-**Option-Command-S** — *Stream Media File…* — opens a file picker. Video support depends on what
-TeamTalk can open on your Mac; 10-bit video is not supported. When a file carries video, the
-collapsible **Video** panel of the main window shows it.
+Video support depends on what TeamTalk can open on your Mac, and 10-bit video isn't supported. When
+a file carries video, the Video panel of the main window shows it.
 
-## Streaming a URL
+## Stream an internet radio or another URL
 
-**Option-Command-U** — *Stream URL…* — asks for the address of an audio stream, such as an internet
-radio. The `http`, `https`, `rtmp`, `rtmps`, `rtsp` and `mms` schemes are accepted.
+1. Choose Shortcuts > Stream URL, or press Option-Command-U.
+2. Enter the address of the stream, then click Stream. You can use the `http`, `https`, `rtmp`,
+   `rtmps`, `rtsp` and `mms` schemes.
 
-## Streaming a device, an application or VoiceOver
+## Stream a device, an app or VoiceOver
 
-**Option-Command-A** — *Stream a Device or Application…* — opens a sheet with:
+1. Choose Shortcuts > Stream a Device or Application, or press Option-Command-A.
+2. Click the **Audio source** pop-up menu, then choose an audio input of your Mac, **VoiceOver**, or
+   an app under Applications. To pick an app that isn't running, choose **Select Application** — this
+   requires macOS 14.2 or later. Streaming the audio of an app or of VoiceOver requires macOS 13 or
+   later.
+3. Select **Play the streamed audio back to me** if you want to hear what you're sending. It's off,
+   so you aren't forced to listen to it.
+4. Select **Mute this source on this Mac while streaming** to silence the source for yourself while
+   the channel keeps hearing it. This option appears for apps on recent versions of macOS.
+5. Click Stream.
 
-- **Audio source** — an audio input of your Mac, **VoiceOver**, or an entry under **Applications**.
-  **Select Application…** lets you browse any installed app, even one that is not running, on macOS
-  14.2 and later. Streaming an application's or VoiceOver's audio requires macOS 13 or later.
-- **Play the streamed audio back to me** — off by default, so you are not forced to listen to what
-  you are broadcasting.
-- **Mute this source on this Mac while streaming** — silences the source locally while the channel
-  keeps hearing it. Available on recent systems, and only for an application source.
+The stream keeps going even while the source is silent, so a pause in the music doesn't end it. Your
+last choice is selected again next time.
 
-The stream keeps going even while the source is silent, so a pause in the music does not end the
-broadcast. Your last choice is preselected the next time.
+If the app you picked isn't producing any sound, tt-Accessible answers *The selected source has no
+audio to capture right now.*
 
-If the app you picked is not producing any audio, the app answers *The selected source has no audio
-to capture right now.*
+## Control what's playing
 
-## The media player
-
-While a stream is running, the **Media Player** window shows *Playing:* followed by the source, and
-gives you:
+While a stream is running, the Media Player window shows what's playing and offers these keys:
 
 | Key | Action |
 |---|---|
 | Space | Play or pause |
 | Escape | Stop |
-| Left / Right arrow | Seek 5 seconds back or forward |
-| Up / Down arrow | Broadcast volume |
+| Left Arrow or Right Arrow | Skip 5 seconds back or forward |
+| Up Arrow or Down Arrow | Change the broadcast volume |
 
-**Broadcast volume** sets how loud the stream is sent to the channel, independently of your own
-listening level.
+The broadcast volume sets how loud the stream is sent to the channel, independently of the level you
+listen at.
 
-## Stopping
+## Stop streaming
 
-**Option-Command-.** (Option-Command-period) — *Stop Streaming* — ends the stream. The app announces
-*Streaming finished*, and both the start and the end are recorded in the session history.
+Choose Shortcuts > Stop Streaming, or press Option-Command-Period. tt-Accessible announces
+*Streaming finished*, and both the start and the end appear in the session history.
 
-## What others hear
+Everyone subscribed to your media file stream hears it. Each person can silence it without silencing
+your voice — see [Adjust what you hear from each person](users.html).
 
-The stream reaches everyone subscribed to your **Media File** stream. Anyone can silence it on their
-side without silencing your voice, with *Mute media stream locally* — see
-[People you hear](users.html).
+**See also:** [Talk in a channel](talking.html) · [Record a conversation](recording.html)

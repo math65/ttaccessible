@@ -1,35 +1,37 @@
 ---
-title: La fenêtre principale
-description: Les zones de la fenêtre de session, comment circuler avec Commande-1 à Commande-5, et ce qu'annonce l'arbre des canaux.
+title: Découvrir la fenêtre de tt-Accessible
+description: Circuler entre les cinq zones de la fenêtre de session, lire l'arbre des canaux et changer de pseudo ou de statut.
 keywords: fenêtre principale, zones, focus, arbre des canaux, historique de session, barre audio, pseudo, statut
 anchor: main-window
 ---
 
-Une fois la session ouverte, la fenêtre s'intitule **Serveur connecté** suivi du nom du serveur. Tout
-s'y trouve au même endroit.
+Une fois connecté, la fenêtre s'intitule Serveur connecté, suivi du nom du serveur. Elle réunit
+l'arbre des canaux, le chat, l'historique de session, les commandes audio et le mixeur : vous
+n'avez jamais besoin d'en sortir.
 
-## Les cinq zones
+## Circuler entre les zones
 
-| Raccourci | Zone | Contenu |
-|---|---|---|
-| Commande-1 | Zone principale | L'arbre des canaux et des utilisateurs |
-| Commande-2 | Historique du chat | Les messages échangés dans votre canal |
-| Commande-3 | Saisie du message | Le champ de saisie et le bouton **Envoyer** |
-| Commande-4 | Historique de session | Tout ce qui s'est passé pendant la session |
-| Commande-5 | Mixeur du canal | Une tranche par personne que vous entendez |
+Appuyez sur l'un de ces raccourcis pour placer le focus clavier — et avec lui le curseur VoiceOver —
+là où vous en avez besoin :
 
-Ces raccourcis déplacent le focus clavier — et avec lui le curseur VoiceOver —, ce qui évite de
-parcourir toute la fenêtre pour atteindre la partie qui vous intéresse. Ils fonctionnent également
-quand la fenêtre **Messages privés** est au premier plan : Commande-1, Commande-2 et Commande-3 y
-atteignent la liste des conversations, l'historique et le champ de saisie. Hors session, Commande-1
-ramène la fenêtre **Serveurs TeamTalk** et sélectionne la liste.
+| Raccourci | Zone |
+|---|---|
+| Commande + 1 | Zone principale : l'arbre des canaux et des utilisateurs |
+| Commande + 2 | Historique du chat |
+| Commande + 3 | Saisie du message |
+| Commande + 4 | Historique de session |
+| Commande + 5 | Mixeur du canal |
 
-## L'arbre des canaux
+Ces raccourcis fonctionnent aussi quand la fenêtre Messages privés est au premier plan : Commande +
+1, Commande + 2 et Commande + 3 y atteignent la liste des conversations, l'historique et le champ de
+saisie. Hors session, Commande + 1 ramène la fenêtre Serveurs TeamTalk.
 
-L'arbre présente les canaux du serveur et, sous chacun, les personnes qui s'y trouvent. Les flèches
-le parcourent, **Entrée** rejoint le canal sélectionné. Le clic droit — ou le rotor d'actions de
-VoiceOver — ouvre le menu **Canal**, avec les commandes décrites dans [Les canaux](channels.html) et
-[Les personnes que vous entendez](users.html).
+## Lire l'arbre des canaux
+
+L'arbre présente les canaux du serveur et, sous chacun, les personnes qui s'y trouvent. Utilisez les
+flèches pour le parcourir et appuyez sur Retour pour rejoindre le canal sélectionné. Pour connaître
+les actions disponibles sur une ligne, cliquez dessus en maintenant la touche Contrôle enfoncée, ou
+utilisez le rotor d'actions de VoiceOver.
 
 Chaque ligne est annoncée avec ce qui la caractérise :
 
@@ -38,55 +40,50 @@ Chaque ligne est annoncée avec ce qui la caractérise :
 - Une personne ajoute *vous*, *administrateur*, *opérateur du canal*, *parle*, *absent* ou
   *question*.
 
-L'ordre des canaux suit le réglage *Trier les canaux par* de
-[Préférences → Connexion](preferences.html#prefs-connection) : par **Nom**, ou par **Nombre
-d'utilisateurs (les plus peuplés d'abord)**.
+Pour modifier l'ordre des canaux, ouvrez les Préférences, cliquez sur Connexion, puis utilisez le
+menu local **Trier les canaux par**.
 
-## L'historique de session
+## Suivre ce qui se passe dans la session
 
 L'historique de session rassemble les événements de la session : connexions, arrivées et départs,
 changements de canal, expulsions, modifications d'abonnement, fichiers ajoutés ou supprimés, absence
-automatique et diffusions média. Chaque entrée peut être annoncée à voix haute ou rester silencieuse
-— voir [Sons et annonces](sounds-announcements.html).
+automatique et diffusions média. Pour choisir lesquels sont annoncés, consultez
+[Choisir les sons et les annonces](sounds-announcements.html).
 
-Les horodatages s'affichent sous forme d'heure ou de durée relative — *il y a 2 min* — selon
-l'option *Utiliser des horodatages relatifs* de
-[Préférences → Général](preferences.html#prefs-general).
+Pour conserver la conversation, appuyez sur Maj + Commande + S.
 
-**Maj-Commande-S** exporte l'historique du chat dans un fichier.
+## Utiliser les commandes audio
 
-## La barre audio
+Sous les listes se trouvent le bouton du micro et trois curseurs : **Volume d'entrée**, **Volume de
+sortie** et **Volume des effets sonores**. Chaque curseur propose l'action VoiceOver *Réinitialiser
+à 50 %*.
 
-Sous les listes se trouvent :
+Pour connaître l'état audio à tout moment — sortie active ou non, micro en train de transmettre ou
+non, enregistrement en cours ou non —, appuyez sur F9.
 
-- Le bouton du micro — **Activer le micro** ou **Couper le micro**.
-- Trois curseurs : **Volume d'entrée**, **Volume de sortie** et **Volume des effets sonores**. Chacun
-  propose l'action VoiceOver *Réinitialiser à 50 %*.
+## Changer de pseudo ou de statut
 
-**F9** énonce l'état audio à tout moment : sortie active ou non, micro prêt ou en train de
-transmettre, enregistrement en cours ou non.
+- Pour changer de pseudo, appuyez sur F5. Laissez le champ vide pour revenir à votre pseudo par
+  défaut.
+- Pour changer de statut, appuyez sur F6, puis choisissez **Disponible**, **Absent** ou
+  **Question**, un genre et, si vous le souhaitez, un message de statut.
 
-## Votre identité sur le serveur
+tt-Accessible peut aussi vous passer en absent tout seul quand vous cessez d'utiliser le clavier.
+Consultez [Modifier les réglages de tt-Accessible](preferences.html#prefs-general).
 
-- **F5** — *Changer le pseudo*. Laissez le champ vide pour revenir à votre pseudo par défaut.
-- **F6** — *Changer le statut* : un mode (**Disponible**, **Absent** ou **Question**), un genre et,
-  si vous le souhaitez, un message de statut.
+## Regarder une vidéo
 
-L'absence automatique peut aussi changer votre statut toute seule quand vous ne touchez plus au
-clavier ; voir [Préférences → Général](preferences.html#prefs-general).
+Quand quelqu'un diffuse un fichier vidéo dans le canal, un panneau Vidéo apparaît ; vous pouvez
+l'afficher ou le masquer. Il indique *Pas de vidéo* quand rien ne passe.
 
-## La vidéo
+## Si la connexion tombe
 
-Quand quelqu'un diffuse un fichier vidéo dans le canal, un panneau **Vidéo** repliable apparaît. Il
-s'affiche ou se masque à volonté et indique *Pas de vidéo* quand rien ne passe.
+La fenêtre affiche **Reconnexion en cours** et tt-Accessible tente de rétablir la session, en
+rejoignant le canal où vous étiez. Pour activer ou désactiver ces comportements, ouvrez les
+Préférences et cliquez sur Connexion.
 
-## En cas de coupure
+Pour quitter le serveur, appuyez sur F2. Si vous aviez ouvert le serveur depuis un fichier `.tt` ou
+un lien sans l'enregistrer, tt-Accessible vous propose d'abord de le sauvegarder.
 
-Si la connexion tombe, la fenêtre affiche **Reconnexion en cours…** et l'application tente de
-rétablir la session — y compris en rejoignant le canal où vous étiez, si les options correspondantes
-sont activées dans [Préférences → Connexion](preferences.html#prefs-connection).
-
-## Quitter la session
-
-**F2** vous déconnecte. Si le serveur avait été ouvert depuis un fichier `.tt` ou un lien sans jamais
-être enregistré, l'application propose d'abord de le sauvegarder.
+**Voir aussi :** [Rejoindre et gérer des canaux](channels.html) ·
+[Parler dans un canal](talking.html) · [Raccourcis clavier](shortcuts.html)

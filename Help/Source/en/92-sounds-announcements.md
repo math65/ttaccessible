@@ -1,83 +1,67 @@
 ---
-title: Sounds and announcements
-description: Choose a sound pack, build your own, and decide what the app says out loud in the foreground and in the background.
+title: Choose sounds and announcements
+description: Pick a sound pack or build your own, and decide what tt-Accessible says out loud in the foreground and in the background.
 keywords: sounds, sound pack, notification, announcement, VoiceOver, text to speech, background
 anchor: sounds-announcements
 ---
 
-tt-Accessible tells you what happens in two ways: short sounds, and spoken announcements. Both are
-configured event by event.
+tt-Accessible tells you what happens in two ways: short sounds, and spoken announcements. You can
+set both event by event.
 
-## Sound packs
+## Choose a sound pack
 
-Three packs are built in — **Default**, **Majorly-G** and **Old** — and are chosen with **Sound
-pack** in [Preferences → Sounds](preferences.html#prefs-sounds). **Enable sound notifications** turns
-every sound off in one move.
+1. Open Preferences, then click Sounds in the sidebar.
+2. Click the **Sound pack** pop-up menu, then choose **Default**, **Majorly-G** or **Old**.
 
-To build your own:
+To turn every sound off at once, deselect **Enable sound notifications**.
 
-1. **Required Files...** lists every file name the app looks for and the event it is used for.
-   Prepare a folder of WAV files with those names. Any file you leave out falls back to the Default
+The level of these sounds follows the **Sound effects volume** slider of the main window.
+
+## Turn individual sounds off
+
+In the Sounds pane, deselect any of the twenty-six sound events. They cover people joining and
+leaving, messages sent and received, connection loss, files, transfers, question mode, hotkeys,
+voice activation, muting, intercepts, the transmit queue, VOX, and your own microphone.
+
+## Build your own sound pack
+
+1. Open Preferences, then click Sounds.
+2. Click **Required Files** to see every file name tt-Accessible looks for and the event it's used
+   for.
+3. Prepare a folder of WAV files with those names. Any file you leave out falls back to the Default
    pack.
-2. **New Pack...** imports that folder. Its name becomes the name of the pack.
-3. Once your pack is selected, **Edit selected pack** appears: each event shows whether it is
-   **Custom** or **Default**, with **Choose...** to point it at another file and **Reset** to go
-   back.
-4. **Reveal Packs Folder** opens the folder where your packs are stored, and **Delete** removes the
-   selected one. Deleting a custom pack also deletes it from this Mac.
+4. Click **New Pack**, then select your folder. Its name becomes the name of the pack.
+5. With your pack selected, use **Edit selected pack** to replace a single sound: click **Choose**
+   next to an event to point it at another file, or **Reset** to go back to the default.
 
-The volume of these sounds follows the **Sound effects volume** slider of the main window.
+To see where your packs are stored, click **Reveal Packs Folder**. To remove one, select it, then
+click Delete — a custom pack is also deleted from your Mac.
 
-## The twenty-six sound events
+## Choose what VoiceOver announces
 
-Each of these can be turned off on its own:
-
-| | |
-|---|---|
-| User joined channel | User left channel |
-| Private message received | Private message sent |
-| Channel message received | Channel message sent |
-| Connection lost | Broadcast message |
-| User logged in | User logged out |
-| File added or removed | File transfer complete |
-| Question mode | Hotkey pressed |
-| Voice activation on | Voice activation off |
-| Mute all | Unmute all |
-| Intercept started | Intercept ended |
-| Transmit queue start | Transmit queue stop |
-| VOX enabled | VOX disabled |
-| Microphone activated | Microphone deactivated |
-
-## Spoken announcements
-
-[Preferences → Announcements](preferences.html#prefs-announcements) separates two situations.
-
-### While tt-Accessible is in front
-
-**Event announcements** covers what is spoken through VoiceOver:
-
-- **Announce channel messages**, **Announce private messages** and **Announce broadcast
-  messages** — all on by default.
-- **Announce system history**, a list of twenty events you can enable or disable one by one, with
-  **Enable all** and **Disable all**. They are grouped as **Connection** (connected, disconnected,
-  connection lost), **Own channel** (joined, left), **User presence** (logged in and out, joined and
-  left a channel), **Moderation** (kicked from the server or the channel, transmission blocked),
-  **Status** (auto-away on and off), **Subscriptions** (subscription and intercept changes),
-  **Files** (added, removed) and **Media streaming** (started, finished).
+1. Open Preferences, then click Announcements in the sidebar.
+2. Under Event announcements, select or deselect **Announce channel messages**, **Announce private
+   messages** and **Announce broadcast messages**.
+3. Click **Announce system history** to unfold twenty more events, grouped as Connection, Own
+   channel, User presence, Moderation, Status, Subscriptions, Files and Media streaming. Use
+   **Enable all** or **Disable all** to set them together.
 
 Turning an event off only silences the announcement — the entry still appears in the session
 history.
 
-### While another app is in front
+## Choose what happens when another app is in front
 
-**Background message handling** decides how you are told when tt-Accessible is not frontmost:
+1. Open Preferences, then click Announcements.
+2. Click the **Mode** pop-up menu, then choose one of the following:
+   - **System notification** — a standard macOS notification.
+   - **macOS text to speech** — tt-Accessible speaks the message itself.
+   - **VoiceOver via AppleScript** — VoiceOver announces the message.
+3. To use different modes depending on what arrives, deselect **Use the same mode for all event
+   types**, then set private messages, channel messages, broadcast messages and TeamTalk history
+   separately.
 
-- **System notification** — a standard macOS notification. This is the default.
-- **macOS text to speech** — the app speaks the message itself, with the **Voice**, **Speech rate**
-  and **Volume** set below. **Test voice** tries the current settings.
-- **VoiceOver via AppleScript** — VoiceOver announces the message.
+If you chose macOS text to speech, set the **Voice**, the **Speech rate** and the **Volume** just
+below, then click **Test voice** to hear the result.
 
-**Use the same mode for all event types** is on by default and applies one mode to everything. Turn
-it off to choose a different mode for private messages, channel messages, broadcast messages and
-TeamTalk history — for example a spoken alert for private messages and a silent notification for the
-rest.
+**See also:** [Get to know the tt-Accessible window](main-window.html) ·
+[Change tt-Accessible settings](preferences.html#prefs-announcements)

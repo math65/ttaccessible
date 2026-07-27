@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Régler l'audio</title>
-<meta name="description" content="Choisir les périphériques d'entrée et de sortie, activer la réduction de bruit ou l'annulation d'écho, et tester son micro.">
+<title>Configurer vos périphériques audio</title>
+<meta name="description" content="Choisir vos périphériques d'entrée et de sortie, supprimer l'écho et le bruit de fond, et tester votre micro.">
 <meta name="keywords" content="périphérique audio, entrée, sortie, annulation d'écho, AEC, réduction de bruit, aperçu, canaux, casque">
 <meta name="robots" content="index, anchors">
 <link rel="stylesheet" href="../css/help.css">
@@ -12,44 +12,45 @@
 <body>
 <nav class="crumb"><a href="index.html">Sommaire</a></nav>
 <a id="audio-setup"></a>
-<h1>Régler l'audio</h1>
-<p>Tout ce qui suit se trouve dans <a href="preferences.html#prefs-audio">Préférences → Audio</a>. Les changements sont appliqués immédiatement, même en pleine session.</p>
-<h2 id="les-périphériques">Les périphériques</h2>
-<ul>
-<li><strong>Périphérique de sortie</strong> — <strong>Par défaut du système</strong>, une sortie précise de votre Mac, ou <strong>Aucune sortie audio</strong> si vous voulez faire tourner l'application en silence.</li>
-<li><strong>Périphérique d'entrée</strong> — <strong>Par défaut du système</strong> ou un micro précis.</li>
-</ul>
-<p><strong>Actualiser les périphériques</strong> reconstruit la liste après un branchement ou un débranchement. L'application détecte de toute façon ces changements toute seule et redémarre son moteur audio : un casque connecté en cours de session est pris en compte sans que vous ayez à intervenir.</p>
-<h2 id="le-traitement-du-micro">Le traitement du micro</h2>
-<p><strong>Traitement du micro</strong> propose trois réglages :</p>
+<h1>Configurer vos périphériques audio</h1>
+<p>Vous pouvez choisir les périphériques utilisés par tt-Accessible et la façon dont il traite votre micro. Les changements prennent effet immédiatement, même en pleine session.</p>
+<h2 id="choisir-vos-périphériques">Choisir vos périphériques</h2>
+<ol type="1">
+<li>Ouvrez les Préférences, puis cliquez sur Audio dans la barre latérale.</li>
+<li>Cliquez sur le menu local <strong>Périphérique de sortie</strong>, puis choisissez <strong>Par défaut du système</strong>, un périphérique précis, ou <strong>Aucune sortie audio</strong> pour faire tourner tt-Accessible en silence.</li>
+<li>Cliquez sur le menu local <strong>Périphérique d'entrée</strong>, puis choisissez <strong>Par défaut du système</strong> ou un micro précis.</li>
+</ol>
+<p>Si vous branchez ou débranchez un appareil et qu'il n'apparaît pas, cliquez sur <strong>Actualiser les périphériques</strong>. tt-Accessible détecte de toute façon ces changements tout seul et redémarre son moteur audio : un casque connecté en cours de session est pris en compte sans que vous ayez à intervenir.</p>
+<h2 id="supprimer-lécho-et-le-bruit-de-fond">Supprimer l'écho et le bruit de fond</h2>
+<ol type="1">
+<li>Ouvrez les Préférences, puis cliquez sur Audio.</li>
+<li>Cliquez sur le menu local <strong>Traitement du micro</strong>, puis choisissez l'une des options suivantes :
 <ul>
 <li><strong>Aucun</strong> — votre micro part tel quel.</li>
 <li><strong>Réduction de bruit</strong> — supprime le bruit de fond de votre microphone.</li>
-<li><strong>Annulation d'écho + réduction de bruit</strong> — retire en plus le son de vos haut-parleurs de ce que vous envoyez, et comprend toujours la réduction de bruit.</li>
-</ul>
-<p>C'est l'annulation d'écho qui permet de travailler <strong>sans casque</strong> : sans elle, tout le monde s'entend revenir par votre micro. À partir de macOS 14.2, l'application utilise comme référence le son réellement produit par le Mac : VoiceOver et les sons système sont donc annulés au même titre que les voix du canal. Sur les systèmes plus anciens, seul l'audio de TeamTalk peut l'être.</p>
-<h2 id="les-canaux-dentrée">Les canaux d'entrée</h2>
-<p><strong>Canaux d'entrée</strong> détermine quelles entrées physiques du périphérique sont utilisées :</p>
+<li><strong>Annulation d'écho + réduction de bruit</strong> — retire en plus le son de vos haut-parleurs de ce que vous envoyez.</li>
+</ul></li>
+</ol>
+<p>C'est l'annulation d'écho qui permet de travailler sans casque : sans elle, tout le monde s'entend revenir par votre micro. À partir de macOS 14.2, tt-Accessible utilise comme référence le son réellement produit par votre Mac : VoiceOver et les sons du système sont donc annulés au même titre que les voix du canal. Sur les versions antérieures, seul l'audio de TeamTalk peut l'être.</p>
+<h2 id="choisir-les-entrées-utilisées">Choisir les entrées utilisées</h2>
+<p>Cliquez sur le menu local <strong>Canaux d'entrée</strong>, puis choisissez <strong>Auto</strong>, une entrée mono, une paire stéréo, ou une somme mono de deux entrées. Ce réglage compte avec une interface audio, où le micro est rarement sur l'entrée 1.</p>
+<p>Si vous changez de périphérique et que la configuration ne convient plus, tt-Accessible revient sur Auto et vous le signale.</p>
+<h2 id="tester-votre-micro">Tester votre micro</h2>
+<ol type="1">
+<li>Ouvrez les Préférences, puis cliquez sur Audio.</li>
+<li>Cliquez sur <strong>Aperçu audio</strong>. Votre micro vous est renvoyé avec le traitement sélectionné, sans être connecté à quoi que ce soit.</li>
+<li>Cliquez sur <strong>Arrêter l'aperçu</strong> pour mettre fin à l'essai.</li>
+</ol>
+<p>En session, appuyez plutôt sur Maj + Commande + H pour vous entendre à travers le canal.</p>
+<h2 id="conserver-les-niveaux-réglés-pour-les-autres">Conserver les niveaux réglés pour les autres</h2>
+<p>Cliquez sur les boutons <strong>Mémorisation des volumes par utilisateur</strong>, puis choisissez l'une des options suivantes :</p>
 <ul>
-<li><strong>Auto</strong> — l'application choisit.</li>
-<li><strong>Entrée <em>n</em> mono</strong> — une entrée unique.</li>
-<li><strong>Entrées <em>n</em>/<em>n</em> stéréo</strong> — une paire stéréo.</li>
-<li><strong>Somme mono <em>n</em>+<em>n</em></strong> — deux entrées additionnées en mono.</li>
+<li><strong>Désactivé</strong> — tous les niveaux reviennent à 50 % à la reconnexion.</li>
+<li><strong>Session en cours seulement</strong> — les niveaux sont oubliés à la fermeture.</li>
+<li><strong>Toujours</strong> — les niveaux sont mémorisés d'un lancement à l'autre.</li>
 </ul>
-<p>Le réglage prend tout son sens avec une interface audio multi-entrées, où le micro est rarement sur l'entrée 1. Si le périphérique change et que la configuration choisie ne convient plus, l'application revient sur <strong>Auto</strong> et vous le signale.</p>
-<h2 id="se-tester-avant-de-parler">Se tester avant de parler</h2>
-<p><strong>Aperçu audio</strong> vous renvoie votre micro, avec le traitement sélectionné, sans être connecté à quoi que ce soit. Le même bouton — <strong>Arrêter l'aperçu</strong> — met fin à l'essai.</p>
-<p>En session, <strong>Maj-Commande-H</strong> (le retour audio) fait la même chose à travers le canal.</p>
-<h2 id="la-mémorisation-des-volumes">La mémorisation des volumes</h2>
-<p><strong>Mémorisation des volumes par utilisateur</strong> décide du sort des niveaux que vous réglez pour chaque personne :</p>
-<ul>
-<li><strong>Désactivé</strong> — tout revient à 50 % à la reconnexion.</li>
-<li><strong>Session en cours seulement</strong> — oublié à la fermeture.</li>
-<li><strong>Toujours</strong> — mémorisé d'un lancement à l'autre. C'est le réglage par défaut.</li>
-</ul>
-<p>Les réglages sont propres à chaque serveur : un niveau défini sur un serveur ne se reporte jamais sur un autre.</p>
-<h2 id="si-laudio-se-comporte-mal">Si l'audio se comporte mal</h2>
-<p>L'application tient un journal de diagnostic que vous pouvez consulter ou joindre à un message adressé au développeur ; voir <a href="troubleshooting.html">En cas de problème</a>.</p>
+<p>Les niveaux sont propres à chaque serveur : un réglage fait sur l'un ne se reporte jamais sur l'autre.</p>
+<p><strong>Voir aussi :</strong> <a href="talking.html">Parler dans un canal</a> · <a href="troubleshooting.html">Si quelque chose ne fonctionne pas</a></p>
 <hr>
 <p class="footer"><a href="index.html">Sommaire</a></p>
 </body>

@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Setting up audio</title>
-<meta name="description" content="Choose input and output devices, enable noise reduction or echo cancellation, and test your microphone.">
+<title>Set up your audio devices</title>
+<meta name="description" content="Choose your input and output devices, remove echo and background noise, and test your microphone.">
 <meta name="keywords" content="audio device, input, output, echo cancellation, AEC, noise reduction, preview, channels, headphones">
 <meta name="robots" content="index, anchors">
 <link rel="stylesheet" href="../css/help.css">
@@ -12,44 +12,45 @@
 <body>
 <nav class="crumb"><a href="index.html">Table of contents</a></nav>
 <a id="audio-setup"></a>
-<h1>Setting up audio</h1>
-<p>Everything on this page lives in <a href="preferences.html#prefs-audio">Preferences → Audio</a>. Changes take effect immediately, even during a session.</p>
-<h2 id="devices">Devices</h2>
-<ul>
-<li><strong>Output device</strong> — <strong>System default</strong>, any output on your Mac, or <strong>No output device</strong> if you want to run the app silently.</li>
-<li><strong>Input device</strong> — <strong>System default</strong> or a specific microphone.</li>
-</ul>
-<p><strong>Refresh Devices</strong> rebuilds the list after plugging or unplugging hardware. The app also notices device changes on its own and restarts its audio engine, so headphones connected mid-session are picked up without action from you.</p>
-<h2 id="microphone-processing">Microphone processing</h2>
-<p><strong>Microphone processing</strong> offers three settings:</p>
+<h1>Set up your audio devices</h1>
+<p>You can choose which devices tt-Accessible uses and how it treats your microphone. Changes take effect immediately, even during a session.</p>
+<h2 id="choose-your-devices">Choose your devices</h2>
+<ol type="1">
+<li>Open Preferences, then click Audio in the sidebar.</li>
+<li>Click the <strong>Output device</strong> pop-up menu, then choose <strong>System default</strong>, a specific device, or <strong>No output device</strong> to run tt-Accessible silently.</li>
+<li>Click the <strong>Input device</strong> pop-up menu, then choose <strong>System default</strong> or a specific microphone.</li>
+</ol>
+<p>If you plug in or unplug a device and it doesn't appear, click <strong>Refresh Devices</strong>. tt-Accessible also notices device changes on its own and restarts its audio engine, so headphones connected during a session are picked up without action from you.</p>
+<h2 id="remove-echo-and-background-noise">Remove echo and background noise</h2>
+<ol type="1">
+<li>Open Preferences, then click Audio.</li>
+<li>Click the <strong>Microphone processing</strong> pop-up menu, then choose one of the following:
 <ul>
 <li><strong>None</strong> — your microphone is sent as it is.</li>
 <li><strong>Noise reduction</strong> — removes background noise from your microphone.</li>
-<li><strong>Echo cancellation + noise reduction</strong> — additionally removes the sound of your speakers from what you send, and always includes noise reduction.</li>
-</ul>
-<p>Echo cancellation is what makes it possible to work <strong>without headphones</strong>: without it, everyone hears themselves come back through your microphone. On macOS 14.2 and later the app uses the actual mixed system output as its reference, so VoiceOver and system sounds are cancelled along with the voices of the channel. On older systems only TeamTalk audio can be cancelled.</p>
-<h2 id="input-channels">Input channels</h2>
-<p><strong>Input channels</strong> decides which physical inputs of the device are used:</p>
+<li><strong>Echo cancellation + noise reduction</strong> — also removes the sound of your speakers from what you send.</li>
+</ul></li>
+</ol>
+<p>Echo cancellation is what lets you work without headphones: without it, everyone hears themselves come back through your microphone. On macOS 14.2 and later, tt-Accessible uses the sound your Mac actually produces as its reference, so VoiceOver and system sounds are cancelled along with the voices of the channel. On earlier versions, only TeamTalk audio can be cancelled.</p>
+<h2 id="choose-which-inputs-of-your-device-are-used">Choose which inputs of your device are used</h2>
+<p>Click the <strong>Input channels</strong> pop-up menu, then choose <strong>Auto</strong>, a single mono input, a stereo pair, or a mono mix of two inputs. This matters with audio interfaces, where the microphone is rarely on input 1.</p>
+<p>If you change device and the preset no longer fits, tt-Accessible falls back to Auto and tells you.</p>
+<h2 id="test-your-microphone">Test your microphone</h2>
+<ol type="1">
+<li>Open Preferences, then click Audio.</li>
+<li>Click <strong>Audio preview</strong>. Your microphone is played back to you with the processing you selected, without being connected to anything.</li>
+<li>Click <strong>Stop preview</strong> to end the test.</li>
+</ol>
+<p>During a session, press Shift-Command-H to hear yourself through the channel instead.</p>
+<h2 id="keep-the-levels-you-set-for-other-people">Keep the levels you set for other people</h2>
+<p>Click the <strong>Per-user volume memory</strong> buttons, then choose one of the following:</p>
 <ul>
-<li><strong>Auto</strong> — let the app choose.</li>
-<li><strong>Input <em>n</em> mono</strong> — a single input.</li>
-<li><strong>Inputs <em>n</em>/<em>n</em> stereo</strong> — a stereo pair.</li>
-<li><strong>Mono mix <em>n</em>+<em>n</em></strong> — two inputs summed to mono.</li>
+<li><strong>Off</strong> — every level returns to 50% when you reconnect.</li>
+<li><strong>This session only</strong> — levels are forgotten when you quit.</li>
+<li><strong>Always</strong> — levels are remembered from one launch to the next.</li>
 </ul>
-<p>This matters with multi-input audio interfaces, where the microphone is rarely on input 1. If the device changes and the chosen preset no longer fits, the app falls back to <strong>Auto</strong> and says so.</p>
-<h2 id="testing-before-you-talk">Testing before you talk</h2>
-<p><strong>Audio preview</strong> plays your microphone back to you, with the processing you selected, without being connected to anything. Press it again — <strong>Stop preview</strong> — to end the test.</p>
-<p>During a session, <strong>Shift-Command-H</strong> (<em>Hear myself</em>) does the same through the channel.</p>
-<h2 id="volume-memory">Volume memory</h2>
-<p><strong>Per-user volume memory</strong> decides what happens to the levels you set for individual people:</p>
-<ul>
-<li><strong>Off</strong> — always reset to 50% on reconnect.</li>
-<li><strong>This session only</strong> — forget on quit.</li>
-<li><strong>Always</strong> — remember across launches. This is the default.</li>
-</ul>
-<p>Adjustments are scoped per server, so a level set on one server never carries over to another.</p>
-<h2 id="if-the-audio-misbehaves">If the audio misbehaves</h2>
-<p>The app writes a diagnostic log you can consult or attach to a message to the developer; see <a href="troubleshooting.html">Troubleshooting</a>.</p>
+<p>Levels are kept per server, so a level you set on one server never carries over to another.</p>
+<p><strong>See also:</strong> <a href="talking.html">Talk in a channel</a> · <a href="troubleshooting.html">If something doesn't work</a></p>
 <hr>
 <p class="footer"><a href="index.html">Table of contents</a></p>
 </body>

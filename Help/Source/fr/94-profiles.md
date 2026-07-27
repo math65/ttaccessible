@@ -1,41 +1,49 @@
 ---
-title: Les profils
-description: Faire tourner plusieurs instances indépendantes de tt-Accessible, chacune avec ses serveurs, ses réglages et ses mots de passe.
+title: Utiliser plusieurs profils à la fois
+description: Faire tourner des instances indépendantes de tt-Accessible, chacune avec ses serveurs, ses réglages et ses mots de passe.
 keywords: profil, instance, plusieurs comptes, dupliquer, renommer, supprimer
 anchor: profiles
 ---
 
 Un profil est une copie complète et séparée de votre configuration : ses propres serveurs
-enregistrés, ses préférences, ses packs de sons, son historique de chat et ses mots de passe. Chaque
-profil tourne dans sa propre instance de l'application : vous pouvez donc être connecté à deux
-serveurs en même temps, ou séparer une identité professionnelle d'une identité personnelle.
+enregistrés, réglages, packs de sons, historique de chat et mots de passe. Chaque profil tourne dans
+sa propre instance de tt-Accessible : vous pouvez donc être connecté à deux serveurs en même temps,
+ou séparer une identité professionnelle d'une identité personnelle.
 
-Le nom du profil courant apparaît dans le titre de la fenêtre **Serveurs TeamTalk**.
+Le nom du profil courant apparaît dans le titre de la fenêtre Serveurs TeamTalk.
 
-## Ouvrir la fenêtre des profils
+## Créer un profil
 
-**tt-Accessible → Gérer les profils…**, ou **Nouvelle instance…** (**Maj-Commande-N**), ouvre la
-fenêtre **Profils**. La liste indique le **Nom** de chaque profil et son **Statut** — **Actuel**, **En
-cours d'exécution** ou **Par défaut**.
+1. Choisissez tt-Accessible > Nouvelle instance, ou appuyez sur Maj + Commande + N.
+2. Saisissez un nom, puis cliquez sur **Créer et lancer**. Une instance distincte s'ouvre avec ses
+   propres réglages.
 
-## Ce que vous pouvez faire
+Le nom Default est réservé.
 
-| Bouton | Effet |
-|---|---|
-| Lancer | Démarre une instance avec le profil sélectionné — Entrée fait de même |
-| Nouveau… | Crée un profil et le lance dans la foulée |
-| Dupliquer… | Copie un profil existant, avec ses serveurs, mots de passe, réglages, historique et packs de sons |
-| Renommer… | Change seulement le nom affiché ; rien n'est déplacé ni copié |
-| Supprimer | Supprime le profil et tout ce qu'il contient — la touche Suppr fait de même |
-| Actualiser | Met les statuts à jour |
+## Passer à un autre profil
 
-Le nom **Default** est réservé.
+1. Choisissez tt-Accessible > Gérer les profils.
+2. Sélectionnez un profil dans la liste, puis cliquez sur **Lancer** ou appuyez sur Retour.
 
-## Quelques limites à connaître
+La colonne Statut indique quel profil est **Actuel**, lesquels sont **En cours d'exécution**, et
+lequel est le profil **Par défaut**.
 
-- Un profil ne peut être ni **dupliqué** ni **supprimé** tant qu'une instance tourne avec lui.
-  Quittez d'abord cette instance.
-- Le profil que vous êtes en train d'utiliser ne peut pas être supprimé depuis cette même instance :
-  faites-le depuis une autre.
-- La suppression d'un profil est définitive : ses serveurs, ses préférences, ses packs de sons, son
-  historique de chat et ses mots de passe disparaissent avec lui.
+## Copier, renommer ou supprimer un profil
+
+Dans la fenêtre Profils, sélectionnez un profil, puis effectuez l'une des opérations suivantes :
+
+- **Le copier :** cliquez sur **Dupliquer**, puis saisissez un nom. Ses serveurs, mots de passe,
+  réglages, historique de chat et packs de sons sont copiés.
+- **Le renommer :** cliquez sur **Renommer**, puis saisissez un nouveau nom. Rien n'est déplacé ni
+  copié.
+- **Le supprimer :** cliquez sur **Supprimer**, ou appuyez sur la touche Supprimer, puis confirmez.
+
+La suppression d'un profil est définitive : ses serveurs, réglages, packs de sons, historique de
+chat et mots de passe disparaissent avec lui.
+
+Vous ne pouvez ni dupliquer ni supprimer un profil tant qu'une instance tourne avec lui — quittez
+d'abord cette instance. Le profil que vous utilisez ne peut pas être supprimé depuis cette même
+instance : faites-le depuis une autre.
+
+**Voir aussi :** [Ajouter un serveur et s'y connecter](servers.html) ·
+[Modifier les réglages de tt-Accessible](preferences.html)

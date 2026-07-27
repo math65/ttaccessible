@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Les serveurs</title>
-<meta name="description" content="Ajouter, modifier, trier, importer et exporter des serveurs TeamTalk, et se connecter avec un compte BearWare.">
+<title>Ajouter un serveur et s'y connecter</title>
+<meta name="description" content="Ajouter, modifier et trier vos serveurs TeamTalk, les importer et les exporter, et se connecter avec un compte BearWare.">
 <meta name="keywords" content="serveur, serveurs enregistrés, import, export, fichier tt, lien tt, BearWare, connexion web">
 <meta name="robots" content="index, anchors">
 <link rel="stylesheet" href="../css/help.css">
@@ -12,89 +12,57 @@
 <body>
 <nav class="crumb"><a href="index.html">Sommaire</a></nav>
 <a id="servers"></a>
-<h1>Les serveurs</h1>
-<p>La fenêtre <strong>Serveurs TeamTalk</strong> est le point de départ de chaque session. Elle affiche vos serveurs enregistrés avec leur <strong>Nom</strong>, leur <strong>Hôte</strong>, leurs ports <strong>TCP</strong> et <strong>UDP</strong>, et la mention <strong>Sécurisé</strong>.</p>
-<p>La fenêtre rappelle elle-même l'essentiel : <em>Entrée ou F2 pour se connecter, Cmd-N pour ajouter, Cmd-E pour modifier, Suppr pour supprimer.</em></p>
-<h2 id="se-connecter">Se connecter</h2>
-<p>Sélectionnez un serveur avec les flèches et appuyez sur <strong>Entrée</strong> ou sur <strong>F2</strong>. La même commande figure dans <strong>Serveur → Se connecter</strong> et sur le bouton <strong>Connexion</strong> de la barre d'outils.</p>
-<p>Une fois la session ouverte, <strong>F2</strong> devient <strong>Se déconnecter</strong>.</p>
-<p>Si le serveur refuse vos identifiants, l'application propose <strong>Modifier les identifiants…</strong> : vous corrigez le nom d'utilisateur ou le mot de passe sans avoir à ressaisir le reste.</p>
-<h2 id="ajouter-un-serveur-à-la-main">Ajouter un serveur à la main</h2>
-<p><strong>Commande-N</strong>, ou <strong>Serveur → Nouveau serveur</strong>. Le formulaire demande :</p>
-<table>
-<thead>
-<tr>
-<th>Champ</th>
-<th>Ce qu'il contient</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Nom</td>
-<td>Le nom sous lequel le serveur apparaît dans votre liste</td>
-</tr>
-<tr>
-<td>Hôte</td>
-<td>L'adresse du serveur</td>
-</tr>
-<tr>
-<td>Port TCP / Port UDP</td>
-<td>Les ports du serveur</td>
-</tr>
-<tr>
-<td>Connexion chiffrée</td>
-<td>À activer si le serveur l'exige</td>
-</tr>
-<tr>
-<td>Pseudo</td>
-<td>Le nom que les autres voient. Laissez vide pour reprendre votre pseudo par défaut</td>
-</tr>
-<tr>
-<td>Nom d'utilisateur / Mot de passe</td>
-<td>Votre compte sur ce serveur. Laissez vide pour une connexion d'invité</td>
-</tr>
-<tr>
-<td>Utiliser la connexion web BearWare</td>
-<td>Se connecter avec votre compte BearWare à la place (voir plus bas)</td>
-</tr>
-<tr>
-<td>Canal à rejoindre</td>
-<td>Le chemin d'un canal à rejoindre automatiquement après la connexion</td>
-</tr>
-<tr>
-<td>Mot de passe du canal</td>
-<td>Le mot de passe de ce canal, s'il en a un</td>
-</tr>
-</tbody>
-</table>
-<p>Les mots de passe sont conservés dans votre trousseau de session, pas dans les fichiers de l'application.</p>
-<p>Pour revenir sur un serveur, sélectionnez-le et appuyez sur <strong>Commande-E</strong>. Pour le retirer, appuyez sur <strong>Suppr</strong> ; une confirmation vous est demandée.</p>
-<h2 id="trier-la-liste">Trier la liste</h2>
-<p>Les commandes <strong>Trier</strong>, au-dessus du tableau, classent la liste par <strong>Ordre enregistré</strong>, <strong>Nom</strong>, <strong>Hôte</strong>, <strong>Port TCP</strong> ou <strong>Port UDP</strong>, en ordre <strong>Croissant</strong> ou <strong>Décroissant</strong>. L'ordre enregistré conserve les serveurs dans l'ordre où vous les avez ajoutés. Votre choix est mémorisé.</p>
+<h1>Ajouter un serveur et s'y connecter</h1>
+<p>Vous pouvez conserver autant de serveurs TeamTalk que vous le souhaitez dans la fenêtre Serveurs TeamTalk, qui affiche pour chacun son nom, son hôte, ses ports TCP et UDP, et s'il est sécurisé. Les mots de passe sont conservés dans votre trousseau de session, pas dans les fichiers de l'app.</p>
+<h2 id="se-connecter-à-un-serveur">Se connecter à un serveur</h2>
+<ol type="1">
+<li>Accédez à la fenêtre Serveurs TeamTalk dans tt-Accessible.</li>
+<li>Sélectionnez un serveur dans la liste à l'aide des flèches.</li>
+<li>Appuyez sur Retour ou sur F2. Vous pouvez aussi choisir Serveur &gt; Se connecter, ou cliquer sur Connexion dans la barre d'outils.</li>
+</ol>
+<p>Une fois la session ouverte, F2 vous déconnecte.</p>
+<p>Si le serveur refuse votre nom d'utilisateur ou votre mot de passe, cliquez sur <strong>Modifier les identifiants</strong> dans l'alerte pour les corriger et réessayer.</p>
+<h2 id="ajouter-un-serveur">Ajouter un serveur</h2>
+<ol type="1">
+<li>Choisissez Serveur &gt; Nouveau serveur, ou appuyez sur Commande + N.</li>
+<li>Saisissez le nom que vous voulez voir dans votre liste, puis l'hôte et les ports TCP et UDP.</li>
+<li>Sélectionnez <strong>Connexion chiffrée</strong> si le serveur l'exige.</li>
+<li>Saisissez un pseudo, ou laissez le champ vide pour reprendre votre pseudo par défaut.</li>
+<li>Saisissez votre nom d'utilisateur et votre mot de passe sur ce serveur, ou laissez-les vides pour vous connecter en invité.</li>
+<li>Pour rejoindre un canal dès la connexion, saisissez son chemin dans <strong>Canal à rejoindre</strong>, et son mot de passe s'il en a un.</li>
+<li>Cliquez sur Enregistrer.</li>
+</ol>
+<p>Pour modifier un serveur, sélectionnez-le et appuyez sur Commande + E. Pour le retirer, appuyez sur Supprimer, puis confirmez.</p>
+<h2 id="trier-la-liste-des-serveurs">Trier la liste des serveurs</h2>
+<p>Utilisez les menus locaux <strong>Trier</strong>, au-dessus de la liste, pour classer vos serveurs par <strong>Ordre enregistré</strong>, <strong>Nom</strong>, <strong>Hôte</strong>, <strong>Port TCP</strong> ou <strong>Port UDP</strong>, en ordre <strong>Croissant</strong> ou <strong>Décroissant</strong>. L'ordre enregistré conserve les serveurs dans l'ordre où vous les avez ajoutés. Votre choix est mémorisé.</p>
 <h2 id="importer-des-serveurs">Importer des serveurs</h2>
-<p><strong>Serveur → Importer les serveurs TeamTalk…</strong> (<strong>Maj-Commande-I</strong>) vous laisse choisir la source :</p>
+<ol type="1">
+<li>Choisissez Serveur &gt; Importer les serveurs TeamTalk, ou appuyez sur Maj + Commande + I.</li>
+<li>Choisissez la méthode d'import :
 <ul>
-<li><strong>Fichier de configuration...</strong> — le fichier de configuration du client TeamTalk officiel. Tous ses serveurs sont importés d'un coup. tt-Accessible sait reconnaître le format tout seul ; ce comportement dépend de l'option <em>Utiliser la détection automatique du fichier TeamTalk lors de l'import</em>, dans <a href="preferences.html#prefs-general">Préférences → Général</a>.</li>
-<li><strong>Fichier .tt...</strong> — un serveur unique, le format que partagent le plus souvent les propriétaires de serveurs.</li>
-<li><strong>Coller un lien tt://...</strong> — collez un lien du type <code>tt://serveur.exemple.com?tcpport=10333</code>.</li>
-</ul>
-<p>Si un serveur importé correspond à un serveur que vous avez déjà, l'application demande s'il faut le <strong>Remplacer</strong>. Quand plusieurs entrées se recoupent, elle demande une seule fois s'il faut <strong>Continuer</strong>. Un bilan s'affiche à la fin : <em>n serveur(s) importé(s), n ignoré(s).</em></p>
-<p>Vous pouvez aussi ouvrir directement un fichier <code>.tt</code> depuis le Finder, ou cliquer sur un lien <code>tt://</code>. Si une session est déjà ouverte, l'application prévient que l'ouverture va la fermer. Et quand le fichier contient en plus des réglages du client — un pseudo, un genre —, elle énumère ce qu'elle sait appliquer et vous laisse choisir entre <strong>Appliquer</strong> et <strong>Ignorer</strong>.</p>
-<p>Un serveur ouvert de cette façon n'est pas enregistré automatiquement : au moment de vous déconnecter, l'application vous propose de le <strong>Sauvegarder</strong> sous le nom de votre choix.</p>
+<li><strong>Fichier de configuration</strong> — le fichier de configuration du client TeamTalk officiel. Tous ses serveurs sont importés d'un coup.</li>
+<li><strong>Fichier .tt</strong> — un serveur unique, le format que partagent le plus souvent les propriétaires de serveurs.</li>
+<li><strong>Coller un lien tt://</strong> — collez un lien du type <code>tt://serveur.exemple.com?tcpport=10333</code>.</li>
+</ul></li>
+<li>Si un serveur importé correspond à un serveur que vous avez déjà, cliquez sur <strong>Remplacer</strong> pour le mettre à jour. Quand plusieurs entrées se recoupent, cliquez sur <strong>Continuer</strong> pour toutes les importer.</li>
+</ol>
+<p>tt-Accessible indique combien de serveurs ont été importés et combien ont été ignorés.</p>
+<p>Vous pouvez aussi ouvrir un fichier <code>.tt</code> depuis le Finder, ou cliquer sur un lien <code>tt://</code>. Si une session est déjà ouverte, tt-Accessible vous prévient que l'ouverture va la fermer. Un serveur ouvert de cette façon n'est pas enregistré automatiquement : au moment de vous déconnecter, tt-Accessible vous propose de le sauvegarder sous le nom de votre choix.</p>
 <h2 id="exporter-des-serveurs">Exporter des serveurs</h2>
 <ul>
-<li><strong>Serveur → Exporter le serveur...</strong> exporte le serveur sélectionné en <strong>Fichier .tt...</strong> ou copie un <strong>lien tt://</strong> dans le presse-papiers. Pendant une session, la même commande peut <em>Inclure un chemin direct vers</em> le canal où vous vous trouvez, pour que la personne qui ouvre le fichier arrive au bon endroit.</li>
-<li><strong>Serveur → Exporter la liste de serveurs…</strong> exporte tout, soit dans <strong>Un seul fichier</strong>, soit à raison d'<strong>Un fichier par serveur</strong> dans le dossier de votre choix.</li>
+<li>Pour exporter le serveur sélectionné, choisissez Serveur &gt; Exporter le serveur, puis choisissez <strong>Fichier .tt</strong> ou <strong>Copier le lien tt://</strong>. Pendant une session, vous pouvez aussi sélectionner <strong>Inclure un chemin direct</strong> pour que la personne qui ouvre le fichier arrive dans le canal où vous êtes.</li>
+<li>Pour tous les exporter, choisissez Serveur &gt; Exporter la liste de serveurs, puis choisissez <strong>Un seul fichier</strong> ou <strong>Un fichier par serveur</strong>.</li>
+<li>Pour copier un lien vers le serveur auquel vous êtes connecté, choisissez Serveur &gt; Copier le lien du serveur, ou appuyez sur Maj + Commande + L.</li>
 </ul>
-<p>Pendant une session, <strong>Serveur → Copier le lien du serveur</strong> (<strong>Maj-Commande-L</strong>) place un lien vers le serveur courant dans le presse-papiers.</p>
-<h2 id="la-connexion-web-bearware">La connexion web BearWare</h2>
-<p>Un compte BearWare gratuit (bearware.dk) permet de se connecter aux serveurs qui acceptent la connexion web, sans créer un compte sur chacun d'eux.</p>
+<h2 id="se-connecter-avec-un-compte-bearware">Se connecter avec un compte BearWare</h2>
+<p>Un compte BearWare gratuit (bearware.dk) vous permet de vous connecter aux serveurs qui acceptent la connexion web, sans créer de compte sur chacun d'eux.</p>
 <ol type="1">
-<li>Ouvrez <a href="preferences.html#prefs-bearware">Préférences → BearWare</a>.</li>
-<li>Saisissez votre <strong>Identifiant BearWare</strong> et votre <strong>Mot de passe BearWare</strong>, puis <strong>Se connecter</strong>. Le volet affiche ensuite <em>Connecté en tant que …</em> et propose <strong>Se déconnecter</strong>.</li>
-<li>Dans chaque serveur concerné, activez <strong>Utiliser la connexion web BearWare</strong>. Les champs d'identifiants locaux disparaissent : ce serveur passe désormais par votre compte BearWare.</li>
+<li>Ouvrez les Préférences, puis cliquez sur BearWare dans la barre latérale.</li>
+<li>Saisissez votre <strong>Identifiant BearWare</strong> et votre <strong>Mot de passe BearWare</strong>, puis cliquez sur <strong>Se connecter</strong>.</li>
+<li>Ouvrez les réglages de chaque serveur concerné, puis sélectionnez <strong>Utiliser la connexion web BearWare</strong>. Les champs d'identifiants locaux disparaissent : ce serveur passe désormais par votre compte BearWare.</li>
 </ol>
-<p>Si un serveur est réglé sur la connexion web alors qu'aucun compte BearWare n'est configuré, la connexion échoue avec un message qui vous renvoie aux préférences.</p>
+<p>Si un serveur est réglé sur la connexion web alors qu'aucun compte BearWare n'est configuré, la connexion échoue et tt-Accessible vous renvoie aux Préférences.</p>
+<p><strong>Voir aussi :</strong> <a href="main-window.html">Découvrir la fenêtre de tt-Accessible</a> · <a href="channels.html">Rejoindre et gérer des canaux</a></p>
 <hr>
 <p class="footer"><a href="index.html">Sommaire</a></p>
 </body>

@@ -1,67 +1,63 @@
 ---
-title: Setting up audio
-description: Choose input and output devices, enable noise reduction or echo cancellation, and test your microphone.
+title: Set up your audio devices
+description: Choose your input and output devices, remove echo and background noise, and test your microphone.
 keywords: audio device, input, output, echo cancellation, AEC, noise reduction, preview, channels, headphones
 anchor: audio-setup
 ---
 
-Everything on this page lives in [Preferences → Audio](preferences.html#prefs-audio). Changes take
+You can choose which devices tt-Accessible uses and how it treats your microphone. Changes take
 effect immediately, even during a session.
 
-## Devices
+## Choose your devices
 
-- **Output device** — **System default**, any output on your Mac, or **No output device** if you
-  want to run the app silently.
-- **Input device** — **System default** or a specific microphone.
+1. Open Preferences, then click Audio in the sidebar.
+2. Click the **Output device** pop-up menu, then choose **System default**, a specific device, or
+   **No output device** to run tt-Accessible silently.
+3. Click the **Input device** pop-up menu, then choose **System default** or a specific microphone.
 
-**Refresh Devices** rebuilds the list after plugging or unplugging hardware. The app also notices
-device changes on its own and restarts its audio engine, so headphones connected mid-session are
-picked up without action from you.
+If you plug in or unplug a device and it doesn't appear, click **Refresh Devices**. tt-Accessible
+also notices device changes on its own and restarts its audio engine, so headphones connected during
+a session are picked up without action from you.
 
-## Microphone processing
+## Remove echo and background noise
 
-**Microphone processing** offers three settings:
+1. Open Preferences, then click Audio.
+2. Click the **Microphone processing** pop-up menu, then choose one of the following:
+   - **None** — your microphone is sent as it is.
+   - **Noise reduction** — removes background noise from your microphone.
+   - **Echo cancellation + noise reduction** — also removes the sound of your speakers from what you
+     send.
 
-- **None** — your microphone is sent as it is.
-- **Noise reduction** — removes background noise from your microphone.
-- **Echo cancellation + noise reduction** — additionally removes the sound of your speakers from
-  what you send, and always includes noise reduction.
+Echo cancellation is what lets you work without headphones: without it, everyone hears themselves
+come back through your microphone. On macOS 14.2 and later, tt-Accessible uses the sound your Mac
+actually produces as its reference, so VoiceOver and system sounds are cancelled along with the
+voices of the channel. On earlier versions, only TeamTalk audio can be cancelled.
 
-Echo cancellation is what makes it possible to work **without headphones**: without it, everyone
-hears themselves come back through your microphone. On macOS 14.2 and later the app uses the actual
-mixed system output as its reference, so VoiceOver and system sounds are cancelled along with the
-voices of the channel. On older systems only TeamTalk audio can be cancelled.
+## Choose which inputs of your device are used
 
-## Input channels
+Click the **Input channels** pop-up menu, then choose **Auto**, a single mono input, a stereo pair,
+or a mono mix of two inputs. This matters with audio interfaces, where the microphone is rarely on
+input 1.
 
-**Input channels** decides which physical inputs of the device are used:
+If you change device and the preset no longer fits, tt-Accessible falls back to Auto and tells you.
 
-- **Auto** — let the app choose.
-- **Input _n_ mono** — a single input.
-- **Inputs _n_/_n_ stereo** — a stereo pair.
-- **Mono mix _n_+_n_** — two inputs summed to mono.
+## Test your microphone
 
-This matters with multi-input audio interfaces, where the microphone is rarely on input 1. If the
-device changes and the chosen preset no longer fits, the app falls back to **Auto** and says so.
+1. Open Preferences, then click Audio.
+2. Click **Audio preview**. Your microphone is played back to you with the processing you selected,
+   without being connected to anything.
+3. Click **Stop preview** to end the test.
 
-## Testing before you talk
+During a session, press Shift-Command-H to hear yourself through the channel instead.
 
-**Audio preview** plays your microphone back to you, with the processing you selected, without
-being connected to anything. Press it again — **Stop preview** — to end the test.
+## Keep the levels you set for other people
 
-During a session, **Shift-Command-H** (*Hear myself*) does the same through the channel.
+Click the **Per-user volume memory** buttons, then choose one of the following:
 
-## Volume memory
+- **Off** — every level returns to 50% when you reconnect.
+- **This session only** — levels are forgotten when you quit.
+- **Always** — levels are remembered from one launch to the next.
 
-**Per-user volume memory** decides what happens to the levels you set for individual people:
+Levels are kept per server, so a level you set on one server never carries over to another.
 
-- **Off** — always reset to 50% on reconnect.
-- **This session only** — forget on quit.
-- **Always** — remember across launches. This is the default.
-
-Adjustments are scoped per server, so a level set on one server never carries over to another.
-
-## If the audio misbehaves
-
-The app writes a diagnostic log you can consult or attach to a message to the developer; see
-[Troubleshooting](troubleshooting.html).
+**See also:** [Talk in a channel](talking.html) · [If something doesn't work](troubleshooting.html)

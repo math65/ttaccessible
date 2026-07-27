@@ -1,76 +1,70 @@
 ---
-title: Prendre la parole
-description: Activer le micro, utiliser le push-to-talk, régler les volumes et s'entendre soi-même.
+title: Parler dans un canal
+description: Activer votre micro, utiliser le push-to-talk, régler les volumes et vérifier que vous êtes bien à l'antenne.
 keywords: micro, microphone, push-to-talk, PTT, sourdine, volume principal, retour audio, état audio
 anchor: talking
 ---
 
-## Activer le micro
+Vous pouvez parler dès que vous avez rejoint un canal. tt-Accessible peut garder votre micro ouvert,
+ou n'envoyer votre voix que pendant que vous maintenez une touche.
 
-**Maj-Commande-A** active ou coupe le micro. L'application confirme par *Micro activé.* ou *Micro
-coupé.*, et le bouton de la barre d'outils indique son état.
+## Activer ou couper le micro
 
-Il faut d'abord être dans un canal : ailleurs, l'application répond *Vous devez rejoindre un canal
+Appuyez sur Maj + Commande + A. tt-Accessible confirme par *Micro activé* ou *Micro coupé*, et le
+bouton de la barre d'outils indique son état.
+
+Il faut d'abord être dans un canal. Ailleurs, tt-Accessible répond *Vous devez rejoindre un canal
 avant d'activer le micro.*
 
-## Les modes du microphone
+## Choisir la façon dont votre micro transmet
 
-[Préférences → Audio](preferences.html#prefs-audio) propose trois façons de travailler, sous **Mode
-du microphone** :
+1. Ouvrez les Préférences, puis cliquez sur Audio dans la barre latérale.
+2. Cliquez sur le menu local **Mode du microphone**, puis choisissez l'une des options suivantes :
+   - **Toujours actif** — le micro reste ouvert une fois que vous l'avez activé.
+   - **Push-to-talk** — vous ne transmettez que pendant que vous maintenez une touche.
+   - **Les deux** — Maj + Commande + A ouvre une transmission continue, et maintenir la touche de
+     push-to-talk transmet quoi qu'il arrive.
+3. Pour le push-to-talk, cliquez sur **Touche de push-to-talk**, puis appuyez sur la touche à
+   maintenir. N'importe quelle touche convient, même une seule, ou une combinaison de touches de
+   modification seule comme Commande + Contrôle. Appuyez sur Supprimer pour l'effacer.
 
-- **Toujours actif** — une fois activé, le micro reste ouvert. C'est le réglage par défaut.
-- **Push-to-talk (maintenez une touche pour parler)** — vous ne transmettez que pendant que vous
-  maintenez une touche.
-- **Les deux (coupure avec push-to-talk)** — Maj-Commande-A ouvre une transmission continue, et
-  maintenir la touche de push-to-talk transmet dans tous les cas. La relâcher recoupe le son,
-  jusqu'à ce que vous appuyiez de nouveau sur Maj-Commande-A ou que vous mainteniez la touche.
+Tant qu'aucune touche n'est enregistrée, le push-to-talk reste inactif et le micro transmet comme en
+mode « toujours actif ». tt-Accessible vous en avertit dans le même volet.
 
-Pour le push-to-talk, il faut enregistrer une touche : activez **Touche de push-to-talk**, puis
-appuyez sur la touche à maintenir. N'importe quelle touche convient, même une seule ; une
-combinaison de touches de modification seule — Commande-Contrôle, par exemple — fonctionne aussi.
-La touche Supprimer efface le réglage. Tant qu'aucune touche n'est définie, l'application prévient
-que le push-to-talk est inactif et que le micro reste ouvert comme en mode « toujours actif ».
+Deux options complètent le tableau, juste en dessous :
 
-Deux options complètent le tableau :
+- **Jouer un son au début et à la fin de la transmission**, qui est activée.
+- **Le push-to-talk fonctionne même quand une autre app est au premier plan**, activée elle aussi.
+  Un réglage équivalent existe pour l'activation du micro, désactivé. Tous deux utilisent
+  l'autorisation « Surveillance des saisies », que macOS demande la première fois. Comme
+  tt-Accessible fonctionne en bac à sable, la touche atteint quand même l'app où vous travaillez :
+  préférez des touches de modification seules ou une touche de fonction de F13 à F19.
 
-- **Jouer un son au début et à la fin de la transmission** — activé par défaut.
-- **Le push-to-talk fonctionne même quand une autre app est au premier plan** — activé par défaut. Un
-  réglage équivalent existe pour le raccourci d'activation du micro, désactivé par défaut. Tous deux
-  reposent sur l'autorisation « Surveillance des saisies », que macOS demande la première fois.
-  Comme l'application fonctionne en bac à sable, la touche est détectée mais atteint quand même
-  l'application au premier plan : préférez donc une combinaison de touches de modification seules, ou
-  une touche de fonction de F13 à F19 — ni l'une ni l'autre n'écrit quoi que ce soit là où vous
-  travaillez.
+## Régler les volumes
 
-## Les volumes
-
-Trois curseurs sont posés dans la fenêtre principale, chacun avec l'action VoiceOver
-*Réinitialiser à 50 %* :
+La fenêtre principale comporte trois curseurs, chacun avec l'action VoiceOver *Réinitialiser à
+50 %* :
 
 - **Volume d'entrée** — le niveau auquel votre micro est envoyé.
 - **Volume de sortie** — le niveau auquel vous entendez tout le monde.
 - **Volume des effets sonores** — le niveau des sons de notification.
 
-**Commande-M** coupe et rétablit le volume principal, en annonçant *Volume principal coupé* ou
-*Volume principal rétabli*.
+Pour tout couper ou tout rétablir d'un coup, appuyez sur Commande + M.
 
-Chaque personne se règle par ailleurs séparément : voir
-[Les personnes que vous entendez](users.html) et [Le mixeur du canal](mixer.html).
+Pour régler le niveau d'une seule personne, consultez
+[Régler ce que vous entendez de chaque personne](users.html) et
+[Équilibrer un canal avec le mixeur](mixer.html).
 
-## S'entendre soi-même
+## Vérifier qu'on vous entend
 
-**Maj-Commande-H** active et désactive le retour audio : votre propre voix vous revient par le canal.
-C'est le moyen le plus rapide de vérifier que votre micro, votre gain et votre traitement sont bien
-réglés. L'application annonce *Retour audio activé* ou *Retour audio désactivé*.
+- Pour entendre votre propre voix par le canal, appuyez sur Maj + Commande + H. Si vous vous
+  entendez, vous êtes à l'antenne.
+- Pour connaître l'état audio, appuyez sur F9.
+- Pour tester votre micro avant de vous connecter, ouvrez les Préférences, cliquez sur Audio, puis
+  cliquez sur **Aperçu audio**.
 
-Pour un essai avant même de vous connecter, utilisez le bouton **Aperçu audio** de
-[Préférences → Audio](preferences.html#prefs-audio).
-
-## Savoir où vous en êtes
-
-**F9** énonce l'état audio : sortie active ou non, micro prêt ou en train de transmettre,
-enregistrement en cours. C'est la façon la plus directe de répondre à la question « est-ce que je
-suis vraiment à l'antenne ? » sans quitter ce que vous faites.
-
-Si l'application annonce *Transmission bloquée par l'opérateur du canal*, un opérateur vous a retiré
+Si tt-Accessible annonce *Transmission bloquée par l'opérateur du canal*, un opérateur vous a retiré
 le droit de parler dans ce canal.
+
+**Voir aussi :** [Configurer vos périphériques audio](audio-setup.html) ·
+[Si quelque chose ne fonctionne pas](troubleshooting.html)
