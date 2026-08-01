@@ -118,10 +118,11 @@ final class KeyCaptureSession: ObservableObject {
                            announcement: "preferences.audio.hotkey.rejected.announcement")
                     return true
                 }
-                // Only the OS knows whether another app already owns the chord,
-                // and it answers by refusing to register it. Ask now, while the
-                // user is still here to pick another one — discovering it later
-                // means a hotkey that silently does nothing.
+                // Catches the one collision macOS reports: our OWN other hotkey
+                // already carrying this chord, where the second registration is
+                // refused and that hotkey silently never runs. A chord another
+                // app uses is granted to us — deliberately, that is what a
+                // global hotkey is for — so it is not tested here.
                 guard HotkeyMonitor.isChordAvailable(binding, current: currentBinding) else {
                     reject("preferences.audio.hotkey.rejected.taken",
                            announcement: "preferences.audio.hotkey.rejected.taken.announcement")

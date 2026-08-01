@@ -298,6 +298,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // stays muted forever in push-to-talk mode.
         pushToTalkMonitor.onPress = { [weak self] in self?.handlePushToTalkPress() }
         pushToTalkMonitor.onRelease = { [weak self] in self?.handlePushToTalkRelease() }
+        // A chord another app claimed after it was chosen leaves the hotkey
+        // inactive, with nothing to show for it — Preferences says so.
+        pushToTalkMonitor.onChordUnavailableChange = { binding in
+            HotkeyStatusStore.shared.setPushToTalkUnavailable(binding)
+        }
+        muteHotkeyMonitor.onChordUnavailableChange = { binding in
+            HotkeyStatusStore.shared.setMuteHotkeyUnavailable(binding)
+        }
         // Mirrors the menu action without restoring/focusing our window, which
         // would steal focus. The tap defers to the menu for a chord the menu
         // carries (⌘⇧A by default), and answers any other binding itself,
@@ -312,9 +320,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.connectedServerViewController?.performToggleMicrophoneShortcut(announceStatus: true)
         }
 
-        configureHotkeyMonitors(with: preferencesStore.preferences)
-
-        // Reconfigure the monitors whenever the mode, key, or scope changes.
+        // Installs the monitors AND reconfigures them whenever the mode, key, or
+        // scope changes: `@Published` replays the current value synchronously on
+        // subscription, so this covers the initial setup too. Calling
+        // configureHotkeyMonitors() here as well would register the hotkey twice
+        // at launch (unregistering and re-registering it in the process).
         // NOTE: @Published fires in willSet, so the sink must use the value the
         // publisher delivers — reading preferencesStore.preferences here would
         // return the OLD value and reconfigure with stale settings.
@@ -361,9 +371,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // User-configurable global mic-toggle binding; the default is
             // ⌘⇧ + whatever key TYPES "a" on the current layout (key codes
             // are positional — hardcoding 0 made ⌘⇧Q toggle the mic on
-            // AZERTY). A user whose chord collides with another app's
-            // shortcut (the listen-only tap can't swallow) picks a
-            // different binding instead of us keeping per-app ignore lists.
+            // AZERTY). A global chord is taken before the app in front sees
+            // it, so one that another app uses stops working there — the
+            // user picks a different binding, we keep no per-app ignore list.
             muteHotkeyMonitor.configure(
                 binding: prefs.muteHotkeyBinding ?? HotkeyBinding.defaultMuteHotkey(),
                 scope: .global,

@@ -7,13 +7,23 @@
 //  key+modifier combos, AND pure-modifier chords (⌘⌃), each either app-focused
 //  or global.
 //
-//  Global scope uses a listen-only CGEventTap (.cgSessionEventTap, .listenOnly)
-//  gated by Input Monitoring — available to sandboxed / App Store apps. It
-//  DETECTS the hotkey system-wide but cannot SWALLOW it: a consuming (.defaultTap)
-//  tap needs Accessibility, which the App Sandbox blocks. So a global hotkey is
-//  seen by the app AND still reaches the frontmost app. (Carbon RegisterEventHotKey
-//  was tried and rejected — it doesn't swallow either, and can't do bare keys /
-//  modifier-only chords.) True global swallowing would require un-sandboxing.
+//  Global scope routes by the shape of the binding:
+//
+//  - Anything with a key code registers through Carbon RegisterEventHotKey. No
+//    permission is needed and the chord IS swallowed: the WindowServer takes it
+//    before the frontmost app sees it. Bare keys work, and a held key delivers
+//    one press/release pair with no autorepeat. Measured on a sandboxed build
+//    with physical keypresses, then reproduced on a second machine — see issue
+//    #41. (The earlier note here claiming the opposite described the
+//    KeyboardShortcuts library, not a measurement.)
+//  - A pure-modifier chord (⌘⌃) has no key code, and RegisterEventHotKey
+//    requires one — 0 is a real key — so it stays on a listen-only CGEventTap
+//    (.cgSessionEventTap, .listenOnly) gated by Input Monitoring. That tap
+//    DETECTS the chord system-wide but cannot SWALLOW it: a consuming
+//    (.defaultTap) tap needs Accessibility, which the App Sandbox blocks.
+//
+//  Known limit: secure input (a password field) suspends a Carbon hotkey. It
+//  resumes on its own once the field is gone.
 //
 //  App-focused (local) scope uses an NSEvent local monitor (no permission), and
 //  CAN swallow the matched key — local monitors consume events destined for our
@@ -62,8 +72,13 @@ private final class CarbonHotKeyCenter {
     private init() {}
 
     /// Registers `binding` and returns the id to unregister with, or nil when
-    /// the system refuses it — most often because another app already owns the
-    /// chord. Callers fall back to the tap in that case.
+    /// the system refuses it.
+    ///
+    /// Measured: macOS refuses ONLY a duplicate within the same process
+    /// (`eventHotKeyExistsErr`, -9878). A chord another process already holds is
+    /// granted — both registrants then receive it — and so are the system ones
+    /// (⌘Space, ⌘Tab, ⌃↑). So a refusal here means one thing only: our own two
+    /// hotkeys carry the same chord.
     func register(_ binding: HotkeyBinding, onEvent: @escaping (Bool) -> Void) -> UInt32? {
         guard let keyCode = binding.keyCode else { return nil }
         installHandlerIfNeeded()
@@ -97,8 +112,14 @@ private final class CarbonHotKeyCenter {
     }
 
     /// Whether the system would hand us this chord — asked by registering it and
-    /// letting it go straight away. Only the OS can answer: a chord another app
-    /// already owns is refused, and there is no way to enumerate those.
+    /// letting it go straight away.
+    ///
+    /// In practice this only ever catches OUR OWN collision: push-to-talk and
+    /// the mic toggle carrying the same chord, where the second registration is
+    /// refused and that hotkey silently never runs. A chord held by another app
+    /// is granted (see `register`), and a chord an app handles internally — a
+    /// menu item, a DAW's key map — is invisible to every API: we simply take
+    /// the key from it, which is what a global hotkey is for.
     ///
     /// Callers must exclude the binding we ourselves currently hold, or it reads
     /// as taken because of us.
@@ -156,6 +177,9 @@ final class HotkeyMonitor {
 
     var onPress: (() -> Void)?
     var onRelease: (() -> Void)?
+    /// Called with the binding another app owns, or nil once the hotkey runs
+    /// again. Called on the thread that configures the monitor — the main one.
+    var onChordUnavailableChange: ((HotkeyBinding?) -> Void)?
 
     private var binding: HotkeyBinding?
     private var scope: Scope = .local
@@ -178,9 +202,15 @@ final class HotkeyMonitor {
     /// not yet granted — the caller reconfigures after a grant.
     private(set) var isAwaitingGlobalPermission = false
 
-    /// Set when another app owns the chord, so the hotkey is simply not running.
-    /// Surfaced in Preferences: silence here reads as "the app is broken".
-    private(set) var isChordUnavailable = false
+    /// Set when the registration was refused — our two hotkeys carry the same
+    /// chord and only one of them can run. Surfaced in Preferences: silence here
+    /// reads as "the app is broken".
+    private(set) var isChordUnavailable = false {
+        didSet {
+            guard oldValue != isChordUnavailable else { return }
+            onChordUnavailableChange?(isChordUnavailable ? binding : nil)
+        }
+    }
 
     func configure(
         binding: HotkeyBinding?,
@@ -211,18 +241,18 @@ final class HotkeyMonitor {
         }
     }
 
-    /// A refusal here means another app already owns the chord. We deliberately
-    /// do NOT fall back to the tap: that would ask for Input Monitoring out of
-    /// nowhere and then fire on top of whatever the other app does with the same
-    /// press. Better to leave the hotkey plainly unavailable and say so — the
-    /// recorder tests availability up front, so this is the case where a chord
-    /// was taken by someone else AFTER it was chosen.
+    /// A refusal here means our other hotkey already carries this chord (the
+    /// only case macOS refuses — see `CarbonHotKeyCenter.register`). We do NOT
+    /// fall back to the tap: it would ask for Input Monitoring out of nowhere,
+    /// and the chord would still be answered twice. Better to leave this one
+    /// plainly inactive and say so in Preferences. The recorder rejects the
+    /// collision up front, so this is the config that predates that check.
     private func installCarbonHotKey(_ binding: HotkeyBinding) {
         guard let id = CarbonHotKeyCenter.shared.register(binding, onEvent: { [weak self] pressed in
             self?.setPressed(pressed)
         }) else {
             isChordUnavailable = true
-            AudioLogger.log("[Hotkey] %@ is owned by another app — hotkey inactive",
+            AudioLogger.log("[Hotkey] %@ is already registered by our other hotkey — this one inactive",
                             binding.displayString)
             return
         }
