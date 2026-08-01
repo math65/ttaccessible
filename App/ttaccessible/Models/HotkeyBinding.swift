@@ -128,6 +128,42 @@ struct HotkeyBinding: Codable, Equatable {
     /// no character at all.
     var menuKeyEquivalent: (characters: String, modifiers: NSEvent.ModifierFlags)? {
         guard let keyCode else { return nil }
+        return rawMenuKeyEquivalent(for: keyCode)
+    }
+
+    /// What may safely be installed on a main-menu item for this binding, or nil
+    /// when the item must carry no shortcut at all. A binding that types into a
+    /// focused field is withheld from the menu: an item carrying a bare
+    /// `keyEquivalent` answers it before the field sees it, so the mic would
+    /// toggle mid-sentence. The tap declines the same bindings while a field is
+    /// focused (`HotkeyMonitor.handleTapEvent`) — both halves have to withhold or
+    /// the problem just moves from one to the other.
+    var safeMenuKeyEquivalent: (characters: String, modifiers: NSEvent.ModifierFlags)? {
+        typesIntoTextFields ? nil : menuKeyEquivalent
+    }
+
+    /// True when pressing this binding with a text field focused would insert a
+    /// character. ⇧ is not protective — ⇧K still types "K"; only ⌘, ⌃ or ⌥ put a
+    /// chord out of reach of ordinary typing. F13–F20, arrows and Esc type
+    /// nothing, so they stay usable bare, which is the point of binding them.
+    var typesIntoTextFields: Bool {
+        guard modifiers.isDisjoint(with: [.command, .control, .option]) else { return false }
+        guard let scalar = menuKeyEquivalent?.characters.unicodeScalars.first else { return false }
+        return Self.isPrintable(scalar)
+    }
+
+    /// Whether a scalar would insert a visible character if left alone. Function
+    /// and navigation keys map into the F700–F8FF private-use range and type
+    /// nothing. The single rule behind both the menu half and the tap half, so
+    /// the two can't drift apart.
+    static func isPrintable(_ scalar: UnicodeScalar) -> Bool {
+        scalar.value >= 0x20 && scalar.value != 0x7F
+            && (scalar.value < 0xF700 || scalar.value > 0xF8FF)
+    }
+
+    private func rawMenuKeyEquivalent(
+        for keyCode: Int
+    ) -> (characters: String, modifiers: NSEvent.ModifierFlags)? {
         if let scalarValue = Self.menuFunctionKeyScalars[keyCode],
            let scalar = UnicodeScalar(UInt32(scalarValue)) {
             return (String(Character(scalar)), modifiers)

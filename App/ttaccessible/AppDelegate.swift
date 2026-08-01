@@ -219,6 +219,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// owns that binding in every focus state, which is the same one-chord
     /// contract by a different route.
     ///
+    /// A binding that types (a bare or ⇧-only printable key) is withheld the same
+    /// way: an item carrying it would answer the key before a focused chat field
+    /// did, toggling the mic mid-sentence. The tap declines it while a field is
+    /// focused and answers it otherwise, so the chord still works everywhere it
+    /// isn't being typed.
+    ///
     /// Takes the preferences rather than reading the store: this also runs from
     /// the `$preferences` sink, where `@Published` fires in willSet and the
     /// stored property still holds the OLD value.
@@ -231,7 +237,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         let binding = preferences.muteHotkeyBinding ?? HotkeyBinding.defaultMuteHotkey()
-        if let equivalent = binding.menuKeyEquivalent {
+        if let equivalent = binding.safeMenuKeyEquivalent {
             item.keyEquivalent = equivalent.characters
             item.keyEquivalentModifierMask = equivalent.modifiers
         } else {

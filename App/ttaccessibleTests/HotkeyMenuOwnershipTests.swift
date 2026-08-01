@@ -136,6 +136,90 @@ final class HotkeyMenuOwnershipTests: XCTestCase {
                                          modifiers: equivalent.modifiers))
     }
 
+    // MARK: - Bindings that type must not steal the keystroke
+
+    private func binding(_ keyCode: Int, _ mods: NSEvent.ModifierFlags, _ label: String) -> HotkeyBinding {
+        HotkeyBinding(keyCode: keyCode, modifiers: mods, keyLabel: label)
+    }
+
+    func testBarePrintableKeyIsRecognisedAsTyping() {
+        // keyCode 46 is M on ANSI. Bound bare, it has to keep typing into the
+        // chat field instead of toggling the mic mid-sentence.
+        XCTAssertTrue(binding(46, [], "M").typesIntoTextFields)
+    }
+
+    func testShiftAloneDoesNotProtectABinding() {
+        // ⇧M still types "M" — shift is part of the character, not an escape
+        // from the keyboard.
+        XCTAssertTrue(binding(46, [.shift], "M").typesIntoTextFields)
+    }
+
+    func testCommandControlOrOptionMakeABindingNonTyping() {
+        // Each of the three on its own puts the chord out of reach of typing.
+        XCTAssertFalse(binding(46, [.command], "M").typesIntoTextFields)
+        XCTAssertFalse(binding(46, [.control], "M").typesIntoTextFields)
+        XCTAssertFalse(binding(46, [.option], "M").typesIntoTextFields)
+    }
+
+    func testBareSpaceIsTyping() {
+        // Space is the example the model's own header offers, and it is the one
+        // most likely to be bound bare.
+        XCTAssertTrue(binding(49, [], "Space").typesIntoTextFields)
+    }
+
+    func testBareFunctionKeysAreNotTyping() {
+        // F13–F20 type nothing and carry no system function — staying bindable
+        // bare is the entire reason commit 3 named them.
+        XCTAssertFalse(binding(105, [], "F13").typesIntoTextFields)
+        XCTAssertFalse(binding(96, [], "F5").typesIntoTextFields)
+    }
+
+    func testBareArrowKeyIsNotTyping() {
+        XCTAssertFalse(binding(126, [], "\u{2191}").typesIntoTextFields)
+    }
+
+    func testModifierOnlyChordIsNotTyping() {
+        XCTAssertFalse(HotkeyBinding(keyCode: nil, modifiers: [.command, .control], keyLabel: nil)
+            .typesIntoTextFields)
+    }
+
+    func testTypingBindingIsWithheldFromTheMenu() {
+        // The menu half: no key equivalent is installed at all, so AppKit never
+        // answers the key ahead of the focused field.
+        XCTAssertNil(binding(46, [], "M").safeMenuKeyEquivalent)
+        XCTAssertNil(binding(49, [], "Space").safeMenuKeyEquivalent)
+    }
+
+    func testNonTypingBindingStillReachesTheMenu() {
+        // Withholding must not cost the safe bindings their menu shortcut —
+        // that shortcut is what makes one chord work while the app is focused.
+        XCTAssertEqual(binding(46, [.command, .option], "M").safeMenuKeyEquivalent?.characters, "m")
+        XCTAssertEqual(binding(105, [], "F13").safeMenuKeyEquivalent?.characters,
+                       String(UnicodeScalar(UInt32(NSF13FunctionKey))!))
+    }
+
+    func testWithheldBindingIsAlsoNotOwnedByTheMenu() {
+        // The two halves have to agree in this direction too: since nothing is
+        // installed, the ownership check must report the chord as unowned, which
+        // is what routes it to the tap — where the focused-field guard then
+        // declines it. Both withhold; neither acts while typing.
+        let typing = binding(46, [], "M")
+        XCTAssertNil(typing.safeMenuKeyEquivalent)
+        let menu = NSMenu()
+        menu.addItem(withTitle: "Microphone", action: nil, keyEquivalent: "")
+        XCTAssertFalse(HotkeyMonitor.menu(menu, carries: "m", modifiers: []))
+    }
+
+    func testPrintabilityRuleMatchesTheLocalPath() {
+        // One rule behind the menu, the tap and the local monitor. If these
+        // diverge, a key is swallowed on one path and typed on another.
+        XCTAssertTrue(HotkeyBinding.isPrintable(UnicodeScalar("m")))
+        XCTAssertTrue(HotkeyBinding.isPrintable(UnicodeScalar(" ")))
+        XCTAssertFalse(HotkeyBinding.isPrintable(UnicodeScalar(UInt32(NSF13FunctionKey))!))
+        XCTAssertFalse(HotkeyBinding.isPrintable(UnicodeScalar(UInt32(NSUpArrowFunctionKey))!))
+        XCTAssertFalse(HotkeyBinding.isPrintable(UnicodeScalar(0x7F)))
+    }
+
     func testComparableModifiersDropsHardwareOnlyFlags() {
         // An F-key press carries .function and a keypad key .numericPad, neither
         // of which a menu declares — left in, nothing would ever match.

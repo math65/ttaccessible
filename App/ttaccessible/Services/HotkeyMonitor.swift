@@ -189,6 +189,13 @@ final class HotkeyMonitor {
         case .keyDown:
             let autorepeat = event.getIntegerValueField(.keyboardEventAutorepeat) != 0
             guard keyCode == binding.keyCode, mods == binding.modifiers, menuOwnsPress() == false else { return }
+            // A binding that types must keep typing into our own focused field —
+            // the field wins over the mic toggle there, exactly as it does on the
+            // local path. Only checked while WE are frontmost: the whole point of
+            // a global binding is to act in other apps, whatever has focus there.
+            // Evaluated after the chord matched, so ordinary typing never pays
+            // for the layout lookup.
+            if NSApp.isActive, binding.typesIntoTextFields, Self.isTextInputFocused() { return }
             if autorepeat == false { setPressed(true) }
         case .keyUp:
             guard keyCode == binding.keyCode else { return }
@@ -253,10 +260,11 @@ final class HotkeyMonitor {
 
     /// Whether the event would insert a visible character if left alone
     /// (excludes function/navigation keys, which map into the F700 range).
+    /// Shares `HotkeyBinding.isPrintable` with the global path and the menu, so
+    /// all three agree on which keys a focused field gets to keep.
     private static func isPrintable(_ event: NSEvent) -> Bool {
         guard let scalar = event.charactersIgnoringModifiers?.unicodeScalars.first else { return false }
-        return scalar.value >= 0x20 && scalar.value != 0x7F
-            && (scalar.value < 0xF700 || scalar.value > 0xF8FF)
+        return HotkeyBinding.isPrintable(scalar)
     }
 
     private static func isTextInputFocused() -> Bool {
@@ -301,7 +309,13 @@ final class HotkeyMonitor {
     /// `keyEquivalent` — so letters, punctuation and F-keys all match by the
     /// same rule.
     private static func mainMenuOwns(_ event: CGEvent) -> Bool {
-        guard let mainMenu = NSApp.mainMenu,
+        // The main menu is inert for the duration of a modal session, so an item
+        // carrying the chord will never answer it — deferring would leave the mic
+        // toggle dead while an alert is up, which is when cutting your mic matters
+        // most. (`isEnabled` is not the test to use instead: with an auto-enabling
+        // menu it is only refreshed when the menu is actually displayed.)
+        guard NSApp.modalWindow == nil,
+              let mainMenu = NSApp.mainMenu,
               let nsEvent = NSEvent(cgEvent: event),
               let characters = nsEvent.charactersIgnoringModifiers?.lowercased(),
               characters.isEmpty == false else { return false }
