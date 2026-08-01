@@ -240,9 +240,10 @@ final class HotkeyMonitor {
         switch event.type {
         case .keyDown:
             guard Int(event.keyCode) == binding.keyCode, mods == binding.modifiers else { return false }
-            // A bare printable key (no modifiers) must keep typing into a
-            // focused text field — the field wins over push-to-talk there.
-            if binding.modifiers.isEmpty, Self.isPrintable(event), Self.isTextInputFocused() {
+            // A binding the focused field would use — a printable key, Return,
+            // Tab, an arrow — must keep reaching it: the field wins over
+            // push-to-talk there. Same predicate as the global tap and the menu.
+            if binding.typesIntoTextFields, Self.isTextInputFocused() {
                 return false
             }
             if event.isARepeat == false { setPressed(true) }
@@ -256,15 +257,6 @@ final class HotkeyMonitor {
         default:
             return false
         }
-    }
-
-    /// Whether the event would insert a visible character if left alone
-    /// (excludes function/navigation keys, which map into the F700 range).
-    /// Shares `HotkeyBinding.isPrintable` with the global path and the menu, so
-    /// all three agree on which keys a focused field gets to keep.
-    private static func isPrintable(_ event: NSEvent) -> Bool {
-        guard let scalar = event.charactersIgnoringModifiers?.unicodeScalars.first else { return false }
-        return HotkeyBinding.isPrintable(scalar)
     }
 
     private static func isTextInputFocused() -> Bool {

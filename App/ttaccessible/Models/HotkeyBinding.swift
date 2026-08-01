@@ -142,20 +142,41 @@ struct HotkeyBinding: Codable, Equatable {
         typesIntoTextFields ? nil : menuKeyEquivalent
     }
 
-    /// True when pressing this binding with a text field focused would insert a
-    /// character. ⇧ is not protective — ⇧K still types "K"; only ⌘, ⌃ or ⌥ put a
-    /// chord out of reach of ordinary typing. F13–F20, arrows and Esc type
-    /// nothing, so they stay usable bare, which is the point of binding them.
+    /// Key codes a focused text field consumes even though they insert no
+    /// visible character: Return and Enter insert a newline or send, Tab moves
+    /// focus, Delete edits, and the arrows / Home / End / Page keys move the
+    /// caret. "Would the field use this key" is the real question — "is it
+    /// printable" only answers part of it.
+    ///
+    /// F1–F20 are deliberately absent. They do nothing in a text field, which is
+    /// exactly what makes them the one family safe to bind bare.
+    private static let textEditingKeyCodes: Set<Int> = [
+        36,   // Return
+        76,   // Enter
+        48,   // Tab
+        51,   // Delete
+        117,  // Forward Delete
+        123, 124, 125, 126,  // ← → ↓ ↑
+        115, 119,            // Home, End
+        116, 121             // Page Up, Page Down
+    ]
+
+    /// True when pressing this binding with a text field focused would type into
+    /// it or move around inside it. ⇧ is not protective — ⇧K still types "K", and
+    /// ⇧Tab still moves focus; only ⌘, ⌃ or ⌥ put a chord out of reach of
+    /// ordinary editing.
     var typesIntoTextFields: Bool {
         guard modifiers.isDisjoint(with: [.command, .control, .option]) else { return false }
+        guard let keyCode else { return false }  // a pure-modifier chord types nothing
+        if Self.textEditingKeyCodes.contains(keyCode) { return true }
         guard let scalar = menuKeyEquivalent?.characters.unicodeScalars.first else { return false }
         return Self.isPrintable(scalar)
     }
 
     /// Whether a scalar would insert a visible character if left alone. Function
     /// and navigation keys map into the F700–F8FF private-use range and type
-    /// nothing. The single rule behind both the menu half and the tap half, so
-    /// the two can't drift apart.
+    /// nothing; the navigation half of that range is caught by
+    /// `textEditingKeyCodes` above instead.
     static func isPrintable(_ scalar: UnicodeScalar) -> Bool {
         scalar.value >= 0x20 && scalar.value != 0x7F
             && (scalar.value < 0xF700 || scalar.value > 0xF8FF)

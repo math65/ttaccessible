@@ -174,8 +174,38 @@ final class HotkeyMenuOwnershipTests: XCTestCase {
         XCTAssertFalse(binding(96, [], "F5").typesIntoTextFields)
     }
 
-    func testBareArrowKeyIsNotTyping() {
-        XCTAssertFalse(binding(126, [], "\u{2191}").typesIntoTextFields)
+    func testReturnAndEnterAreTyping() {
+        // Return in the chat field sends the message; bound bare it was toggling
+        // the mic instead. It types nothing, so the printable rule alone missed
+        // it — the field still consumes it.
+        XCTAssertTrue(binding(36, [], "Return").typesIntoTextFields)
+        XCTAssertTrue(binding(76, [], "Enter").typesIntoTextFields)
+    }
+
+    func testTabAndDeleteAreTyping() {
+        // The recorder only reserves these when pressed with NO modifier, so the
+        // ⇧ variants are bindable and would otherwise steal focus movement and
+        // backspace out of a focused field.
+        XCTAssertTrue(binding(48, [.shift], "Tab").typesIntoTextFields)
+        XCTAssertTrue(binding(51, [.shift], "Delete").typesIntoTextFields)
+        XCTAssertTrue(binding(117, [], "Fwd Delete").typesIntoTextFields)
+    }
+
+    func testCaretMovementKeysAreTyping() {
+        // Arrows and the Home/End/Page family move the caret — a field in use
+        // needs them as much as it needs letters.
+        for keyCode in [123, 124, 125, 126, 115, 119, 116, 121] {
+            XCTAssertTrue(binding(keyCode, [], "key").typesIntoTextFields,
+                          "keyCode \(keyCode) must yield to a focused field")
+        }
+    }
+
+    func testEditingKeysWithACommandChordAreNotTyping() {
+        // ⌘Return / ⌥↑ are out of reach of ordinary editing, so they stay
+        // available as bindings and keep their menu shortcut.
+        XCTAssertFalse(binding(36, [.command], "Return").typesIntoTextFields)
+        XCTAssertFalse(binding(126, [.option], "\u{2191}").typesIntoTextFields)
+        XCTAssertNotNil(binding(36, [.command], "Return").safeMenuKeyEquivalent)
     }
 
     func testModifierOnlyChordIsNotTyping() {
@@ -210,9 +240,10 @@ final class HotkeyMenuOwnershipTests: XCTestCase {
         XCTAssertFalse(HotkeyMonitor.menu(menu, carries: "m", modifiers: []))
     }
 
-    func testPrintabilityRuleMatchesTheLocalPath() {
-        // One rule behind the menu, the tap and the local monitor. If these
-        // diverge, a key is swallowed on one path and typed on another.
+    func testPrintabilityCoversTheCharacterHalfOfTheRule() {
+        // `typesIntoTextFields` is the one predicate the menu, the tap and the
+        // local monitor all consult; this is the character half of it. The keys
+        // that type nothing but a field still uses are covered by key code above.
         XCTAssertTrue(HotkeyBinding.isPrintable(UnicodeScalar("m")))
         XCTAssertTrue(HotkeyBinding.isPrintable(UnicodeScalar(" ")))
         XCTAssertFalse(HotkeyBinding.isPrintable(UnicodeScalar(UInt32(NSF13FunctionKey))!))
