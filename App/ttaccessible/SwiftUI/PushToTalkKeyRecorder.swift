@@ -18,10 +18,15 @@ import SwiftUI
 /// Settings window is focused (no Input Monitoring permission required).
 final class KeyCaptureSession: ObservableObject {
     @Published private(set) var isRecording = false
-    /// Set when the last press was refused because the key types into text
-    /// fields. Shown on the button so the refusal isn't silent for a sighted
-    /// user; VoiceOver gets the full explanation as an announcement.
-    @Published private(set) var didRejectTypingKey = false
+    /// Set when the last press was refused. Shown on the button so the refusal
+    /// isn't silent for a sighted user; VoiceOver gets the full explanation as
+    /// an announcement.
+    @Published private(set) var rejectionTitleKey: String?
+
+    /// The binding this field currently holds. A chord reads as taken when we
+    /// are the ones holding it, so re-recording the same one must not be
+    /// refused.
+    var currentBinding: HotkeyBinding?
 
     private var monitor: Any?
     private var peakModifiers: NSEvent.ModifierFlags = []
@@ -109,7 +114,17 @@ final class KeyCaptureSession: ObservableObject {
                 // the user is still here to pick another key, rather than let
                 // them discover the hole mid-conversation.
                 guard binding.typesIntoTextFields == false else {
-                    rejectTypingKey()
+                    reject("preferences.audio.hotkey.rejected.typing",
+                           announcement: "preferences.audio.hotkey.rejected.announcement")
+                    return true
+                }
+                // Only the OS knows whether another app already owns the chord,
+                // and it answers by refusing to register it. Ask now, while the
+                // user is still here to pick another one — discovering it later
+                // means a hotkey that silently does nothing.
+                guard HotkeyMonitor.isChordAvailable(binding, current: currentBinding) else {
+                    reject("preferences.audio.hotkey.rejected.taken",
+                           announcement: "preferences.audio.hotkey.rejected.taken.announcement")
                     return true
                 }
                 commit(binding)
@@ -123,14 +138,13 @@ final class KeyCaptureSession: ObservableObject {
 
     /// Stays in recording mode: the user keeps the field and can try another key
     /// straight away, which is what the announcement tells them to do.
-    private func rejectTypingKey() {
-        didRejectTypingKey = true
+    private func reject(_ titleKey: String, announcement: String) {
+        rejectionTitleKey = titleKey
         NSAccessibility.post(
             element: NSApp.accessibilityWindow() ?? NSApp as Any,
             notification: .announcementRequested,
             userInfo: [
-                NSAccessibility.NotificationUserInfoKey.announcement:
-                    L10n.text("preferences.audio.hotkey.rejected.announcement"),
+                NSAccessibility.NotificationUserInfoKey.announcement: L10n.text(announcement),
                 NSAccessibility.NotificationUserInfoKey.priority:
                     NSAccessibilityPriorityLevel.high.rawValue
             ]
@@ -148,7 +162,7 @@ final class KeyCaptureSession: ObservableObject {
         peakModifiers = []
         onCommit = nil
         isRecording = false
-        didRejectTypingKey = false
+        rejectionTitleKey = nil
     }
 }
 
@@ -170,6 +184,9 @@ struct HotkeyRecorderButton: View {
             if session.isRecording {
                 session.cancel()
             } else {
+                // The field's own binding is available by definition — without
+                // this, re-recording the same chord reads as taken by us.
+                session.currentBinding = value
                 session.begin { binding in
                     onCommit(binding)
                 }
@@ -188,9 +205,10 @@ struct HotkeyRecorderButton: View {
 
     private var buttonTitle: String {
         guard session.isRecording else { return valueText }
-        return session.didRejectTypingKey
-            ? L10n.text("preferences.audio.hotkey.rejected.typing")
-            : L10n.text("preferences.audio.pushToTalk.key.recording")
+        if let rejectionTitleKey = session.rejectionTitleKey {
+            return L10n.text(rejectionTitleKey)
+        }
+        return L10n.text("preferences.audio.pushToTalk.key.recording")
     }
 
     private var valueText: String {

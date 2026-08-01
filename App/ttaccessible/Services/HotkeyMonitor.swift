@@ -21,6 +21,7 @@
 //
 
 import AppKit
+import Carbon.HIToolbox
 import CoreGraphics
 
 /// Whether the app currently has (or can request) the Input Monitoring privilege
@@ -35,6 +36,115 @@ enum InputMonitoringPermission {
     static func request() -> Bool {
         if CGPreflightListenEventAccess() { return true }
         return CGRequestListenEventAccess()
+    }
+}
+
+/// Process-wide registry for Carbon hotkeys.
+///
+/// `RegisterEventHotKey` needs no permission and — measured, not assumed — the
+/// WindowServer intercepts the chord before any app sees it, including our own:
+/// with ⌘⇧A registered here AND carried by a main-menu item, the Carbon handler
+/// fires and the menu item never does. That is what makes it strictly better
+/// than the listen-only tap, which is stuck asking for Input Monitoring and
+/// still lets the key through.
+///
+/// One handler per process (Carbon delivers every hotkey to every installed
+/// handler), so registrations are multiplexed by `EventHotKeyID.id`.
+private final class CarbonHotKeyCenter {
+    static let shared = CarbonHotKeyCenter()
+
+    /// `true` = pressed, `false` = released.
+    private var handlers: [UInt32: (Bool) -> Void] = [:]
+    private var refs: [UInt32: EventHotKeyRef] = [:]
+    private var nextID: UInt32 = 1
+    private var handlerInstalled = false
+
+    private init() {}
+
+    /// Registers `binding` and returns the id to unregister with, or nil when
+    /// the system refuses it — most often because another app already owns the
+    /// chord. Callers fall back to the tap in that case.
+    func register(_ binding: HotkeyBinding, onEvent: @escaping (Bool) -> Void) -> UInt32? {
+        guard let keyCode = binding.keyCode else { return nil }
+        installHandlerIfNeeded()
+
+        let id = nextID
+        nextID += 1
+        var ref: EventHotKeyRef?
+        let status = RegisterEventHotKey(
+            UInt32(keyCode),
+            Self.carbonModifiers(binding.modifiers),
+            EventHotKeyID(signature: OSType(0x54544131), id: id),  // 'TTA1'
+            GetApplicationEventTarget(),
+            0,
+            &ref
+        )
+        guard status == noErr, let ref else {
+            AudioLogger.log("[Hotkey] RegisterEventHotKey FAILED status=%d for %@",
+                            Int(status), binding.displayString)
+            return nil
+        }
+        refs[id] = ref
+        handlers[id] = onEvent
+        return id
+    }
+
+    func unregister(_ id: UInt32) {
+        if let ref = refs.removeValue(forKey: id) {
+            UnregisterEventHotKey(ref)
+        }
+        handlers.removeValue(forKey: id)
+    }
+
+    /// Whether the system would hand us this chord — asked by registering it and
+    /// letting it go straight away. Only the OS can answer: a chord another app
+    /// already owns is refused, and there is no way to enumerate those.
+    ///
+    /// Callers must exclude the binding we ourselves currently hold, or it reads
+    /// as taken because of us.
+    func isAvailable(_ binding: HotkeyBinding) -> Bool {
+        guard let keyCode = binding.keyCode else { return false }
+        var ref: EventHotKeyRef?
+        let probeID = UInt32.max  // never collides with a real registration
+        let status = RegisterEventHotKey(
+            UInt32(keyCode),
+            Self.carbonModifiers(binding.modifiers),
+            EventHotKeyID(signature: OSType(0x54544150), id: probeID),  // 'TTAP'
+            GetApplicationEventTarget(),
+            0,
+            &ref
+        )
+        if let ref { UnregisterEventHotKey(ref) }
+        return status == noErr
+    }
+
+    private func installHandlerIfNeeded() {
+        guard handlerInstalled == false else { return }
+        handlerInstalled = true
+        var specs = [
+            EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed)),
+            EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyReleased))
+        ]
+        InstallEventHandler(GetApplicationEventTarget(), { _, event, _ -> OSStatus in
+            guard let event else { return noErr }
+            var id = EventHotKeyID()
+            let status = GetEventParameter(event, EventParamName(kEventParamDirectObject),
+                                           EventParamType(typeEventHotKeyID), nil,
+                                           MemoryLayout<EventHotKeyID>.size, nil, &id)
+            guard status == noErr else { return noErr }
+            let pressed = GetEventKind(event) == UInt32(kEventHotKeyPressed)
+            CarbonHotKeyCenter.shared.handlers[id.id]?(pressed)
+            return noErr
+        }, 2, &specs, nil, nil)
+    }
+
+    private static func carbonModifiers(_ flags: NSEvent.ModifierFlags) -> UInt32 {
+        var mask: UInt32 = 0
+        if flags.contains(.command) { mask |= UInt32(cmdKey) }
+        if flags.contains(.shift) { mask |= UInt32(shiftKey) }
+        if flags.contains(.option) { mask |= UInt32(optionKey) }
+        if flags.contains(.control) { mask |= UInt32(controlKey) }
+        return mask
     }
 }
 
@@ -61,11 +171,16 @@ final class HotkeyMonitor {
     private var resignActiveObserver: Any?
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
+    private var carbonHotKeyID: UInt32?
     private var isPressed = false
 
     /// Set when the global tap couldn't be created because Input Monitoring is
     /// not yet granted — the caller reconfigures after a grant.
     private(set) var isAwaitingGlobalPermission = false
+
+    /// Set when another app owns the chord, so the hotkey is simply not running.
+    /// Surfaced in Preferences: silence here reads as "the app is broken".
+    private(set) var isChordUnavailable = false
 
     func configure(
         binding: HotkeyBinding?,
@@ -84,8 +199,44 @@ final class HotkeyMonitor {
         case .local:
             installLocalMonitor(binding)
         case .global:
-            installEventTap(binding)
+            // Route by the shape of the binding. Anything with a key code goes
+            // to Carbon: no permission, and the chord is genuinely swallowed.
+            // A pure-modifier chord has no key code to register, so it is the
+            // one form still worth paying Input Monitoring for.
+            if binding.isModifierOnly {
+                installEventTap(binding)
+            } else {
+                installCarbonHotKey(binding)
+            }
         }
+    }
+
+    /// A refusal here means another app already owns the chord. We deliberately
+    /// do NOT fall back to the tap: that would ask for Input Monitoring out of
+    /// nowhere and then fire on top of whatever the other app does with the same
+    /// press. Better to leave the hotkey plainly unavailable and say so — the
+    /// recorder tests availability up front, so this is the case where a chord
+    /// was taken by someone else AFTER it was chosen.
+    private func installCarbonHotKey(_ binding: HotkeyBinding) {
+        guard let id = CarbonHotKeyCenter.shared.register(binding, onEvent: { [weak self] pressed in
+            self?.setPressed(pressed)
+        }) else {
+            isChordUnavailable = true
+            AudioLogger.log("[Hotkey] %@ is owned by another app — hotkey inactive",
+                            binding.displayString)
+            return
+        }
+        carbonHotKeyID = id
+        AudioLogger.log("[Hotkey] Carbon hotkey ACTIVE for %@ (no permission needed)",
+                        binding.displayString)
+    }
+
+    /// Whether the system would grant `binding` to us right now. `current` is the
+    /// binding this monitor already holds, if any — it is available by definition,
+    /// and would otherwise read as taken because we are the ones holding it.
+    static func isChordAvailable(_ binding: HotkeyBinding, current: HotkeyBinding?) -> Bool {
+        if let current, current == binding { return true }
+        return CarbonHotKeyCenter.shared.isAvailable(binding)
     }
 
     func stop() {
@@ -109,7 +260,12 @@ final class HotkeyMonitor {
             CFMachPortInvalidate(eventTap)
             self.eventTap = nil
         }
+        if let carbonHotKeyID {
+            CarbonHotKeyCenter.shared.unregister(carbonHotKeyID)
+            self.carbonHotKeyID = nil
+        }
         isAwaitingGlobalPermission = false
+        isChordUnavailable = false
         if isPressed {
             isPressed = false
             onRelease?()
