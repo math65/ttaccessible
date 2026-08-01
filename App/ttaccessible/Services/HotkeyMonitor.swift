@@ -7,13 +7,23 @@
 //  key+modifier combos, AND pure-modifier chords (⌘⌃), each either app-focused
 //  or global.
 //
-//  Global scope uses a listen-only CGEventTap (.cgSessionEventTap, .listenOnly)
-//  gated by Input Monitoring — available to sandboxed / App Store apps. It
-//  DETECTS the hotkey system-wide but cannot SWALLOW it: a consuming (.defaultTap)
-//  tap needs Accessibility, which the App Sandbox blocks. So a global hotkey is
-//  seen by the app AND still reaches the frontmost app. (Carbon RegisterEventHotKey
-//  was tried and rejected — it doesn't swallow either, and can't do bare keys /
-//  modifier-only chords.) True global swallowing would require un-sandboxing.
+//  Global scope routes by the shape of the binding:
+//
+//  - Anything with a key code registers through Carbon RegisterEventHotKey. No
+//    permission is needed and the chord IS swallowed: the WindowServer takes it
+//    before the frontmost app sees it. Bare keys work, and a held key delivers
+//    one press/release pair with no autorepeat. Measured on a sandboxed build
+//    with physical keypresses, then reproduced on a second machine — see issue
+//    #41. (The earlier note here claiming the opposite described the
+//    KeyboardShortcuts library, not a measurement.)
+//  - A pure-modifier chord (⌘⌃) has no key code, and RegisterEventHotKey
+//    requires one — 0 is a real key — so it stays on a listen-only CGEventTap
+//    (.cgSessionEventTap, .listenOnly) gated by Input Monitoring. That tap
+//    DETECTS the chord system-wide but cannot SWALLOW it: a consuming
+//    (.defaultTap) tap needs Accessibility, which the App Sandbox blocks.
+//
+//  Known limit: secure input (a password field) suspends a Carbon hotkey. It
+//  resumes on its own once the field is gone.
 //
 //  App-focused (local) scope uses an NSEvent local monitor (no permission), and
 //  CAN swallow the matched key — local monitors consume events destined for our
@@ -21,6 +31,7 @@
 //
 
 import AppKit
+import Carbon.HIToolbox
 import CoreGraphics
 
 /// Whether the app currently has (or can request) the Input Monitoring privilege
@@ -38,6 +49,126 @@ enum InputMonitoringPermission {
     }
 }
 
+/// Process-wide registry for Carbon hotkeys.
+///
+/// `RegisterEventHotKey` needs no permission and — measured, not assumed — the
+/// WindowServer intercepts the chord before any app sees it, including our own:
+/// with ⌘⇧A registered here AND carried by a main-menu item, the Carbon handler
+/// fires and the menu item never does. That is what makes it strictly better
+/// than the listen-only tap, which is stuck asking for Input Monitoring and
+/// still lets the key through.
+///
+/// One handler per process (Carbon delivers every hotkey to every installed
+/// handler), so registrations are multiplexed by `EventHotKeyID.id`.
+private final class CarbonHotKeyCenter {
+    static let shared = CarbonHotKeyCenter()
+
+    /// `true` = pressed, `false` = released.
+    private var handlers: [UInt32: (Bool) -> Void] = [:]
+    private var refs: [UInt32: EventHotKeyRef] = [:]
+    private var nextID: UInt32 = 1
+    private var handlerInstalled = false
+
+    private init() {}
+
+    /// Registers `binding` and returns the id to unregister with, or nil when
+    /// the system refuses it.
+    ///
+    /// Measured: macOS refuses ONLY a duplicate within the same process
+    /// (`eventHotKeyExistsErr`, -9878). A chord another process already holds is
+    /// granted — both registrants then receive it — and so are the system ones
+    /// (⌘Space, ⌘Tab, ⌃↑). So a refusal here means one thing only: our own two
+    /// hotkeys carry the same chord.
+    func register(_ binding: HotkeyBinding, onEvent: @escaping (Bool) -> Void) -> UInt32? {
+        guard let keyCode = binding.keyCode else { return nil }
+        installHandlerIfNeeded()
+
+        let id = nextID
+        nextID += 1
+        var ref: EventHotKeyRef?
+        let status = RegisterEventHotKey(
+            UInt32(keyCode),
+            Self.carbonModifiers(binding.modifiers),
+            EventHotKeyID(signature: OSType(0x54544131), id: id),  // 'TTA1'
+            GetApplicationEventTarget(),
+            0,
+            &ref
+        )
+        guard status == noErr, let ref else {
+            AudioLogger.log("[Hotkey] RegisterEventHotKey FAILED status=%d for %@",
+                            Int(status), binding.displayString)
+            return nil
+        }
+        refs[id] = ref
+        handlers[id] = onEvent
+        return id
+    }
+
+    func unregister(_ id: UInt32) {
+        if let ref = refs.removeValue(forKey: id) {
+            UnregisterEventHotKey(ref)
+        }
+        handlers.removeValue(forKey: id)
+    }
+
+    /// Whether the system would hand us this chord — asked by registering it and
+    /// letting it go straight away.
+    ///
+    /// In practice this only ever catches OUR OWN collision: push-to-talk and
+    /// the mic toggle carrying the same chord, where the second registration is
+    /// refused and that hotkey silently never runs. A chord held by another app
+    /// is granted (see `register`), and a chord an app handles internally — a
+    /// menu item, a DAW's key map — is invisible to every API: we simply take
+    /// the key from it, which is what a global hotkey is for.
+    ///
+    /// Callers must exclude the binding we ourselves currently hold, or it reads
+    /// as taken because of us.
+    func isAvailable(_ binding: HotkeyBinding) -> Bool {
+        guard let keyCode = binding.keyCode else { return false }
+        var ref: EventHotKeyRef?
+        let probeID = UInt32.max  // never collides with a real registration
+        let status = RegisterEventHotKey(
+            UInt32(keyCode),
+            Self.carbonModifiers(binding.modifiers),
+            EventHotKeyID(signature: OSType(0x54544150), id: probeID),  // 'TTAP'
+            GetApplicationEventTarget(),
+            0,
+            &ref
+        )
+        if let ref { UnregisterEventHotKey(ref) }
+        return status == noErr
+    }
+
+    private func installHandlerIfNeeded() {
+        guard handlerInstalled == false else { return }
+        handlerInstalled = true
+        var specs = [
+            EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed)),
+            EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyReleased))
+        ]
+        InstallEventHandler(GetApplicationEventTarget(), { _, event, _ -> OSStatus in
+            guard let event else { return noErr }
+            var id = EventHotKeyID()
+            let status = GetEventParameter(event, EventParamName(kEventParamDirectObject),
+                                           EventParamType(typeEventHotKeyID), nil,
+                                           MemoryLayout<EventHotKeyID>.size, nil, &id)
+            guard status == noErr else { return noErr }
+            let pressed = GetEventKind(event) == UInt32(kEventHotKeyPressed)
+            CarbonHotKeyCenter.shared.handlers[id.id]?(pressed)
+            return noErr
+        }, 2, &specs, nil, nil)
+    }
+
+    private static func carbonModifiers(_ flags: NSEvent.ModifierFlags) -> UInt32 {
+        var mask: UInt32 = 0
+        if flags.contains(.command) { mask |= UInt32(cmdKey) }
+        if flags.contains(.shift) { mask |= UInt32(shiftKey) }
+        if flags.contains(.option) { mask |= UInt32(optionKey) }
+        if flags.contains(.control) { mask |= UInt32(controlKey) }
+        return mask
+    }
+}
+
 final class HotkeyMonitor {
     enum Scope {
         case local   // app-focused only
@@ -46,37 +177,53 @@ final class HotkeyMonitor {
 
     var onPress: (() -> Void)?
     var onRelease: (() -> Void)?
+    /// Called when the hotkey can't run — with what is wrong, or nil once it
+    /// runs again. Called on the thread that configures the monitor: the main one.
+    var onUnavailabilityChange: ((Unavailability?) -> Void)?
+
+    /// Why a configured hotkey isn't running. Both are surfaced in Preferences:
+    /// silence at that point reads as "the app is broken".
+    enum Unavailability: Equatable {
+        /// Our two hotkeys carry the same chord; macOS registers it once, so the
+        /// second one silently never fires.
+        case collidesWithOurOtherHotkey(HotkeyBinding)
+        /// A key the chat field needs, bound globally. Carbon takes it before
+        /// any app sees it — there is no giving it back to the field the way the
+        /// local monitor and the menu do, so it would block typing everywhere.
+        /// The recorder refuses these; this catches settings that predate it.
+        case wouldBlockTyping(HotkeyBinding)
+    }
 
     private var binding: HotkeyBinding?
     private var scope: Scope = .local
-    /// When true, the global tap defers to the main menu while the app is
-    /// frontmost — but only for a chord the menu actually carries. A menu key
-    /// equivalent is delivered to the focused app whatever the (listen-only) tap
-    /// does, so acting on it here too would double-fire; a chord no menu item
-    /// owns has no other handler, so the tap stays the one that answers it.
-    private var deferToMainMenuWhenActive = false
     private var wantsReleaseEvents = true
 
     private var localMonitor: Any?
     private var resignActiveObserver: Any?
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
+    private var carbonHotKeyID: UInt32?
     private var isPressed = false
 
     /// Set when the global tap couldn't be created because Input Monitoring is
     /// not yet granted — the caller reconfigures after a grant.
     private(set) var isAwaitingGlobalPermission = false
 
+    private(set) var unavailability: Unavailability? {
+        didSet {
+            guard oldValue != unavailability else { return }
+            onUnavailabilityChange?(unavailability)
+        }
+    }
+
     func configure(
         binding: HotkeyBinding?,
         scope: Scope,
-        deferToMainMenuWhenActive: Bool = false,
         wantsReleaseEvents: Bool = true
     ) {
         stop()
         self.binding = binding
         self.scope = scope
-        self.deferToMainMenuWhenActive = deferToMainMenuWhenActive
         self.wantsReleaseEvents = wantsReleaseEvents
 
         guard let binding, binding.isValid else { return }
@@ -84,8 +231,50 @@ final class HotkeyMonitor {
         case .local:
             installLocalMonitor(binding)
         case .global:
-            installEventTap(binding)
+            // Route by the shape of the binding. Anything with a key code goes
+            // to Carbon: no permission, and the chord is genuinely swallowed.
+            // A pure-modifier chord has no key code to register, so it is the
+            // one form still worth paying Input Monitoring for.
+            if binding.isModifierOnly {
+                installEventTap(binding)
+            } else if binding.typesIntoTextFields {
+                // Swallowed globally means swallowed HERE too, including in the
+                // chat field. Refuse rather than take the key away everywhere.
+                unavailability = .wouldBlockTyping(binding)
+                AudioLogger.log("[Hotkey] %@ types into text fields — refused as a global hotkey",
+                                binding.displayString)
+            } else {
+                installCarbonHotKey(binding)
+            }
         }
+    }
+
+    /// A refusal here means our other hotkey already carries this chord (the
+    /// only case macOS refuses — see `CarbonHotKeyCenter.register`). We do NOT
+    /// fall back to the tap: it would ask for Input Monitoring out of nowhere,
+    /// and the chord would still be answered twice. Better to leave this one
+    /// plainly inactive and say so in Preferences. The recorder rejects the
+    /// collision up front, so this is the config that predates that check.
+    private func installCarbonHotKey(_ binding: HotkeyBinding) {
+        guard let id = CarbonHotKeyCenter.shared.register(binding, onEvent: { [weak self] pressed in
+            self?.setPressed(pressed)
+        }) else {
+            unavailability = .collidesWithOurOtherHotkey(binding)
+            AudioLogger.log("[Hotkey] %@ is already registered by our other hotkey — this one inactive",
+                            binding.displayString)
+            return
+        }
+        carbonHotKeyID = id
+        AudioLogger.log("[Hotkey] Carbon hotkey ACTIVE for %@ (no permission needed)",
+                        binding.displayString)
+    }
+
+    /// Whether the system would grant `binding` to us right now. `current` is the
+    /// binding this monitor already holds, if any — it is available by definition,
+    /// and would otherwise read as taken because we are the ones holding it.
+    static func isChordAvailable(_ binding: HotkeyBinding, current: HotkeyBinding?) -> Bool {
+        if let current, current == binding { return true }
+        return CarbonHotKeyCenter.shared.isAvailable(binding)
     }
 
     func stop() {
@@ -109,18 +298,28 @@ final class HotkeyMonitor {
             CFMachPortInvalidate(eventTap)
             self.eventTap = nil
         }
+        if let carbonHotKeyID {
+            CarbonHotKeyCenter.shared.unregister(carbonHotKeyID)
+            self.carbonHotKeyID = nil
+        }
         isAwaitingGlobalPermission = false
+        unavailability = nil
         if isPressed {
             isPressed = false
             onRelease?()
         }
     }
 
-    // MARK: - Global via consuming CGEventTap
+    // MARK: - Global, pure-modifier chords only, via a listen-only CGEventTap
 
+    /// Only ever installed for a pure-modifier chord — everything with a key
+    /// code goes through Carbon now. So the tap watches `flagsChanged` alone,
+    /// and never has to decide whether a menu item or a focused text field
+    /// should answer the key first: a chord of modifiers types nothing and can't
+    /// be a menu key equivalent.
     private func installEventTap(_ binding: HotkeyBinding) {
-        AudioLogger.log("[Hotkey] installEventTap binding=%@ modifierOnly=%d preflight=%d",
-                        binding.displayString, binding.isModifierOnly ? 1 : 0,
+        AudioLogger.log("[Hotkey] installEventTap binding=%@ preflight=%d",
+                        binding.displayString,
                         CGPreflightListenEventAccess() ? 1 : 0)
         guard InputMonitoringPermission.request() else {
             AudioLogger.log("[Hotkey] Input Monitoring not granted — global pending for %@", binding.displayString)
@@ -128,9 +327,7 @@ final class HotkeyMonitor {
             return
         }
 
-        let mask: CGEventMask = binding.isModifierOnly
-            ? (1 << CGEventType.flagsChanged.rawValue)
-            : (1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.keyUp.rawValue)
+        let mask: CGEventMask = 1 << CGEventType.flagsChanged.rawValue
 
         let callback: CGEventTapCallBack = { _, type, event, userInfo in
             guard let userInfo else { return Unmanaged.passUnretained(event) }
@@ -168,41 +365,9 @@ final class HotkeyMonitor {
             if let eventTap { CGEvent.tapEnable(tap: eventTap, enable: true) }
             return
         }
-        guard let binding else { return }
-        // The defer-to-menu guard suppresses PRESSES only. Releases always run —
-        // if the app becomes active between down and up, eating the keyUp
-        // would leave isPressed stuck and silently swallow the next toggle.
-        // Evaluated only once the chord has already matched, so the menu walk
-        // never runs on ordinary typing.
-        let menuOwnsPress = { self.deferToMainMenuWhenActive && NSApp.isActive && Self.mainMenuOwns(event) }
-
+        guard let binding, binding.isModifierOnly else { return }
         let mods = Self.modifierFlags(from: event.flags)
-        if binding.isModifierOnly {
-            let chordActive = mods == binding.modifiers
-            // A pure-modifier chord can't be a menu key equivalent, so the menu
-            // never owns it and there is nothing to defer to.
-            setPressed(chordActive)
-            return
-        }
-        let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
-        switch type {
-        case .keyDown:
-            let autorepeat = event.getIntegerValueField(.keyboardEventAutorepeat) != 0
-            guard keyCode == binding.keyCode, mods == binding.modifiers, menuOwnsPress() == false else { return }
-            // A binding that types must keep typing into our own focused field —
-            // the field wins over the mic toggle there, exactly as it does on the
-            // local path. Only checked while WE are frontmost: the whole point of
-            // a global binding is to act in other apps, whatever has focus there.
-            // Evaluated after the chord matched, so ordinary typing never pays
-            // for the layout lookup.
-            if NSApp.isActive, binding.typesIntoTextFields, Self.isTextInputFocused() { return }
-            if autorepeat == false { setPressed(true) }
-        case .keyUp:
-            guard keyCode == binding.keyCode else { return }
-            setPressed(false)
-        default:
-            break
-        }
+        setPressed(mods == binding.modifiers)
     }
 
     // MARK: - Local (app-focused) via NSEvent
@@ -292,51 +457,5 @@ final class HotkeyMonitor {
         if cg.contains(.maskAlternate) { flags.insert(.option) }
         if cg.contains(.maskShift) { flags.insert(.shift) }
         return flags
-    }
-
-    /// True when a main-menu item carries this exact key equivalent. AppKit
-    /// delivers it to the focused app regardless of our listen-only tap, so the
-    /// menu is the handler and the tap must not act on top of it. Compares what
-    /// AppKit itself compares — `charactersIgnoringModifiers` against
-    /// `keyEquivalent` — so letters, punctuation and F-keys all match by the
-    /// same rule.
-    private static func mainMenuOwns(_ event: CGEvent) -> Bool {
-        // The main menu is inert for the duration of a modal session, so an item
-        // carrying the chord will never answer it — deferring would leave the mic
-        // toggle dead while an alert is up, which is when cutting your mic matters
-        // most. (`isEnabled` is not the test to use instead: with an auto-enabling
-        // menu it is only refreshed when the menu is actually displayed.)
-        guard NSApp.modalWindow == nil,
-              let mainMenu = NSApp.mainMenu,
-              let nsEvent = NSEvent(cgEvent: event),
-              let characters = nsEvent.charactersIgnoringModifiers?.lowercased(),
-              characters.isEmpty == false else { return false }
-        return menu(mainMenu, carries: characters, modifiers: comparableModifiers(nsEvent.modifierFlags))
-    }
-
-    /// Menu key equivalents are declared without the layout/hardware-only flags,
-    /// so both sides are reduced to the same set before comparing.
-    static func comparableModifiers(_ flags: NSEvent.ModifierFlags) -> NSEvent.ModifierFlags {
-        flags.intersection(.deviceIndependentFlagsMask)
-            .subtracting([.capsLock, .numericPad, .function])
-    }
-
-    static func menu(
-        _ menu: NSMenu,
-        carries characters: String,
-        modifiers: NSEvent.ModifierFlags
-    ) -> Bool {
-        for item in menu.items {
-            if item.keyEquivalent.isEmpty == false,
-               item.keyEquivalent.lowercased() == characters,
-               comparableModifiers(item.keyEquivalentModifierMask) == modifiers {
-                return true
-            }
-            if let submenu = item.submenu,
-               self.menu(submenu, carries: characters, modifiers: modifiers) {
-                return true
-            }
-        }
-        return false
     }
 }

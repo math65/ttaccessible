@@ -10,6 +10,9 @@ struct PreferencesAudioView: View {
     private let noOutputDeviceTag = AudioDevicePreference.noOutputSentinelID
 
     @ObservedObject var store: AudioPreferencesStore
+    /// Whether the configured hotkeys are actually running — a binding can be
+    /// valid and still be refused, and the refusal has to be visible somewhere.
+    @ObservedObject private var hotkeyStatus = HotkeyStatusStore.shared
 
     @State private var selectedInputID = "__system_default__"
     @State private var selectedOutputID = "__system_default__"
@@ -209,6 +212,24 @@ struct PreferencesAudioView: View {
         store.state.pushToTalkKey?.isValid ?? false
     }
 
+    /// Shown when a configured hotkey isn't running. Nothing else in the window
+    /// would say so, and a shortcut that silently does nothing reads as a broken
+    /// app rather than as a binding to change.
+    private func unavailableHotkeyWarning(_ reason: HotkeyMonitor.Unavailability) -> some View {
+        let (key, binding): (String, HotkeyBinding) = {
+            switch reason {
+            case .collidesWithOurOtherHotkey(let binding):
+                return ("preferences.audio.hotkey.unavailable.collision", binding)
+            case .wouldBlockTyping(let binding):
+                return ("preferences.audio.hotkey.unavailable.typing", binding)
+            }
+        }()
+        return Text(L10n.format(key, binding.displayString))
+            .font(.caption)
+            .foregroundStyle(.orange)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
     @ViewBuilder
     private var pushToTalkSection: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -258,6 +279,10 @@ struct PreferencesAudioView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
+                if let reason = hotkeyStatus.pushToTalk {
+                    unavailableHotkeyWarning(reason)
+                }
+
                 Toggle(isOn: Binding(
                     get: { store.state.pushToTalkGlobal },
                     set: { store.updatePushToTalkGlobal($0) }
@@ -302,6 +327,10 @@ struct PreferencesAudioView: View {
                     ) { binding in
                         store.updateMuteHotkeyBinding(binding)
                     }
+                }
+
+                if let reason = hotkeyStatus.muteHotkey {
+                    unavailableHotkeyWarning(reason)
                 }
             }
 

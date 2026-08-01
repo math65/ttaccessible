@@ -225,19 +225,24 @@ final class PreferencesCodableTests: XCTestCase {
 
 final class UserVolumeStoreScopingTests: XCTestCase {
 
-    private var suiteName: String!
+    // One fixed suite, emptied on both sides of every test. A UUID per run left
+    // a .plist behind in the container each time — removePersistentDomain drops
+    // the contents, but cfprefsd still writes out the (empty) file, and 234 of
+    // them had piled up. Emptying in setUp is what actually isolates the run,
+    // so a stable name costs nothing.
+    private let suiteName = "UserVolumeStoreScopingTests"
     private var defaults: UserDefaults!
 
     override func setUp() {
         super.setUp()
-        suiteName = "UserVolumeStoreScopingTests.\(UUID().uuidString)"
         defaults = UserDefaults(suiteName: suiteName)
+        defaults.removePersistentDomain(forName: suiteName)
     }
 
     override func tearDown() {
         defaults.removePersistentDomain(forName: suiteName)
+        UserDefaults.standard.removeSuite(named: suiteName)
         defaults = nil
-        suiteName = nil
         super.tearDown()
     }
 
