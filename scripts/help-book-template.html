@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="$lang$">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>$title$</title>
+$if(description)$
+<meta name="description" content="$description$">
+$endif$
+$if(keywords)$
+<meta name="keywords" content="$keywords$">
+$endif$
+<meta name="robots" content="$if(robots)$$robots$$else$index, anchors$endif$">
+<link rel="stylesheet" href="../css/help.css">
+</head>
+<body>
+$if(index)$
+<img src="../shrd/help-icon.png" class="app-icon" alt="" width="72" height="72">
+$else$
+<nav class="crumb"><a href="index.html">$home$</a></nav>
+$endif$
+$if(anchor)$
+<a id="$anchor$"></a>
+$endif$
+<h1>$title$</h1>
+$body$
+$if(index)$
+$else$
+<hr>
+<p class="footer"><a href="index.html">$home$</a></p>
+$endif$
+</body>
+</html>

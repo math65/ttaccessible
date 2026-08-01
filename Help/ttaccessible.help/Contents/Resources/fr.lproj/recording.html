@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enregistrer une conversation</title>
+<meta name="description" content="Enregistrer un canal en un seul fichier mixé, en un fichier par personne, ou les deux, et choisir où vont les fichiers.">
+<meta name="keywords" content="enregistrement, enregistrer, WAV, OGG, Opus, dossier, stems, canal sans enregistrement">
+<meta name="robots" content="index, anchors">
+<link rel="stylesheet" href="../css/help.css">
+</head>
+<body>
+<nav class="crumb"><a href="index.html">Sommaire</a></nav>
+<a id="recording"></a>
+<h1>Enregistrer une conversation</h1>
+<p>Vous pouvez enregistrer ce qui se dit dans un canal. tt-Accessible peut mixer tout le monde dans un seul fichier, écrire un fichier par personne, ou faire les deux à la fois.</p>
+<h2 id="démarrer-et-arrêter-un-enregistrement">Démarrer et arrêter un enregistrement</h2>
+<ul>
+<li>Pour enregistrer un seul fichier mixé, appuyez sur Commande + R.</li>
+<li>Pour enregistrer selon le mode défini dans les Préférences, appuyez sur Maj + Commande + R.</li>
+</ul>
+<p>Appuyez de nouveau sur le même raccourci pour arrêter. tt-Accessible annonce <em>Enregistrement démarré</em> puis <em>Enregistrement arrêté</em>, et F9 vous indique si un enregistrement est en cours. Un bouton de la barre d'outils fait la même chose.</p>
+<p>La première fois, si vous n'avez pas choisi de dossier, tt-Accessible vous demande où enregistrer.</p>
+<h2 id="choisir-ce-quenregistre-maj--commande--r">Choisir ce qu'enregistre Maj + Commande + R</h2>
+<ol type="1">
+<li>Ouvrez les Préférences, puis cliquez sur Enregistrements dans la barre latérale.</li>
+<li>Cliquez sur le menu local <strong>Mode d'enregistrement</strong>, puis choisissez l'une des options suivantes :
+<ul>
+<li><strong>Fichiers séparés</strong> — un fichier par personne, y compris votre propre voix.</li>
+<li><strong>Les deux</strong> — un fichier mixé et les fichiers individuels.</li>
+</ul></li>
+</ol>
+<p>Commande + R n'est pas concerné : il produit toujours le fichier mixé unique. C'est toute la raison d'être des deux raccourcis.</p>
+<h2 id="choisir-le-format-et-le-dossier">Choisir le format et le dossier</h2>
+<ol type="1">
+<li>Ouvrez les Préférences, puis cliquez sur Enregistrements.</li>
+<li>Cliquez sur le menu local <strong>Format audio</strong>, puis choisissez <strong>WAV</strong> pour des fichiers non compressés ou <strong>OGG (Opus)</strong> pour des fichiers bien plus légers.</li>
+<li>Cliquez sur <strong>Choisir</strong>, puis sélectionnez le dossier de destination. tt-Accessible conserve d'un lancement à l'autre le droit d'y écrire.</li>
+</ol>
+<h2 id="reprendre-lenregistrement-automatiquement">Reprendre l'enregistrement automatiquement</h2>
+<p>Sélectionnez <strong>Redémarrer automatiquement l'enregistrement en rejoignant un canal</strong> pour relancer l'enregistrement quand vous changez de canal, quand la connexion revient, ou quand vous rouvrez tt-Accessible après une session qui enregistrait. Le mode réellement en cours est restauré.</p>
+<p>Le changement de canal pendant un enregistrement mixé est géré pour vous : le fichier en cours est refermé et un nouveau démarre dans le nouveau canal.</p>
+<h2 id="si-un-canal-interdit-lenregistrement">Si un canal interdit l'enregistrement</h2>
+<p>Un canal peut être créé avec l'option <strong>Pas d'enregistrement audio</strong>. Commande + R et Maj + Commande</p>
+<ul>
+<li>R refusent alors de démarrer, et tt-Accessible annonce <em>L'enregistrement n'est pas autorisé dans ce canal</em> — sauf si votre compte dispose du droit d'enregistrer la voix.</li>
+</ul>
+<p><strong>Voir aussi :</strong> <a href="channels.html">Rejoindre et gérer des canaux</a> · <a href="preferences.html#prefs-recording">Modifier les réglages de tt-Accessible</a></p>
+<hr>
+<p class="footer"><a href="index.html">Sommaire</a></p>
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>If something doesn't work</title>
+<meta name="description" content="What to check when you can't hear anyone, when nobody hears you, when there's echo, and how to reach the developer.">
+<meta name="keywords" content="problem, no sound, microphone, echo, permission, keychain, log, support, bug report">
+<meta name="robots" content="index, anchors">
+<link rel="stylesheet" href="../css/help.css">
+</head>
+<body>
+<nav class="crumb"><a href="index.html">Table of contents</a></nav>
+<a id="troubleshooting"></a>
+<h1>If something doesn't work</h1>
+<p>Most audio problems come down to a handful of settings. Press F9 at any time to hear the current audio status — it answers the first question for you.</p>
+<h2 id="if-you-cant-hear-anyone">If you can't hear anyone</h2>
+<ol type="1">
+<li>Check that the master volume isn't muted: press Command-M.</li>
+<li>Check the <strong>Output volume</strong> slider in the main window.</li>
+<li>Open Preferences, click Audio, then check that <strong>Output device</strong> isn't set to <strong>No output device</strong> or to a device you no longer use. Click <strong>Refresh Devices</strong> to rebuild the list.</li>
+<li>Check whether that person is muted for you: their row says <em>muted</em>, and Shift-Command-M brings them back. Check their level in <a href="mixer.html">the mixer</a> too.</li>
+<li>Check that you're still subscribed to their voice — see <a href="users.html">Adjust what you hear from each person</a>.</li>
+</ol>
+<h2 id="if-nobody-hears-you">If nobody hears you</h2>
+<ol type="1">
+<li>Check that you've joined a channel. Outside one, tt-Accessible answers <em>You must join a channel before enabling the microphone.</em></li>
+<li>Check that the microphone is on: press Shift-Command-A.</li>
+<li>If you use push-to-talk, check that you've recorded a key. Until you do, the microphone behaves as in always-on mode.</li>
+<li>If tt-Accessible reports <em>Microphone access was denied by macOS</em>, choose Apple menu &gt; System Settings, click Privacy &amp; Security, click Microphone, then turn on tt-Accessible.</li>
+<li>Open Preferences, click Audio, then check the <strong>Input device</strong> and the <strong>Input channels</strong> preset. On an audio interface, the microphone is rarely on input 1.</li>
+<li>If tt-Accessible announces <em>Transmission blocked by the channel operator</em>, an operator has taken your right to speak there.</li>
+</ol>
+<p>To settle it, press Shift-Command-H: if you can hear yourself through the channel, you're on air.</p>
+<h2 id="if-everyone-hears-themselves-come-back">If everyone hears themselves come back</h2>
+<p>Your speakers are being picked up by your microphone. Either use headphones, or open Preferences, click Audio, then set <strong>Microphone processing</strong> to <strong>Echo cancellation + noise reduction</strong>. On macOS 14.2 and later this also cancels VoiceOver and system sounds.</p>
+<h2 id="if-the-sound-stops-after-plugging-something-in">If the sound stops after plugging something in</h2>
+<p>tt-Accessible notices device changes and restarts its audio engine on its own. If something is still wrong, open Preferences, click Audio, then click <strong>Refresh Devices</strong>. If the microphone stopped, tt-Accessible says <em>Microphone stopped after an audio device change. Turn it on again.</em></p>
+<h2 id="if-recording-wont-start">If recording won't start</h2>
+<p>The channel was probably created with <strong>No audio recording</strong>, and tt-Accessible announces <em>Recording is not allowed in this channel.</em> Only an account with the right to record voice can override it. See <a href="recording.html">Record a conversation</a>.</p>
+<h2 id="if-streaming-an-app-doesnt-work">If streaming an app doesn't work</h2>
+<ul>
+<li>Streaming the audio of an app or of VoiceOver requires macOS 13 or later, and browsing apps that aren't running requires macOS 14.2 or later.</li>
+<li>If tt-Accessible answers <em>The selected source has no audio to capture right now</em>, make sure the app is really running and playing something.</li>
+</ul>
+<p>See <a href="streaming.html">Stream audio into a channel</a>.</p>
+<h2 id="if-the-server-refuses-your-password">If the server refuses your password</h2>
+<ul>
+<li>Click <strong>Edit Credentials</strong> in the alert to correct your user name or password.</li>
+<li>If the server uses BearWare web login, check that your account is signed in: open Preferences, then click BearWare.</li>
+<li>If macOS refuses access to the stored password, open Keychain Access, delete the <strong>ttaccessible</strong> entry for that server, then try again.</li>
+</ul>
+<h2 id="if-the-connection-keeps-dropping">If the connection keeps dropping</h2>
+<p>Open Preferences, click Connection, then select <strong>Adaptive jitter buffer</strong>, which improves audio on unstable connections. Automatic reconnection and rejoining your last channel are already on in the same pane.</p>
+<h2 id="report-a-problem">Report a problem</h2>
+<ol type="1">
+<li>Choose Help &gt; Contact the Developer.</li>
+<li>Click the <strong>Type</strong> pop-up menu, then choose <strong>Report a problem</strong>, <strong>Suggestion</strong>, <strong>Question</strong> or <strong>Other</strong>.</li>
+<li>Enter your email address and your message.</li>
+<li>To make a sound problem diagnosable, select <strong>Attach the audio diagnostic log</strong>. Reproduce the problem first, then send the message: the log is cleared every time you open the app.</li>
+<li>Click Send.</li>
+</ol>
+<p>Your app version, macOS version and audio settings are attached to help with troubleshooting. The log itself is stored in your home folder, in <code>Library/Containers/com.math65.ttaccessible/Data/Library/Logs/TTAccessible/audio.log</code>.</p>
+<p>To report something publicly instead, choose Help &gt; Report an Issue.</p>
+<p><strong>See also:</strong> <a href="audio-setup.html">Set up your audio devices</a> · <a href="talking.html">Talk in a channel</a></p>
+<hr>
+<p class="footer"><a href="index.html">Table of contents</a></p>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Choose sounds and announcements</title>
+<meta name="description" content="Pick a sound pack or build your own, and decide what tt-Accessible says out loud in the foreground and in the background.">
+<meta name="keywords" content="sounds, sound pack, notification, announcement, VoiceOver, text to speech, background">
+<meta name="robots" content="index, anchors">
+<link rel="stylesheet" href="../css/help.css">
+</head>
+<body>
+<nav class="crumb"><a href="index.html">Table of contents</a></nav>
+<a id="sounds-announcements"></a>
+<h1>Choose sounds and announcements</h1>
+<p>tt-Accessible tells you what happens in two ways: short sounds, and spoken announcements. You can set both event by event.</p>
+<h2 id="choose-a-sound-pack">Choose a sound pack</h2>
+<ol type="1">
+<li>Open Preferences, then click Sounds in the sidebar.</li>
+<li>Click the <strong>Sound pack</strong> pop-up menu, then choose <strong>Default</strong>, <strong>Majorly-G</strong> or <strong>Old</strong>.</li>
+</ol>
+<p>To turn every sound off at once, deselect <strong>Enable sound notifications</strong>.</p>
+<p>The level of these sounds follows the <strong>Sound effects volume</strong> slider of the main window.</p>
+<h2 id="turn-individual-sounds-off">Turn individual sounds off</h2>
+<p>In the Sounds pane, deselect any of the twenty-six sound events. They cover people joining and leaving, messages sent and received, connection loss, files, transfers, question mode, hotkeys, voice activation, muting, intercepts, the transmit queue, VOX, and your own microphone.</p>
+<h2 id="build-your-own-sound-pack">Build your own sound pack</h2>
+<ol type="1">
+<li>Open Preferences, then click Sounds.</li>
+<li>Click <strong>Required Files</strong> to see every file name tt-Accessible looks for and the event it's used for.</li>
+<li>Prepare a folder of WAV files with those names. Any file you leave out falls back to the Default pack.</li>
+<li>Click <strong>New Pack</strong>, then select your folder. Its name becomes the name of the pack.</li>
+<li>With your pack selected, use <strong>Edit selected pack</strong> to replace a single sound: click <strong>Choose</strong> next to an event to point it at another file, or <strong>Reset</strong> to go back to the default.</li>
+</ol>
+<p>To see where your packs are stored, click <strong>Reveal Packs Folder</strong>. To remove one, select it, then click Delete — a custom pack is also deleted from your Mac.</p>
+<h2 id="choose-what-voiceover-announces">Choose what VoiceOver announces</h2>
+<ol type="1">
+<li>Open Preferences, then click Announcements in the sidebar.</li>
+<li>Under Event announcements, select or deselect <strong>Announce channel messages</strong>, <strong>Announce private messages</strong> and <strong>Announce broadcast messages</strong>.</li>
+<li>Click <strong>Announce system history</strong> to unfold twenty more events, grouped as Connection, Own channel, User presence, Moderation, Status, Subscriptions, Files and Media streaming. Use <strong>Enable all</strong> or <strong>Disable all</strong> to set them together.</li>
+</ol>
+<p>Turning an event off only silences the announcement — the entry still appears in the session history.</p>
+<h2 id="choose-what-happens-when-another-app-is-in-front">Choose what happens when another app is in front</h2>
+<ol type="1">
+<li>Open Preferences, then click Announcements.</li>
+<li>Click the <strong>Mode</strong> pop-up menu, then choose one of the following:
+<ul>
+<li><strong>System notification</strong> — a standard macOS notification.</li>
+<li><strong>macOS text to speech</strong> — tt-Accessible speaks the message itself.</li>
+<li><strong>VoiceOver via AppleScript</strong> — VoiceOver announces the message.</li>
+</ul></li>
+<li>To use different modes depending on what arrives, deselect <strong>Use the same mode for all event types</strong>, then set private messages, channel messages, broadcast messages and TeamTalk history separately.</li>
+</ol>
+<p>If you chose macOS text to speech, set the <strong>Voice</strong>, the <strong>Speech rate</strong> and the <strong>Volume</strong> just below, then click <strong>Test voice</strong> to hear the result.</p>
+<p><strong>See also:</strong> <a href="main-window.html">Get to know the tt-Accessible window</a> · <a href="preferences.html#prefs-announcements">Change tt-Accessible settings</a></p>
+<hr>
+<p class="footer"><a href="index.html">Table of contents</a></p>
+</body>
+</html>

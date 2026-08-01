@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ajouter un serveur et s'y connecter</title>
+<meta name="description" content="Ajouter, modifier et trier vos serveurs TeamTalk, les importer et les exporter, et se connecter avec un compte BearWare.">
+<meta name="keywords" content="serveur, serveurs enregistrés, import, export, fichier tt, lien tt, BearWare, connexion web">
+<meta name="robots" content="index, anchors">
+<link rel="stylesheet" href="../css/help.css">
+</head>
+<body>
+<nav class="crumb"><a href="index.html">Sommaire</a></nav>
+<a id="servers"></a>
+<h1>Ajouter un serveur et s'y connecter</h1>
+<p>Vous pouvez conserver autant de serveurs TeamTalk que vous le souhaitez dans la fenêtre Serveurs TeamTalk, qui affiche pour chacun son nom, son hôte, ses ports TCP et UDP, et s'il est sécurisé. Les mots de passe sont conservés dans votre trousseau de session, pas dans les fichiers de l'app.</p>
+<h2 id="se-connecter-à-un-serveur">Se connecter à un serveur</h2>
+<ol type="1">
+<li>Accédez à la fenêtre Serveurs TeamTalk dans tt-Accessible.</li>
+<li>Sélectionnez un serveur dans la liste à l'aide des flèches.</li>
+<li>Appuyez sur Retour ou sur F2. Vous pouvez aussi choisir Serveur &gt; Se connecter, ou cliquer sur Connexion dans la barre d'outils.</li>
+</ol>
+<p>Une fois la session ouverte, F2 vous déconnecte.</p>
+<p>Si le serveur refuse votre nom d'utilisateur ou votre mot de passe, cliquez sur <strong>Modifier les identifiants</strong> dans l'alerte pour les corriger et réessayer.</p>
+<h2 id="ajouter-un-serveur">Ajouter un serveur</h2>
+<ol type="1">
+<li>Choisissez Serveur &gt; Nouveau serveur, ou appuyez sur Commande + N.</li>
+<li>Saisissez le nom que vous voulez voir dans votre liste, puis l'hôte et les ports TCP et UDP.</li>
+<li>Sélectionnez <strong>Connexion chiffrée</strong> si le serveur l'exige.</li>
+<li>Saisissez un pseudo, ou laissez le champ vide pour reprendre votre pseudo par défaut.</li>
+<li>Saisissez votre nom d'utilisateur et votre mot de passe sur ce serveur, ou laissez-les vides pour vous connecter en invité.</li>
+<li>Pour rejoindre un canal dès la connexion, saisissez son chemin dans <strong>Canal à rejoindre</strong>, et son mot de passe s'il en a un.</li>
+<li>Cliquez sur Enregistrer.</li>
+</ol>
+<p>Pour modifier un serveur, sélectionnez-le et appuyez sur Commande + E. Pour le retirer, appuyez sur Supprimer, puis confirmez.</p>
+<h2 id="trier-la-liste-des-serveurs">Trier la liste des serveurs</h2>
+<p>Utilisez les menus locaux <strong>Trier</strong>, au-dessus de la liste, pour classer vos serveurs par <strong>Ordre enregistré</strong>, <strong>Nom</strong>, <strong>Hôte</strong>, <strong>Port TCP</strong> ou <strong>Port UDP</strong>, en ordre <strong>Croissant</strong> ou <strong>Décroissant</strong>. L'ordre enregistré conserve les serveurs dans l'ordre où vous les avez ajoutés. Votre choix est mémorisé.</p>
+<h2 id="importer-des-serveurs">Importer des serveurs</h2>
+<ol type="1">
+<li>Choisissez Serveur &gt; Importer les serveurs TeamTalk, ou appuyez sur Maj + Commande + I.</li>
+<li>Choisissez la méthode d'import :
+<ul>
+<li><strong>Fichier de configuration</strong> — le fichier de configuration du client TeamTalk officiel. Tous ses serveurs sont importés d'un coup.</li>
+<li><strong>Fichier .tt</strong> — un serveur unique, le format que partagent le plus souvent les propriétaires de serveurs.</li>
+<li><strong>Coller un lien tt://</strong> — collez un lien du type <code>tt://serveur.exemple.com?tcpport=10333</code>.</li>
+</ul></li>
+<li>Si un serveur importé correspond à un serveur que vous avez déjà, cliquez sur <strong>Remplacer</strong> pour le mettre à jour. Quand plusieurs entrées se recoupent, cliquez sur <strong>Continuer</strong> pour toutes les importer.</li>
+</ol>
+<p>tt-Accessible indique combien de serveurs ont été importés et combien ont été ignorés.</p>
+<p>Vous pouvez aussi ouvrir un fichier <code>.tt</code> depuis le Finder, ou cliquer sur un lien <code>tt://</code>. Si une session est déjà ouverte, tt-Accessible vous prévient que l'ouverture va la fermer. Un serveur ouvert de cette façon n'est pas enregistré automatiquement : au moment de vous déconnecter, tt-Accessible vous propose de le sauvegarder sous le nom de votre choix.</p>
+<h2 id="exporter-des-serveurs">Exporter des serveurs</h2>
+<ul>
+<li>Pour exporter le serveur sélectionné, choisissez Serveur &gt; Exporter le serveur, puis choisissez <strong>Fichier .tt</strong> ou <strong>Copier le lien tt://</strong>. Pendant une session, vous pouvez aussi sélectionner <strong>Inclure un chemin direct</strong> pour que la personne qui ouvre le fichier arrive dans le canal où vous êtes.</li>
+<li>Pour tous les exporter, choisissez Serveur &gt; Exporter la liste de serveurs, puis choisissez <strong>Un seul fichier</strong> ou <strong>Un fichier par serveur</strong>.</li>
+<li>Pour copier un lien vers le serveur auquel vous êtes connecté, choisissez Serveur &gt; Copier le lien du serveur, ou appuyez sur Maj + Commande + L.</li>
+</ul>
+<h2 id="se-connecter-avec-un-compte-bearware">Se connecter avec un compte BearWare</h2>
+<p>Un compte BearWare gratuit (bearware.dk) vous permet de vous connecter aux serveurs qui acceptent la connexion web, sans créer de compte sur chacun d'eux.</p>
+<ol type="1">
+<li>Ouvrez les Préférences, puis cliquez sur BearWare dans la barre latérale.</li>
+<li>Saisissez votre <strong>Identifiant BearWare</strong> et votre <strong>Mot de passe BearWare</strong>, puis cliquez sur <strong>Se connecter</strong>.</li>
+<li>Ouvrez les réglages de chaque serveur concerné, puis sélectionnez <strong>Utiliser la connexion web BearWare</strong>. Les champs d'identifiants locaux disparaissent : ce serveur passe désormais par votre compte BearWare.</li>
+</ol>
+<p>Si un serveur est réglé sur la connexion web alors qu'aucun compte BearWare n'est configuré, la connexion échoue et tt-Accessible vous renvoie aux Préférences.</p>
+<p><strong>Voir aussi :</strong> <a href="main-window.html">Découvrir la fenêtre de tt-Accessible</a> · <a href="channels.html">Rejoindre et gérer des canaux</a></p>
+<hr>
+<p class="footer"><a href="index.html">Sommaire</a></p>
+</body>
+</html>

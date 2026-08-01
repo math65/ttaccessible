@@ -42,7 +42,17 @@ struct ttaccessibleApp: App {
                 }
             }
 
-            CommandGroup(after: .help) {
+            // `replacing` rather than `after`: SwiftUI's own "<App> Help" item is
+            // titled from the system language, which would read English in a
+            // French UI when the language preference overrides the system.
+            CommandGroup(replacing: .help) {
+                Button(L10n.text("help.menu.userGuide")) {
+                    HelpBook.open()
+                }
+                .keyboardShortcut("?", modifiers: [.command])
+
+                Divider()
+
                 Button(L10n.text("help.menu.viewOnGitHub")) {
                     NSWorkspace.shared.open(URL(string: "https://github.com/math65/ttaccessible")!)
                 }

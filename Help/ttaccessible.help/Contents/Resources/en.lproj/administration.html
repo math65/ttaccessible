@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manage users, bans and server settings</title>
+<meta name="description" content="Promote channel operators, kick or ban people, move them between channels, and edit accounts and server properties.">
+<meta name="keywords" content="operator, kick, ban, move users, accounts, rights, server properties, statistics, admin">
+<meta name="robots" content="index, anchors">
+<link rel="stylesheet" href="../css/help.css">
+</head>
+<body>
+<nav class="crumb"><a href="index.html">Table of contents</a></nav>
+<a id="administration"></a>
+<h1>Manage users, bans and server settings</h1>
+<p>If your account has the matching rights, you can moderate the channels of a server and change its settings. Commands you aren't allowed to use stay dimmed.</p>
+<h2 id="make-someone-a-channel-operator">Make someone a channel operator</h2>
+<p>Select the person in the channel tree, then press Control-Command-O. Press it again to revoke the status. If you aren't an operator yourself and the channel has an operator password, tt-Accessible asks for it.</p>
+<h2 id="remove-someone-from-a-channel-or-the-server">Remove someone from a channel or the server</h2>
+<p>Select the person, then do one of the following:</p>
+<ul>
+<li><strong>Remove them from their channel:</strong> press Command-K.</li>
+<li><strong>Disconnect them from the server:</strong> press Shift-Command-K.</li>
+<li><strong>Disconnect and ban them:</strong> choose User &gt; Kick and Ban, then choose whether to ban the IP address or the user name.</li>
+</ul>
+<p>Each command asks you to confirm. To skip that step for the two kick commands, open Preferences, click Connection, then select <strong>Skip confirmation when kicking users</strong>. Kick and Ban always confirms.</p>
+<h2 id="move-people-to-another-channel">Move people to another channel</h2>
+<ul>
+<li>To move one person, select them and press Option-Command-X, then choose the destination channel.</li>
+<li>To move a whole channel, Control-click it, then choose <strong>Move all in channel</strong>. Select the people to move — <strong>Select All</strong> and <strong>Deselect All</strong> help — choose the destination in the <strong>Move to channel</strong> pop-up menu, then click Move.</li>
+</ul>
+<h2 id="manage-bans">Manage bans</h2>
+<ol type="1">
+<li>Choose Server &gt; Banned Users, or press Shift-Command-B.</li>
+<li>Do any of the following:
+<ul>
+<li><strong>Lift a ban:</strong> select it, then click Unban. The person can reconnect.</li>
+<li><strong>Add a ban:</strong> click Add Ban, then choose <strong>IP Address</strong> or <strong>Username</strong> and enter the value.</li>
+<li><strong>Update the list:</strong> click Refresh.</li>
+</ul></li>
+</ol>
+<h2 id="manage-user-accounts">Manage user accounts</h2>
+<ol type="1">
+<li>Choose Server &gt; User Accounts, or press Shift-Command-U.</li>
+<li>Click Add, or select an account and click Edit.</li>
+<li>In the Essential tab, set the user name, password, account type — <strong>Default</strong>, <strong>Administrator</strong> or <strong>Disabled</strong> — an initial channel and a note.</li>
+<li>In the Rights tab, select what the account may do. Twenty-four rights are available, covering logging in several times at once, seeing every user, creating and modifying channels, broadcasting, kicking, banning, moving people, becoming a channel operator, uploading and downloading files, changing server properties, transmitting voice, video, desktop and media files, locking the nickname or status, recording voice, seeing hidden channels, and sending private or channel messages. <strong>Enable all</strong>, <strong>Disable all</strong> and <strong>Default rights</strong> set them in one click.</li>
+<li>In the Advanced tab, set the audio bandwidth limit, where 0 means unlimited, and the command limits.</li>
+<li>Click Save.</li>
+</ol>
+<p>To remove an account, select it and click Delete. You can't undo this.</p>
+<h2 id="change-the-servers-settings">Change the server's settings</h2>
+<ol type="1">
+<li>Choose Server &gt; Server Properties, or press Shift-Command-P.</li>
+<li>In the General section, set the server name, the message of the day, the maximum number of users, the timeouts and the login limits.</li>
+<li>In the Bandwidth Limits section, set the maximum throughput for voice, video, media files, desktop sharing and the total, in bytes per second, where 0 means unlimited.</li>
+<li>Click Save.</li>
+</ol>
+<p>The Network &amp; Server Information section shows the ports and versions for information.</p>
+<p>To make the current configuration survive a restart of the server, choose Server &gt; Save Server Configuration.</p>
+<h2 id="see-how-the-server-is-doing">See how the server is doing</h2>
+<p>Choose Server &gt; Server Statistics, or press Shift-Command-I, to see the uptime, the number of users served, the peak, the data sent and received, and the UDP and TCP ping.</p>
+<p><strong>See also:</strong> <a href="users.html">Adjust what you hear from each person</a> · <a href="channels.html">Join and manage channels</a></p>
+<hr>
+<p class="footer"><a href="index.html">Table of contents</a></p>
+</body>
+</html>

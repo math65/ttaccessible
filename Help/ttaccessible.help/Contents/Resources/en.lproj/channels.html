@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Join and manage channels</title>
+<meta name="description" content="Join and leave channels, create or edit them, set the audio codec, and exchange files with the people there.">
+<meta name="keywords" content="channel, join, leave, create, edit, delete, password, codec, Opus, files, upload, download">
+<meta name="robots" content="index, anchors">
+<link rel="stylesheet" href="../css/help.css">
+</head>
+<body>
+<nav class="crumb"><a href="index.html">Table of contents</a></nav>
+<a id="channels"></a>
+<h1>Join and manage channels</h1>
+<p>A channel is where you talk. You can join any channel on the server, create your own, and exchange files with the people in it.</p>
+<h2 id="join-or-leave-a-channel">Join or leave a channel</h2>
+<ol type="1">
+<li>Select a channel in the tree.</li>
+<li>Press Command-J, or press Return.</li>
+</ol>
+<p>If the channel is protected, enter its password. tt-Accessible remembers it, so your next visit asks nothing. To forget it, Control-click the channel, then choose <strong>Forget Saved Password</strong>.</p>
+<p>To leave the channel you're in, press Command-L.</p>
+<p>To join a channel automatically, open Preferences, click Connection, then select <strong>Automatically join the main channel on connect</strong> or <strong>Automatically rejoin the last channel after reconnecting</strong>. A saved server can also carry a channel of its own — see <a href="servers.html">Add a server</a>.</p>
+<h2 id="create-a-channel">Create a channel</h2>
+<ol type="1">
+<li>Press F7.</li>
+<li>Enter a channel name and, if you want one, a topic.</li>
+<li>To protect the channel, enter a password.</li>
+<li>Set the maximum number of users and the disk quota for files. A quota of 0 means only administrators can upload files.</li>
+<li>Select any of the following options:
+<ul>
+<li><strong>Permanent channel</strong> — the channel survives when the last person leaves.</li>
+<li><strong>Solo transmit</strong> — only one person speaks at a time.</li>
+<li><strong>Disable voice activation</strong> — people must use push-to-talk.</li>
+<li><strong>No audio recording</strong> — see <a href="recording.html">Record a conversation</a>.</li>
+</ul></li>
+<li>To set the audio quality of the channel, use the Audio Codec section: choose <strong>Mono</strong> or <strong>Stereo</strong>, a sample rate, a bitrate in kbps, and <strong>VoIP</strong> or <strong>Music</strong> depending on what people will send.</li>
+<li>Select <strong>Join channel after creation</strong> if you want to go there straight away, then click Create.</li>
+</ol>
+<p>To change a channel, select it and press Shift-F7. Settings that the form doesn't show are kept as they were.</p>
+<p>To delete a channel, select it and press F8, then confirm. The channel and all of its subchannels are deleted, and you can't undo this.</p>
+<h2 id="share-files-with-the-channel">Share files with the channel</h2>
+<ol type="1">
+<li>Choose Server &gt; Channel Files, or press Shift-Command-F.</li>
+<li>Do any of the following:
+<ul>
+<li><strong>Send a file:</strong> click Upload, or choose Server &gt; Upload a File (Shift-F5).</li>
+<li><strong>Get a file:</strong> select it, then click Download or press Return.</li>
+<li><strong>Remove a file:</strong> select it, then click Delete or press the Delete key, and confirm.</li>
+</ul></li>
+</ol>
+<p>tt-Accessible announces each transfer when it finishes. If the channel has no room left, it reports <em>This channel does not have enough storage.</em></p>
+<p><strong>See also:</strong> <a href="talking.html">Talk in a channel</a> · <a href="administration.html">Manage users, bans and server settings</a></p>
+<hr>
+<p class="footer"><a href="index.html">Table of contents</a></p>
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Si quelque chose ne fonctionne pas</title>
+<meta name="description" content="Que vérifier quand vous n'entendez personne, quand personne ne vous entend, quand il y a de l'écho, et comment joindre le développeur.">
+<meta name="keywords" content="problème, pas de son, micro, écho, autorisation, trousseau, journal, assistance, bug">
+<meta name="robots" content="index, anchors">
+<link rel="stylesheet" href="../css/help.css">
+</head>
+<body>
+<nav class="crumb"><a href="index.html">Sommaire</a></nav>
+<a id="troubleshooting"></a>
+<h1>Si quelque chose ne fonctionne pas</h1>
+<p>La plupart des problèmes audio tiennent à quelques réglages. Appuyez sur F9 à tout moment pour connaître l'état audio : cela répond déjà à la première question.</p>
+<h2 id="si-vous-nentendez-personne">Si vous n'entendez personne</h2>
+<ol type="1">
+<li>Vérifiez que le volume principal n'est pas coupé : appuyez sur Commande + M.</li>
+<li>Vérifiez le curseur <strong>Volume de sortie</strong> dans la fenêtre principale.</li>
+<li>Ouvrez les Préférences, cliquez sur Audio, puis vérifiez que <strong>Périphérique de sortie</strong> n'est pas réglé sur <strong>Aucune sortie audio</strong> ni sur un appareil que vous n'utilisez plus. Cliquez sur <strong>Actualiser les périphériques</strong> pour reconstruire la liste.</li>
+<li>Vérifiez si cette personne est coupée pour vous : sa ligne indique <em>coupé</em>, et Maj + Commande + M la rétablit. Vérifiez aussi son niveau dans <a href="mixer.html">le mixeur</a>.</li>
+<li>Vérifiez que vous êtes toujours abonné à son audio — consultez <a href="users.html">Régler ce que vous entendez de chaque personne</a>.</li>
+</ol>
+<h2 id="si-personne-ne-vous-entend">Si personne ne vous entend</h2>
+<ol type="1">
+<li>Vérifiez que vous avez rejoint un canal. Ailleurs, tt-Accessible répond <em>Vous devez rejoindre un canal avant d'activer le micro.</em></li>
+<li>Vérifiez que le micro est activé : appuyez sur Maj + Commande + A.</li>
+<li>Si vous utilisez le push-to-talk, vérifiez que vous avez enregistré une touche. Tant que ce n'est pas fait, le micro se comporte comme en mode « toujours actif ».</li>
+<li>Si tt-Accessible indique <em>L'accès au micro a été refusé par macOS</em>, choisissez le menu Pomme &gt; Réglages Système, cliquez sur Confidentialité et sécurité, cliquez sur Microphone, puis activez tt-Accessible.</li>
+<li>Ouvrez les Préférences, cliquez sur Audio, puis vérifiez le <strong>Périphérique d'entrée</strong> et la configuration <strong>Canaux d'entrée</strong>. Sur une interface audio, le micro est rarement sur l'entrée 1.</li>
+<li>Si tt-Accessible annonce <em>Transmission bloquée par l'opérateur du canal</em>, un opérateur vous a retiré le droit de parler.</li>
+</ol>
+<p>Pour trancher, appuyez sur Maj + Commande + H : si vous vous entendez par le canal, vous êtes à l'antenne.</p>
+<h2 id="si-tout-le-monde-sentend-revenir">Si tout le monde s'entend revenir</h2>
+<p>Vos haut-parleurs sont repris par votre micro. Utilisez un casque, ou ouvrez les Préférences, cliquez sur Audio, puis réglez <strong>Traitement du micro</strong> sur <strong>Annulation d'écho + réduction de bruit</strong>. À partir de macOS 14.2, cette option annule aussi VoiceOver et les sons du système.</p>
+<h2 id="si-le-son-sarrête-après-un-branchement">Si le son s'arrête après un branchement</h2>
+<p>tt-Accessible détecte les changements de périphérique et redémarre son moteur audio tout seul. Si quelque chose cloche malgré tout, ouvrez les Préférences, cliquez sur Audio, puis cliquez sur <strong>Actualiser les périphériques</strong>. Si le micro s'est arrêté, tt-Accessible indique <em>Le micro s'est arrêté après un changement de périphérique audio. Réactivez-le.</em></p>
+<h2 id="si-lenregistrement-refuse-de-démarrer">Si l'enregistrement refuse de démarrer</h2>
+<p>Le canal a probablement été créé avec l'option <strong>Pas d'enregistrement audio</strong>, et tt-Accessible annonce <em>L'enregistrement n'est pas autorisé dans ce canal.</em> Seul un compte disposant du droit d'enregistrer la voix peut passer outre. Consultez <a href="recording.html">Enregistrer une conversation</a>.</p>
+<h2 id="si-la-diffusion-dune-app-ne-fonctionne-pas">Si la diffusion d'une app ne fonctionne pas</h2>
+<ul>
+<li>La diffusion de l'audio d'une app ou de VoiceOver nécessite macOS 13 ou une version ultérieure, et parcourir les apps qui ne sont pas lancées nécessite macOS 14.2 ou une version ultérieure.</li>
+<li>Si tt-Accessible répond <em>La source sélectionnée n'a aucun audio à capturer pour le moment</em>, vérifiez que l'app visée tourne réellement et produit du son.</li>
+</ul>
+<p>Consultez <a href="streaming.html">Diffuser du son dans un canal</a>.</p>
+<h2 id="si-le-serveur-refuse-votre-mot-de-passe">Si le serveur refuse votre mot de passe</h2>
+<ul>
+<li>Cliquez sur <strong>Modifier les identifiants</strong> dans l'alerte pour corriger votre nom d'utilisateur ou votre mot de passe.</li>
+<li>Si le serveur utilise la connexion web BearWare, vérifiez que votre compte est connecté : ouvrez les Préférences, puis cliquez sur BearWare.</li>
+<li>Si macOS refuse l'accès au mot de passe enregistré, ouvrez Trousseau d'accès, supprimez l'entrée <strong>ttaccessible</strong> correspondant à ce serveur, puis réessayez.</li>
+</ul>
+<h2 id="si-la-connexion-tombe-sans-arrêt">Si la connexion tombe sans arrêt</h2>
+<p>Ouvrez les Préférences, cliquez sur Connexion, puis sélectionnez <strong>Buffer de gigue adaptatif</strong>, qui améliore l'audio sur les connexions instables. La reconnexion automatique et le retour dans votre dernier canal sont déjà activés dans le même volet.</p>
+<h2 id="signaler-un-problème">Signaler un problème</h2>
+<ol type="1">
+<li>Choisissez Aide &gt; Contacter le développeur.</li>
+<li>Cliquez sur le menu local <strong>Type</strong>, puis choisissez <strong>Signaler un problème</strong>, <strong>Suggestion</strong>, <strong>Question</strong> ou <strong>Autre</strong>.</li>
+<li>Saisissez votre adresse e-mail et votre message.</li>
+<li>Pour qu'un problème de son soit diagnosticable, sélectionnez <strong>Joindre le journal de diagnostic audio</strong>. Reproduisez d'abord le problème, puis envoyez le message : le journal est effacé à chaque ouverture de l'app.</li>
+<li>Cliquez sur Envoyer.</li>
+</ol>
+<p>La version de l'app, la version de macOS et vos réglages audio sont joints pour faciliter le diagnostic. Le journal lui-même se trouve dans votre dossier de départ, sous <code>Library/Containers/com.math65.ttaccessible/Data/Library/Logs/TTAccessible/audio.log</code>.</p>
+<p>Pour signaler quelque chose publiquement, choisissez plutôt Aide &gt; Signaler un problème.</p>
+<p><strong>Voir aussi :</strong> <a href="audio-setup.html">Configurer vos périphériques audio</a> · <a href="talking.html">Parler dans un canal</a></p>
+<hr>
+<p class="footer"><a href="index.html">Sommaire</a></p>
+</body>
+</html>

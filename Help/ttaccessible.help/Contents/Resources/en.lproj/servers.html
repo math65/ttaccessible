@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Add a server and connect to it</title>
+<meta name="description" content="Add, edit and sort your TeamTalk servers, import and export them, and sign in with a BearWare account.">
+<meta name="keywords" content="server, saved servers, import, export, tt file, tt link, BearWare, web login, connect">
+<meta name="robots" content="index, anchors">
+<link rel="stylesheet" href="../css/help.css">
+</head>
+<body>
+<nav class="crumb"><a href="index.html">Table of contents</a></nav>
+<a id="servers"></a>
+<h1>Add a server and connect to it</h1>
+<p>You can keep as many TeamTalk servers as you like in the TeamTalk Servers window, which lists each one with its name, host, TCP and UDP ports, and whether the connection is secure. Passwords are stored in your login keychain, not in the app's own files.</p>
+<h2 id="connect-to-a-server">Connect to a server</h2>
+<ol type="1">
+<li>Go to the TeamTalk Servers window in tt-Accessible.</li>
+<li>Select a server in the list with the arrow keys.</li>
+<li>Press Return or F2. You can also choose Server &gt; Connect, or click Connect in the toolbar.</li>
+</ol>
+<p>Once you're connected, F2 disconnects you.</p>
+<p>If the server refuses your user name or password, click <strong>Edit Credentials</strong> in the alert to correct them and try again.</p>
+<h2 id="add-a-server">Add a server</h2>
+<ol type="1">
+<li>Choose Server &gt; New Server, or press Command-N.</li>
+<li>Enter the name you want to see in your list, then the host and the TCP and UDP ports.</li>
+<li>Select <strong>Encrypted connection</strong> if the server requires it.</li>
+<li>Enter a nickname, or leave the field empty to use your default nickname.</li>
+<li>Enter your user name and password for that server, or leave them empty to connect as a guest.</li>
+<li>To join a channel as soon as you connect, enter its path in <strong>Channel to join</strong>, and its password if it has one.</li>
+<li>Click Save.</li>
+</ol>
+<p>To change a server later, select it and press Command-E. To remove it, press Delete, then confirm.</p>
+<h2 id="sort-the-list-of-servers">Sort the list of servers</h2>
+<p>Use the <strong>Sort</strong> pop-up menus above the list to order your servers by <strong>Custom order</strong>, <strong>Name</strong>, <strong>Host</strong>, <strong>TCP Port</strong> or <strong>UDP Port</strong>, in <strong>Ascending</strong> or <strong>Descending</strong> order. Custom order keeps the servers in the order you added them. Your choice is remembered.</p>
+<h2 id="import-servers">Import servers</h2>
+<ol type="1">
+<li>Choose Server &gt; Import TeamTalk Servers, or press Shift-Command-I.</li>
+<li>Choose how to import:
+<ul>
+<li><strong>Configuration File</strong> — a configuration file from the official TeamTalk client. All of its servers are imported at once.</li>
+<li><strong>.tt File</strong> — a single server file, the format server owners usually share.</li>
+<li><strong>Paste tt:// Link</strong> — paste a link such as <code>tt://server.example.com?tcpport=10333</code>.</li>
+</ul></li>
+<li>If a server you're importing matches one you already have, click <strong>Replace</strong> to update it. When several entries match, click <strong>Continue</strong> to import them all.</li>
+</ol>
+<p>tt-Accessible reports how many servers were imported and how many were skipped.</p>
+<p>You can also open a <code>.tt</code> file from the Finder, or click a <code>tt://</code> link. If a session is already open, tt-Accessible warns you that opening the file disconnects it. A server opened this way isn't saved automatically: when you disconnect, tt-Accessible offers to save it under a name of your choice.</p>
+<h2 id="export-servers">Export servers</h2>
+<ul>
+<li>To export the selected server, choose Server &gt; Export Server, then choose <strong>.tt File</strong> or <strong>Copy tt:// Link</strong>. While you're connected, you can also select <strong>Include a direct path</strong> so that whoever opens the file lands in the channel you're in.</li>
+<li>To export all of them, choose Server &gt; Export Server List, then choose <strong>Single file</strong> or <strong>One file per server</strong>.</li>
+<li>To copy a link to the server you're connected to, choose Server &gt; Copy Server Link, or press Shift-Command-L.</li>
+</ul>
+<h2 id="sign-in-with-a-bearware-account">Sign in with a BearWare account</h2>
+<p>A free BearWare account (bearware.dk) lets you log in to servers that support web login, without creating an account on each one.</p>
+<ol type="1">
+<li>Open Preferences, then click BearWare in the sidebar.</li>
+<li>Enter your <strong>BearWare username</strong> and <strong>BearWare password</strong>, then click <strong>Sign in</strong>.</li>
+<li>Open the settings of each server that supports it, then select <strong>Use BearWare web login</strong>. The local user name and password fields disappear — that server now signs in with your BearWare account.</li>
+</ol>
+<p>If a server is set to use web login while no BearWare account is set up, the connection fails and tt-Accessible points you back to Preferences.</p>
+<p><strong>See also:</strong> <a href="main-window.html">Get to know the tt-Accessible window</a> · <a href="channels.html">Join and manage channels</a></p>
+<hr>
+<p class="footer"><a href="index.html">Table of contents</a></p>
+</body>
+</html>

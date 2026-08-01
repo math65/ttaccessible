@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gérer les utilisateurs, les bannissements et les réglages du serveur</title>
+<meta name="description" content="Promouvoir des opérateurs, expulser ou bannir, déplacer des personnes, et modifier les comptes et les propriétés du serveur.">
+<meta name="keywords" content="opérateur, expulser, bannir, déplacer, comptes, droits, propriétés du serveur, statistiques">
+<meta name="robots" content="index, anchors">
+<link rel="stylesheet" href="../css/help.css">
+</head>
+<body>
+<nav class="crumb"><a href="index.html">Sommaire</a></nav>
+<a id="administration"></a>
+<h1>Gérer les utilisateurs, les bannissements et les réglages du serveur</h1>
+<p>Si votre compte dispose des droits correspondants, vous pouvez modérer les canaux d'un serveur et modifier ses réglages. Les commandes que vous n'avez pas le droit d'utiliser restent grisées.</p>
+<h2 id="promouvoir-quelquun-opérateur-de-canal">Promouvoir quelqu'un opérateur de canal</h2>
+<p>Sélectionnez la personne dans l'arbre des canaux, puis appuyez sur Contrôle + Commande + O. Appuyez de nouveau pour lui retirer ce statut. Si vous n'êtes pas vous-même opérateur et que le canal possède un mot de passe d'opérateur, tt-Accessible vous le demande.</p>
+<h2 id="retirer-quelquun-dun-canal-ou-du-serveur">Retirer quelqu'un d'un canal ou du serveur</h2>
+<p>Sélectionnez la personne, puis effectuez l'une des opérations suivantes :</p>
+<ul>
+<li><strong>La retirer de son canal :</strong> appuyez sur Commande + K.</li>
+<li><strong>La déconnecter du serveur :</strong> appuyez sur Maj + Commande + K.</li>
+<li><strong>La déconnecter et la bannir :</strong> choisissez Utilisateur &gt; Expulser et bannir, puis choisissez de bannir l'adresse IP ou le nom d'utilisateur.</li>
+</ul>
+<p>Chaque commande demande confirmation. Pour supprimer cette étape sur les deux premières, ouvrez les Préférences, cliquez sur Connexion, puis sélectionnez <strong>Ne pas demander de confirmation lors de l'expulsion</strong>. « Expulser et bannir » demande toujours confirmation.</p>
+<h2 id="déplacer-des-personnes-vers-un-autre-canal">Déplacer des personnes vers un autre canal</h2>
+<ul>
+<li>Pour déplacer une personne, sélectionnez-la, appuyez sur Option + Commande + X, puis choisissez le canal de destination.</li>
+<li>Pour déplacer tout un canal, cliquez dessus en maintenant la touche Contrôle enfoncée, puis choisissez <strong>Déplacer tout le monde</strong>. Sélectionnez les personnes à déplacer — <strong>Tout sélectionner</strong> et <strong>Tout désélectionner</strong> vous y aident —, choisissez la destination dans le menu local <strong>Déplacer vers le canal</strong>, puis cliquez sur Déplacer.</li>
+</ul>
+<h2 id="gérer-les-bannissements">Gérer les bannissements</h2>
+<ol type="1">
+<li>Choisissez Serveur &gt; Utilisateurs bannis, ou appuyez sur Maj + Commande + B.</li>
+<li>Effectuez l'une des opérations suivantes :
+<ul>
+<li><strong>Lever un bannissement :</strong> sélectionnez-le, puis cliquez sur Débannir. La personne pourra se reconnecter.</li>
+<li><strong>Ajouter un bannissement :</strong> cliquez sur Ajouter, puis choisissez <strong>Adresse IP</strong> ou <strong>Nom d'utilisateur</strong> et saisissez la valeur.</li>
+<li><strong>Mettre la liste à jour :</strong> cliquez sur Rafraîchir.</li>
+</ul></li>
+</ol>
+<h2 id="gérer-les-comptes-utilisateurs">Gérer les comptes utilisateurs</h2>
+<ol type="1">
+<li>Choisissez Serveur &gt; Comptes utilisateurs, ou appuyez sur Maj + Commande + U.</li>
+<li>Cliquez sur Ajouter, ou sélectionnez un compte et cliquez sur Modifier.</li>
+<li>Dans l'onglet Essentiel, définissez le nom d'utilisateur, le mot de passe, le type de compte — <strong>Défaut</strong>, <strong>Administrateur</strong> ou <strong>Désactivé</strong> —, un canal initial et une note.</li>
+<li>Dans l'onglet Droits, sélectionnez ce que le compte a le droit de faire. Vingt-quatre droits sont disponibles : connexions multiples, visibilité de tous les utilisateurs, création et modification de canaux, diffusion de messages, expulsion, bannissement, déplacement, qualité d'opérateur, envoi et téléchargement de fichiers, modification des propriétés du serveur, transmission de la voix, de la vidéo, du bureau et des fichiers média, verrouillage du pseudo ou du statut, enregistrement de la voix, visibilité des canaux masqués, et envoi de messages privés ou de canal. <strong>Tout activer</strong>, <strong>Tout désactiver</strong> et <strong>Droits par défaut</strong> les règlent d'un clic.</li>
+<li>Dans l'onglet Avancé, définissez la limite de bande passante audio, où 0 signifie illimité, et les limites de commandes.</li>
+<li>Cliquez sur Enregistrer.</li>
+</ol>
+<p>Pour supprimer un compte, sélectionnez-le et cliquez sur Supprimer. Cette action est irréversible.</p>
+<h2 id="modifier-les-réglages-du-serveur">Modifier les réglages du serveur</h2>
+<ol type="1">
+<li>Choisissez Serveur &gt; Propriétés du serveur, ou appuyez sur Maj + Commande + P.</li>
+<li>Dans la section Général, définissez le nom du serveur, le message du jour, le nombre maximal d'utilisateurs, les délais d'expiration et les limites de connexion.</li>
+<li>Dans la section Limites de débit, définissez les débits maximaux pour la voix, la vidéo, les fichiers média, le bureau partagé et le total, en octets par seconde, où 0 signifie illimité.</li>
+<li>Cliquez sur Enregistrer.</li>
+</ol>
+<p>La section Réseau et informations du serveur affiche les ports et les versions, à titre indicatif.</p>
+<p>Pour que la configuration courante survive à un redémarrage du serveur, choisissez Serveur &gt; Enregistrer la configuration du serveur.</p>
+<h2 id="consulter-lactivité-du-serveur">Consulter l'activité du serveur</h2>
+<p>Choisissez Serveur &gt; Statistiques du serveur, ou appuyez sur Maj + Commande + I, pour connaître la durée de fonctionnement, le nombre d'utilisateurs accueillis, le pic, les données émises et reçues, et les pings UDP et TCP.</p>
+<p><strong>Voir aussi :</strong> <a href="users.html">Régler ce que vous entendez de chaque personne</a> · <a href="channels.html">Rejoindre et gérer des canaux</a></p>
+<hr>
+<p class="footer"><a href="index.html">Sommaire</a></p>
+</body>
+</html>

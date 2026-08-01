@@ -1047,6 +1047,7 @@
 "user.menu.move" = "Déplacer vers un canal";
 
 "update.menu.checkForUpdates" = "Vérifier les mises à jour…";
+"help.menu.userGuide" = "Aide tt-Accessible";
 "help.menu.viewOnGitHub" = "Voir le projet sur GitHub";
 "help.menu.reportIssue" = "Signaler un problème…";
 "toolbar.connect" = "Connexion";
