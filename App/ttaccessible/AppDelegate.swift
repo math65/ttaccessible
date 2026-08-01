@@ -298,13 +298,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // stays muted forever in push-to-talk mode.
         pushToTalkMonitor.onPress = { [weak self] in self?.handlePushToTalkPress() }
         pushToTalkMonitor.onRelease = { [weak self] in self?.handlePushToTalkRelease() }
-        // A chord another app claimed after it was chosen leaves the hotkey
-        // inactive, with nothing to show for it — Preferences says so.
-        pushToTalkMonitor.onChordUnavailableChange = { binding in
-            HotkeyStatusStore.shared.setPushToTalkUnavailable(binding)
+        // A configured hotkey that can't run leaves nothing to see — Preferences
+        // says which one, and why.
+        pushToTalkMonitor.onUnavailabilityChange = { reason in
+            HotkeyStatusStore.shared.setPushToTalk(reason)
         }
-        muteHotkeyMonitor.onChordUnavailableChange = { binding in
-            HotkeyStatusStore.shared.setMuteHotkeyUnavailable(binding)
+        muteHotkeyMonitor.onUnavailabilityChange = { reason in
+            HotkeyStatusStore.shared.setMuteHotkey(reason)
         }
         // Mirrors the menu action without restoring/focusing our window, which
         // would steal focus. The tap defers to the menu for a chord the menu
@@ -377,7 +377,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             muteHotkeyMonitor.configure(
                 binding: prefs.muteHotkeyBinding ?? HotkeyBinding.defaultMuteHotkey(),
                 scope: .global,
-                deferToMainMenuWhenActive: true,
                 wantsReleaseEvents: false
             )
         } else {

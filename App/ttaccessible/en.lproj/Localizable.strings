@@ -455,7 +455,8 @@
 "preferences.audio.muteHotkey.global.label" = "Microphone toggle hotkey works when another app is in front";
 "preferences.audio.muteHotkey.key.label" = "Global microphone toggle key";
 "preferences.audio.hotkey.global.help" = "Working from another app needs no permission: macOS takes the key before the app in front receives it, so nothing is typed where you are working — and the shortcut you pick stops doing whatever it did in that app, for as long as it is set here. Choose one you don't use elsewhere: a function key from F13 to F19 is a safe bet. A combination of modifier keys on their own, such as Command-Control, is the exception: it uses the Input Monitoring permission, which macOS asks for the first time, and the app in front still receives the keys. While a password field is focused, macOS suspends the shortcut; it works again as soon as you leave that field.";
-"preferences.audio.hotkey.unavailable" = "%@ is also your other microphone shortcut, so only one of the two runs. Activate the button above and choose a different key.";
+"preferences.audio.hotkey.unavailable.collision" = "%@ is also your other microphone shortcut, so only one of the two runs. Activate the button above and choose a different key.";
+"preferences.audio.hotkey.unavailable.typing" = "%@ types into text fields. A shortcut that works from another app takes the key everywhere, including the chat here, so this one is not active. Activate the button above and choose a function key from F13 to F19, or add Command, Control or Option.";
 "preferences.audio.pushToTalk.warning.noShortcut" = "No hotkey configured — push-to-talk is inactive and the microphone keeps transmitting as in always-on mode. Activate the button above to set a key.";
 "preferences.audio.volumeMemory.section" = "Per-user volume memory";
 "preferences.audio.volumeMemory.label" = "Remember per-user volume adjustments";

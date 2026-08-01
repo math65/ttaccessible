@@ -2,11 +2,14 @@
 //  HotkeyMenuOwnershipTests.swift
 //  ttaccessibleTests
 //
-//  The global mute tap defers to the main menu only for a chord the menu
-//  actually carries. Getting that predicate wrong is invisible in a build and
-//  fails in opposite directions — too eager and a rebound hotkey does nothing
-//  while the app is focused, too lax and a binding that collides with an in-app
-//  shortcut fires both actions at once.
+//  What the mic-toggle binding declares to the main menu, and which keys a
+//  focused text field would swallow. Both are invisible in a build and fail
+//  quietly: a menu item can display a shortcut it never answers, and a binding
+//  that types can toggle the mic mid-sentence.
+//
+//  The ownership predicate the tap used to consult (HotkeyMonitor.menu) is
+//  gone with the tap's key-code path — a Carbon hotkey is served before the
+//  menu, so the double-fire it guarded against can no longer happen.
 //
 //  Menu construction only; no window, no run loop.
 //
@@ -17,62 +20,12 @@ import AppKit
 
 final class HotkeyMenuOwnershipTests: XCTestCase {
 
-    /// Mirrors the real shape: shortcuts live on items inside submenus.
-    private func makeMenu() -> NSMenu {
-        let root = NSMenu()
 
-        let userItem = NSMenuItem()
-        let userMenu = NSMenu(title: "User")
-        userMenu.addItem(withTitle: "Microphone", action: nil, keyEquivalent: "a")
-            .keyEquivalentModifierMask = [.command, .shift]
-        userMenu.addItem(withTitle: "Master mute", action: nil, keyEquivalent: "m")
-            .keyEquivalentModifierMask = [.command]
-        userItem.submenu = userMenu
-        root.addItem(userItem)
 
-        let windowItem = NSMenuItem()
-        let windowMenu = NSMenu(title: "Window")
-        windowMenu.addItem(withTitle: "Mixer", action: nil,
-                           keyEquivalent: String(UnicodeScalar(UInt32(NSF5FunctionKey))!))
-            .keyEquivalentModifierMask = []
-        windowMenu.addItem(withTitle: "No shortcut", action: nil, keyEquivalent: "")
-        windowItem.submenu = windowMenu
-        root.addItem(windowItem)
 
-        return root
-    }
 
-    func testDefaultMuteChordIsOwnedByTheMenu() {
-        // ⌘⇧A must keep going to the menu item — the tap acting on it too would
-        // toggle the mic twice.
-        XCTAssertTrue(HotkeyMonitor.menu(makeMenu(), carries: "a", modifiers: [.command, .shift]))
-    }
 
-    func testRe_boundChordIsNotOwnedByTheMenu() {
-        // ⌥⌘M matches nothing, so the tap is the only handler and must act.
-        XCTAssertFalse(HotkeyMonitor.menu(makeMenu(), carries: "m", modifiers: [.command, .option]))
-    }
 
-    func testSameKeyDifferentModifiersIsNotOwned() {
-        XCTAssertFalse(HotkeyMonitor.menu(makeMenu(), carries: "a", modifiers: [.command]))
-    }
-
-    func testCollidingChordInAnotherSubmenuIsOwned() {
-        // ⌘M already opens/closes a window — a mute binding on it must defer,
-        // not fire both actions.
-        XCTAssertTrue(HotkeyMonitor.menu(makeMenu(), carries: "m", modifiers: [.command]))
-    }
-
-    func testFunctionKeyEquivalentIsMatched() {
-        // F13–F19 are the recommended global bindings, so F-keys must compare
-        // by the same rule as letters rather than silently never matching.
-        let f5 = String(UnicodeScalar(UInt32(NSF5FunctionKey))!)
-        XCTAssertTrue(HotkeyMonitor.menu(makeMenu(), carries: f5, modifiers: []))
-    }
-
-    func testUnboundKeyIsNotOwned() {
-        XCTAssertFalse(HotkeyMonitor.menu(makeMenu(), carries: "z", modifiers: [.command, .control]))
-    }
 
     // MARK: - Binding -> menu key equivalent
 
@@ -143,20 +96,6 @@ final class HotkeyMenuOwnershipTests: XCTestCase {
         XCTAssertEqual(binding.menuKeyEquivalent?.modifiers, [.option])
     }
 
-    func testMenuEquivalentRoundTripsThroughTheOwnershipCheck() {
-        // The two halves have to agree: whatever we put on the item must be what
-        // the tap then recognises as menu-owned, or the chord fires twice.
-        let binding = HotkeyBinding(keyCode: 46, modifiers: [.command, .option], keyLabel: "M")
-        guard let equivalent = binding.menuKeyEquivalent else {
-            return XCTFail("⌥⌘M must have a menu key equivalent")
-        }
-        let menu = NSMenu()
-        menu.addItem(withTitle: "Microphone", action: nil, keyEquivalent: equivalent.characters)
-            .keyEquivalentModifierMask = equivalent.modifiers
-        XCTAssertTrue(HotkeyMonitor.menu(menu,
-                                         carries: equivalent.characters.lowercased(),
-                                         modifiers: equivalent.modifiers))
-    }
 
     // MARK: - Bindings that type must not steal the keystroke
 
@@ -256,21 +195,9 @@ final class HotkeyMenuOwnershipTests: XCTestCase {
                        String(UnicodeScalar(UInt32(NSF13FunctionKey))!))
     }
 
-    func testWithheldBindingIsAlsoNotOwnedByTheMenu() {
-        // The two halves have to agree in this direction too: since nothing is
-        // installed, the ownership check must report the chord as unowned, which
-        // is what routes it to the tap — where the focused-field guard then
-        // declines it. Both withhold; neither acts while typing.
-        let typing = binding(46, [], "M")
-        XCTAssertNil(typing.safeMenuKeyEquivalent)
-        let menu = NSMenu()
-        menu.addItem(withTitle: "Microphone", action: nil, keyEquivalent: "")
-        XCTAssertFalse(HotkeyMonitor.menu(menu, carries: "m", modifiers: []))
-    }
-
     func testPrintabilityCoversTheCharacterHalfOfTheRule() {
-        // `typesIntoTextFields` is the one predicate the menu, the tap and the
-        // local monitor all consult; this is the character half of it. The keys
+        // `typesIntoTextFields` is the one predicate the menu, the recorder and
+        // the local monitor all consult; this is the character half of it. The keys
         // that type nothing but a field still uses are covered by key code above.
         XCTAssertTrue(HotkeyBinding.isPrintable(UnicodeScalar("m")))
         XCTAssertTrue(HotkeyBinding.isPrintable(UnicodeScalar(" ")))
@@ -279,10 +206,4 @@ final class HotkeyMenuOwnershipTests: XCTestCase {
         XCTAssertFalse(HotkeyBinding.isPrintable(UnicodeScalar(0x7F)))
     }
 
-    func testComparableModifiersDropsHardwareOnlyFlags() {
-        // An F-key press carries .function and a keypad key .numericPad, neither
-        // of which a menu declares — left in, nothing would ever match.
-        let raw: NSEvent.ModifierFlags = [.command, .shift, .function, .capsLock, .numericPad]
-        XCTAssertEqual(HotkeyMonitor.comparableModifiers(raw), [.command, .shift])
-    }
 }

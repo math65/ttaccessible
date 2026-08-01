@@ -3,11 +3,9 @@
 //  ttaccessible
 //
 //  Runtime state of the global hotkeys, for Preferences to display. A binding
-//  can be perfectly valid and still not run: the recorder asks the OS whether a
-//  chord is free at record time, but another app can claim it afterwards, and
-//  RegisterEventHotKey then refuses it. We deliberately don't fall back to the
-//  event tap in that case (it would ask for Input Monitoring out of nowhere and
-//  fire on top of the other app), so the hotkey is simply inactive — and
+//  can be perfectly valid and still not run — our two hotkeys carrying the same
+//  chord, or a key the chat field needs bound globally (see
+//  HotkeyMonitor.Unavailability). The hotkey is then simply inactive, and
 //  silence at that point reads as "the app is broken".
 //
 
@@ -18,20 +16,20 @@ import Foundation
 final class HotkeyStatusStore: ObservableObject {
     static let shared = HotkeyStatusStore()
 
-    /// The binding another app owns, when there is one. nil means the hotkey is
-    /// running — or isn't configured at all.
-    @Published private(set) var pushToTalkUnavailable: HotkeyBinding?
-    @Published private(set) var muteHotkeyUnavailable: HotkeyBinding?
+    /// Why each hotkey isn't running, when it isn't. nil means it runs — or
+    /// isn't configured at all.
+    @Published private(set) var pushToTalk: HotkeyMonitor.Unavailability?
+    @Published private(set) var muteHotkey: HotkeyMonitor.Unavailability?
 
     private init() {}
 
-    func setPushToTalkUnavailable(_ binding: HotkeyBinding?) {
-        guard pushToTalkUnavailable != binding else { return }
-        pushToTalkUnavailable = binding
+    func setPushToTalk(_ reason: HotkeyMonitor.Unavailability?) {
+        guard pushToTalk != reason else { return }
+        pushToTalk = reason
     }
 
-    func setMuteHotkeyUnavailable(_ binding: HotkeyBinding?) {
-        guard muteHotkeyUnavailable != binding else { return }
-        muteHotkeyUnavailable = binding
+    func setMuteHotkey(_ reason: HotkeyMonitor.Unavailability?) {
+        guard muteHotkey != reason else { return }
+        muteHotkey = reason
     }
 }

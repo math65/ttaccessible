@@ -11,7 +11,7 @@ struct PreferencesAudioView: View {
 
     @ObservedObject var store: AudioPreferencesStore
     /// Whether the configured hotkeys are actually running — a binding can be
-    /// valid and still be refused by the OS because another app owns it.
+    /// valid and still be refused, and the refusal has to be visible somewhere.
     @ObservedObject private var hotkeyStatus = HotkeyStatusStore.shared
 
     @State private var selectedInputID = "__system_default__"
@@ -212,11 +212,19 @@ struct PreferencesAudioView: View {
         store.state.pushToTalkKey?.isValid ?? false
     }
 
-    /// Shown when the OS refused to register a binding that was free when it was
-    /// recorded — another app claimed it since. The hotkey is simply not running,
-    /// and nothing else in the window would say so.
-    private func unavailableChordWarning(_ binding: HotkeyBinding) -> some View {
-        Text(L10n.format("preferences.audio.hotkey.unavailable", binding.displayString))
+    /// Shown when a configured hotkey isn't running. Nothing else in the window
+    /// would say so, and a shortcut that silently does nothing reads as a broken
+    /// app rather than as a binding to change.
+    private func unavailableHotkeyWarning(_ reason: HotkeyMonitor.Unavailability) -> some View {
+        let (key, binding): (String, HotkeyBinding) = {
+            switch reason {
+            case .collidesWithOurOtherHotkey(let binding):
+                return ("preferences.audio.hotkey.unavailable.collision", binding)
+            case .wouldBlockTyping(let binding):
+                return ("preferences.audio.hotkey.unavailable.typing", binding)
+            }
+        }()
+        return Text(L10n.format(key, binding.displayString))
             .font(.caption)
             .foregroundStyle(.orange)
             .fixedSize(horizontal: false, vertical: true)
@@ -271,8 +279,8 @@ struct PreferencesAudioView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                if let taken = hotkeyStatus.pushToTalkUnavailable {
-                    unavailableChordWarning(taken)
+                if let reason = hotkeyStatus.pushToTalk {
+                    unavailableHotkeyWarning(reason)
                 }
 
                 Toggle(isOn: Binding(
@@ -321,8 +329,8 @@ struct PreferencesAudioView: View {
                     }
                 }
 
-                if let taken = hotkeyStatus.muteHotkeyUnavailable {
-                    unavailableChordWarning(taken)
+                if let reason = hotkeyStatus.muteHotkey {
+                    unavailableHotkeyWarning(reason)
                 }
             }
 
