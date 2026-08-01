@@ -446,6 +446,8 @@
 "preferences.audio.pushToTalk.key.notSet" = "Non définie";
 "preferences.audio.pushToTalk.key.recording" = "Appuyez sur une touche… (Échap pour annuler)";
 "preferences.audio.pushToTalk.key.recordHint" = "Activez, puis appuyez sur la touche à maintenir pour le push-to-talk. N'importe quelle touche convient, même une seule touche. Vous pouvez aussi utiliser une combinaison de touches de modification seule, comme Commande-Contrôle : appuyez puis relâchez-la. Appuyez sur Supprimer pour effacer.";
+"preferences.audio.hotkey.rejected.typing" = "Sert à la saisie";
+"preferences.audio.hotkey.rejected.announcement" = "Cette touche écrit dans les champs de texte : le raccourci ne ferait rien pendant que vous rédigez un message. Choisissez une touche de fonction de F13 à F19, ou ajoutez Commande, Contrôle ou Option. L'enregistrement continue — appuyez sur une autre touche, ou sur Échap pour annuler.";
 "preferences.audio.pushToTalk.beep.label" = "Jouer un son au début et à la fin de la transmission";
 "preferences.audio.pushToTalk.global.label" = "Le push-to-talk fonctionne même quand une autre app est au premier plan";
 "preferences.audio.muteHotkey.global.label" = "Le raccourci d'activation du microphone fonctionne même quand une autre app est au premier plan";

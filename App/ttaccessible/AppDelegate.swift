@@ -205,6 +205,63 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             $0.submenu?.title == title || $0.title == title
         }) else { return }
         item.isHidden = menuState.mode != .connectedServer
+        applyMuteMenuShortcut(with: preferencesStore.preferences)
+    }
+
+    /// Keeps the User ▸ Microphone item's key equivalent equal to the global
+    /// mute binding, so one chord toggles the mic whether or not ttaccessible is
+    /// focused — the menu answers it here, the tap answers it everywhere else.
+    /// Declared in SwiftUI as ⌘⇧A, which is the right default and stays put
+    /// while the hotkey is app-local; a global binding overrides it.
+    ///
+    /// A chord with no key-equivalent form (a pure-modifier chord) leaves the
+    /// item without a shortcut rather than stranding ⌘⇧A on it — the tap then
+    /// owns that binding in every focus state, which is the same one-chord
+    /// contract by a different route.
+    ///
+    /// A binding that types (a bare or ⇧-only printable key) is withheld the same
+    /// way: an item carrying it would answer the key before a focused chat field
+    /// did, toggling the mic mid-sentence. The tap declines it while a field is
+    /// focused and answers it otherwise, so the chord still works everywhere it
+    /// isn't being typed.
+    ///
+    /// Takes the preferences rather than reading the store: this also runs from
+    /// the `$preferences` sink, where `@Published` fires in willSet and the
+    /// stored property still holds the OLD value.
+    private func applyMuteMenuShortcut(with preferences: AppPreferences) {
+        let title = L10n.text("shortcuts.microphone")
+        guard let item = findMainMenuItem(titled: title) else { return }
+        guard preferences.muteHotkeyGlobal else {
+            item.keyEquivalent = Self.defaultMuteMenuKeyEquivalent.characters
+            item.keyEquivalentModifierMask = Self.defaultMuteMenuKeyEquivalent.modifiers
+            return
+        }
+        let binding = preferences.muteHotkeyBinding ?? HotkeyBinding.defaultMuteHotkey()
+        if let equivalent = binding.safeMenuKeyEquivalent {
+            item.keyEquivalent = equivalent.characters
+            item.keyEquivalentModifierMask = equivalent.modifiers
+        } else {
+            item.keyEquivalent = ""
+            item.keyEquivalentModifierMask = []
+        }
+    }
+
+    /// ⌘⇧ + whatever key types "a" on the current layout, matching what the
+    /// SwiftUI declaration means (key codes are positional; the character is not).
+    private static var defaultMuteMenuKeyEquivalent: (characters: String, modifiers: NSEvent.ModifierFlags) {
+        HotkeyBinding.defaultMuteHotkey().menuKeyEquivalent ?? ("a", [.command, .shift])
+    }
+
+    private func findMainMenuItem(titled title: String) -> NSMenuItem? {
+        func search(_ menu: NSMenu) -> NSMenuItem? {
+            for item in menu.items {
+                if item.title == title { return item }
+                if let submenu = item.submenu, let found = search(submenu) { return found }
+            }
+            return nil
+        }
+        guard let mainMenu = NSApp.mainMenu else { return nil }
+        return search(mainMenu)
     }
 
     private func syncNicknamePreference() {
@@ -241,11 +298,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // stays muted forever in push-to-talk mode.
         pushToTalkMonitor.onPress = { [weak self] in self?.handlePushToTalkPress() }
         pushToTalkMonitor.onRelease = { [weak self] in self?.handlePushToTalkRelease() }
-        // The global ⌘⇧A tap fires only while another app is focused (the menu
-        // shortcut covers the focused case), so it mirrors the menu action —
-        // without restoring/focusing our window, which would steal focus.
+        // Mirrors the menu action without restoring/focusing our window, which
+        // would steal focus. The tap defers to the menu for a chord the menu
+        // carries (⌘⇧A by default), and answers any other binding itself,
+        // focused or not. Requires a channel for the same reason the menu item
+        // is disabled without one: transmission has no meaning outside a
+        // channel, and the SDK path would fail with "not in a channel" and pop
+        // an alert over whatever app the user is actually in.
         muteHotkeyMonitor.onPress = { [weak self] in
-            guard let self, self.menuState.mode == .connectedServer else { return }
+            guard let self,
+                  self.menuState.mode == .connectedServer,
+                  self.menuState.isInChannel else { return }
             self.connectedServerViewController?.performToggleMicrophoneShortcut(announceStatus: true)
         }
 
@@ -281,6 +344,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             pushToTalkKeyConfigured: prefs.pushToTalkKey?.isValid ?? false
         )
 
+        // The focused case is the menu's, so it has to track the same binding.
+        applyMuteMenuShortcut(with: prefs)
+
         let pttActive = prefs.microphoneMode == .pushToTalk || prefs.microphoneMode == .both
         if pttActive, let key = prefs.pushToTalkKey, key.isValid {
             pushToTalkMonitor.configure(
@@ -301,7 +367,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             muteHotkeyMonitor.configure(
                 binding: prefs.muteHotkeyBinding ?? HotkeyBinding.defaultMuteHotkey(),
                 scope: .global,
-                globalOnlyWhenInactive: true,
+                deferToMainMenuWhenActive: true,
                 wantsReleaseEvents: false
             )
         } else {

@@ -446,6 +446,8 @@
 "preferences.audio.pushToTalk.key.notSet" = "Not set";
 "preferences.audio.pushToTalk.key.recording" = "Press a key… (Esc to cancel)";
 "preferences.audio.pushToTalk.key.recordHint" = "Activate, then press the key to hold for push-to-talk. Any key works, including a single key. You can also use a modifier combo on its own, like Command-Control — press and release it. Press Delete to clear.";
+"preferences.audio.hotkey.rejected.typing" = "Used for typing";
+"preferences.audio.hotkey.rejected.announcement" = "That key types into text fields, so the shortcut would do nothing while you are writing a message. Choose a function key from F13 to F19, or add Command, Control or Option. Still recording — press another key, or Esc to cancel.";
 "preferences.audio.pushToTalk.beep.label" = "Play a sound when transmission starts and stops";
 "preferences.audio.pushToTalk.global.label" = "Push-to-talk works when another app is in front";
 "preferences.audio.muteHotkey.global.label" = "Microphone toggle hotkey works when another app is in front";

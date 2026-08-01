@@ -18,6 +18,10 @@ import SwiftUI
 /// Settings window is focused (no Input Monitoring permission required).
 final class KeyCaptureSession: ObservableObject {
     @Published private(set) var isRecording = false
+    /// Set when the last press was refused because the key types into text
+    /// fields. Shown on the button so the refusal isn't silent for a sighted
+    /// user; VoiceOver gets the full explanation as an announcement.
+    @Published private(set) var didRejectTypingKey = false
 
     private var monitor: Any?
     private var peakModifiers: NSEvent.ModifierFlags = []
@@ -97,6 +101,17 @@ final class KeyCaptureSession: ObservableObject {
                 return true
             }
             if let binding = HotkeyBinding.fromKeyEvent(event) {
+                // A binding a focused text field would consume can't be honoured
+                // there: the menu withholds its shortcut and both hotkey paths
+                // stand down while you are writing (HotkeyBinding
+                // .typesIntoTextFields). Recording it would produce a shortcut
+                // that works everywhere except the chat field — refuse it while
+                // the user is still here to pick another key, rather than let
+                // them discover the hole mid-conversation.
+                guard binding.typesIntoTextFields == false else {
+                    rejectTypingKey()
+                    return true
+                }
                 commit(binding)
             }
             return true
@@ -104,6 +119,22 @@ final class KeyCaptureSession: ObservableObject {
         default:
             return false
         }
+    }
+
+    /// Stays in recording mode: the user keeps the field and can try another key
+    /// straight away, which is what the announcement tells them to do.
+    private func rejectTypingKey() {
+        didRejectTypingKey = true
+        NSAccessibility.post(
+            element: NSApp.accessibilityWindow() ?? NSApp as Any,
+            notification: .announcementRequested,
+            userInfo: [
+                NSAccessibility.NotificationUserInfoKey.announcement:
+                    L10n.text("preferences.audio.hotkey.rejected.announcement"),
+                NSAccessibility.NotificationUserInfoKey.priority:
+                    NSAccessibilityPriorityLevel.high.rawValue
+            ]
+        )
     }
 
     private func commit(_ binding: HotkeyBinding?) {
@@ -117,6 +148,7 @@ final class KeyCaptureSession: ObservableObject {
         peakModifiers = []
         onCommit = nil
         isRecording = false
+        didRejectTypingKey = false
     }
 }
 
@@ -155,7 +187,10 @@ struct HotkeyRecorderButton: View {
     }
 
     private var buttonTitle: String {
-        session.isRecording ? L10n.text("preferences.audio.pushToTalk.key.recording") : valueText
+        guard session.isRecording else { return valueText }
+        return session.didRejectTypingKey
+            ? L10n.text("preferences.audio.hotkey.rejected.typing")
+            : L10n.text("preferences.audio.pushToTalk.key.recording")
     }
 
     private var valueText: String {

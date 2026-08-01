@@ -89,6 +89,128 @@ struct HotkeyBinding: Codable, Equatable {
         return symbols + keyLabel
     }
 
+    // MARK: - Menu key equivalents
+
+    /// Virtual key codes AppKit expresses as a function-key unicode scalar
+    /// rather than a typed character. Anything a layout can type is resolved
+    /// through `KeyCodeResolver` instead, so this covers only the keys that
+    /// type nothing.
+    private static let menuFunctionKeyScalars: [Int: Int] = [
+        122: NSF1FunctionKey, 120: NSF2FunctionKey, 99: NSF3FunctionKey,
+        118: NSF4FunctionKey, 96: NSF5FunctionKey, 97: NSF6FunctionKey,
+        98: NSF7FunctionKey, 100: NSF8FunctionKey, 101: NSF9FunctionKey,
+        109: NSF10FunctionKey, 103: NSF11FunctionKey, 111: NSF12FunctionKey,
+        105: NSF13FunctionKey, 107: NSF14FunctionKey, 113: NSF15FunctionKey,
+        106: NSF16FunctionKey, 64: NSF17FunctionKey, 79: NSF18FunctionKey,
+        80: NSF19FunctionKey, 90: NSF20FunctionKey,
+        123: NSLeftArrowFunctionKey, 124: NSRightArrowFunctionKey,
+        125: NSDownArrowFunctionKey, 126: NSUpArrowFunctionKey,
+        115: NSHomeFunctionKey, 119: NSEndFunctionKey,
+        116: NSPageUpFunctionKey, 121: NSPageDownFunctionKey,
+        117: NSDeleteFunctionKey
+    ]
+
+    /// Keys AppKit matches by a plain control character.
+    private static let menuControlCharacters: [Int: String] = [
+        49: " ",         // Space
+        48: "\t",        // Tab
+        36: "\r",        // Return
+        76: "\u{3}",     // Enter
+        53: "\u{1B}",    // Esc
+        51: "\u{8}"      // Delete
+    ]
+
+    /// What a main-menu item must carry to answer this binding, or nil when the
+    /// chord cannot be a menu key equivalent — a pure-modifier chord types
+    /// nothing for AppKit to match, and an exotic key that neither the layout
+    /// nor the tables above can name has no representation either. Callers fall
+    /// back to the global tap in that case, which matches by key code and needs
+    /// no character at all.
+    var menuKeyEquivalent: (characters: String, modifiers: NSEvent.ModifierFlags)? {
+        guard let keyCode else { return nil }
+        return rawMenuKeyEquivalent(for: keyCode)
+    }
+
+    /// What may safely be installed on a main-menu item for this binding, or nil
+    /// when the item must carry no shortcut at all. A binding that types into a
+    /// focused field is withheld from the menu: an item carrying a bare
+    /// `keyEquivalent` answers it before the field sees it, so the mic would
+    /// toggle mid-sentence. The tap declines the same bindings while a field is
+    /// focused (`HotkeyMonitor.handleTapEvent`) — both halves have to withhold or
+    /// the problem just moves from one to the other.
+    var safeMenuKeyEquivalent: (characters: String, modifiers: NSEvent.ModifierFlags)? {
+        typesIntoTextFields ? nil : menuKeyEquivalent
+    }
+
+    /// Key codes a focused text field consumes even though they insert no
+    /// visible character: Return and Enter insert a newline or send, Tab moves
+    /// focus, Delete edits, and the arrows / Home / End / Page keys move the
+    /// caret. "Would the field use this key" is the real question — "is it
+    /// printable" only answers part of it.
+    ///
+    /// F1–F20 are deliberately absent. They do nothing in a text field, which is
+    /// exactly what makes them the one family safe to bind bare.
+    private static let textEditingKeyCodes: Set<Int> = [
+        36,   // Return
+        76,   // Enter
+        48,   // Tab
+        51,   // Delete
+        117,  // Forward Delete
+        123, 124, 125, 126,  // ← → ↓ ↑
+        115, 119,            // Home, End
+        116, 121             // Page Up, Page Down
+    ]
+
+    /// True when pressing this binding with a text field focused would type into
+    /// it or move around inside it. ⇧ is not protective — ⇧K still types "K", and
+    /// ⇧Tab still moves focus; only ⌘, ⌃ or ⌥ put a chord out of reach of
+    /// ordinary editing.
+    var typesIntoTextFields: Bool {
+        guard modifiers.isDisjoint(with: [.command, .control, .option]) else { return false }
+        guard let keyCode else { return false }  // a pure-modifier chord types nothing
+        if Self.textEditingKeyCodes.contains(keyCode) { return true }
+        guard let scalar = menuKeyEquivalent?.characters.unicodeScalars.first else { return false }
+        return Self.isPrintable(scalar)
+    }
+
+    /// Whether a scalar would insert a visible character if left alone. Function
+    /// and navigation keys map into the F700–F8FF private-use range and type
+    /// nothing; the navigation half of that range is caught by
+    /// `textEditingKeyCodes` above instead.
+    static func isPrintable(_ scalar: UnicodeScalar) -> Bool {
+        scalar.value >= 0x20 && scalar.value != 0x7F
+            && (scalar.value < 0xF700 || scalar.value > 0xF8FF)
+    }
+
+    private func rawMenuKeyEquivalent(
+        for keyCode: Int
+    ) -> (characters: String, modifiers: NSEvent.ModifierFlags)? {
+        if let scalarValue = Self.menuFunctionKeyScalars[keyCode],
+           let scalar = UnicodeScalar(UInt32(scalarValue)) {
+            return (String(Character(scalar)), modifiers)
+        }
+        if let control = Self.menuControlCharacters[keyCode] {
+            return (control, modifiers)
+        }
+        // AppKit matches a key equivalent against `charactersIgnoringModifiers`,
+        // which applies Shift — so a ⌘⇧ chord on the key that types "&" has to be
+        // declared as "1", the character the press actually produces. Taking the
+        // unshifted character left the item carrying "&", which no press ever
+        // matched: the shortcut showed in the menu and never fired (the tap
+        // answered it instead), and the recorder displayed a different chord than
+        // the menu did.
+        //
+        // Case is the exception the mask still owns: equivalents are declared in
+        // lower case, so ⌘⇧A stays "a" rather than needing ⇧ declared twice.
+        // An untypable key yields nil, and the tap — which matches by key code —
+        // handles it instead.
+        guard let typed = KeyCodeResolver.character(
+            forKeyCode: keyCode,
+            shifted: modifiers.contains(.shift)
+        )?.lowercased(), typed.count == 1 else { return nil }
+        return (typed, modifiers)
+    }
+
     // MARK: - Key labels
 
     static let specialKeyLabels: [Int: String] = [
@@ -108,7 +230,12 @@ struct HotkeyBinding: Codable, Equatable {
         116: "Page Up",
         121: "Page Down",
         122: "F1", 120: "F2", 99: "F3", 118: "F4", 96: "F5", 97: "F6",
-        98: "F7", 100: "F8", 101: "F9", 109: "F10", 103: "F11", 111: "F12"
+        98: "F7", 100: "F8", 101: "F9", 109: "F10", 103: "F11", 111: "F12",
+        // F13–F20 type nothing and carry no system function, which makes them
+        // the one genuinely safe global binding — they were showing as
+        // "Key 105" because the table stopped at F12.
+        105: "F13", 107: "F14", 113: "F15", 106: "F16",
+        64: "F17", 79: "F18", 80: "F19", 90: "F20"
     ]
 
     private static func keyLabel(for event: NSEvent) -> String {
@@ -149,14 +276,25 @@ enum KeyCodeResolver {
         if let special = HotkeyBinding.specialKeyLabels[keyCode] {
             return special
         }
-        if let layoutData = currentLayoutData(),
-           let translated = translate(keyCode: keyCode, layoutData: layoutData),
-           translated.isEmpty == false,
-           let scalar = translated.unicodeScalars.first,
-           scalar.value >= 0x20, scalar.value != 0x7F {
+        if let translated = character(forKeyCode: keyCode, shifted: false) {
             return translated.uppercased()
         }
         return "Key \(keyCode)"
+    }
+
+    /// The visible character `keyCode` types under the current layout, with Shift
+    /// applied or not, or nil when it types nothing. Shift matters: the same
+    /// physical key types "&" alone and "1" with Shift on AZERTY, and a menu key
+    /// equivalent has to be declared as the shifted form to ever match.
+    static func character(forKeyCode keyCode: Int, shifted: Bool) -> String? {
+        guard let layoutData = currentLayoutData(),
+              let translated = translate(keyCode: keyCode,
+                                         layoutData: layoutData,
+                                         shifted: shifted),
+              translated.isEmpty == false,
+              let scalar = translated.unicodeScalars.first,
+              scalar.value >= 0x20, scalar.value != 0x7F else { return nil }
+        return translated
     }
 
     private static func currentLayoutData() -> Data? {
@@ -167,8 +305,10 @@ enum KeyCodeResolver {
         return unsafeBitCast(layoutDataRef, to: CFData.self) as Data
     }
 
-    private static func translate(keyCode: Int, layoutData: Data) -> String? {
-        layoutData.withUnsafeBytes { rawBuffer -> String? in
+    private static func translate(keyCode: Int, layoutData: Data, shifted: Bool = false) -> String? {
+        // UCKeyTranslate wants the Carbon modifier bits shifted down a byte.
+        let modifierState = shifted ? UInt32(shiftKey >> 8) : 0
+        return layoutData.withUnsafeBytes { rawBuffer -> String? in
             guard let layoutPtr = rawBuffer.bindMemory(to: UCKeyboardLayout.self).baseAddress else { return nil }
             var deadKeyState: UInt32 = 0
             var chars = [UniChar](repeating: 0, count: 4)
@@ -177,7 +317,7 @@ enum KeyCodeResolver {
                 layoutPtr,
                 UInt16(keyCode),
                 UInt16(kUCKeyActionDisplay),
-                0,
+                modifierState,
                 UInt32(LMGetKbdType()),
                 OptionBits(kUCKeyTranslateNoDeadKeysBit),
                 &deadKeyState,
