@@ -108,6 +108,28 @@ final class HotkeyMenuOwnershipTests: XCTestCase {
                        String(UnicodeScalar(UInt32(NSF13FunctionKey))!))
     }
 
+    func testShiftedChordDeclaresTheCharacterThePressActuallyTypes() throws {
+        // AppKit compares a key equivalent against `charactersIgnoringModifiers`,
+        // which keeps Shift applied. Declaring the UNSHIFTED character left the
+        // item carrying "&" for a chord that types "1" — the menu shortcut was
+        // shown and never fired.
+        //
+        // Layout-agnostic: find any key whose shifted character differs from its
+        // unshifted one (the digit row, on every layout) and assert we declare
+        // the shifted form. Case is excluded — that half stays in the mask.
+        let keyCode = try XCTUnwrap((0..<128).first { code in
+            guard let plain = KeyCodeResolver.character(forKeyCode: code, shifted: false),
+                  let shifted = KeyCodeResolver.character(forKeyCode: code, shifted: true) else {
+                return false
+            }
+            return plain.lowercased() != shifted.lowercased()
+        }, "no key on this layout types a different character with Shift")
+
+        let shifted = try XCTUnwrap(KeyCodeResolver.character(forKeyCode: keyCode, shifted: true))
+        let binding = HotkeyBinding(keyCode: keyCode, modifiers: [.command, .shift], keyLabel: nil)
+        XCTAssertEqual(binding.menuKeyEquivalent?.characters, shifted.lowercased())
+    }
+
     func testUnnameableKeyHasNoMenuKeyEquivalent() {
         // A key no table names and no layout types must degrade to "the tap
         // handles it", not to a bogus menu title.
@@ -223,7 +245,13 @@ final class HotkeyMenuOwnershipTests: XCTestCase {
     func testNonTypingBindingStillReachesTheMenu() {
         // Withholding must not cost the safe bindings their menu shortcut —
         // that shortcut is what makes one chord work while the app is focused.
-        XCTAssertEqual(binding(46, [.command, .option], "M").safeMenuKeyEquivalent?.characters, "m")
+        //
+        // The key code comes from the layout rather than a constant: codes are
+        // positional, so 46 types "m" on ANSI but "," on AZERTY, and hardcoding
+        // it fails the test on a French keyboard for a reason that has nothing
+        // to do with what is under test.
+        let m = KeyCodeResolver.keyCode(for: "m") ?? 46
+        XCTAssertEqual(binding(m, [.command, .option], "M").safeMenuKeyEquivalent?.characters, "m")
         XCTAssertEqual(binding(105, [], "F13").safeMenuKeyEquivalent?.characters,
                        String(UnicodeScalar(UInt32(NSF13FunctionKey))!))
     }

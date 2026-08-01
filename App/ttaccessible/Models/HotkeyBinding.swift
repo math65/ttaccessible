@@ -192,11 +192,22 @@ struct HotkeyBinding: Codable, Equatable {
         if let control = Self.menuControlCharacters[keyCode] {
             return (control, modifiers)
         }
-        // Key equivalents are declared in lower case; the shift in a chord like
-        // ⌘⇧A lives in the modifier mask, not in the character.
-        // An unnameable key comes back as "Key 105", which is never one character.
-        let typed = KeyCodeResolver.label(forKeyCode: keyCode).lowercased()
-        guard typed.count == 1 else { return nil }
+        // AppKit matches a key equivalent against `charactersIgnoringModifiers`,
+        // which applies Shift — so a ⌘⇧ chord on the key that types "&" has to be
+        // declared as "1", the character the press actually produces. Taking the
+        // unshifted character left the item carrying "&", which no press ever
+        // matched: the shortcut showed in the menu and never fired (the tap
+        // answered it instead), and the recorder displayed a different chord than
+        // the menu did.
+        //
+        // Case is the exception the mask still owns: equivalents are declared in
+        // lower case, so ⌘⇧A stays "a" rather than needing ⇧ declared twice.
+        // An untypable key yields nil, and the tap — which matches by key code —
+        // handles it instead.
+        guard let typed = KeyCodeResolver.character(
+            forKeyCode: keyCode,
+            shifted: modifiers.contains(.shift)
+        )?.lowercased(), typed.count == 1 else { return nil }
         return (typed, modifiers)
     }
 
@@ -265,14 +276,25 @@ enum KeyCodeResolver {
         if let special = HotkeyBinding.specialKeyLabels[keyCode] {
             return special
         }
-        if let layoutData = currentLayoutData(),
-           let translated = translate(keyCode: keyCode, layoutData: layoutData),
-           translated.isEmpty == false,
-           let scalar = translated.unicodeScalars.first,
-           scalar.value >= 0x20, scalar.value != 0x7F {
+        if let translated = character(forKeyCode: keyCode, shifted: false) {
             return translated.uppercased()
         }
         return "Key \(keyCode)"
+    }
+
+    /// The visible character `keyCode` types under the current layout, with Shift
+    /// applied or not, or nil when it types nothing. Shift matters: the same
+    /// physical key types "&" alone and "1" with Shift on AZERTY, and a menu key
+    /// equivalent has to be declared as the shifted form to ever match.
+    static func character(forKeyCode keyCode: Int, shifted: Bool) -> String? {
+        guard let layoutData = currentLayoutData(),
+              let translated = translate(keyCode: keyCode,
+                                         layoutData: layoutData,
+                                         shifted: shifted),
+              translated.isEmpty == false,
+              let scalar = translated.unicodeScalars.first,
+              scalar.value >= 0x20, scalar.value != 0x7F else { return nil }
+        return translated
     }
 
     private static func currentLayoutData() -> Data? {
@@ -283,8 +305,10 @@ enum KeyCodeResolver {
         return unsafeBitCast(layoutDataRef, to: CFData.self) as Data
     }
 
-    private static func translate(keyCode: Int, layoutData: Data) -> String? {
-        layoutData.withUnsafeBytes { rawBuffer -> String? in
+    private static func translate(keyCode: Int, layoutData: Data, shifted: Bool = false) -> String? {
+        // UCKeyTranslate wants the Carbon modifier bits shifted down a byte.
+        let modifierState = shifted ? UInt32(shiftKey >> 8) : 0
+        return layoutData.withUnsafeBytes { rawBuffer -> String? in
             guard let layoutPtr = rawBuffer.bindMemory(to: UCKeyboardLayout.self).baseAddress else { return nil }
             var deadKeyState: UInt32 = 0
             var chars = [UniChar](repeating: 0, count: 4)
@@ -293,7 +317,7 @@ enum KeyCodeResolver {
                 layoutPtr,
                 UInt16(keyCode),
                 UInt16(kUCKeyActionDisplay),
-                0,
+                modifierState,
                 UInt32(LMGetKbdType()),
                 OptionBits(kUCKeyTranslateNoDeadKeysBit),
                 &deadKeyState,
