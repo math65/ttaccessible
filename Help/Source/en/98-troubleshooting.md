@@ -35,6 +35,17 @@ audio status — it answers the first question for you.
 
 To settle it, press Shift-Command-H: if you can hear yourself through the channel, you're on air.
 
+## If a microphone shortcut stops responding
+
+1. Check whether a password field is focused somewhere on your Mac — in another app, or on a website.
+   macOS suspends shortcuts that work from other apps while one is, and restores them the moment you
+   leave the field.
+2. Open Preferences, then click Audio. When a shortcut can't run, tt-Accessible says so right under
+   the button that sets it. Two things cause it: your push-to-talk key and your microphone toggle
+   carry the same keys, so only one of them can run; or the key you chose types into text fields,
+   which is refused.
+3. Record a different key: click the button, then press the one you want.
+
 ## If everyone hears themselves come back
 
 Your speakers are being picked up by your microphone. Either use headphones, or open Preferences,

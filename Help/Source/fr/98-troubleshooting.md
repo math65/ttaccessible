@@ -38,6 +38,17 @@ connaître l'état audio : cela répond déjà à la première question.
 Pour trancher, appuyez sur Maj + Commande + H : si vous vous entendez par le canal, vous êtes à
 l'antenne.
 
+## Si un raccourci du micro ne répond plus
+
+1. Vérifiez si un champ de mot de passe est actif quelque part sur votre Mac — dans une autre app ou
+   sur un site web. Tant que c'est le cas, macOS suspend les raccourcis qui fonctionnent depuis les
+   autres apps, et les rétablit dès que vous quittez ce champ.
+2. Ouvrez les Préférences, puis cliquez sur Audio. Quand un raccourci ne peut pas fonctionner,
+   tt-Accessible l'indique juste sous le bouton qui le définit. Deux causes : votre touche de
+   push-to-talk et votre raccourci d'activation du micro portent les mêmes touches, et un seul des
+   deux peut fonctionner ; ou la touche choisie écrit dans les champs de texte, ce qui est refusé.
+3. Enregistrez une autre touche : cliquez sur le bouton, puis appuyez sur celle que vous voulez.
+
 ## Si tout le monde s'entend revenir
 
 Vos haut-parleurs sont repris par votre micro. Utilisez un casque, ou ouvrez les Préférences,

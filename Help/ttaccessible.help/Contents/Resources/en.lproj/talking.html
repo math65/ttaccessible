@@ -32,7 +32,17 @@
 <p>Two related options sit just below:</p>
 <ul>
 <li><strong>Play a sound when transmission starts and stops</strong>, which is on.</li>
-<li><strong>Push-to-talk works when another app is in front</strong>, which is on. A matching option exists for the microphone toggle, and is off. Both use the Input Monitoring permission, which macOS asks for the first time. Because tt-Accessible runs in a sandbox, the key still reaches the app you're working in, so prefer modifier keys on their own or a function key from F13 to F19.</li>
+<li><strong>Push-to-talk works when another app is in front</strong>, which is on. A matching option exists for the microphone toggle, and is off.</li>
+</ul>
+<h2 id="use-your-microphone-from-another-app">Use your microphone from another app</h2>
+<p>With either of those options on, the shortcut answers wherever you are — in your browser, in your audio editor, anywhere.</p>
+<p>macOS gives the key to tt-Accessible before the app in front sees it, so nothing is typed where you're working. That app no longer receives the key at all: if your audio editor pauses on Control-Space and you choose Control-Space here, it stops pausing for as long as the shortcut is set. Choose one you don't use elsewhere — a function key from F13 to F19 is a safe bet.</p>
+<p>Also worth knowing:</p>
+<ul>
+<li>An ordinary shortcut needs no permission.</li>
+<li>A combination of modifier keys on their own, such as Command-Control, is the exception. macOS asks for the Input Monitoring permission the first time, and the app in front still receives the keys.</li>
+<li>A key that types — a letter, Space, Return, an arrow — is refused. It would stop that character reaching any text field, including the chat here.</li>
+<li>While a password field is focused anywhere on your Mac, macOS suspends the shortcut. It works again as soon as you leave that field.</li>
 </ul>
 <h2 id="adjust-the-volumes">Adjust the volumes</h2>
 <p>The main window has three sliders, each with a <em>Reset to 50%</em> VoiceOver action:</p>

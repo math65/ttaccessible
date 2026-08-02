@@ -35,9 +35,27 @@ Two related options sit just below:
 
 - **Play a sound when transmission starts and stops**, which is on.
 - **Push-to-talk works when another app is in front**, which is on. A matching option exists for the
-  microphone toggle, and is off. Both use the Input Monitoring permission, which macOS asks for the
-  first time. Because tt-Accessible runs in a sandbox, the key still reaches the app you're working
-  in, so prefer modifier keys on their own or a function key from F13 to F19.
+  microphone toggle, and is off.
+
+## Use your microphone from another app
+
+With either of those options on, the shortcut answers wherever you are — in your browser, in your
+audio editor, anywhere.
+
+macOS gives the key to tt-Accessible before the app in front sees it, so nothing is typed where
+you're working. That app no longer receives the key at all: if your audio editor pauses on
+Control-Space and you choose Control-Space here, it stops pausing for as long as the shortcut is
+set. Choose one you don't use elsewhere — a function key from F13 to F19 is a safe bet.
+
+Also worth knowing:
+
+- An ordinary shortcut needs no permission.
+- A combination of modifier keys on their own, such as Command-Control, is the exception. macOS asks
+  for the Input Monitoring permission the first time, and the app in front still receives the keys.
+- A key that types — a letter, Space, Return, an arrow — is refused. It would stop that character
+  reaching any text field, including the chat here.
+- While a password field is focused anywhere on your Mac, macOS suspends the shortcut. It works
+  again as soon as you leave that field.
 
 ## Adjust the volumes
 

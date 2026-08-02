@@ -35,10 +35,30 @@ Deux options complètent le tableau, juste en dessous :
 
 - **Jouer un son au début et à la fin de la transmission**, qui est activée.
 - **Le push-to-talk fonctionne même quand une autre app est au premier plan**, activée elle aussi.
-  Un réglage équivalent existe pour l'activation du micro, désactivé. Tous deux utilisent
-  l'autorisation « Surveillance des saisies », que macOS demande la première fois. Comme
-  tt-Accessible fonctionne en bac à sable, la touche atteint quand même l'app où vous travaillez :
-  préférez des touches de modification seules ou une touche de fonction de F13 à F19.
+  Un réglage équivalent existe pour l'activation du micro, désactivé.
+
+## Utiliser votre micro depuis une autre app
+
+Quand l'une de ces options est activée, le raccourci répond où que vous soyez : dans votre
+navigateur, dans votre éditeur audio, n'importe où.
+
+macOS remet la touche à tt-Accessible avant que l'app au premier plan la voie : rien ne s'écrit là
+où vous travaillez. En contrepartie, cette app ne reçoit plus du tout la touche. Si votre éditeur
+audio met en pause avec Contrôle + Espace et que vous choisissez Contrôle + Espace ici, il ne met
+plus en pause tant que le raccourci est défini. Choisissez-en un que vous n'utilisez pas ailleurs :
+une touche de fonction de F13 à F19 est un choix sûr.
+
+Bon à savoir également :
+
+- Un raccourci ordinaire ne demande aucune autorisation.
+- Seule exception, une combinaison de touches de modification seules, comme Commande + Contrôle :
+  macOS demande l'autorisation « Surveillance des saisies » la première fois, et l'app au premier
+  plan reçoit quand même les touches.
+- Une touche qui écrit — une lettre, la barre d'espace, Retour, une flèche — est refusée. Elle
+  empêcherait ce caractère d'atteindre le moindre champ de texte, y compris la zone de discussion
+  ici.
+- Tant qu'un champ de mot de passe est actif, où que ce soit sur votre Mac, macOS suspend le
+  raccourci. Il refonctionne dès que vous quittez ce champ.
 
 ## Régler les volumes
 
