@@ -133,6 +133,7 @@ final class UserAccountFormViewController: NSViewController {
 
         rightsTableView = NSTableView()
         rightsTableView.headerView = nil
+        rightsTableView.setAccessibilityLabel(L10n.text("accounts.form.rights.accessibilityLabel"))
         let checkCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("check"))
         checkCol.width = 24
         let labelCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("label"))

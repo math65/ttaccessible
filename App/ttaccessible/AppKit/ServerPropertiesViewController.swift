@@ -151,6 +151,9 @@ final class ServerPropertiesViewController: NSViewController {
         scrollView.drawsBackground = false
         let clipView = scrollView.contentView
         scrollView.documentView = contentStack
+        // Nothing inside the stack names the region, so the scroll area carries the
+        // name — what it holds, not the sheet title, which would then be read twice.
+        scrollView.setAccessibilityLabel(L10n.text("serverProperties.form.settings.accessibilityLabel"))
 
         view.addSubview(scrollView)
 
