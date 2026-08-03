@@ -90,6 +90,9 @@ final class UserInfoViewController: NSViewController {
         let contentView = NSView()
         contentView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.documentView = contentView
+        // The fields inside are unnamed rows, so the scroll area is what VoiceOver
+        // has to introduce the region with.
+        scrollView.setAccessibilityLabel(L10n.text("userInfo.details.accessibilityLabel"))
 
         contentView.addSubview(stackView)
 

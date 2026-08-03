@@ -1,5 +1,20 @@
 {
   "skillOverrides": {
     "publish-release": "user-invocable-only"
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .agents/skills/accessibility/scripts/hook.py",
+            "timeout": 30,
+            "statusMessage": "Audit d'accessibilité"
+          }
+        ]
+      }
+    ]
   }
 }

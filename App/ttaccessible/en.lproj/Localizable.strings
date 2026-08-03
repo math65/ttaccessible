@@ -856,6 +856,7 @@
 "ttFile.exportFolder.prompt" = "Export Here";
 "ttFile.exportFolder.done.message" = "%ld servers exported, %ld failed.";
 "userInfo.window.title" = "User Information";
+"userInfo.details.accessibilityLabel" = "User details";
 "userInfo.window.title.withName" = "User Information — %@";
 "userInfo.empty" = "This user is no longer available.";
 "userInfo.field.id" = "ID";
@@ -960,6 +961,7 @@
 "accounts.form.initChannel" = "Initial channel";
 "accounts.form.note" = "Note";
 "accounts.form.rights.enableAll" = "Enable all";
+"accounts.form.rights.accessibilityLabel" = "Account rights";
 "accounts.form.rights.disableAll" = "Disable all";
 "accounts.form.rights.defaultRights" = "Default rights";
 "accounts.form.audioBpsLimit" = "Audio bandwidth limit (0 = unlimited)";
@@ -1011,6 +1013,7 @@
 "serverProperties.menu.open" = "Server Properties…";
 "serverConfig.menu.save" = "Save Server Configuration";
 "serverProperties.form.title" = "Server Properties";
+"serverProperties.form.settings.accessibilityLabel" = "Server settings";
 "serverProperties.form.section.general" = "General";
 "serverProperties.form.section.bandwidth" = "Bandwidth Limits";
 "serverProperties.form.section.info" = "Network & Server Information";
