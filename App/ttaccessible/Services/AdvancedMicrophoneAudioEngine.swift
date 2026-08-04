@@ -953,7 +953,8 @@ final class AdvancedMicrophoneAudioEngine {
 
     private func applyInputGainInPlace(to samples: inout [Float], count: Int, gainDB: Double) {
         guard count > 0, gainDB != 0 else { return }
-        let gain = Float(pow(10, gainDB / 20))
+        // 0 % on the slider (`minGainDB`) is a real silence, not a -24 dB whisper.
+        let gain = Float(AppPreferences.linearGain(forGainDB: gainDB))
         for index in 0..<count {
             samples[index] *= gain
         }

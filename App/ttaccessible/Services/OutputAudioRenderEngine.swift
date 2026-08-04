@@ -535,7 +535,7 @@ final class OutputAudioRenderEngine {
     // MARK: - Master gain / mute (serial queue)
 
     func setMasterGainDB(_ gainDB: Double) {
-        gainCell.pointee = Float(pow(10.0, gainDB / 20.0))
+        gainCell.pointee = Float(AppPreferences.linearGain(forGainDB: gainDB))
     }
 
     func setMuted(_ muted: Bool) {

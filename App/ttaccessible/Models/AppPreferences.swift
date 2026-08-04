@@ -376,8 +376,20 @@ struct AppPreferences: Codable, Equatable {
         self.hasChosenInitialLanguage = hasChosenInitialLanguage
     }
 
+    nonisolated static let minGainDB: Double = -24
+    nonisolated static let maxGainDB: Double = 24
+
     nonisolated static func clampGainDB(_ value: Double) -> Double {
-        min(max(value, -24), 24)
+        min(max(value, minGainDB), maxGainDB)
+    }
+
+    /// Linear gain for a slider dB value. The bottom of the scale — 0 % on every
+    /// gain slider — is a REAL silence, not `minGainDB`: -24 dB is quiet but still
+    /// perfectly audible, and a user who drags a volume to 0 % means "off".
+    nonisolated static func linearGain(forGainDB value: Double) -> Double {
+        let clamped = clampGainDB(value)
+        if clamped <= minGainDB { return 0 }
+        return pow(10, clamped / 20)
     }
 
     nonisolated static func clampAutoAwayTimeoutMinutes(_ value: Int) -> Int {

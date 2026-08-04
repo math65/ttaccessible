@@ -131,7 +131,10 @@ final class SoundPlayer {
     /// Recompute the combined linear gain (clamped to allow up to +12 dB of boost).
     /// Must run on `queue`.
     private func recomputeEffectsGain() {
-        let linear = Float(pow(10.0, (effectsGainDB + masterGainDB) / 20.0))
+        // Product of the two linear gains rather than a sum of dB: identical result,
+        // except either slider sitting at 0 % now silences the effects outright.
+        let linear = Float(AppPreferences.linearGain(forGainDB: effectsGainDB)
+            * AppPreferences.linearGain(forGainDB: masterGainDB))
         effectsGainLinear = min(Self.maxBoostLinear, max(0, linear))
     }
 
