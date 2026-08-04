@@ -74,6 +74,46 @@ final class ClampGainDBTests: XCTestCase {
     }
 }
 
+// MARK: - linearGain(forGainDB:) — bottom of the scale must be a real silence
+
+final class LinearGainTests: XCTestCase {
+
+    func testBottomOfScaleIsSilence() {
+        XCTAssertEqual(AppPreferences.linearGain(forGainDB: -24), 0, accuracy: 0.0000001)
+        XCTAssertEqual(AppPreferences.linearGain(forGainDB: -100), 0, accuracy: 0.0000001)
+        // 0 % on the slider maps to minGainDB, so the slider's floor is silent too.
+        XCTAssertEqual(
+            AppPreferences.linearGain(forGainDB: AudioGainControlView.gainDB(forPercent: 0)),
+            0,
+            accuracy: 0.0000001
+        )
+    }
+
+    func testUnityAndBoost() {
+        XCTAssertEqual(AppPreferences.linearGain(forGainDB: 0), 1, accuracy: 0.0001)
+        XCTAssertEqual(AppPreferences.linearGain(forGainDB: 6), 1.995_262, accuracy: 0.0001)
+        XCTAssertEqual(AppPreferences.linearGain(forGainDB: 24), 15.848_931, accuracy: 0.0001)
+        XCTAssertEqual(AppPreferences.linearGain(forGainDB: 100), 15.848_931, accuracy: 0.0001)
+    }
+
+    /// Just above the floor must still be audible — the silence is the floor only,
+    /// not a range of near-zero percentages.
+    func testJustAboveFloorIsAudible() {
+        let onePercent = AppPreferences.linearGain(forGainDB: AudioGainControlView.gainDB(forPercent: 1))
+        XCTAssertGreaterThan(onePercent, 0)
+        XCTAssertLessThan(onePercent, 1)
+    }
+
+    func testMonotonicNonDecreasing() {
+        var last = -1.0
+        for p in stride(from: 0.0, through: 100.0, by: 1.0) {
+            let gain = AppPreferences.linearGain(forGainDB: AudioGainControlView.gainDB(forPercent: p))
+            XCTAssertGreaterThanOrEqual(gain, last, "gain curve not monotonic at \(p)%")
+            last = gain
+        }
+    }
+}
+
 // MARK: - User volume <-> percent piecewise-linear curve
 
 final class UserVolumeCurveTests: XCTestCase {
