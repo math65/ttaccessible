@@ -1,3 +1,35 @@
+## v1.11.0 (build 46) — 2026-08-04
+
+This release adds a complete user guide to the Help menu, and rebuilds how global shortcuts work: a microphone shortcut no longer asks for a system permission, and the key you press no longer ends up typed into whatever app you were using. Setting a volume to 0% now really does mean silence.
+
+### Highlights
+- **A complete user guide, in the Help menu (⌘?)** — 18 topics, in English and French.
+- **A microphone shortcut used from another app no longer needs the Input Monitoring permission.**
+- **The key you press is now truly taken.** It no longer types into the app you are working in.
+- **0% on a volume slider is silence.** It used to be a quiet — but perfectly audible — level.
+
+### The user guide
+- **⌘? opens a full guide in the macOS help viewer.** It covers the first launch, adding a server, moving around the main window, channels, talking, messages, the channel mixer, setting up your audio, recording, streaming, users and administration, every preference pane, sounds and announcements, profiles, the complete shortcut list, and what to do when something doesn't work.
+- **Written to be followed, not read.** Each topic starts with what you can do, then gives numbered steps naming the exact menu, button and pop-up menu to use.
+- **Available in English and French.** The help viewer picks its language from your Mac's, not from the app's, so each home page links to the other language if you end up in the wrong one.
+
+### Microphone shortcuts from other apps
+- **No more Input Monitoring permission** for an ordinary shortcut — a key with Command, Control or Option. Only a shortcut made of modifier keys alone (pressed and released on their own) still asks for it.
+- **The key no longer reaches the app in front.** Previously your shortcut both toggled the microphone and typed its character into whatever you were using. Worth knowing: the app that used that same shortcut internally stops receiving it while yours is set — Reaper, for instance, loses its Control-Space for as long as you keep it bound.
+- **A shortcut that would type is now refused while you record it**, with the alternatives spoken out: F13 to F20, or add Command, Control or Option. A shortcut of that kind saved before this release is refused too, and Preferences tells you why, rather than silently eating that letter everywhere you type.
+- **The User menu now shows the shortcut you actually chose**, instead of always displaying ⌘⇧A.
+- **F13 to F20 are named properly** — they used to appear as "Key 105" and could not be shown in the menu, when they are exactly the keys worth choosing.
+
+### Fixes
+- **A re-bound microphone shortcut now works with tt-Accessible in front too.** Once you changed it in Preferences, it worked everywhere except in the app itself.
+- **The shortcut shown matches the key you pressed on AZERTY keyboards.** A ⌘⇧ shortcut on the "1" key was displayed as ⌘⇧& in the menu and ⌘⇧1 in Preferences — two labels for one shortcut, read aloud as two different things.
+- **Your shortcut is no longer registered twice at launch.** Reported by Rocco Fiorentino.
+- **VoiceOver now names two places it entered blind**: the rights table when editing a user account, which announced itself as "table" and nothing else, and the scrolling areas of the server properties and user information windows.
+- **A microphone shortcut stops responding while a password field is focused anywhere on your Mac.** That is macOS protecting your typing, not a bug — it is now written down in the troubleshooting page.
+
+### Download
+[ttaccessible-1.11.0-46.zip](https://github.com/math65/ttaccessible/releases/download/v1.11.0/ttaccessible-1.11.0-46.zip)
+
 ## v1.10.0 (build 45) — 2026-07-26
 
 This release lets you stream an application's audio — or VoiceOver itself — into a channel, and keeps your voice in time with it. Auto-reconnect now reliably puts you back in the channel you were in, channel passwords are remembered, and moderators can move a whole channel's occupants in one go.

@@ -1,3 +1,35 @@
+## v1.11.0 (build 46) — 04/08/2026
+
+Cette version dote enfin l'application d'un vrai guide d'utilisation, accessible depuis le menu Aide. Elle revoit aussi de fond en comble les raccourcis utilisables depuis une autre application : ils ne réclament plus d'autorisation système, et la touche que vous appuyez ne vient plus s'écrire dans l'application où vous travaillez. Enfin, un volume réglé sur 0 % coupe désormais réellement le son.
+
+### L'essentiel
+- **Un guide d'utilisation complet, dans le menu Aide (⌘?)** — 18 rubriques, en français et en anglais.
+- **Un raccourci micro utilisé depuis une autre application ne demande plus l'autorisation « Surveillance de la saisie ».**
+- **La touche est réellement captée** : elle ne s'écrit plus dans l'application que vous utilisez.
+- **0 % sur un curseur de volume, c'est le silence.** C'était jusqu'ici un niveau discret, mais parfaitement audible.
+
+### Le guide d'utilisation
+- **⌘? ouvre un guide complet dans l'aide de macOS.** Vous y trouverez le premier lancement, l'ajout d'un serveur, la circulation dans la fenêtre principale, les canaux, la prise de parole, les messages, le mixeur de canal, le réglage de votre matériel audio, l'enregistrement, la diffusion, les utilisateurs et l'administration, chaque panneau des préférences, les sons et les annonces, les profils, la liste complète des raccourcis, et la marche à suivre quand quelque chose ne fonctionne pas.
+- **Écrit pour être suivi, pas seulement lu.** Chaque rubrique annonce ce que vous allez pouvoir faire, puis déroule des étapes numérotées qui nomment le menu, le bouton et le menu local exacts.
+- **Disponible en français et en anglais.** L'aide de macOS choisit sa langue d'après celle de votre Mac et non celle de l'application : chaque page d'accueil renvoie donc vers l'autre langue si vous tombez sur la mauvaise.
+
+### Les raccourcis micro depuis une autre application
+- **Plus d'autorisation « Surveillance de la saisie »** pour un raccourci ordinaire, c'est-à-dire une touche accompagnée de Commande, Contrôle ou Option. Seul un raccourci composé uniquement de touches de modification, que l'on presse et relâche telles quelles, la réclame encore.
+- **La touche ne parvient plus à l'application au premier plan.** Auparavant, votre raccourci coupait bien le micro, mais son caractère s'écrivait aussi dans ce que vous étiez en train d'utiliser. À savoir : l'application qui se servait du même raccourci de son côté cesse de le recevoir tant que le vôtre est défini — Reaper, par exemple, perd son Contrôle-Espace aussi longtemps que vous le gardez.
+- **Un raccourci qui écrirait quelque chose est maintenant refusé au moment où vous l'enregistrez**, et les solutions vous sont annoncées : F13 à F20, ou l'ajout de Commande, Contrôle ou Option. Un raccourci de ce type enregistré avant cette version est refusé lui aussi, avec l'explication dans les préférences, plutôt que d'avaler cette lettre partout où vous écrivez.
+- **Le menu Utilisateur affiche enfin le raccourci que vous avez choisi**, au lieu de toujours annoncer ⌘⇧A.
+- **Les touches F13 à F20 portent leur nom.** Elles s'affichaient sous la forme « Key 105 » et ne pouvaient pas apparaître dans le menu, alors que ce sont précisément celles qu'il vaut mieux choisir.
+
+### Corrections
+- **Un raccourci micro réattribué fonctionne aussi quand tt-Accessible est au premier plan.** Une fois modifié dans les préférences, il fonctionnait partout sauf dans l'application elle-même.
+- **Sur les claviers AZERTY, le raccourci affiché correspond à la touche pressée.** Un raccourci ⌘⇧ sur la touche « 1 » s'affichait ⌘⇧& dans le menu et ⌘⇧1 dans les préférences : deux libellés pour un seul raccourci, que VoiceOver énonçait comme deux choses différentes.
+- **Votre raccourci n'est plus enregistré deux fois au lancement.** Signalé par Rocco Fiorentino.
+- **VoiceOver nomme deux endroits où l'on entrait à l'aveugle** : le tableau des droits, lors de la modification d'un compte, qui s'annonçait « tableau » et rien d'autre, ainsi que les zones de défilement des fenêtres de propriétés du serveur et d'informations sur un utilisateur.
+- **Un raccourci micro reste sans effet tant qu'un champ de mot de passe est actif quelque part sur votre Mac.** C'est macOS qui protège votre saisie, et non un défaut : c'est désormais écrit dans la page de dépannage.
+
+### Téléchargement
+[ttaccessible-1.11.0-46.zip](https://github.com/math65/ttaccessible/releases/download/v1.11.0/ttaccessible-1.11.0-46.zip)
+
 ## v1.10.0 (build 45) — 26/07/2026
 
 Cette version vous permet de diffuser dans un canal le son d'une application — ou celui de VoiceOver — en gardant votre voix calée dessus. La reconnexion automatique vous ramène désormais vraiment dans le canal que vous occupiez, les mots de passe de canaux sont mémorisés, et les modérateurs peuvent vider un canal en une seule opération.
