@@ -404,6 +404,10 @@
 "preferences.audio.title" = "Audio";
 "preferences.audio.outputDevice" = "Output device";
 "preferences.audio.inputDevice" = "Input device";
+"preferences.audio.outputChannels" = "Output channels";
+"preferences.audio.outputChannels.auto" = "Auto";
+"preferences.audio.outputChannels.mono" = "Output %d mono";
+"preferences.audio.outputChannels.stereoPair" = "Outputs %d/%d stereo";
 "preferences.audio.systemDefault" = "System default";
 "preferences.audio.noOutput" = "No output device";
 "preferences.audio.advanced.title" = "Microphone";
@@ -630,6 +634,7 @@
 "mediaStream.device.error.deviceUnavailable" = "The selected audio device is no longer available.";
 "mediaStream.device.error.startFailed" = "Failed to start streaming the audio device.";
 "mediaStream.device.prompt.muteSource" = "Mute this source on this Mac while streaming";
+"mediaStream.device.prompt.channelsLabel" = "Channels";
 "mediaStream.device.source.voiceOver" = "VoiceOver";
 "mediaStream.device.source.applicationMenu" = "Application";
 "mediaStream.device.source.chooseApplication" = "Select Application…";

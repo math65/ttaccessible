@@ -288,6 +288,17 @@ final class OutputAudioRenderEngine {
     private let gainCell = UnsafeMutablePointer<Float>.allocate(capacity: 1)   // master linear gain
     private let muteCell = UnsafeMutablePointer<Int32>.allocate(capacity: 1)
     private let primedCell = UnsafeMutablePointer<Int32>.allocate(capacity: 1)
+    /// Which physical device channels the stereo mix lands on, packed into ONE
+    /// word so the render thread reads a coherent pair without a lock:
+    /// `(left << 16) | right`, with `right == monoSentinel` meaning "sum to mono
+    /// on `left`". Written on engineQueue (a device switch or a preference
+    /// change), read every render callback. Single-word = benign, like gain/mute.
+    private let planeMapCell = UnsafeMutablePointer<Int32>.allocate(capacity: 1)
+    private static let monoSentinel: Int32 = 0xFFFF
+
+    /// The user's selection for the CURRENT device (engineQueue). Kept so a
+    /// device switch can re-resolve it against the new device's channel count.
+    private var channelSelection: OutputChannelSelection = .auto
 
     // MARK: RT-only state
     private let mixChannels = 2                     // the ring is always stereo
@@ -318,6 +329,7 @@ final class OutputAudioRenderEngine {
         gainCell.initialize(to: 1)
         muteCell.initialize(to: 0)
         primedCell.initialize(to: 0)
+        planeMapCell.initialize(to: Self.packedMapping(left: 0, right: 1))
     }
 
     deinit {
@@ -325,6 +337,7 @@ final class OutputAudioRenderEngine {
         gainCell.deallocate()
         muteCell.deallocate()
         primedCell.deallocate()
+        planeMapCell.deallocate()
     }
 
     var isRunning: Bool { auhal != nil }
@@ -453,6 +466,10 @@ final class OutputAudioRenderEngine {
         self.gainSmoothCoeff = Float(1.0 - exp(-1.0 / (0.008 * devRate)))
         self.underflowCount = 0
         primedCell.pointee = 0
+        // Re-resolve the routing against THIS device's channel count (deviceChannels
+        // was just set above) — a switch to a device with fewer outputs must fall
+        // back to 1/2 instead of rendering nowhere.
+        publishChannelMappingLocked()
 
         // Publish the RT render state written just above (rtPull / rtPullCapacity /
         // rtPlanePtrs / rtDeviceChannels / currentGain / ring) with a release fence,
@@ -530,6 +547,34 @@ final class OutputAudioRenderEngine {
             guard self.isRunning else { return }
             try self.startImpl(deviceID: deviceID)
         }
+    }
+
+    // MARK: - Output channel routing
+
+    /// Choose which physical channels of the current device carry the mix.
+    /// Cheap and glitch-free: no AudioUnit rebind, just a new plane mapping the
+    /// next render callback picks up (the previously-used planes are silenced by
+    /// the same callback, so nothing is left ringing on the old outputs).
+    func setChannelSelection(_ selection: OutputChannelSelection) {
+        engineQueue.async { [weak self] in
+            guard let self else { return }
+            self.channelSelection = selection
+            self.publishChannelMappingLocked()
+        }
+    }
+
+    /// engineQueue only. Resolves the selection against the CURRENT device's
+    /// channel count (a 32-out interface swapped for built-in stereo falls back
+    /// to 1/2 rather than going silent) and publishes it to the render thread.
+    private func publishChannelMappingLocked() {
+        let channels = deviceChannels > 0 ? deviceChannels : 2
+        let indices = channelSelection.planeIndices(deviceChannels: channels)
+        planeMapCell.pointee = Self.packedMapping(left: indices.left, right: indices.right)
+    }
+
+    private static func packedMapping(left: Int, right: Int?) -> Int32 {
+        let rightValue = right.map { Int32($0) & 0xFFFF } ?? monoSentinel
+        return (Int32(left) & 0xFFFF) << 16 | rightValue
     }
 
     // MARK: - Master gain / mute (serial queue)
@@ -779,10 +824,15 @@ final class OutputAudioRenderEngine {
         // Per-frame conversion + gain smoothing in the C hot loop (RT-safe in
         // every build configuration; -Onone Swift measurably missed deadlines).
         let target: Float = (muteCell.pointee != 0) ? 0 : gainCell.pointee
+        let packedMap = planeMapCell.pointee
+        let leftPlane = Int32((packedMap >> 16) & 0xFFFF)
+        let rightRaw = packedMap & 0xFFFF
+        let rightPlane: Int32 = rightRaw == Self.monoSentinel ? -1 : rightRaw
         currentGain = ttac_render_planes(
             planes, Int32(devCh), pull,
             Int32(framesAvailable), Int32(frameCount),
-            currentGain, target, gainSmoothCoeff
+            currentGain, target, gainSmoothCoeff,
+            leftPlane, rightPlane
         )
 
         return noErr

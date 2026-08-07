@@ -432,6 +432,11 @@ extension TeamTalkConnectionController {
             // only takes effect after the user manually stops & restarts transmission.
             let micProcessingChanged = self.advancedMicrophoneProcessingChangedLocked(preferences: preferences)
 
+            // Output channel routing (which physical outputs carry the mix) is a
+            // plane remap inside our render engine — no device reopen, no gap —
+            // so it is pushed unconditionally rather than gated behind a reinit.
+            self.applyOutputChannelSelectionLocked(preferences: preferences)
+
             guard outputChanged || inputChanged || micProcessingChanged else {
                 self.appliedOutputPreference = preferences.preferredOutputDevice
                 self.appliedInputPreference = preferences.preferredInputDevice
@@ -702,6 +707,12 @@ extension TeamTalkConnectionController {
             // all our code, fast, and no SDK audio mutex involved. Master gain/mute
             // persist in the engine across the switch.
             if let device = resolveOutputEngineDeviceLocked() {
+                // Push the new device's channel routing BEFORE the rebind, so the
+                // very first render on the new device already lands on the right
+                // outputs (the engine re-resolves it against the new channel count).
+                outputRenderEngine.setChannelSelection(
+                    preferencesStore.outputChannelSelection(for: device.uid)
+                )
                 if outputRenderEngine.isRunning {
                     AudioLogger.log("reinit: switching output engine to %@", device.name)
                     try outputRenderEngine.switchDevice(device.deviceID)
@@ -812,6 +823,18 @@ extension TeamTalkConnectionController {
         return devices.first
     }
 
+    /// Push the stored channel routing for whichever output device is currently
+    /// bound. Cheap (a CoreAudio enumeration plus a word written on the engine
+    /// queue) and safe to call when the engine is idle — the selection is stored
+    /// and re-resolved the next time it starts.
+    func applyOutputChannelSelectionLocked(preferences: AppPreferences) {
+        guard preferences.preferredOutputDevice.usesNoOutput == false,
+              let device = resolveOutputEngineDeviceLocked() else { return }
+        outputRenderEngine.setChannelSelection(
+            preferences.outputChannelSelections[device.uid] ?? .auto
+        )
+    }
+
     /// Start the output render engine on the currently-selected output device.
     func startOutputRenderEngineLocked() {
         guard outputAudioReady, outputRenderEngine.isRunning == false else { return }
@@ -821,6 +844,9 @@ extension TeamTalkConnectionController {
         }
         outputRenderEngine.setMasterGainDB(preferencesStore.preferences.outputGainDB)
         outputRenderEngine.setMuted(masterMuted)
+        outputRenderEngine.setChannelSelection(
+            preferencesStore.outputChannelSelection(for: device.uid)
+        )
         do {
             try outputRenderEngine.start(deviceID: device.deviceID)
             AudioLogger.log("outputRenderEngine: started on %@", device.name)

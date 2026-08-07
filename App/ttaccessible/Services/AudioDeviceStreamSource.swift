@@ -112,6 +112,9 @@ final class AudioDeviceStreamSource {
     nonisolated static let outputChannels = 2
 
     private let spec: DeviceStreamCaptureSpec
+    /// Which channels of an input-device source are broadcast. Process/VoiceOver
+    /// sources are already a stereo mixdown, so it only applies to devices.
+    private let channelPreset: InputChannelPreset
     private let muteSourceOutput: Bool
     /// Passed to the process-tap backend so its transient aggregate device
     /// doesn't trigger a sound-system restart. See `ProcessTapCaptureBackend`.
@@ -143,10 +146,12 @@ final class AudioDeviceStreamSource {
     /// muted-while-tapped behavior). Ignored for devices and the SCK backend.
     init(
         spec: DeviceStreamCaptureSpec,
+        channelPreset: InputChannelPreset = .auto,
         muteSourceOutput: Bool = false,
         suppressDeviceChanges: ((TimeInterval) -> Void)? = nil
     ) {
         self.spec = spec
+        self.channelPreset = channelPreset
         self.muteSourceOutput = muteSourceOutput
         self.suppressDeviceChanges = suppressDeviceChanges
         self.syncClock = MediaSyncClock(ring: ring)
@@ -185,7 +190,7 @@ final class AudioDeviceStreamSource {
     private func makeBackend() throws -> DeviceStreamCaptureBackend {
         switch spec {
         case .inputDevice(let device):
-            return DeviceInputCaptureBackend(device: device, ring: ring)
+            return DeviceInputCaptureBackend(device: device, channelPreset: channelPreset, ring: ring)
         case .processes(let selection):
             if #available(macOS 14.2, *) {
                 return ProcessTapCaptureBackend(

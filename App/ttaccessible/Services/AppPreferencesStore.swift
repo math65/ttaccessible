@@ -222,6 +222,29 @@ final class AppPreferencesStore: ObservableObject {
         mutate { $0.advancedInputAudioProfiles.fallbackProfile = nil }
     }
 
+    /// Which physical output channels the mix plays on for a given output device
+    /// (keyed by its stable CoreAudio UID). Unknown device → `.auto` (1/2).
+    func outputChannelSelection(for deviceUID: String?) -> OutputChannelSelection {
+        guard let deviceUID, deviceUID.isEmpty == false else { return .auto }
+        return preferences.outputChannelSelections[deviceUID] ?? .auto
+    }
+
+    func updateOutputChannelSelection(_ selection: OutputChannelSelection, for deviceUID: String?) {
+        guard let deviceUID, deviceUID.isEmpty == false else { return }
+        mutate { $0.outputChannelSelections[deviceUID] = selection }
+    }
+
+    /// Which channels a device stream broadcasts, keyed by input-device UID.
+    func deviceStreamChannelPreset(for deviceUID: String?) -> InputChannelPreset {
+        guard let deviceUID, deviceUID.isEmpty == false else { return .auto }
+        return preferences.deviceStreamChannelPresets[deviceUID] ?? .auto
+    }
+
+    func updateDeviceStreamChannelPreset(_ preset: InputChannelPreset, for deviceUID: String?) {
+        guard let deviceUID, deviceUID.isEmpty == false else { return }
+        mutate { $0.deviceStreamChannelPresets[deviceUID] = preset }
+    }
+
     func updateVoiceOverChannelMessagesEnabled(_ enabled: Bool) {
         mutate { $0.voiceOverAnnouncements.channelMessagesEnabled = enabled }
     }
@@ -694,6 +717,87 @@ final class AudioPreferencesStore: ObservableObject {
         advancedSettingsStore.deviceInfo
     }
 
+    /// The CoreAudio output device the render engine will actually bind to, and
+    /// the channel routing offered for it. Only devices with more than a single
+    /// stereo pair get a routing picker — everything else has nothing to choose.
+    @Published private(set) var outputDeviceInfo: InputAudioDeviceResolver.OutputAudioDeviceInfo?
+    @Published private(set) var outputChannelOptions: [OutputChannelSelectionOption] = []
+    /// Published rather than computed from the root store: the root store's
+    /// preference changes don't drive this object's objectWillChange, so a
+    /// computed value would leave the picker showing the previous routing.
+    @Published private(set) var outputChannelSelection: OutputChannelSelection = .auto
+
+    var offersOutputChannelSelection: Bool {
+        (outputDeviceInfo?.outputChannels ?? 0) > 2
+    }
+
+    /// Deliberately `>= 2`, not `> 2` like the output side: this picker already
+    /// existed (in the microphone block) and a plain stereo device has real
+    /// choices on it — "Input 1 mono" for an XLR plugged into the left channel
+    /// only, or the mono sum. Moving the control must not delete those.
+    var offersInputChannelSelection: Bool {
+        (advancedDeviceInfo?.inputChannels ?? 0) >= 2
+    }
+
+    func updateOutputChannelSelection(_ selection: OutputChannelSelection) {
+        guard let uid = outputDeviceInfo?.uid else { return }
+        outputChannelSelection = selection
+        rootStore.updateOutputChannelSelection(selection, for: uid)
+        // Applies live: the render engine remaps planes without reopening the
+        // device, so a routing change is heard on the next buffer.
+        connectionController.applyAudioPreferences(rootStore.preferences) { _ in }
+    }
+
+    /// Re-resolve the bound output device (its UID keys the stored routing, its
+    /// channel count sizes the option list). Cheap CoreAudio enumeration, same
+    /// as the input side does in AdvancedMicrophoneSettingsStore.refreshState.
+    ///
+    /// ⚠️ `preferences` must be passed explicitly when called from the
+    /// `rootStore.$preferences` sink. That publisher fires on *willSet*, so
+    /// `rootStore.preferences` still holds the PREVIOUS value inside the sink —
+    /// reading it there resolved the device the user just switched AWAY from,
+    /// which is why the picker stayed hidden after selecting a 24-channel
+    /// interface. (The input picker sidesteps this because updateSelectedDevices
+    /// pokes AdvancedMicrophoneSettingsStore directly, after the write lands.)
+    private func refreshOutputChannelState(preferences: AppPreferences? = nil) {
+        let preferences = preferences ?? rootStore.preferences
+        let preference = preferences.preferredOutputDevice
+        let resolved: InputAudioDeviceResolver.OutputAudioDeviceInfo?
+        if preference.usesNoOutput {
+            resolved = nil
+        } else if preference.usesSystemDefault {
+            let devices = InputAudioDeviceResolver.availableOutputDevices()
+            let defaultUID = InputAudioDeviceResolver.defaultOutputDeviceUID()
+            resolved = devices.first(where: { $0.uid == defaultUID }) ?? devices.first
+        } else {
+            resolved = InputAudioDeviceResolver.resolveOutputDevice(
+                persistentID: preference.persistentID,
+                displayName: preference.displayName
+            )
+        }
+
+        outputDeviceInfo = resolved
+        let channelCount = resolved?.outputChannels ?? 0
+        outputChannelOptions = channelCount > 2
+            ? InputAudioDeviceResolver.availableOutputChannelOptions(channelCount: channelCount)
+            : []
+
+        // A stored routing that no longer fits the device as it is RIGHT NOW
+        // (interface in a smaller mode, or gone) displays as Auto, matching what
+        // the engine falls back to. Deliberately NOT written back: the stored
+        // intent for that UID survives, so the routing returns when the device
+        // does. (Writing here would also be a reentrant mutation of the very
+        // preference object mid-publish when called from the sink.)
+        guard let uid = resolved?.uid else {
+            outputChannelSelection = .auto
+            return
+        }
+        let stored = preferences.outputChannelSelections[uid] ?? .auto
+        outputChannelSelection = InputAudioDeviceResolver.contains(stored, channelCount: channelCount)
+            ? stored
+            : .auto
+    }
+
     init(
         rootStore: AppPreferencesStore,
         connectionController: TeamTalkConnectionController,
@@ -734,7 +838,13 @@ final class AudioPreferencesStore: ObservableObject {
                 let muteGlobal = preferences.muteHotkeyGlobal
                 let muteBinding = preferences.muteHotkeyBinding
                 if self.state.preferredInputDevice != input { self.state.preferredInputDevice = input }
-                if self.state.preferredOutputDevice != output { self.state.preferredOutputDevice = output }
+                if self.state.preferredOutputDevice != output {
+                    self.state.preferredOutputDevice = output
+                    // A different output device has its own channel count and its
+                    // own stored routing. Fed the sink's OWN value — see the
+                    // willSet warning on refreshOutputChannelState.
+                    self.refreshOutputChannelState(preferences: preferences)
+                }
                 if self.state.microphoneMode != mode { self.state.microphoneMode = mode }
                 if self.state.pushToTalkBeepEnabled != beep { self.state.pushToTalkBeepEnabled = beep }
                 if self.state.pushToTalkKey != pttKey { self.state.pushToTalkKey = pttKey }
@@ -777,6 +887,7 @@ final class AudioPreferencesStore: ObservableObject {
             catalogStale = false
             loadCatalogIfNeeded(forceRefresh: true)
             advancedSettingsStore.refresh()
+            refreshOutputChannelState()
             hasPrepared = true
             return
         }
@@ -786,6 +897,7 @@ final class AudioPreferencesStore: ObservableObject {
         hasPrepared = true
         loadCatalogIfNeeded(forceRefresh: false)
         advancedSettingsStore.refresh()
+        refreshOutputChannelState()
     }
 
     func refreshIfVisible() {
@@ -794,6 +906,7 @@ final class AudioPreferencesStore: ObservableObject {
         }
         loadCatalogIfNeeded(forceRefresh: true)
         advancedSettingsStore.refresh()
+        refreshOutputChannelState()
     }
 
     private var catalogStale = false
@@ -809,6 +922,7 @@ final class AudioPreferencesStore: ObservableObject {
         let workItem = DispatchWorkItem { [weak self] in
             self?.loadCatalogIfNeeded(forceRefresh: true)
             self?.advancedSettingsStore.refresh()
+            self?.refreshOutputChannelState()
         }
         deviceChangeRefreshWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(600), execute: workItem)
@@ -910,6 +1024,9 @@ final class AudioPreferencesStore: ObservableObject {
         rootStore.updatePreferredOutputDevice(outputPreference)
         rootStore.updatePreferredInputDevice(inputPreference)
         advancedSettingsStore.handleInputDevicePreferenceChange()
+        // Same direct poke as the input side above: both stores must re-resolve
+        // against the values that have now actually landed in the root store.
+        refreshOutputChannelState()
         scheduleApplyAudioPreferencesIfNeeded(
             inputPreference: inputPreference,
             outputPreference: outputPreference
