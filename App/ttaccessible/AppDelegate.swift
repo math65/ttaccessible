@@ -1642,6 +1642,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         announceWithVoiceOver(L10n.text("mediaStream.announced.finished"))
     }
 
+    /// Silence the broadcast without ending it. The new state is spoken by the
+    /// player controls when the progress update comes back, so nothing is
+    /// announced here — it would double up.
+    func toggleMediaStreamingPause() {
+        guard menuState.mode == .connectedServer, menuState.isMediaStreamingActive else { return }
+        connectionController.toggleMediaStreamingPaused()
+    }
+
     private func promptMediaStreamFile() {
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
@@ -1748,7 +1756,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         applicationSources: [DeviceStreamCaptureSpec],
         voiceOverAvailable: Bool
     ) {
-        guard devices.isEmpty == false || applicationSources.isEmpty == false || voiceOverAvailable else {
+        // Capturing everything the Mac plays needs one of the two process
+        // backends, so macOS 13 or later — same floor as VoiceOver capture.
+        let allowsSystemAudio: Bool
+        if #available(macOS 13.0, *) { allowsSystemAudio = true } else { allowsSystemAudio = false }
+
+        guard devices.isEmpty == false || applicationSources.isEmpty == false
+                || voiceOverAvailable || allowsSystemAudio else {
             announceWithVoiceOver(L10n.text("mediaStream.device.error.noDevices"))
             let errorAlert = NSAlert()
             errorAlert.messageText = L10n.text("mediaStream.device.prompt.title")
@@ -1774,6 +1788,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             applicationSources: applicationSources,
             voiceOverAvailable: voiceOverAvailable,
             allowsApplicationBrowsing: allowsApplicationBrowsing,
+            allowsSystemAudio: allowsSystemAudio,
             preselectedToken: preferencesStore.preferences.deviceStreamLastSource
                 ?? preferencesStore.preferences.deviceStreamLastDeviceUID.map { "device:\($0)" },
             fallbackDeviceUID: InputAudioDeviceResolver.defaultInputDeviceUID()
@@ -2631,6 +2646,10 @@ extension AppDelegate: TeamTalkConnectionControllerDelegate {
 
     func teamTalkConnectionController(_ controller: TeamTalkConnectionController, didUpdateMediaStreamingProgress progress: MediaStreamingProgress) {
         menuState.setMediaStreamingActive(progress.isActive)
+        if progress.isActive {
+            menuState.setMediaStreamingLive(progress.sourceKind.pauseMutesSource)
+            menuState.setMediaStreamingPaused(progress.isPaused)
+        }
         connectedServerViewController?.applyMediaStreamingProgress(progress)
     }
 

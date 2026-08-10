@@ -103,17 +103,18 @@ the one selected in the channel tree.
 |---|---|
 | Option-Command-S | Stream Media File |
 | Option-Command-U | Stream URL |
-| Option-Command-A | Stream a Device or Application |
+| Option-Command-A | Stream Audio from This Mac |
+| Option-Command-M | Pause a file, or mute a live source |
 | Option-Command-Period | Stop Streaming |
 
-## In the media player
+## In the broadcast controls
 
-| Key | Action |
-|---|---|
-| Space | Play or pause |
-| Escape | Stop |
-| Left Arrow or Right Arrow | Skip 5 seconds |
-| Up Arrow or Down Arrow | Change the broadcast volume |
+| Key | Media file | Radio, device or application |
+|---|---|---|
+| Space | Pause or resume | Mute or unmute |
+| Escape | Stop | Stop |
+| Left Arrow or Right Arrow | Skip 5 seconds | No effect |
+| Up Arrow or Down Arrow | Change the broadcast volume | Change the broadcast volume |
 
 ## In the channel mixer
 

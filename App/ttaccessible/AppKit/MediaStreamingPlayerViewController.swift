@@ -34,31 +34,87 @@ final class MediaStreamingPlayerViewController: NSViewController {
     }
 
     func update(with progress: MediaStreamingProgress) {
+        let previous = lastProgress
         lastProgress = progress
         view.isHidden = !progress.isActive
 
         if let fileName = progress.fileName {
-            fileNameLabel.stringValue = L10n.format("mediaPlayer.fileName.format", fileName)
+            // A device, an application or a radio is broadcast, not played back.
+            let key = progress.sourceKind == .file
+                ? "mediaPlayer.fileName.format"
+                : "mediaPlayer.sourceName.format"
+            fileNameLabel.stringValue = L10n.format(key, fileName)
         } else {
             fileNameLabel.stringValue = L10n.text("mediaPlayer.fileName.empty")
         }
 
-        playPauseButton.title = progress.isPaused
-            ? L10n.text("mediaPlayer.play")
-            : L10n.text("mediaPlayer.pause")
+        // A live capture can't be paused — the loopback keeps feeding the SDK,
+        // so the button mutes the source and the broadcast stays up.
+        playPauseButton.title = Self.playPauseTitle(for: progress)
         playPauseButton.setAccessibilityLabel(playPauseButton.title)
+        playPauseButton.setAccessibilityHelp(L10n.text(
+            progress.isSeekable ? "mediaPlayer.shortcuts.hint" : "mediaPlayer.shortcuts.hint.live"
+        ))
 
+        // Without a duration the readout would say "02:31 / 00:00" and the
+        // scrubber would take input it can't honour: hide it entirely.
+        positionControl.isHidden = !progress.isSeekable
         positionControl.isPlaybackActive = progress.isActive && !progress.isPaused
 
         if !positionControl.isAdjustingPosition {
             applyPositionControl(announceAccessibility: false)
         }
 
+        updateDisplayTimer(for: progress)
+        announcePauseChangeIfNeeded(previous: previous, current: progress)
+
         suppressGainAction = true
         broadcastGainSlider.doubleValue = Double(progress.broadcastGainPercent)
         suppressGainAction = false
         broadcastGainValueLabel.stringValue = "\(progress.broadcastGainPercent)%"
         broadcastGainSlider.setAccessibilityValueDescription("\(progress.broadcastGainPercent)%")
+    }
+
+    private static func playPauseTitle(for progress: MediaStreamingProgress) -> String {
+        if progress.sourceKind.pauseMutesSource {
+            return progress.isPaused
+                ? L10n.text("mediaPlayer.unmute")
+                : L10n.text("mediaPlayer.mute")
+        }
+        return progress.isPaused
+            ? L10n.text("mediaPlayer.play")
+            : L10n.text("mediaPlayer.pause")
+    }
+
+    /// Speak the new state: the button title changes, but VoiceOver only reads
+    /// it back when the button happens to hold focus — and Space works from
+    /// anywhere in the player.
+    private func announcePauseChangeIfNeeded(
+        previous: MediaStreamingProgress,
+        current: MediaStreamingProgress
+    ) {
+        guard current.isActive, previous.isActive else { return }
+        guard previous.isPaused != current.isPaused else { return }
+
+        let key: String
+        if current.sourceKind.pauseMutesSource {
+            key = current.isPaused ? "mediaPlayer.announced.muted" : "mediaPlayer.announced.unmuted"
+        } else {
+            key = current.isPaused ? "mediaPlayer.announced.paused" : "mediaPlayer.announced.resumed"
+        }
+        announce(L10n.text(key))
+    }
+
+    private func announce(_ text: String) {
+        // .priority must be the NSNumber rawValue, not the enum, or VoiceOver drops it.
+        NSAccessibility.post(
+            element: NSApp as Any,
+            notification: .announcementRequested,
+            userInfo: [
+                .announcement: text,
+                .priority: NSAccessibilityPriorityLevel.high.rawValue
+            ]
+        )
     }
 
     override var acceptsFirstResponder: Bool { true }
@@ -86,7 +142,14 @@ final class MediaStreamingPlayerViewController: NSViewController {
     }
 
     private func seekDelta(seconds: Int) {
-        guard lastProgress.isActive, lastProgress.durationMSec > 0 else { return }
+        guard lastProgress.isActive else { return }
+        // A live capture and a radio have nowhere to seek to. Say so rather
+        // than swallowing the key and looking broken.
+        guard lastProgress.isSeekable else {
+            NSSound.beep()
+            announce(L10n.text("mediaPlayer.seek.unavailable"))
+            return
+        }
         let currentMS = Int(currentEstimatedElapsedMSec())
         let durationMS = Int(lastProgress.durationMSec)
         let newMS = max(0, min(currentMS + seconds * 1000, durationMS - 1))
@@ -113,17 +176,32 @@ final class MediaStreamingPlayerViewController: NSViewController {
         actions?.mediaStreamingPlayerDidChangeBroadcastGainPercent(Int(sender.doubleValue.rounded()))
     }
 
+    /// The timer only interpolates the readout between SDK reports, so it earns
+    /// its ticks only while there is a position to show.
+    private func updateDisplayTimer(for progress: MediaStreamingProgress) {
+        if progress.isActive, progress.isSeekable {
+            startDisplayTimerIfNeeded()
+        } else {
+            displayTimer?.invalidate()
+            displayTimer = nil
+        }
+    }
+
     private func startDisplayTimerIfNeeded() {
         guard displayTimer == nil else { return }
-        displayTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+        displayTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] timer in
             MainActor.assumeIsolated {
-                self?.refreshPositionControlIfNeeded()
+                guard let self else {
+                    timer.invalidate()
+                    return
+                }
+                self.refreshPositionControlIfNeeded()
             }
         }
     }
 
     private func refreshPositionControlIfNeeded() {
-        guard lastProgress.isActive, lastProgress.durationMSec > 0, !positionControl.isAdjustingPosition else { return }
+        guard lastProgress.isActive, lastProgress.isSeekable, !positionControl.isAdjustingPosition else { return }
         applyPositionControl(announceAccessibility: false)
     }
 
@@ -205,7 +283,5 @@ final class MediaStreamingPlayerViewController: NSViewController {
             positionControl.widthAnchor.constraint(equalTo: stack.widthAnchor),
             gainRow.widthAnchor.constraint(equalTo: stack.widthAnchor)
         ])
-
-        startDisplayTimerIfNeeded()
     }
 }

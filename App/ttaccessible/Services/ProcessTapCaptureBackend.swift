@@ -163,6 +163,15 @@ final class ProcessTapCaptureBackend: DeviceStreamCaptureBackend {
         return unsafeBitCast(symbol, to: (@convention(c) (pid_t) -> pid_t).self)
     }()
 
+    /// Our own HAL processes — what a system-wide tap must leave out.
+    private static func ownAudioProcessObjectIDs() -> [AudioObjectID] {
+        guard let ownBundleID = Bundle.main.bundleIdentifier else { return [] }
+        let ownPID = ProcessInfo.processInfo.processIdentifier
+        return audioProcesses()
+            .filter { $0.bundleID == ownBundleID || $0.pid == ownPID }
+            .map(\.objectID)
+    }
+
     private func matchedProcesses() -> [AudioProcessInfo] {
         let prefixes = selection.bundleIDPrefixes
         // Running apps the selection denotes — helpers attribute to these
@@ -198,6 +207,14 @@ final class ProcessTapCaptureBackend: DeviceStreamCaptureBackend {
             stereoScratch = [Int16](repeating: 0, count: Self.maxFramesPerSlice * 2)
             let worstCaseOutputFrames = Self.maxFramesPerSlice * (AudioDeviceStreamSource.outputSampleRate / 8_000) + 8
             resampleScratch = [Int16](repeating: 0, count: worstCaseOutputFrames * AudioDeviceStreamSource.outputChannels)
+
+            // A global tap follows the system on its own: no process matching,
+            // and no process-list listener — `matchedProcesses()` would match
+            // nothing and tear the capture down on the first app launch.
+            if selection.capturesEntireSystem {
+                try buildCaptureLocked(matched: [])
+                return
+            }
 
             let matched = matchedProcesses()
             // Diagnostic dump: which HAL processes exist, who they're
@@ -302,14 +319,27 @@ final class ProcessTapCaptureBackend: DeviceStreamCaptureBackend {
     // MARK: - Tap + aggregate construction
 
     private func buildCaptureLocked(matched: [AudioProcessInfo]) throws {
-        AudioLogger.log("process tap: capturing %d process(es) for %@: %@",
-                        matched.count, selection.displayName,
-                        matched.map { "\($0.bundleID)(\($0.pid))" }.joined(separator: " "))
-
         // 1. Tap: stereo mixdown of exactly the matched processes; private so
         // it isn't user-visible. Muting the source's local output while tapped
         // is the user's per-stream choice.
-        let description = CATapDescription(stereoMixdownOfProcesses: matched.map { $0.objectID })
+        let description: CATapDescription
+        if selection.capturesEntireSystem {
+            // Everything the Mac plays EXCEPT us: our own output carries the
+            // channel we broadcast to, so tapping it would feed the channel
+            // back into itself.
+            let excluded = Self.ownAudioProcessObjectIDs()
+            if excluded.isEmpty {
+                AudioLogger.log("process tap: own audio process not registered yet — system capture may echo the channel back")
+            }
+            AudioLogger.log("process tap: capturing all system audio for %@, excluding %d own process(es)",
+                            selection.displayName, excluded.count)
+            description = CATapDescription(stereoGlobalTapButExcludeProcesses: excluded)
+        } else {
+            AudioLogger.log("process tap: capturing %d process(es) for %@: %@",
+                            matched.count, selection.displayName,
+                            matched.map { "\($0.bundleID)(\($0.pid))" }.joined(separator: " "))
+            description = CATapDescription(stereoMixdownOfProcesses: matched.map { $0.objectID })
+        }
         description.name = "ttaccessible-stream-tap"
         description.isPrivate = true
         description.muteBehavior = muteLocalOutput ? .mutedWhenTapped : .unmuted

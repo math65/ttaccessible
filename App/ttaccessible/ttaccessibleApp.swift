@@ -432,6 +432,14 @@ struct ttaccessibleApp: App {
                 .keyboardShortcut("a", modifiers: [.command, .option])
                 .disabled(menuState.mode != .connectedServer || menuState.isMediaStreamingActive || menuState.isInChannel == false)
 
+                // A live capture can't be paused — the broadcast stays up and
+                // goes silent — so it gets mute wording, not pause wording.
+                Button(mediaStreamPauseTitle(menuState)) {
+                    appDelegate.toggleMediaStreamingPause()
+                }
+                .keyboardShortcut("m", modifiers: [.command, .option])
+                .disabled(menuState.mode != .connectedServer || !menuState.isMediaStreamingActive)
+
                 Button(L10n.text("shortcuts.mediaStream.stop")) {
                     appDelegate.stopMediaStreaming()
                 }
@@ -459,5 +467,16 @@ struct ttaccessibleApp: App {
                 .disabled(menuState.mode != .connectedServer || menuState.isInChannel == false)
             }
         }
+    }
+
+    private func mediaStreamPauseTitle(_ menuState: SavedServersMenuState) -> String {
+        if menuState.isMediaStreamingLive {
+            return menuState.isMediaStreamingPaused
+                ? L10n.text("shortcuts.mediaStream.unmute")
+                : L10n.text("shortcuts.mediaStream.mute")
+        }
+        return menuState.isMediaStreamingPaused
+            ? L10n.text("shortcuts.mediaStream.resume")
+            : L10n.text("shortcuts.mediaStream.pause")
     }
 }

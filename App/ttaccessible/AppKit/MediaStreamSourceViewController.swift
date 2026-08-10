@@ -2,20 +2,43 @@
 //  MediaStreamSourceViewController.swift
 //  ttaccessible
 //
-//  "Choose an audio source to stream" sheet: a source button whose menu lists
-//  the input devices and VoiceOver at the top level, with the applications in
-//  an "Application" submenu, plus the monitor and mute-source options.
+//  "Choose what to stream" sheet: a checkbox list of every source — all system
+//  audio, the input devices, VoiceOver and the running applications — plus the
+//  monitor and mute-source options.
 //
-//  This is a SHEET hosting a plain view controller, not an NSAlert. That is
-//  what makes the menu work: the dialog used to be an NSAlert run app-modally,
-//  and in a modal session AppKit never delivers an NSMenuItem's action, so no
-//  source could be selected at all — the menu opened, highlighted and dismissed
-//  while the choice was silently dropped. Outside a modal session the menu, its
-//  submenu and their actions all behave normally.
+//  A LIST, not a pop-up menu, because applications cumulate: both capture
+//  backends mix several processes themselves (see DeviceStreamCaptureSpec.merging),
+//  so streaming Music and VoiceOver together only ever needed an interface that
+//  can express it. Devices don't cumulate — a device is captured by an entirely
+//  different backend — so ticking one clears the applications, and vice versa.
+//  That exclusion is announced: silently unticking a line is unintelligible when
+//  you can't see the list.
+//
+//  This is a SHEET hosting a plain view controller, not an NSAlert. That is what
+//  made the old menu work: in a modal session AppKit never delivers an
+//  NSMenuItem's action, so no source could be selected at all. The list has no
+//  such constraint, but the sheet stays — an NSAlert would also swallow the
+//  Add Application… panel.
 //
 
 import AppKit
 import UniformTypeIdentifiers
+
+/// Space toggles the selected line, the way a checkbox list is expected to
+/// behave. Without this, the ticks are reachable by mouse and by VoiceOver but
+/// not by the keyboard alone.
+final class SourceListTableView: NSTableView {
+    var onToggleSelectedRow: (() -> Void)?
+
+    override func keyDown(with event: NSEvent) {
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if event.keyCode == 49, modifiers.isDisjoint(with: [.command, .option, .control, .shift]) {
+            onToggleSelectedRow?()
+            return
+        }
+        super.keyDown(with: event)
+    }
+}
 
 final class MediaStreamSourceViewController: NSViewController {
 
@@ -27,15 +50,26 @@ final class MediaStreamSourceViewController: NSViewController {
     private var applicationSources: [DeviceStreamCaptureSpec]
     private let voiceOverAvailable: Bool
     private let allowsApplicationBrowsing: Bool
+    private let allowsSystemAudio: Bool
     private let preselectedToken: String?
     private let fallbackDeviceUID: String?
 
-    /// An application picked by browsing that isn't in the running list — kept
-    /// so it stays visible and checkable in the submenu.
-    private var browsedApplication: DeviceStreamCaptureSpec?
-    private var selectedSource: DeviceStreamCaptureSpec?
+    /// At most one device, any number of applications, or all system audio —
+    /// the three are mutually exclusive.
+    private var selectedDevice: InputAudioDeviceInfo?
+    private var selectedApplications: [DeviceStreamCaptureSpec] = []
+    private var systemAudioSelected = false
 
-    private var sourceButton: NSButton!
+    private enum Row {
+        case group(String)
+        case source(DeviceStreamCaptureSpec)
+    }
+
+    private var rows: [Row] = []
+
+    private var tableView: SourceListTableView!
+    private var browseButton: NSButton?
+    private var summaryLabel: NSTextField!
     private var monitorCheckbox: NSButton!
     private var muteSourceCheckbox: NSButton?
     private var streamButton: NSButton!
@@ -44,16 +78,20 @@ final class MediaStreamSourceViewController: NSViewController {
     ///   - allowsApplicationBrowsing: browsing for a not-yet-running app needs
     ///     the process-tap backend's wait-and-attach (macOS 14.2+); the
     ///     ScreenCaptureKit tier can only capture apps that are already running.
+    ///   - allowsSystemAudio: capturing everything the Mac plays needs one of
+    ///     the two process backends, so macOS 13 or later.
     init(devices: [InputAudioDeviceInfo],
          applicationSources: [DeviceStreamCaptureSpec],
          voiceOverAvailable: Bool,
          allowsApplicationBrowsing: Bool,
+         allowsSystemAudio: Bool,
          preselectedToken: String?,
          fallbackDeviceUID: String?) {
         self.devices = devices
         self.applicationSources = applicationSources
         self.voiceOverAvailable = voiceOverAvailable
         self.allowsApplicationBrowsing = allowsApplicationBrowsing
+        self.allowsSystemAudio = allowsSystemAudio
         self.preselectedToken = preselectedToken
         self.fallbackDeviceUID = fallbackDeviceUID
         super.init(nibName: nil, bundle: nil)
@@ -63,36 +101,66 @@ final class MediaStreamSourceViewController: NSViewController {
     required init?(coder: NSCoder) { nil }
 
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 440, height: 210))
+        view = NSView(frame: NSRect(x: 0, y: 0, width: 460, height: 460))
     }
 
     override func viewDidLoad() {
         super.viewDidLoad()
         setupLayout()
+        rebuildRows()
         selectPreferredSource()
     }
 
     override func viewDidAppear() {
         super.viewDidAppear()
-        view.window?.initialFirstResponder = sourceButton
-        view.window?.makeFirstResponder(sourceButton)
-        // Return confirms even while the source button holds focus; a key
-        // equivalent alone doesn't carry in a sheet.
+        view.window?.initialFirstResponder = tableView
+        view.window?.makeFirstResponder(tableView)
+        // Return confirms even while the list holds focus; a key equivalent
+        // alone doesn't carry in a sheet.
         view.window?.defaultButtonCell = streamButton.cell as? NSButtonCell
     }
 
-    // MARK: - Sources
+    // MARK: - Rows
 
-    /// Every selectable source, flat, in menu order — used for preselection and
+    /// Every selectable source, flat, in list order — used for preselection and
     /// for restoring a remembered choice.
     private var orderedSources: [DeviceStreamCaptureSpec] {
-        var specs = devices.map { DeviceStreamCaptureSpec.inputDevice($0) }
+        var specs: [DeviceStreamCaptureSpec] = []
+        if allowsSystemAudio { specs.append(.systemAudio()) }
+        specs.append(contentsOf: devices.map { DeviceStreamCaptureSpec.inputDevice($0) })
         if voiceOverAvailable { specs.append(.voiceOver()) }
         specs.append(contentsOf: applicationSources)
-        if let browsedApplication, specs.contains(browsedApplication) == false {
-            specs.append(browsedApplication)
-        }
         return specs
+    }
+
+    private func rebuildRows() {
+        var rows: [Row] = []
+        // All-system audio leads, ungrouped: it is the broadest answer to
+        // "stream several apps", and it belongs to neither group.
+        if allowsSystemAudio {
+            rows.append(.source(.systemAudio()))
+        }
+        if devices.isEmpty == false {
+            rows.append(.group(L10n.text("mediaStream.device.group.devices")))
+            rows.append(contentsOf: devices.map { .source(.inputDevice($0)) })
+        }
+        if voiceOverAvailable || applicationSources.isEmpty == false {
+            rows.append(.group(L10n.text("mediaStream.device.group.applications")))
+            if voiceOverAvailable { rows.append(.source(.voiceOver())) }
+            rows.append(contentsOf: applicationSources.map { .source($0) })
+        }
+        self.rows = rows
+        tableView?.reloadData()
+    }
+
+    private func isSelected(_ spec: DeviceStreamCaptureSpec) -> Bool {
+        switch spec {
+        case .inputDevice(let device):
+            return selectedDevice == device
+        case .processes(let selection):
+            if selection.capturesEntireSystem { return systemAudioSelected }
+            return selectedApplications.contains(spec)
+        }
     }
 
     // MARK: - Setup
@@ -110,14 +178,32 @@ final class MediaStreamSourceViewController: NSViewController {
         message.textColor = .secondaryLabelColor
         message.translatesAutoresizingMaskIntoConstraints = false
 
-        sourceButton = NSButton(title: "", target: self, action: #selector(showSourceMenu))
-        sourceButton.bezelStyle = .rounded
-        sourceButton.translatesAutoresizingMaskIntoConstraints = false
-        // Reads as a pop-up button rather than a plain button: the role can be
-        // overridden here, unlike the VALUE, which is why the title carries the
-        // selected source.
-        sourceButton.setAccessibilityRole(.popUpButton)
-        sourceButton.setAccessibilityLabel(L10n.text("mediaStream.device.prompt.sourceLabel"))
+        let table = SourceListTableView()
+        table.headerView = nil
+        table.allowsMultipleSelection = false
+        table.allowsEmptySelection = false
+        table.rowSizeStyle = .default
+        table.style = .inset
+        table.setAccessibilityLabel(L10n.text("mediaStream.device.prompt.sourceLabel"))
+        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("source"))
+        column.resizingMask = .autoresizingMask
+        table.addTableColumn(column)
+        table.dataSource = self
+        table.delegate = self
+        table.onToggleSelectedRow = { [weak self] in self?.toggleSelectedRow() }
+        tableView = table
+
+        let scrollView = NSScrollView()
+        scrollView.documentView = table
+        scrollView.hasVerticalScroller = true
+        scrollView.autohidesScrollers = true
+        scrollView.borderType = .bezelBorder
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+
+        summaryLabel = NSTextField(labelWithString: "")
+        summaryLabel.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
+        summaryLabel.textColor = .secondaryLabelColor
+        summaryLabel.translatesAutoresizingMaskIntoConstraints = false
 
         // Off by default on purpose: the source is usually audible locally
         // already, and hearing it back a second time reads as an echo.
@@ -145,6 +231,18 @@ final class MediaStreamSourceViewController: NSViewController {
             optionsStack.addArrangedSubview(checkbox)
         }
 
+        var browse: NSButton?
+        if allowsApplicationBrowsing {
+            // Browse for ANY installed app, running or not: the tap backend
+            // waits for it and attaches when it plays audio.
+            let button = NSButton(title: L10n.text("mediaStream.device.source.chooseApplication"),
+                                  target: self, action: #selector(browseForApplication))
+            button.bezelStyle = .rounded
+            button.translatesAutoresizingMaskIntoConstraints = false
+            browse = button
+            browseButton = button
+        }
+
         let cancelButton = NSButton(title: L10n.text("common.cancel"), target: self, action: #selector(cancel))
         cancelButton.bezelStyle = .rounded
         cancelButton.keyEquivalent = "\u{1B}"
@@ -156,10 +254,12 @@ final class MediaStreamSourceViewController: NSViewController {
         streamButton.keyEquivalent = "\r"
         streamButton.translatesAutoresizingMaskIntoConstraints = false
 
-        [header, message, sourceButton, optionsStack, cancelButton, streamButton]
-            .forEach { view.addSubview($0) }
+        var subviews: [NSView] = [header, message, scrollView, summaryLabel,
+                                  optionsStack, cancelButton, streamButton]
+        if let browse { subviews.append(browse) }
+        subviews.forEach { view.addSubview($0) }
 
-        NSLayoutConstraint.activate([
+        var constraints: [NSLayoutConstraint] = [
             header.topAnchor.constraint(equalTo: view.topAnchor, constant: 14),
             header.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 14),
             header.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -14),
@@ -168,11 +268,15 @@ final class MediaStreamSourceViewController: NSViewController {
             message.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 14),
             message.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -14),
 
-            sourceButton.topAnchor.constraint(equalTo: message.bottomAnchor, constant: 12),
-            sourceButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 14),
-            sourceButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -14),
+            scrollView.topAnchor.constraint(equalTo: message.bottomAnchor, constant: 12),
+            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 14),
+            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -14),
+            scrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 190),
 
-            optionsStack.topAnchor.constraint(equalTo: sourceButton.bottomAnchor, constant: 12),
+            summaryLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 14),
+            summaryLabel.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -14),
+
+            optionsStack.topAnchor.constraint(equalTo: summaryLabel.bottomAnchor, constant: 12),
             optionsStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 14),
             optionsStack.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -14),
 
@@ -180,111 +284,195 @@ final class MediaStreamSourceViewController: NSViewController {
             streamButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -14),
             streamButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -14),
             cancelButton.trailingAnchor.constraint(equalTo: streamButton.leadingAnchor, constant: -8),
-            cancelButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -14),
-        ])
-    }
+            cancelButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -14)
+        ]
 
-    // MARK: - Menu
-
-    @objc private func showSourceMenu() {
-        let menu = NSMenu()
-        for device in devices {
-            menu.addItem(makeSourceItem(for: .inputDevice(device)))
+        if let browse {
+            constraints += [
+                browse.topAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: 8),
+                browse.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 14),
+                summaryLabel.topAnchor.constraint(equalTo: browse.bottomAnchor, constant: 10)
+            ]
+        } else {
+            constraints.append(summaryLabel.topAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: 10))
         }
 
-        let hasApplicationMenu = applicationSources.isEmpty == false
-            || browsedApplication != nil
-            || allowsApplicationBrowsing
-        if voiceOverAvailable || hasApplicationMenu {
-            if devices.isEmpty == false { menu.addItem(.separator()) }
-            if voiceOverAvailable {
-                menu.addItem(makeSourceItem(for: .voiceOver()))
-            }
-            if hasApplicationMenu {
-                let submenu = NSMenu(title: L10n.text("mediaStream.device.group.applications"))
-                var sources = applicationSources
-                if let browsedApplication, sources.contains(browsedApplication) == false {
-                    sources.append(browsedApplication)
-                }
-                for source in sources {
-                    submenu.addItem(makeSourceItem(for: source))
-                }
-                if allowsApplicationBrowsing {
-                    // Browse for ANY installed app, running or not: the tap
-                    // backend waits for it and attaches when it plays audio.
-                    if sources.isEmpty == false { submenu.addItem(.separator()) }
-                    let browse = NSMenuItem(title: L10n.text("mediaStream.device.source.chooseApplication"),
-                                            action: #selector(browseForApplication),
-                                            keyEquivalent: "")
-                    browse.target = self
-                    submenu.addItem(browse)
-                }
-                let parent = NSMenuItem(title: L10n.text("mediaStream.device.group.applications"),
-                                        action: nil, keyEquivalent: "")
-                parent.submenu = submenu
-                menu.addItem(parent)
-            }
-        }
-
-        menu.popUp(positioning: nil,
-                   at: NSPoint(x: 0, y: sourceButton.bounds.height + 2),
-                   in: sourceButton)
-    }
-
-    private func makeSourceItem(for spec: DeviceStreamCaptureSpec) -> NSMenuItem {
-        let item = NSMenuItem(title: spec.displayName, action: #selector(selectSource(_:)), keyEquivalent: "")
-        item.target = self
-        item.representedObject = spec
-        item.state = spec == selectedSource ? .on : .off
-        return item
-    }
-
-    @objc private func selectSource(_ sender: NSMenuItem) {
-        guard let spec = sender.representedObject as? DeviceStreamCaptureSpec else { return }
-        applySelection(spec)
+        NSLayoutConstraint.activate(constraints)
     }
 
     // MARK: - Selection
 
-    private func applySelection(_ spec: DeviceStreamCaptureSpec) {
-        selectedSource = spec
-        sourceButton.title = spec.displayName
-        updateMuteAvailability()
-        // The button's VALUE can't be overridden, so the selection is announced
-        // explicitly — otherwise a VoiceOver user gets no feedback that the
-        // choice took.
-        NSAccessibility.post(
-            element: sourceButton as Any,
-            notification: .announcementRequested,
-            userInfo: [
-                .announcement: spec.displayName,
-                .priority: NSAccessibilityPriorityLevel.high.rawValue
-            ]
-        )
+    @objc private func checkboxToggled(_ sender: NSButton) {
+        guard case .source(let spec)? = rows[safe: sender.tag] else { return }
+        apply(spec, selected: sender.state == .on)
     }
 
-    /// Restores the last streamed source, falling back to the default input
+    private func toggleSelectedRow() {
+        let row = tableView.selectedRow
+        guard case .source(let spec)? = rows[safe: row] else {
+            NSSound.beep()
+            return
+        }
+        apply(spec, selected: !isSelected(spec))
+    }
+
+    /// Applies a tick, enforcing the exclusions and saying out loud what the
+    /// tick took away — a line unticking itself elsewhere in the list is
+    /// invisible to anyone not looking at it.
+    private func apply(_ spec: DeviceStreamCaptureSpec, selected: Bool) {
+        var clearedMessages: [String] = []
+
+        switch spec {
+        case .inputDevice(let device):
+            if selected {
+                if selectedApplications.isEmpty == false {
+                    clearedMessages.append(L10n.text("mediaStream.device.cleared.applications"))
+                    selectedApplications.removeAll()
+                }
+                if systemAudioSelected {
+                    clearedMessages.append(L10n.text("mediaStream.device.cleared.systemAudio"))
+                    systemAudioSelected = false
+                }
+                if let previous = selectedDevice, previous != device {
+                    clearedMessages.append(L10n.format("mediaStream.device.cleared.device", previous.name))
+                }
+                selectedDevice = device
+            } else if selectedDevice == device {
+                selectedDevice = nil
+            }
+
+        case .processes(let selection) where selection.capturesEntireSystem:
+            if selected {
+                if let previous = selectedDevice {
+                    clearedMessages.append(L10n.format("mediaStream.device.cleared.device", previous.name))
+                    selectedDevice = nil
+                }
+                if selectedApplications.isEmpty == false {
+                    clearedMessages.append(L10n.text("mediaStream.device.cleared.applications"))
+                    selectedApplications.removeAll()
+                }
+            }
+            systemAudioSelected = selected
+
+        case .processes:
+            if selected {
+                if let previous = selectedDevice {
+                    clearedMessages.append(L10n.format("mediaStream.device.cleared.device", previous.name))
+                    selectedDevice = nil
+                }
+                if systemAudioSelected {
+                    clearedMessages.append(L10n.text("mediaStream.device.cleared.systemAudio"))
+                    systemAudioSelected = false
+                }
+                if selectedApplications.contains(spec) == false {
+                    selectedApplications.append(spec)
+                }
+            } else {
+                selectedApplications.removeAll { $0 == spec }
+            }
+        }
+
+        refreshSelectionUI()
+        if clearedMessages.isEmpty == false {
+            announce(clearedMessages.joined(separator: " "))
+        }
+    }
+
+    private func refreshSelectionUI() {
+        // Only the ticks change, never the rows: reloading data would move the
+        // keyboard selection out from under the user mid-toggle.
+        for (index, row) in rows.enumerated() {
+            guard case .source(let spec) = row,
+                  let cell = tableView.view(atColumn: 0, row: index, makeIfNecessary: false) as? NSButton
+            else { continue }
+            cell.state = isSelected(spec) ? .on : .off
+        }
+        updateSummary()
+        updateMuteAvailability()
+        streamButton.isEnabled = resolvedSpec != nil
+    }
+
+    private func updateSummary() {
+        if systemAudioSelected {
+            summaryLabel.stringValue = L10n.text("mediaStream.device.source.systemAudio")
+        } else if let selectedDevice {
+            summaryLabel.stringValue = selectedDevice.name
+        } else if selectedApplications.count == 1 {
+            summaryLabel.stringValue = selectedApplications[0].displayName
+        } else if selectedApplications.isEmpty == false {
+            summaryLabel.stringValue = L10n.format("mediaStream.device.summary.applications",
+                                                   selectedApplications.count)
+        } else {
+            summaryLabel.stringValue = L10n.text("mediaStream.device.summary.none")
+        }
+    }
+
+    /// Restores the last streamed selection, falling back to the default input
     /// device and then to whatever comes first.
     private func selectPreferredSource() {
-        if let token = preselectedToken,
-           let match = orderedSources.first(where: { $0.persistenceToken == token }) {
-            applySelection(match)
-            return
+        if let preselectedToken {
+            let tokens = DeviceStreamCaptureSpec.componentTokens(of: preselectedToken)
+            let sources = orderedSources
+            let restored = tokens.compactMap { token in
+                sources.first(where: { $0.persistenceToken == token })
+            }
+            if restored.isEmpty == false {
+                restored.forEach { apply($0, selected: true) }
+                selectFirstSelectedRow()
+                return
+            }
         }
         if let fallbackDeviceUID,
            let device = devices.first(where: { $0.uid == fallbackDeviceUID }) {
-            applySelection(.inputDevice(device))
+            apply(.inputDevice(device), selected: true)
+            selectFirstSelectedRow()
             return
         }
-        if let first = orderedSources.first { applySelection(first) }
+        if let first = orderedSources.first {
+            apply(first, selected: true)
+        }
+        selectFirstSelectedRow()
+    }
+
+    /// Put the keyboard on what is already ticked, so the list opens where the
+    /// user left off rather than on its first line.
+    private func selectFirstSelectedRow() {
+        let target = rows.firstIndex { row in
+            guard case .source(let spec) = row else { return false }
+            return isSelected(spec)
+        } ?? rows.firstIndex { if case .source = $0 { return true } else { return false } }
+
+        guard let target else { return }
+        tableView.selectRowIndexes(IndexSet(integer: target), byExtendingSelection: false)
+        tableView.scrollRowToVisible(target)
     }
 
     private func updateMuteAvailability() {
         guard let muteSourceCheckbox else { return }
-        let isProcessSource: Bool
-        if case .processes = selectedSource { isProcessSource = true } else { isProcessSource = false }
-        muteSourceCheckbox.isEnabled = isProcessSource
-        if isProcessSource == false { muteSourceCheckbox.state = .off }
+        // Never offered for all-system audio: muting the tap there would
+        // silence the whole Mac, VoiceOver included.
+        let isMutableSource = systemAudioSelected == false && selectedApplications.isEmpty == false
+        muteSourceCheckbox.isEnabled = isMutableSource
+        if isMutableSource == false { muteSourceCheckbox.state = .off }
+    }
+
+    /// The single spec the capture backends consume, or nil when nothing is ticked.
+    private var resolvedSpec: DeviceStreamCaptureSpec? {
+        if systemAudioSelected { return .systemAudio() }
+        if let selectedDevice { return .inputDevice(selectedDevice) }
+        return DeviceStreamCaptureSpec.merging(selectedApplications)
+    }
+
+    private func announce(_ text: String) {
+        // .priority must be the NSNumber rawValue, not the enum, or VoiceOver drops it.
+        NSAccessibility.post(
+            element: NSApp as Any,
+            notification: .announcementRequested,
+            userInfo: [
+                .announcement: text,
+                .priority: NSAccessibilityPriorityLevel.high.rawValue
+            ]
+        )
     }
 
     // MARK: - Actions
@@ -304,17 +492,68 @@ final class MediaStreamSourceViewController: NSViewController {
         let name = FileManager.default.displayName(atPath: url.path)
             .replacingOccurrences(of: ".app", with: "")
         let spec = DeviceStreamCaptureSpec.application(bundleID: bundleID, displayName: name)
-        browsedApplication = spec
-        applySelection(spec)
+        if applicationSources.contains(spec) == false {
+            applicationSources.append(spec)
+            rebuildRows()
+        }
+        apply(spec, selected: true)
+        selectFirstSelectedRow()
+        announce(L10n.format("mediaStream.device.added.application", name))
     }
 
     @objc private func confirm() {
-        guard let spec = selectedSource else { return }
+        guard let spec = resolvedSpec else {
+            NSSound.beep()
+            return
+        }
         dismiss(nil)
         onStream?(spec, monitorCheckbox.state == .on, muteSourceCheckbox?.state == .on)
     }
 
     @objc private func cancel() {
         dismiss(nil)
+    }
+}
+
+// MARK: - Table data source & delegate
+
+extension MediaStreamSourceViewController: NSTableViewDataSource, NSTableViewDelegate {
+
+    func numberOfRows(in tableView: NSTableView) -> Int { rows.count }
+
+    func tableView(_ tableView: NSTableView, isGroupRow row: Int) -> Bool {
+        if case .group? = rows[safe: row] { return true }
+        return false
+    }
+
+    func tableView(_ tableView: NSTableView, shouldSelectRow row: Int) -> Bool {
+        if case .group? = rows[safe: row] { return false }
+        return true
+    }
+
+    func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+        switch rows[safe: row] {
+        case .group(let title):
+            let label = NSTextField(labelWithString: title)
+            label.font = .boldSystemFont(ofSize: NSFont.smallSystemFontSize)
+            label.textColor = .secondaryLabelColor
+            return label
+
+        case .source(let spec):
+            let checkbox = NSButton(checkboxWithTitle: spec.displayName,
+                                    target: self, action: #selector(checkboxToggled(_:)))
+            checkbox.tag = row
+            checkbox.state = isSelected(spec) ? .on : .off
+            return checkbox
+
+        case nil:
+            return nil
+        }
+    }
+}
+
+private extension Array {
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }

@@ -12,6 +12,7 @@ extension TeamTalkConnectionController {
         startStreamingMedia(
             path: url.path,
             displayName: url.lastPathComponent,
+            sourceKind: .file,
             securityScopedURL: didAccess ? url : nil,
             sourceURL: url,
             completion: completion
@@ -22,6 +23,7 @@ extension TeamTalkConnectionController {
         startStreamingMedia(
             path: url.absoluteString,
             displayName: url.host ?? url.absoluteString,
+            sourceKind: .url,
             securityScopedURL: nil,
             sourceURL: nil,
             completion: completion
@@ -31,6 +33,7 @@ extension TeamTalkConnectionController {
     private func startStreamingMedia(
         path: String,
         displayName: String,
+        sourceKind: MediaStreamingSourceKind,
         securityScopedURL: URL?,
         sourceURL: URL?,
         completion: @escaping (Result<Void, Error>) -> Void
@@ -103,6 +106,7 @@ extension TeamTalkConnectionController {
                 self.mediaStreamingActive = true
                 // Subscribe to our own media stream so we hear what we broadcast.
                 self.refreshLocalMediaAudioEventLocked(instance: instance)
+                self.mediaStreamingSourceKind = sourceKind
                 self.mediaStreamingPath = resolved.path
                 self.mediaStreamingStartedHistoryLogged = false
                 self.mediaStreamingSeekedWhilePaused = false
@@ -249,6 +253,7 @@ extension TeamTalkConnectionController {
             self.refreshLocalMediaAudioEventLocked(instance: instance)
             // Fresh stream: measure the media path's latency from scratch.
             self.voiceSyncEstimator.beginSession(clock: source.syncClock, preservingSnap: false)
+            self.mediaStreamingSourceKind = .live
             self.mediaStreamingPath = url.absoluteString
             self.mediaStreamingStartedHistoryLogged = false
             self.mediaStreamingSeekedWhilePaused = false
@@ -318,6 +323,7 @@ extension TeamTalkConnectionController {
         // Drop our own media subscription now that we're no longer broadcasting.
         refreshLocalMediaAudioEventLocked(instance: instance)
         mediaStreamingPath = nil
+        mediaStreamingSourceKind = .file
         mediaStreamingStartedHistoryLogged = false
         mediaStreamingSeekedWhilePaused = false
         mediaStreamingFileName = nil
@@ -622,6 +628,7 @@ extension TeamTalkConnectionController {
         let progress = MediaStreamingProgress(
             isActive: mediaStreamingActive,
             isPaused: mediaStreamingPaused,
+            sourceKind: mediaStreamingSourceKind,
             fileName: mediaStreamingFileName,
             elapsedMSec: currentMediaStreamingElapsedMSecLocked(),
             elapsedSampleAt: mediaStreamingElapsedSampleAt,
@@ -635,18 +642,43 @@ extension TeamTalkConnectionController {
     }
 }
 
+/// What an active media stream sources.
+///
+/// The UI cannot infer this from the duration: a remote URL pointing at a whole
+/// file reports one, an internet radio does not, and a live capture is endless
+/// by construction. Only `.live` turns "pause" into a mute of the source.
+enum MediaStreamingSourceKind: Equatable {
+    /// A local media file: real SDK pause, seekable when the duration is known.
+    case file
+    /// A remote URL — internet radio or a file served over http: real SDK pause.
+    case url
+    /// A live capture (input device, an application's audio, VoiceOver). The
+    /// loopback keeps feeding the SDK, so pausing mutes the capture instead:
+    /// the broadcast never stops, it goes silent.
+    case live
+
+    /// True when pausing mutes the source rather than pausing the stream.
+    var pauseMutesSource: Bool { self == .live }
+}
+
 struct MediaStreamingProgress: Equatable {
     let isActive: Bool
     let isPaused: Bool
+    let sourceKind: MediaStreamingSourceKind
     let fileName: String?
     let elapsedMSec: UInt32
     let elapsedSampleAt: Date?
     let durationMSec: UInt32
     let broadcastGainPercent: Int
 
+    /// True when the position readout and scrubber mean something: a duration
+    /// the stream will actually reach.
+    var isSeekable: Bool { durationMSec > 0 }
+
     static let inactive = MediaStreamingProgress(
         isActive: false,
         isPaused: false,
+        sourceKind: .file,
         fileName: nil,
         elapsedMSec: 0,
         elapsedSampleAt: nil,

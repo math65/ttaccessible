@@ -80,19 +80,27 @@ final class SCKAudioCaptureBackend: NSObject, DeviceStreamCaptureBackend, SCStre
             AudioLogger.log("sck stream: no shareable content/display (Screen Recording permission?)")
             throw AudioDeviceStreamSourceError.captureStartFailed
         }
-        let matchedApps = content.applications.filter { app in
-            selection.bundleIDPrefixes.contains { app.bundleIdentifier.hasPrefix($0) }
-        }
         for app in content.applications where app.bundleIdentifier.isEmpty == false {
             AudioLogger.log("sck stream: capturable app pid=%d bundle=%@", Int(app.processID), app.bundleIdentifier)
         }
-        guard matchedApps.isEmpty == false else {
-            AudioLogger.log("sck stream: no capturable app matched %@", selection.bundleIDPrefixes.joined(separator: ","))
-            throw AudioDeviceStreamSourceError.deviceUnavailable
-        }
-        AudioLogger.log("sck stream: capturing %d app(s) for %@", matchedApps.count, selection.displayName)
 
-        let filter = SCContentFilter(display: display, including: matchedApps, exceptingWindows: [])
+        let filter: SCContentFilter
+        if selection.capturesEntireSystem {
+            // The whole display, minus ourselves — `excludesCurrentProcessAudio`
+            // below is what keeps the channel from looping back in.
+            AudioLogger.log("sck stream: capturing all system audio for %@", selection.displayName)
+            filter = SCContentFilter(display: display, excludingApplications: [], exceptingWindows: [])
+        } else {
+            let matchedApps = content.applications.filter { app in
+                selection.bundleIDPrefixes.contains { app.bundleIdentifier.hasPrefix($0) }
+            }
+            guard matchedApps.isEmpty == false else {
+                AudioLogger.log("sck stream: no capturable app matched %@", selection.bundleIDPrefixes.joined(separator: ","))
+                throw AudioDeviceStreamSourceError.deviceUnavailable
+            }
+            AudioLogger.log("sck stream: capturing %d app(s) for %@", matchedApps.count, selection.displayName)
+            filter = SCContentFilter(display: display, including: matchedApps, exceptingWindows: [])
+        }
         let configuration = SCStreamConfiguration()
         configuration.capturesAudio = true
         configuration.excludesCurrentProcessAudio = true
