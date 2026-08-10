@@ -36,6 +36,9 @@ final class SavedServersMenuState: ObservableObject {
     @Published private(set) var isRecordingActive = false
     @Published private(set) var isHearMyselfEnabled = false
     @Published private(set) var isMediaStreamingActive = false
+    /// A live capture (device, application, VoiceOver): its "pause" is a mute.
+    @Published private(set) var isMediaStreamingLive = false
+    @Published private(set) var isMediaStreamingPaused = false
     @Published private(set) var selectedUserSubscriptionStates: [UserSubscriptionOption: Bool] = [:]
 
     private init() {
@@ -107,6 +110,18 @@ final class SavedServersMenuState: ObservableObject {
 
     func setMediaStreamingActive(_ value: Bool) {
         if isMediaStreamingActive != value { isMediaStreamingActive = value }
+        if value == false {
+            setMediaStreamingLive(false)
+            setMediaStreamingPaused(false)
+        }
+    }
+
+    func setMediaStreamingLive(_ value: Bool) {
+        if isMediaStreamingLive != value { isMediaStreamingLive = value }
+    }
+
+    func setMediaStreamingPaused(_ value: Bool) {
+        if isMediaStreamingPaused != value { isMediaStreamingPaused = value }
     }
 
     func setSelectedUsersState(hasSelectedUsers: Bool, hasSingleSelectedUser: Bool, hasSingleSelectedOtherUser: Bool, isSelectedUserMuted: Bool, isSelectedUserMediaFileMuted: Bool, isSelectedUserChannelOperator: Bool, states: [UserSubscriptionOption: Bool]) {

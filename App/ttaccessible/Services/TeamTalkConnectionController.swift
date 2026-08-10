@@ -164,6 +164,9 @@ final class TeamTalkConnectionController {
     var recordingFormat: AudioFileFormat = AFF_WAVE_FORMAT
     var mediaStreamingActive = false
     var mediaStreamingPath: String?
+    /// What the active stream sources — the three kinds behave differently
+    /// enough that the UI cannot tell them apart from the duration alone.
+    var mediaStreamingSourceKind: MediaStreamingSourceKind = .file
     var mediaStreamingStartedHistoryLogged = false
     var mediaStreamingFileName: String?
     var mediaStreamingSecurityScopedURL: URL?

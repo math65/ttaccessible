@@ -78,6 +78,10 @@ final class MediaPlaybackPositionControl: NSView {
         slider.isEnabled = enabled
         slider.doubleValue = Double(elapsedMSec)
 
+        // Without this, an endless stream (live capture, radio) leaves a
+        // perfectly ordinary-sounding slider in the tree that swallows every
+        // adjustment. Say it's dimmed instead.
+        setAccessibilityEnabled(enabled)
         setAccessibilityMinValue(0)
         setAccessibilityMaxValue(max(1, Double(durationMSec)))
 
@@ -133,14 +137,14 @@ final class MediaPlaybackPositionControl: NSView {
         return max(1, (slider.maxValue - slider.minValue) / 10)
     }
 
+    /// Report the truth: returning `true` on a stream with nowhere to seek made
+    /// VoiceOver confirm an adjustment that never happened.
     override func accessibilityPerformIncrement() -> Bool {
         seek(bySeconds: +5, announce: true)
-        return true
     }
 
     override func accessibilityPerformDecrement() -> Bool {
         seek(bySeconds: -5, announce: true)
-        return true
     }
 
     override func accessibilityChildren() -> [Any]? { [] }
@@ -206,13 +210,15 @@ final class MediaPlaybackPositionControl: NSView {
         onSeek?(elapsedMSec)
     }
 
-    private func seek(bySeconds seconds: Int, announce: Bool) {
-        guard slider.isEnabled, durationMSec > 0 else { return }
+    @discardableResult
+    private func seek(bySeconds seconds: Int, announce: Bool) -> Bool {
+        guard slider.isEnabled, durationMSec > 0 else { return false }
         let current = Int(slider.doubleValue)
         let duration = Int(durationMSec)
         let newMS = max(0, min(current + seconds * 1000, duration - 1))
         apply(elapsedMSec: UInt32(newMS), durationMSec: durationMSec, enabled: true, announceAccessibility: announce)
         onSeek?(UInt32(newMS))
+        return true
     }
 
     private func publishAccessibilityValue(_ timeText: String, announce: Bool) {

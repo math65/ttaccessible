@@ -27,11 +27,19 @@ enum DeviceStreamCaptureSpec: Equatable {
 
     struct ProcessSelection: Equatable {
         /// Bundle-identifier prefixes to capture — prefix matching so an app's
-        /// helper processes (e.g. browser audio helpers) are included.
+        /// helper processes (e.g. browser audio helpers) are included. Several
+        /// applications can be captured at once: both backends mix N sources
+        /// themselves (CATapDescription takes a list of processes, SCContentFilter
+        /// a list of applications), so cumulating prefixes is all it takes.
+        /// Empty when `capturesEntireSystem`.
         let bundleIDPrefixes: [String]
         let displayName: String
-        /// Stable token stored in preferences ("voiceover" / "app:<bundleID>").
+        /// Stable token stored in preferences ("voiceover", "app:<bundleID>",
+        /// "system", or "multi:<token>+<token>" for a cumulated selection).
         let persistenceToken: String
+        /// Capture everything this Mac plays, minus our own output — otherwise
+        /// the channel we broadcast to would loop straight back into the stream.
+        var capturesEntireSystem = false
     }
 
     var displayName: String {
@@ -76,6 +84,70 @@ enum DeviceStreamCaptureSpec: Equatable {
             displayName: displayName,
             persistenceToken: "app:\(bundleID)"
         ))
+    }
+
+    static let systemAudioPersistenceToken = "system"
+
+    /// Everything the Mac plays, minus tt-Accessible itself.
+    static func systemAudio() -> DeviceStreamCaptureSpec {
+        .processes(ProcessSelection(
+            bundleIDPrefixes: [],
+            displayName: L10n.text("mediaStream.device.source.systemAudio"),
+            persistenceToken: systemAudioPersistenceToken,
+            capturesEntireSystem: true
+        ))
+    }
+
+    static let multiPersistenceTokenPrefix = "multi:"
+    private static let multiPersistenceTokenSeparator = "+"
+
+    /// Fuse several application sources (VoiceOver included) into the single
+    /// selection the capture backends consume. Returns the sole spec unchanged
+    /// when there is only one, and nil when there is nothing to stream.
+    ///
+    /// Only process sources cumulate: an input device is captured by a wholly
+    /// different backend, and the system-wide tap already contains everything.
+    static func merging(_ specs: [DeviceStreamCaptureSpec]) -> DeviceStreamCaptureSpec? {
+        let selections: [ProcessSelection] = specs.compactMap { spec in
+            guard case .processes(let selection) = spec, !selection.capturesEntireSystem else { return nil }
+            return selection
+        }
+        guard selections.isEmpty == false else { return nil }
+        guard selections.count > 1 else { return .processes(selections[0]) }
+
+        var prefixes: [String] = []
+        for selection in selections where selection.bundleIDPrefixes.isEmpty == false {
+            prefixes.append(contentsOf: selection.bundleIDPrefixes.filter { !prefixes.contains($0) })
+        }
+        let token = multiPersistenceTokenPrefix
+            + selections.map(\.persistenceToken).joined(separator: multiPersistenceTokenSeparator)
+        return .processes(ProcessSelection(
+            bundleIDPrefixes: prefixes,
+            displayName: joinedDisplayName(selections.map(\.displayName)),
+            persistenceToken: token
+        ))
+    }
+
+    /// The individual tokens a "multi:" token was built from, in order. Any
+    /// other token yields itself, so callers can restore a selection blind.
+    static func componentTokens(of token: String) -> [String] {
+        guard token.hasPrefix(multiPersistenceTokenPrefix) else { return [token] }
+        return token
+            .dropFirst(multiPersistenceTokenPrefix.count)
+            .components(separatedBy: multiPersistenceTokenSeparator)
+            .filter { $0.isEmpty == false }
+    }
+
+    /// "Music, Safari and VoiceOver" — but a long selection is summarised
+    /// rather than read out in full: this name is spoken on every progress
+    /// update of the player.
+    private static func joinedDisplayName(_ names: [String]) -> String {
+        let maximumNamed = 3
+        guard names.count > maximumNamed else {
+            return ListFormatter.localizedString(byJoining: names)
+        }
+        let head = ListFormatter.localizedString(byJoining: Array(names.prefix(maximumNamed)))
+        return L10n.format("mediaStream.device.source.andOthers", head, names.count - maximumNamed)
     }
 }
 
