@@ -1,3 +1,36 @@
+## v1.12.0-beta.1 (build 47) — 10/08/2026
+
+Cette bêta porte sur la diffusion. Vous pouvez désormais envoyer plusieurs applications à la fois dans un canal — votre lecteur de musique et VoiceOver ensemble, par exemple — ou tout simplement tout ce que joue votre Mac. Et une source en direct dit enfin ce qu'elle fait : elle ne se mettait jamais en pause, elle coupe le son, et les commandes le formulent maintenant ainsi.
+
+### L'essentiel
+- **Diffusez plusieurs applications à la fois**, VoiceOver compris.
+- **Ou tout le son de ce Mac**, d'une seule case cochée.
+- **Une source en direct se coupe au lieu de se mettre en pause** : la diffusion reste ouverte et devient silencieuse, et le bouton le dit.
+- **Fini le temps écoulé face à un total de 00:00** sur quelque chose qui n'a pas de fin.
+
+### Choisir ce que vous diffusez
+- **Option + Commande + A s'appelle maintenant « Diffuser du son de ce Mac »** et ouvre une liste de cases à cocher, à la place d'un menu à choix unique.
+- **Les applications se cumulent.** Cochez-en autant que vous voulez, VoiceOver y compris : elles partent mélangées dans un seul flux.
+- **« Tout le son de ce Mac »** figure en tête de liste. Le son de tt-Accessible est retiré de la capture, sans quoi le canal s'entendrait revenir. En revanche, les notifications et les sons du système partent eux aussi. Nécessite macOS 13 ou une version ultérieure.
+- **Un périphérique d'entrée se diffuse toujours seul** — c'est une capture d'une tout autre nature — donc en cocher un décoche les applications. Ce qu'une case vient de retirer vous est annoncé.
+- **La barre d'espace coche et décoche** la ligne sélectionnée, et les flèches parcourent la liste.
+- **Votre dernière sélection est rétablie**, même lorsqu'elle portait sur plusieurs applications.
+- **« Couper le son de cette source » est refusé pour le son du système.** Couper cette capture ferait taire tout le Mac, VoiceOver avec lui.
+
+### Les commandes de diffusion
+- **Un périphérique, une application ou VoiceOver ne peuvent pas se mettre en pause**, puisque le flux continue d'alimenter le canal. Le bouton propose désormais de couper et de rétablir le son, et la diffusion reste ouverte pendant que la source se tait.
+- **Le curseur de position disparaît quand il n'y a nulle part où aller** — une source en direct, mais aussi une radio internet. Il affichait « 02:31 / 00:00 » et acceptait des réglages qu'il ne pouvait pas appliquer.
+- **Chaque changement est annoncé**, si bien que vous entendez le nouvel état même quand le bouton n'a pas le focus.
+- **Option + Commande + M coupe une diffusion sans l'arrêter**, depuis n'importe où dans l'application.
+- **Une flèche qui n'a nulle part où avancer vous le dit** au lieu de rester sans effet.
+- **VoiceOver ne vous annonce plus un réglage réussi qui ne l'était pas**, sur une diffusion sans position.
+
+### Le guide d'utilisation
+- Les pages sur la diffusion et sur les raccourcis sont réécrites dans les deux langues : les commandes se trouvent dans la fenêtre principale et n'ont jamais formé une fenêtre à part, les touches sont distinguées selon qu'il s'agit d'un fichier ou d'une source en direct, et ce qui peut se cocher ensemble y est détaillé.
+
+### Téléchargement
+[ttaccessible-1.12.0-beta.1-47.zip](https://github.com/math65/ttaccessible/releases/download/v1.12.0-beta.1/ttaccessible-1.12.0-beta.1-47.zip)
+
 ## v1.11.0 (build 46) — 04/08/2026
 
 Cette version dote enfin l'application d'un vrai guide d'utilisation, accessible depuis le menu Aide. Elle revoit aussi de fond en comble les raccourcis utilisables depuis une autre application : ils ne réclament plus d'autorisation système, et la touche que vous appuyez ne vient plus s'écrire dans l'application où vous travaillez. Enfin, un volume réglé sur 0 % coupe désormais réellement le son.

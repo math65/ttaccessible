@@ -1,3 +1,36 @@
+## v1.12.0-beta.1 (build 47) — 2026-08-10
+
+This beta is about streaming. You can now send several applications into a channel at once — your music player and VoiceOver together, say — or simply everything this Mac plays. And a live broadcast finally says what it does: it never pretended to pause, it mutes the source, and the controls now word it that way.
+
+### Highlights
+- **Stream several applications at once**, VoiceOver among them.
+- **Or all audio from this Mac**, in a single tick.
+- **A live source mutes instead of pausing** — the broadcast stays up and goes silent, and the button says so.
+- **No more elapsed time against a total of 00:00** on something with no end.
+
+### Choosing what to stream
+- **Option-Command-A is now "Stream Audio from This Mac"**, and opens a list of tick boxes instead of a pop-up menu with a single choice.
+- **Applications cumulate.** Tick as many as you like, VoiceOver included, and they are mixed into one stream.
+- **"All audio from this Mac"** sits at the top of the list. tt-Accessible's own output is left out of the capture, otherwise the channel would hear itself come back. Notifications and system sounds do go out. Requires macOS 13 or later.
+- **An input device still streams on its own** — a different kind of capture entirely — so ticking one unticks the applications. Whatever a tick clears is spoken out loud.
+- **Space ticks and unticks** the selected line, and the arrow keys move through the list.
+- **Your last selection is restored**, even when it covered several applications.
+- **"Mute this source on this Mac" is refused for all-system audio.** Muting that capture would silence the whole Mac, VoiceOver with it.
+
+### The broadcast controls
+- **A device, an application or VoiceOver cannot be paused**, because the stream keeps feeding the channel. The button now reads Mute and Unmute, and the broadcast stays up while the source is silent.
+- **The position slider is gone when there is nothing to seek to** — a live capture, but an internet radio too. It used to read "02:31 / 00:00" and take adjustments it could not honour.
+- **Every toggle is announced**, so you hear the new state even when the button doesn't have focus.
+- **Option-Command-M silences a broadcast without ending it**, from anywhere in the app.
+- **An arrow key with nowhere to seek to now says so** instead of doing nothing.
+- **VoiceOver is no longer told an adjustment succeeded when it didn't** on a stream without a position.
+
+### The user guide
+- The streaming and shortcut pages are rewritten in both languages: the controls are in the main window and never were a separate window, the keys are listed for a media file and for a live source separately, and what can be ticked together is spelled out.
+
+### Download
+[ttaccessible-1.12.0-beta.1-47.zip](https://github.com/math65/ttaccessible/releases/download/v1.12.0-beta.1/ttaccessible-1.12.0-beta.1-47.zip)
+
 ## v1.11.0 (build 46) — 2026-08-04
 
 This release adds a complete user guide to the Help menu, and rebuilds how global shortcuts work: a microphone shortcut no longer asks for a system permission, and the key you press no longer ends up typed into whatever app you were using. Setting a volume to 0% now really does mean silence.
