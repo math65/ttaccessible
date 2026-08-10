@@ -25,45 +25,60 @@
 <li>Choose Shortcuts &gt; Stream URL, or press Option-Command-U.</li>
 <li>Enter the address of the stream, then click Stream. You can use the <code>http</code>, <code>https</code>, <code>rtmp</code>, <code>rtmps</code>, <code>rtsp</code> and <code>mms</code> schemes.</li>
 </ol>
-<h2 id="stream-a-device-an-app-or-voiceover">Stream a device, an app or VoiceOver</h2>
+<h2 id="stream-a-device-apps-or-voiceover">Stream a device, apps or VoiceOver</h2>
 <ol type="1">
-<li>Choose Shortcuts &gt; Stream a Device or Application, or press Option-Command-A.</li>
-<li>Click the <strong>Audio source</strong> pop-up menu, then choose an audio input of your Mac, <strong>VoiceOver</strong>, or an app under Applications. To pick an app that isn't running, choose <strong>Select Application</strong> — this requires macOS 14.2 or later. Streaming the audio of an app or of VoiceOver requires macOS 13 or later.</li>
+<li>Choose Shortcuts &gt; Stream Audio from This Mac, or press Option-Command-A.</li>
+<li>In the <strong>Audio source</strong> list, tick what you want to send. Use the arrow keys to move through the list and the Space bar to tick or untick.</li>
 <li>Select <strong>Play the streamed audio back to me</strong> if you want to hear what you're sending. It's off, so you aren't forced to listen to it.</li>
-<li>Select <strong>Mute this source on this Mac while streaming</strong> to silence the source for yourself while the channel keeps hearing it. This option appears for apps on recent versions of macOS.</li>
+<li>Select <strong>Mute this source on this Mac while streaming</strong> to silence the source for yourself while the channel keeps hearing it. It only applies to applications, on recent versions of macOS.</li>
 <li>Click Stream.</li>
 </ol>
-<p>The stream keeps going even while the source is silent, so a pause in the music doesn't end it. Your last choice is selected again next time.</p>
+<h3 id="what-you-can-tick">What you can tick</h3>
+<ul>
+<li><strong>Several applications at once.</strong> Your music player and VoiceOver, say, so the channel hears both what you're listening to and what your screen reader is saying.</li>
+<li><strong>All audio from this Mac</strong>, when naming the apps one by one isn't worth it. tt-Accessible's own output is left out of the capture, otherwise the channel would hear itself come back. Be aware that notifications and system sounds go out too.</li>
+<li><strong>An input device</strong>, which streams on its own: ticking a device unticks the applications, and the other way round. tt-Accessible announces whatever was just unticked.</li>
+</ul>
+<p>To pick an app that isn't running, click <strong>Select Application</strong> — this requires macOS 14.2 or later. Streaming the audio of an app, of VoiceOver or of the whole Mac requires macOS 13 or later.</p>
+<p>The stream keeps going even while the source is silent, so a pause in the music doesn't end it. Your last choice is ticked again next time, even when it covered several applications.</p>
 <p>If the app you picked isn't producing any sound, tt-Accessible answers <em>The selected source has no audio to capture right now.</em></p>
-<h2 id="control-whats-playing">Control what's playing</h2>
-<p>While a stream is running, the Media Player window shows what's playing and offers these keys:</p>
+<h2 id="control-a-running-broadcast">Control a running broadcast</h2>
+<p>While a stream is running, the main window shows a block of controls under the sound sliders: the name of what's going out, a button to interrupt it, a Stop button and the broadcast volume. A media file adds a Position slider; a radio, a device or an app has none, because their broadcast has no end to reach.</p>
+<p>These keys work as soon as the focus is inside that block:</p>
 <table>
 <thead>
 <tr>
 <th>Key</th>
-<th>Action</th>
+<th>Media file</th>
+<th>Radio, device or app</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Space</td>
-<td>Play or pause</td>
+<td>Pause or resume</td>
+<td>Mute or unmute</td>
 </tr>
 <tr>
 <td>Escape</td>
+<td>Stop</td>
 <td>Stop</td>
 </tr>
 <tr>
 <td>Left Arrow or Right Arrow</td>
 <td>Skip 5 seconds back or forward</td>
+<td>No effect</td>
 </tr>
 <tr>
 <td>Up Arrow or Down Arrow</td>
 <td>Change the broadcast volume</td>
+<td>Change the broadcast volume</td>
 </tr>
 </tbody>
 </table>
-<p>The broadcast volume sets how loud the stream is sent to the channel, independently of the level you listen at.</p>
+<p>Option-Command-M does the same thing from anywhere in the app.</p>
+<p>A device, an app and VoiceOver never pause: the source is muted, but the broadcast keeps running. The channel still sees you streaming and hears nothing, until you unmute.</p>
+<p>The broadcast volume sets how loud the stream is sent to the channel, independently of the level you listen at. At 0%, nothing goes out.</p>
 <h2 id="stop-streaming">Stop streaming</h2>
 <p>Choose Shortcuts &gt; Stop Streaming, or press Option-Command-Period. tt-Accessible announces <em>Streaming finished</em>, and both the start and the end appear in the session history.</p>
 <p>Everyone subscribed to your media file stream hears it. Each person can silence it without silencing your voice — see <a href="users.html">Adjust what you hear from each person</a>.</p>

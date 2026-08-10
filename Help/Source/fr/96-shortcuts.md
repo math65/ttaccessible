@@ -103,17 +103,18 @@ s'appliquent à celle qui est sélectionnée dans l'arbre des canaux.
 |---|---|
 | Option + Commande + S | Diffuser un fichier média |
 | Option + Commande + U | Diffuser une URL |
-| Option + Commande + A | Diffuser un périphérique ou une application |
+| Option + Commande + A | Diffuser du son de ce Mac |
+| Option + Commande + M | Suspendre un fichier, ou couper le son d'une source en direct |
 | Option + Commande + Point | Arrêter la diffusion |
 
-## Dans le lecteur média
+## Dans les commandes de diffusion
 
-| Touche | Action |
-|---|---|
-| Espace | Lecture ou pause |
-| Échap | Arrêt |
-| Flèche gauche ou Flèche droite | Reculer ou avancer de 5 secondes |
-| Flèche haut ou Flèche bas | Modifier le volume diffusé |
+| Touche | Fichier média | Radio, périphérique ou application |
+|---|---|---|
+| Espace | Pause ou reprise | Couper ou rétablir le son |
+| Échap | Arrêt | Arrêt |
+| Flèche gauche ou Flèche droite | Reculer ou avancer de 5 secondes | Sans effet |
+| Flèche haut ou Flèche bas | Modifier le volume diffusé | Modifier le volume diffusé |
 
 ## Dans le mixeur du canal
 
