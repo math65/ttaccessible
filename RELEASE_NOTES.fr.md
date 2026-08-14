@@ -1,3 +1,37 @@
+## v1.12.0-beta.2 (build 48) — 14/08/2026
+
+Cette bêta est née du rapport d'un testeur, et l'un des défauts qu'il a permis de découvrir est sérieux : votre micro pouvait cesser d'être transmis alors que, de votre côté, tout semblait parfaitement normal. Il se répare désormais tout seul et vous prévient. Le reste corrige des désagréments bien concrets — un espace effacé au moment où vous le tapez, une personne dépourvue de nom — et vous évite de retaper les adresses que vous diffusez.
+
+### L'essentiel
+- **Un micro qui cesse d'être transmis se relance de lui-même et vous le dit.** Il pouvait jusqu'ici rester muet des heures durant, sans le moindre signe.
+- **L'adresse d'un flux déjà diffusé vous est proposée d'emblée.** Appuyez sur Retour pour le relancer.
+- **L'espace que vous tapez dans les préférences Générales ne disparaît plus.** Les mots se collaient les uns aux autres.
+- **Une personne sans pseudo porte enfin un nom**, au lieu de se réduire à une ligne vide.
+
+### Quand le micro ne passait plus
+- **Votre voix pouvait ne plus sortir du tout, sans rien pour vous alerter.** Après un changement de canal — ou après qu'un opérateur a modifié le canal où vous vous trouviez — l'application pouvait continuer d'envoyer votre voix sous une forme que le canal n'acceptait plus. Rien n'y paraissait : le micro était ouvert, vous vous voyiez figurer parmi les personnes qui parlent. Un testeur est resté ainsi une douzaine d'heures.
+- **La cause est corrigée**, et un garde-fou rattrape désormais tout ce qui y ressemblerait : au bout d'une seconde sans qu'un seul instant de voix ne passe, le micro est relancé et vous en êtes averti — « Votre micro n'était plus transmis. Il a été redémarré. » Comme pour tout autre événement, l'annonce se désactive dans Préférences > Annonces > État.
+- **Si la relance échoue, le micro est coupé franchement**, plutôt que laissé muet à votre insu.
+- **Le journal audio ne se remplit plus dans ces moments-là.** Il s'écrivait à raison de plusieurs dizaines de lignes par seconde — plus de cent mégaoctets sur le Mac du testeur —, de quoi ralentir à lui seul une machine ancienne.
+- Si le cas se reproduisait chez vous, le journal note maintenant précisément ce qui s'est désynchronisé : nous envoyer un rapport accompagné de ce journal permettrait d'achever le diagnostic.
+
+### Diffuser une URL
+- **La dernière adresse diffusée vous revient déjà saisie et sélectionnée.** Retour la relance telle quelle, et ce que vous tapez la remplace sans avoir à l'effacer.
+- **Les adresses précédentes sont à une flèche vers le bas**, et taper les premiers caractères de l'une d'elles la complète. Les dix dernières sont retenues.
+- **Une adresse n'est retenue qu'une fois la diffusion réellement lancée** : une faute de frappe ne vient donc jamais s'ajouter à la liste.
+
+### Les préférences
+- **L'espace que vous tapez dans Pseudo par défaut, Message d'état par défaut et Message d'absence n'est plus supprimé.** Si VoiceOver vous annonçait une suppression, c'est qu'il y en avait bel et bien une : le mot suivant venait se coller au précédent, et « Bonjour tout le monde » devenait « Bonjourtout le monde ».
+
+### Les utilisateurs
+- **Une personne sans pseudo ni nom de compte s'affiche désormais « Sans nom - #42 »**, avec son numéro, comme dans le client TeamTalk d'origine. Elle apparaissait jusqu'ici sans nom du tout : vous n'entendiez qu'une virgule et un statut.
+
+### Les anciennes versions de macOS
+- **Le menu de l'application retrouve sa commande Quitter, et le menu Fichier vide disparaît.** Sous macOS 12, la barre des menus ne permettait tout simplement pas de quitter l'application : il fallait passer par le Dock ou par une sortie forcée.
+
+### Téléchargement
+[ttaccessible-1.12.0-beta.2-48.zip](https://github.com/math65/ttaccessible/releases/download/v1.12.0-beta.2/ttaccessible-1.12.0-beta.2-48.zip)
+
 ## v1.12.0-beta.1 (build 47) — 10/08/2026
 
 Cette bêta porte sur la diffusion. Vous pouvez désormais envoyer plusieurs applications à la fois dans un canal — votre lecteur de musique et VoiceOver ensemble, par exemple — ou tout simplement tout ce que joue votre Mac. Et une source en direct dit enfin ce qu'elle fait : elle ne se mettait jamais en pause, elle coupe le son, et les commandes le formulent maintenant ainsi.

@@ -1,3 +1,37 @@
+## v1.12.0-beta.2 (build 48) — 2026-08-14
+
+This beta comes from a tester's report, and one of the things it found is serious: your microphone could stop being transmitted while everything still looked and sounded normal at your end. It now repairs itself and tells you. The rest is a handful of fixes to things that were plainly annoying — a space being deleted as you typed it, a person with no name at all — plus streamed addresses you no longer have to retype.
+
+### Highlights
+- **A microphone that stops being transmitted now restarts itself, and says so.** It could previously stay mute for hours without a single sign.
+- **The address of a stream you've already played is offered back to you.** Press Return to start it again.
+- **Typing a space in the General preferences no longer deletes it.** Words stopped running into each other.
+- **Someone with no nickname is now named** instead of showing up as an empty line.
+
+### When the microphone went quiet
+- **Your voice could stop going out entirely, with nothing to warn you.** After a channel change — or after an operator edited the channel you were in — the app could keep sending your voice in a form the channel no longer accepted. Everything looked normal: the microphone was on, you could see yourself listed as talking. A tester stayed like that for about twelve hours.
+- **The cause is fixed**, and a safety net now catches anything like it: after one second without a single frame of voice getting through, the microphone is restarted and you're told — "Your microphone had stopped being transmitted. It has been restarted." Like every other event, it can be switched off in Preferences > Announcements > Status.
+- **If restarting doesn't work, the microphone is turned off loudly** rather than left silently dead.
+- **The audio log no longer fills up when this happens.** It was writing dozens of lines a second — well over a hundred megabytes on the tester's Mac — which is enough on its own to slow an older machine down.
+- If it ever happens to you again, the log now records exactly what went out of step: sending a report with it would let us finish the diagnosis.
+
+### Streaming a URL
+- **The last address you streamed comes back already filled in and selected.** Return starts it again as it is, and typing replaces it without deleting anything first.
+- **The addresses before it are one Down arrow away**, and typing the first few characters completes one. The last ten are kept.
+- **An address is only remembered once the stream actually started**, so a typo never ends up on the list.
+
+### Preferences
+- **The space you typed in Default nickname, Default status message and Away message is no longer deleted.** VoiceOver was announcing a deletion because there really was one, and the next word ran into the previous one: "Hello World" became "HelloWorld".
+
+### Users
+- **A user with neither a nickname nor an account name now shows as "NoName - #42"**, with their number, like the original TeamTalk client. They used to appear as an empty name — you could hear a comma and a status, and nothing else.
+
+### Older versions of macOS
+- **The app menu gets its Quit item back, and the empty File menu disappears.** On macOS 12 there was no way to quit from the menu bar at all — only the Dock or a force quit.
+
+### Download
+[ttaccessible-1.12.0-beta.2-48.zip](https://github.com/math65/ttaccessible/releases/download/v1.12.0-beta.2/ttaccessible-1.12.0-beta.2-48.zip)
+
 ## v1.12.0-beta.1 (build 47) — 2026-08-10
 
 This beta is about streaming. You can now send several applications into a channel at once — your music player and VoiceOver together, say — or simply everything this Mac plays. And a live broadcast finally says what it does: it never pretended to pause, it mutes the source, and the controls now word it that way.
