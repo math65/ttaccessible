@@ -151,6 +151,21 @@ final class TeamTalkConnectionController {
     /// lightweight flag decides whether captured audio is transmitted when PTT
     /// is not held. Releasing PTT closes it (see setPushToTalkPressed).
     var bothGateOpen = false
+    /// Run of consecutive voice blocks the SDK refused, and how much voice that
+    /// adds up to. A refusal is normally transient, but the capture can settle
+    /// into a state where every block is refused and nothing recovers on its
+    /// own — see `noteVoiceInsertOutcomeLocked`, which throttles the log and
+    /// restarts the capture on a sustained run.
+    var refusedVoiceInsertCount = 0
+    var refusedVoiceSeconds: Double = 0
+    var lastRefusedVoiceLogAt: CFAbsoluteTime = 0
+    var lastVoiceCaptureRecoveryAt: CFAbsoluteTime = 0
+    /// One line per refused block was 47 lines a second in the field.
+    static let refusedVoiceLogInterval: CFAbsoluteTime = 5
+    /// A second of refused voice is well past any transient queue pressure.
+    static let refusedVoiceRecoveryThreshold: Double = 1
+    /// Keeps a wedged SDK from becoming a restart loop.
+    static let voiceCaptureRecoveryBackoff: CFAbsoluteTime = 30
     var lastAudioWarningMessage: String?
     var masterMuted = false
     var hearMyselfEnabled = false
@@ -562,7 +577,11 @@ final class TeamTalkConnectionController {
         if nickname.isEmpty == false {
             return nickname
         }
-        return ttString(from: user.szUsername)
+        let username = ttString(from: user.szUsername)
+        if username.isEmpty == false {
+            return username
+        }
+        return ConnectedServerUser.fallbackDisplayName(userID: user.nUserID)
     }
 
     func effectiveNickname(for record: SavedServerRecord, override nicknameOverride: String? = nil) -> String {

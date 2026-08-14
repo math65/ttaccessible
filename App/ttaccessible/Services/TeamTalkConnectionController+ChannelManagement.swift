@@ -41,9 +41,10 @@ extension TeamTalkConnectionController {
                 self.channelPasswords[channelID] = password
                 self.appendJoinedChannelHistoryLocked(channelID: channelID, instance: instance)
                 self.saveLastChannelLocked(channelID: channelID, instance: instance)
-                if self.voiceTransmissionEnabled, self.isAnyMicrophoneEngineRunning {
-                    self.refreshAdvancedMicrophoneTargetIfNeededLocked(instance: instance)
-                }
+                // Not gated on voiceTransmissionEnabled: a hot-but-muted engine
+                // ("both" mode, or a mic toggled off) keeps its target format
+                // too, and would meet the new channel with the old one.
+                self.refreshAdvancedMicrophoneTargetIfNeededLocked(instance: instance)
                 self.publishSessionLocked(instance: instance, record: record)
                 DispatchQueue.main.async {
                     completion(.success(()))
@@ -291,9 +292,7 @@ extension TeamTalkConnectionController {
                 if previousChannelID > 0 {
                     self.appendLeftChannelHistoryLocked(channelID: previousChannelID, instance: instance)
                 }
-                if self.voiceTransmissionEnabled, self.isAnyMicrophoneEngineRunning {
-                    self.refreshAdvancedMicrophoneTargetIfNeededLocked(instance: instance)
-                }
+                self.refreshAdvancedMicrophoneTargetIfNeededLocked(instance: instance)
                 self.publishSessionLocked(instance: instance, record: record)
                 DispatchQueue.main.async {
                     completion(.success(()))

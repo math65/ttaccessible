@@ -202,6 +202,15 @@ extension TeamTalkConnectionController {
     /// it restores the last transmit state, as before.
     func armMicrophoneEngineOnJoinLocked(instance: UnsafeMutableRawPointer) {
         guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else { return }
+        // An engine carried over from the channel we just left still holds that
+        // channel's target format, and neither arming path below rebuilds a
+        // running engine. This is the one place every self-join goes through —
+        // including the ones the app didn't ask for (moved by an operator, or
+        // drained inside waitForCommandCompletionLocked) — so the format is
+        // reconciled here rather than at each join call site.
+        if isAnyMicrophoneEngineRunning {
+            refreshAdvancedMicrophoneTargetIfNeededLocked(instance: instance)
+        }
         if currentMicrophoneMode == .both {
             armBothModeEngineIfNeededLocked(instance: instance)
             if let connectedRecord {
@@ -586,7 +595,14 @@ extension TeamTalkConnectionController {
     }
 
     func ensureAdvancedMicrophoneInputReadyLocked(instance: UnsafeMutableRawPointer) throws {
+        // An engine that is already up keeps the target format it was built
+        // with, and that format may belong to a channel we have since left —
+        // the channel can change while the mic is off, and nothing recomputes
+        // it on the way back on. The SDK then refuses every block for as long
+        // as the mismatch lasts (silently: the user looks live and is mute).
+        // Revalidate against the current channel before taking the shortcut.
         guard inputAudioReady == false else {
+            refreshAdvancedMicrophoneTargetIfNeededLocked(instance: instance)
             return
         }
 
@@ -1157,11 +1173,96 @@ extension TeamTalkConnectionController {
                 accepted: accepted,
                 gated: false
             )
-            if accepted == false {
-                AudioLogger.log("TT_InsertAudioBlock: queue full, audio block dropped")
-            }
+            noteVoiceInsertOutcomeLocked(accepted: accepted, chunk: chunk)
             return accepted
         }
+    }
+
+    /// Tracks a run of refused inserts and heals it.
+    ///
+    /// A refusal is normally a transient full queue: the delay line retries the
+    /// chunk and the next one lands. But the capture can also end up in a state
+    /// the SDK rejects outright — a target format left over from another channel
+    /// is the one we've seen — and nothing about it is self-correcting. A field
+    /// log showed 2 million consecutive refusals over roughly twelve hours:
+    /// the user was mute the whole time, with a live-looking mic, and the only
+    /// cure was a capture restart that happened by chance.
+    ///
+    /// So: log the run at a fixed cadence instead of per chunk (it was 47 lines
+    /// a second, ~150 MB of `audio.log`), and once a full second of voice has
+    /// been refused, restart the capture and tell the user. The back-off keeps a
+    /// genuinely wedged SDK from turning into a restart loop.
+    func noteVoiceInsertOutcomeLocked(accepted: Bool, chunk: AdvancedMicrophoneAudioChunk) {
+        if accepted {
+            if refusedVoiceInsertCount > 0 {
+                AudioLogger.log(
+                    "TT_InsertAudioBlock: recovered after %d refused blocks (%.1f s)",
+                    refusedVoiceInsertCount,
+                    refusedVoiceSeconds
+                )
+                resetVoiceInsertFailureTrackingLocked()
+            }
+            return
+        }
+
+        let now = CFAbsoluteTimeGetCurrent()
+        refusedVoiceInsertCount += 1
+        if chunk.sampleRate > 0 {
+            refusedVoiceSeconds += Double(chunk.sampleCount) / Double(chunk.sampleRate)
+        }
+
+        if refusedVoiceInsertCount == 1 || now - lastRefusedVoiceLogAt >= Self.refusedVoiceLogInterval {
+            lastRefusedVoiceLogAt = now
+            AudioLogger.log(
+                "TT_InsertAudioBlock: queue full, audio block dropped (%d refused, %.1f s of voice)",
+                refusedVoiceInsertCount,
+                refusedVoiceSeconds
+            )
+        }
+
+        guard refusedVoiceSeconds >= Self.refusedVoiceRecoveryThreshold,
+              now - lastVoiceCaptureRecoveryAt >= Self.voiceCaptureRecoveryBackoff else { return }
+        lastVoiceCaptureRecoveryAt = now
+        let refusedSeconds = refusedVoiceSeconds
+        resetVoiceInsertFailureTrackingLocked()
+
+        // Off this tick: we're inside the chunk's buffer pointer, and the
+        // restart tears down the very engine that produced it.
+        queue.async { [weak self] in
+            self?.recoverStalledVoiceCaptureLocked(refusedSeconds: refusedSeconds)
+        }
+    }
+
+    private func resetVoiceInsertFailureTrackingLocked() {
+        refusedVoiceInsertCount = 0
+        refusedVoiceSeconds = 0
+        lastRefusedVoiceLogAt = 0
+    }
+
+    /// Rebuilds the capture after a run of refused inserts, and says so — being
+    /// mute is not something the user can see, so it can't be fixed silently.
+    private func recoverStalledVoiceCaptureLocked(refusedSeconds: Double) {
+        guard let instance, inputAudioReady else { return }
+        AudioLogger.log("voice capture stalled: restarting after %.1f s of refused voice", refusedSeconds)
+
+        stopAdvancedMicrophoneInputLocked(instance: instance, reason: "voice capture stalled")
+        do {
+            try ensureAdvancedMicrophoneInputReadyLocked(instance: instance)
+            appendMicrophoneStalledHistoryLocked()
+        } catch {
+            AudioLogger.log("voice capture stall recovery failed — %@", error.localizedDescription)
+            voiceTransmissionEnabled = false
+            lastAudioWarningMessage = L10n.text("connectedServer.audio.error.microphoneRestartFailed")
+            SoundPlayer.shared.play(.voxMeDisable)
+            appendMicrophoneStalledHistoryLocked(recovered: false)
+        }
+        if let connectedRecord {
+            publishSessionLocked(instance: instance, record: connectedRecord)
+        }
+    }
+
+    private static func describe(targetFormat: AdvancedMicrophoneAudioTargetFormat) -> String {
+        "\(Int(targetFormat.sampleRate))Hz/\(targetFormat.channels)ch/\(targetFormat.txIntervalMSec)ms"
     }
 
     func refreshAdvancedMicrophoneTargetIfNeededLocked(instance: UnsafeMutableRawPointer) {
@@ -1176,6 +1277,15 @@ extension TeamTalkConnectionController {
         guard currentTargetFormat != advancedMicrophoneTargetFormat else {
             return
         }
+
+        // Logged because a mismatch means the capture was running against a
+        // stale channel format — the one state where the SDK refuses every
+        // block. Knowing which path let it drift is what the log is for.
+        AudioLogger.log(
+            "microphone target format drifted: running=%@ channel=%@",
+            advancedMicrophoneTargetFormat.map(Self.describe(targetFormat:)) ?? "none",
+            Self.describe(targetFormat: currentTargetFormat)
+        )
 
         do {
             stopAdvancedMicrophoneInputLocked(instance: instance, reason: "refreshAdvancedMicrophoneTargetIfNeededLocked")

@@ -33,6 +33,9 @@ struct ConnectedServerUser: Equatable, Identifiable {
     let channelPathComponents: [String]
 
     var displayName: String {
+        if nickname.isEmpty {
+            return username.isEmpty ? Self.fallbackDisplayName(userID: id) : username
+        }
         if username.isEmpty {
             return nickname
         }
@@ -42,6 +45,15 @@ struct ConnectedServerUser: Equatable, Identifiable {
             return nickname
         }
         return "\(nickname) (\(username))"
+    }
+
+    /// Stands in for a user who has neither nickname nor account name — an
+    /// anonymous login, which servers may allow. Without it the row is an empty
+    /// string: VoiceOver reads the separator and the status, and the person is
+    /// there but cannot be named, selected in a sentence, or messaged about.
+    /// Same shape as the Qt client's "NoName - #42".
+    static func fallbackDisplayName(userID: Int32) -> String {
+        L10n.format("user.fallbackName", userID)
     }
 
     func isSubscriptionEnabled(_ option: UserSubscriptionOption) -> Bool {

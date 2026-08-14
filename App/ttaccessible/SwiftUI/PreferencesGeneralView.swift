@@ -6,8 +6,17 @@
 import SwiftUI
 
 struct PreferencesGeneralView: View {
+    /// The three free-text fields, so a store echo can tell whether the field it
+    /// is about to refresh is the one being typed into.
+    private enum Field {
+        case nickname
+        case statusMessage
+        case autoAwayStatusMessage
+    }
+
     @ObservedObject var store: ConnectionPreferencesStore
     @ObservedObject var rootStore: AppPreferencesStore
+    @FocusState private var focusedField: Field?
     @State private var nicknameDraft: String = ""
     @State private var statusMessageDraft: String = ""
     @State private var autoAwayStatusMessageDraft: String = ""
@@ -23,9 +32,10 @@ struct PreferencesGeneralView: View {
                         .accessibilityHidden(true)
                     TextField("", text: $nicknameDraft)
                         .textFieldStyle(.roundedBorder)
+                        .focused($focusedField, equals: .nickname)
                         .accessibilityLabel(L10n.text("preferences.general.defaultNickname"))
-                        .onChangeCompat(of: nicknameDraft) { newValue in
-                            scheduleNicknameCommit(for: newValue)
+                        .onChangeCompat(of: nicknameDraft) { _ in
+                            scheduleNicknameCommit()
                         }
                         .onSubmit { commitNicknameDraft() }
 
@@ -39,9 +49,10 @@ struct PreferencesGeneralView: View {
                         .accessibilityHidden(true)
                     TextField("", text: $statusMessageDraft)
                         .textFieldStyle(.roundedBorder)
+                        .focused($focusedField, equals: .statusMessage)
                         .accessibilityLabel(L10n.text("preferences.connection.defaultStatusMessage"))
-                        .onChangeCompat(of: statusMessageDraft) { newValue in
-                            scheduleStatusCommit(for: newValue)
+                        .onChangeCompat(of: statusMessageDraft) { _ in
+                            scheduleStatusCommit()
                         }
                         .onSubmit { commitStatusDraft() }
                 }
@@ -96,9 +107,10 @@ struct PreferencesGeneralView: View {
                         .accessibilityHidden(true)
                     TextField("", text: $autoAwayStatusMessageDraft)
                         .textFieldStyle(.roundedBorder)
+                        .focused($focusedField, equals: .autoAwayStatusMessage)
                         .accessibilityLabel(L10n.text("preferences.connection.autoAwayStatusMessage"))
-                        .onChangeCompat(of: autoAwayStatusMessageDraft) { newValue in
-                            scheduleAutoAwayCommit(for: newValue)
+                        .onChangeCompat(of: autoAwayStatusMessageDraft) { _ in
+                            scheduleAutoAwayCommit()
                         }
                         .onSubmit { commitAutoAwayDraft() }
                 }
@@ -187,13 +199,21 @@ struct PreferencesGeneralView: View {
             statusMessageDraft = store.state.defaultStatusMessage
             autoAwayStatusMessageDraft = store.state.autoAwayStatusMessage
         }
+        // These mirror a value changed elsewhere (⌘F5 renames the nickname while
+        // this pane is open). They must never touch the field being typed into:
+        // the store trims what it stores, so echoing it back mid-word deletes
+        // the space the user just typed — VoiceOver duly announces the deletion,
+        // and the next word runs into the previous one.
         .onChangeCompat(of: store.state.defaultNickname) { newValue in
-            if nicknameDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { nicknameDraft = newValue }
+            guard focusedField != .nickname else { return }
+            if newValue != nicknameDraft { nicknameDraft = newValue }
         }
         .onChangeCompat(of: store.state.defaultStatusMessage) { newValue in
+            guard focusedField != .statusMessage else { return }
             if newValue != statusMessageDraft { statusMessageDraft = newValue }
         }
         .onChangeCompat(of: store.state.autoAwayStatusMessage) { newValue in
+            guard focusedField != .autoAwayStatusMessage else { return }
             if newValue != autoAwayStatusMessageDraft { autoAwayStatusMessageDraft = newValue }
         }
         .onDisappear {
@@ -203,32 +223,35 @@ struct PreferencesGeneralView: View {
         }
     }
 
-    private func scheduleNicknameCommit(for value: String) {
+    // The debounced commits read the draft when they fire rather than capturing
+    // it when they are scheduled: a keystroke landing between the two would
+    // otherwise write a value that is already one character out of date.
+    private func scheduleNicknameCommit() {
         nicknameCommitTask?.cancel()
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.isEmpty == false else { return }
         nicknameCommitTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 300_000_000)
             guard Task.isCancelled == false else { return }
+            let trimmed = nicknameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard trimmed.isEmpty == false else { return }
             store.updateDefaultNickname(trimmed)
         }
     }
 
-    private func scheduleStatusCommit(for value: String) {
+    private func scheduleStatusCommit() {
         statusCommitTask?.cancel()
         statusCommitTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 300_000_000)
             guard Task.isCancelled == false else { return }
-            store.updateDefaultStatusMessage(value)
+            store.updateDefaultStatusMessage(statusMessageDraft)
         }
     }
 
-    private func scheduleAutoAwayCommit(for value: String) {
+    private func scheduleAutoAwayCommit() {
         autoAwayCommitTask?.cancel()
         autoAwayCommitTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 300_000_000)
             guard Task.isCancelled == false else { return }
-            store.updateAutoAwayStatusMessage(value)
+            store.updateAutoAwayStatusMessage(autoAwayStatusMessageDraft)
         }
     }
 

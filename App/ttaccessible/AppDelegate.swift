@@ -185,17 +185,69 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in
                 self?.applyUserMenuVisibility()
+                // A rebuild restores whatever SwiftUI would have produced on its
+                // own, so the repairs have to be re-applied alongside the
+                // visibility — otherwise connecting once would take Quit away
+                // again on the systems that need it.
+                self?.repairMainMenuIfNeeded()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                     self?.applyUserMenuVisibility()
+                    self?.repairMainMenuIfNeeded()
                 }
             }
         // SwiftUI installs the main menu after launch finishes — apply once
         // now and again after it has settled.
         applyUserMenuVisibility()
+        repairMainMenuIfNeeded()
         for delay in [0.5, 1.5, 3.0] {
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
                 self?.applyUserMenuVisibility()
+                self?.repairMainMenuIfNeeded()
             }
+        }
+    }
+
+    /// Repairs what SwiftUI's menu leaves in an unusable state on older systems.
+    ///
+    /// This app declares only a `Settings` scene — every window is AppKit — and
+    /// on macOS 12 that combination costs the app menu its Quit item: a tester
+    /// on a 2014 Mac mini could only leave the app through the Dock or a force
+    /// quit. The same system keeps an empty File menu that
+    /// `CommandGroup(replacing: .newItem) {}` removes on current macOS.
+    ///
+    /// No public placement covers Quit (AppKit adds it, not SwiftUI), so both
+    /// are repaired here against the built menu rather than declared. Both
+    /// checks are no-ops when the menu is already right — which is the case on
+    /// macOS 13+, where this must stay invisible.
+    private func repairMainMenuIfNeeded() {
+        guard let mainMenu = NSApp.mainMenu, let appMenu = mainMenu.items.first?.submenu else { return }
+
+        if appMenu.items.contains(where: { $0.action == #selector(NSApplication.terminate(_:)) }) == false {
+            appMenu.addItem(.separator())
+            // Named from the app menu's own title, which AppKit fills with the
+            // display name — and localized through L10n, so the wording follows
+            // the app's language preference like the Help menu does.
+            let quitItem = NSMenuItem(
+                title: L10n.format("app.menu.quit", mainMenu.items[0].title),
+                action: #selector(NSApplication.terminate(_:)),
+                keyEquivalent: "q"
+            )
+            quitItem.target = NSApp
+            appMenu.addItem(quitItem)
+        }
+
+        // Only the menus this app never declares are candidates: our own
+        // command menus can legitimately be empty for a while (the User menu is
+        // built empty and hidden until connected), and dropping one would take
+        // it away for good.
+        let ownMenuTitles: Set<String> = [
+            L10n.text("savedServers.menu.title"),
+            L10n.text("user.menu.title"),
+            L10n.text("shortcuts.menu.title"),
+        ]
+        for item in mainMenu.items.dropFirst() where item.submenu?.items.isEmpty == true {
+            guard ownMenuTitles.contains(item.title) == false else { continue }
+            mainMenu.removeItem(item)
         }
     }
 
