@@ -492,6 +492,7 @@
 "preferences.historyEvent.kickedFromChannel" = "Expulsé du canal";
 "preferences.historyEvent.autoAwayActivated" = "Absence automatique activée";
 "preferences.historyEvent.autoAwayDeactivated" = "Absence automatique désactivée";
+"preferences.historyEvent.microphoneStalled" = "Microphone redémarré";
 "preferences.historyEvent.subscriptionChanged" = "Abonnement modifié";
 "preferences.historyEvent.interceptSubscriptionChanged" = "Interception d'abonnement modifiée";
 "preferences.historyEvent.fileAdded" = "Fichier ajouté";
@@ -714,7 +715,10 @@
 "history.fileAdded" = "%@ a ajouté le fichier %@.";
 "history.fileRemoved" = "%@ a supprimé le fichier %@.";
 "history.transmissionBlocked" = "Transmission bloquée par l'opérateur du canal.";
+"history.microphoneStalled" = "Votre micro n'était plus transmis. Il a été redémarré.";
+"history.microphoneStalledFailed" = "Votre micro n'était plus transmis et n'a pas pu être redémarré. Coupez le micro puis rallumez-le.";
 "history.unknownUser" = "un utilisateur inconnu";
+"user.fallbackName" = "Sans nom - #%d";
 "files.window.title" = "Fichiers du canal";
 "files.menu.open" = "Fichiers du canal";
 "files.menu.upload" = "Envoyer un fichier…";
@@ -1074,6 +1078,7 @@
 "user.menu.move" = "Déplacer vers un canal";
 
 "update.menu.checkForUpdates" = "Vérifier les mises à jour…";
+"app.menu.quit" = "Quitter %@";
 "help.menu.userGuide" = "Aide tt-Accessible";
 "help.menu.viewOnGitHub" = "Voir le projet sur GitHub";
 "help.menu.reportIssue" = "Signaler un problème…";

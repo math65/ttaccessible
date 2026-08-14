@@ -137,6 +137,7 @@ struct AppPreferences: Codable, Equatable {
         case userVolumeMemoryMode
         case deviceStreamLastDeviceUID
         case deviceStreamLastSource
+        case mediaStreamRecentURLs
         case deviceStreamVoiceSyncTrimMSec
         case languagePreference
         case hasChosenInitialLanguage
@@ -230,6 +231,10 @@ struct AppPreferences: Codable, Equatable {
     /// "voiceover") — supersedes deviceStreamLastDeviceUID for preselection, which
     /// is still written for devices so older builds keep their memory.
     var deviceStreamLastSource: String?
+    /// Stream URLs already used, most recent first. Retyping a web-radio
+    /// address is expensive with VoiceOver, so the prompt offers them back
+    /// instead of starting empty every time. Capped by `maxRecentMediaStreamURLs`.
+    var mediaStreamRecentURLs: [String]
     /// Signed manual trim (ms) added to the measured voice-sync delay while a
     /// live-capture stream runs. No UI — an escape hatch to absorb the voice
     /// path's own capture latency on unusual setups.
@@ -302,6 +307,7 @@ struct AppPreferences: Codable, Equatable {
         userVolumeMemoryMode: UserVolumeMemoryMode = .persistent,
         deviceStreamLastDeviceUID: String? = nil,
         deviceStreamLastSource: String? = nil,
+        mediaStreamRecentURLs: [String] = [],
         deviceStreamVoiceSyncTrimMSec: Int = 0,
         languagePreference: AppLanguagePreference = .system,
         hasChosenInitialLanguage: Bool = false
@@ -371,6 +377,7 @@ struct AppPreferences: Codable, Equatable {
         self.userVolumeMemoryMode = userVolumeMemoryMode
         self.deviceStreamLastDeviceUID = deviceStreamLastDeviceUID
         self.deviceStreamLastSource = deviceStreamLastSource
+        self.mediaStreamRecentURLs = Self.clampRecentMediaStreamURLs(mediaStreamRecentURLs)
         self.deviceStreamVoiceSyncTrimMSec = deviceStreamVoiceSyncTrimMSec
         self.languagePreference = languagePreference
         self.hasChosenInitialLanguage = hasChosenInitialLanguage
@@ -394,6 +401,25 @@ struct AppPreferences: Codable, Equatable {
 
     nonisolated static func clampAutoAwayTimeoutMinutes(_ value: Int) -> Int {
         min(max(value, 0), 720)
+    }
+
+    /// Long enough to hold the handful of streams anyone actually returns to,
+    /// short enough that the list stays navigable by ear.
+    nonisolated static let maxRecentMediaStreamURLs = 10
+
+    /// Keeps the recent-URL list to what it promises: no blanks, no duplicate of
+    /// an address already listed (compared case-insensitively, since the scheme
+    /// and host aren't case-sensitive), most recent first, capped.
+    nonisolated static func clampRecentMediaStreamURLs(_ urls: [String]) -> [String] {
+        var seen = Set<String>()
+        var result: [String] = []
+        for url in urls {
+            let trimmed = url.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard trimmed.isEmpty == false, seen.insert(trimmed.lowercased()).inserted else { continue }
+            result.append(trimmed)
+            if result.count == maxRecentMediaStreamURLs { break }
+        }
+        return result
     }
 
     nonisolated static func clampMacOSTTSSpeechRate(_ value: Double) -> Double {
@@ -511,6 +537,9 @@ struct AppPreferences: Codable, Equatable {
         userVolumeMemoryMode = try container.decodeIfPresent(UserVolumeMemoryMode.self, forKey: .userVolumeMemoryMode) ?? .persistent
         deviceStreamLastDeviceUID = try container.decodeIfPresent(String.self, forKey: .deviceStreamLastDeviceUID)
         deviceStreamLastSource = try container.decodeIfPresent(String.self, forKey: .deviceStreamLastSource)
+        mediaStreamRecentURLs = Self.clampRecentMediaStreamURLs(
+            try container.decodeIfPresent([String].self, forKey: .mediaStreamRecentURLs) ?? []
+        )
         deviceStreamVoiceSyncTrimMSec = try container.decodeIfPresent(Int.self, forKey: .deviceStreamVoiceSyncTrimMSec) ?? 0
         languagePreference = try container.decodeIfPresent(AppLanguagePreference.self, forKey: .languagePreference) ?? .system
         hasChosenInitialLanguage = try container.decodeIfPresent(Bool.self, forKey: .hasChosenInitialLanguage) ?? false
@@ -583,6 +612,7 @@ struct AppPreferences: Codable, Equatable {
         try container.encode(userVolumeMemoryMode, forKey: .userVolumeMemoryMode)
         try container.encodeIfPresent(deviceStreamLastDeviceUID, forKey: .deviceStreamLastDeviceUID)
         try container.encodeIfPresent(deviceStreamLastSource, forKey: .deviceStreamLastSource)
+        try container.encode(mediaStreamRecentURLs, forKey: .mediaStreamRecentURLs)
         try container.encode(deviceStreamVoiceSyncTrimMSec, forKey: .deviceStreamVoiceSyncTrimMSec)
         try container.encode(languagePreference, forKey: .languagePreference)
         try container.encode(hasChosenInitialLanguage, forKey: .hasChosenInitialLanguage)

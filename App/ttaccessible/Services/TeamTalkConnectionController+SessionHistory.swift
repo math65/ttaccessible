@@ -201,6 +201,16 @@ extension TeamTalkConnectionController {
         }
     }
 
+    /// The capture stopped being accepted by the SDK and was rebuilt. Worth an
+    /// entry either way: a mic that transmits nothing looks exactly like a mic
+    /// that works, so the only way the user learns about it is being told.
+    func appendMicrophoneStalledHistoryLocked(recovered: Bool = true) {
+        appendHistoryLocked(
+            kind: .microphoneStalled,
+            message: L10n.text(recovered ? "history.microphoneStalled" : "history.microphoneStalledFailed")
+        )
+    }
+
     func appendTransmissionBlockedHistoryLocked() {
         appendHistoryLocked(
             kind: .transmissionBlocked,

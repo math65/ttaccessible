@@ -1067,9 +1067,12 @@ extension TeamTalkConnectionController {
                     default:
                         break
                     }
-                    if voiceTransmissionEnabled,
-                       isAnyMicrophoneEngineRunning,
-                       message.user.nUserID == currentUserID {
+                    // Also on a channel update: an operator editing the codec of
+                    // the channel we are sitting in moves the target format
+                    // under a capture that never left the channel. The refresh
+                    // is a no-op unless the format really differs.
+                    if message.user.nUserID == currentUserID
+                        || message.nClientEvent == CLIENTEVENT_CMD_CHANNEL_UPDATE {
                         refreshAdvancedMicrophoneTargetIfNeededLocked(instance: instance)
                     }
                     publishInvalidation = .all
@@ -1383,6 +1386,12 @@ extension TeamTalkConnectionController {
                         }
                     default:
                         break
+                    }
+                    // Same reconciliation as the polling loop: events drained
+                    // here never reach it, so a codec edit seen while waiting on
+                    // a command would otherwise leave the capture out of step.
+                    if message.nClientEvent == CLIENTEVENT_CMD_CHANNEL_UPDATE {
+                        refreshAdvancedMicrophoneTargetIfNeededLocked(instance: instance)
                     }
                     publishSessionLocked(instance: instance, record: connectedRecord)
                 }

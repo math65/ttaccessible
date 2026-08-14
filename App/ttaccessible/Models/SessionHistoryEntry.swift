@@ -26,6 +26,7 @@ struct SessionHistoryEntry: Equatable, Identifiable {
         case broadcastReceived
         case autoAwayActivated
         case autoAwayDeactivated
+        case microphoneStalled
         case subscriptionChanged
         case interceptSubscriptionChanged
         case fileAdded
@@ -67,7 +68,7 @@ struct SessionHistoryEntry: Equatable, Identifiable {
             Group(id: "moderation", localizationKey: "preferences.historyEvents.group.moderation",
                   kinds: [.kickedFromServer, .kickedFromChannel, .transmissionBlocked]),
             Group(id: "status", localizationKey: "preferences.historyEvents.group.status",
-                  kinds: [.autoAwayActivated, .autoAwayDeactivated]),
+                  kinds: [.autoAwayActivated, .autoAwayDeactivated, .microphoneStalled]),
             Group(id: "subscriptions", localizationKey: "preferences.historyEvents.group.subscriptions",
                   kinds: [.subscriptionChanged, .interceptSubscriptionChanged]),
             Group(id: "files", localizationKey: "preferences.historyEvents.group.files",

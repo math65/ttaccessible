@@ -492,6 +492,7 @@
 "preferences.historyEvent.kickedFromChannel" = "Kicked from channel";
 "preferences.historyEvent.autoAwayActivated" = "Auto-away activated";
 "preferences.historyEvent.autoAwayDeactivated" = "Auto-away deactivated";
+"preferences.historyEvent.microphoneStalled" = "Microphone restarted";
 "preferences.historyEvent.subscriptionChanged" = "Subscription changed";
 "preferences.historyEvent.interceptSubscriptionChanged" = "Intercept subscription changed";
 "preferences.historyEvent.fileAdded" = "File added";
@@ -714,7 +715,10 @@
 "history.fileAdded" = "%@ added the file %@.";
 "history.fileRemoved" = "%@ removed the file %@.";
 "history.transmissionBlocked" = "Transmission blocked by the channel operator.";
+"history.microphoneStalled" = "Your microphone had stopped being transmitted. It has been restarted.";
+"history.microphoneStalledFailed" = "Your microphone had stopped being transmitted and could not be restarted. Turn the microphone off and on again.";
 "history.unknownUser" = "an unknown user";
+"user.fallbackName" = "NoName - #%d";
 "files.window.title" = "Channel Files";
 "files.menu.open" = "Channel Files";
 "files.menu.upload" = "Upload a File…";
@@ -1076,6 +1080,7 @@
 "user.menu.move" = "Move to Channel";
 
 "update.menu.checkForUpdates" = "Check for Updates…";
+"app.menu.quit" = "Quit %@";
 "help.menu.userGuide" = "tt-Accessible Help";
 "help.menu.viewOnGitHub" = "View Project on GitHub";
 "help.menu.reportIssue" = "Report an Issue…";
