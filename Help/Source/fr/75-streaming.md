@@ -24,6 +24,11 @@ principale l'affiche.
 2. Saisissez l'adresse du flux, puis cliquez sur Diffuser. Les schémas `http`, `https`, `rtmp`,
    `rtmps`, `rtsp` et `mms` sont acceptés.
 
+La dernière adresse diffusée vous est proposée d'emblée : appuyez sur Retour pour la relancer
+telle quelle. Les adresses précédentes restent accessibles avec la flèche vers le bas, et vous
+pouvez aussi taper les premiers caractères de l'une d'elles pour la compléter. Les dix dernières
+adresses sont retenues.
+
 ## Diffuser un périphérique, des apps ou VoiceOver
 
 1. Choisissez Raccourcis > Diffuser du son de ce Mac, ou appuyez sur Option + Commande + A.

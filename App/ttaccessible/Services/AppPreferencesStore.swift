@@ -446,6 +446,20 @@ final class AppPreferencesStore: ObservableObject {
         }
     }
 
+    /// Promote a stream URL to the top of the recent list. Called only once the
+    /// address has been accepted, so a typo never joins the list.
+    func rememberMediaStreamURL(_ url: String) {
+        mutate { preferences in
+            preferences.mediaStreamRecentURLs = AppPreferences.clampRecentMediaStreamURLs(
+                [url] + preferences.mediaStreamRecentURLs
+            )
+        }
+    }
+
+    func clearMediaStreamRecentURLs() {
+        mutate { $0.mediaStreamRecentURLs = [] }
+    }
+
     func updateDisabledSoundEvents(_ disabled: Set<NotificationSound>) {
         mutate { $0.disabledSoundEvents = disabled }
         SoundPlayer.shared.disabledSounds = disabled

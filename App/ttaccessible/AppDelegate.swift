@@ -1737,16 +1737,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.addButton(withTitle: L10n.text("mediaStream.url.prompt.start"))
         alert.addButton(withTitle: L10n.text("common.cancel"))
 
-        let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 320, height: 24))
-        textField.placeholderString = L10n.text("mediaStream.url.prompt.placeholder")
-        textField.setAccessibilityLabel(L10n.text("mediaStream.url.prompt.accessibilityLabel"))
-        alert.accessoryView = textField
-        alert.window.initialFirstResponder = textField
+        // A combo box rather than a plain field: the addresses already used are
+        // on the list, so returning to a web radio is one Down arrow instead of
+        // retyping it — which is what it costs with VoiceOver. Typed input works
+        // exactly as before, and the list is empty until something has streamed.
+        let recentURLs = preferencesStore.preferences.mediaStreamRecentURLs
+        let urlField = NSComboBox(frame: NSRect(x: 0, y: 0, width: 320, height: 26))
+        urlField.usesDataSource = false
+        urlField.completes = true
+        urlField.numberOfVisibleItems = AppPreferences.maxRecentMediaStreamURLs
+        urlField.placeholderString = L10n.text("mediaStream.url.prompt.placeholder")
+        urlField.setAccessibilityLabel(L10n.text("mediaStream.url.prompt.accessibilityLabel"))
+        urlField.addItems(withObjectValues: recentURLs)
+        // Prefilled with the last one and fully selected: Return alone restarts
+        // the previous stream, and typing replaces it without a deletion first.
+        if let mostRecent = recentURLs.first {
+            urlField.stringValue = mostRecent
+        }
+        alert.accessoryView = urlField
+        alert.window.initialFirstResponder = urlField
 
         guard let parentWindow = NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first else { return }
+        // After the sheet is on screen: the field editor doesn't exist until the
+        // combo box is first responder, so selecting any earlier is a no-op.
+        DispatchQueue.main.async { urlField.selectText(nil) }
         alert.beginSheetModal(for: parentWindow) { [weak self] response in
             guard response == .alertFirstButtonReturn, let self else { return }
-            let raw = textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            let raw = urlField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
             guard let url = URL(string: raw),
                   let scheme = url.scheme?.lowercased(),
                   ["http", "https", "rtmp", "rtmps", "rtsp", "mms"].contains(scheme),
@@ -1762,7 +1779,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 DispatchQueue.main.async {
                     switch result {
                     case .success:
-                        break
+                        // Only once it has actually started: an address that the
+                        // SDK refuses is not one to offer back next time. Stored
+                        // as typed, not as URL.absoluteString, which would show
+                        // back a percent-encoded version of what was entered.
+                        self?.preferencesStore.rememberMediaStreamURL(raw)
                     case .failure(let error):
                         self?.announceWithVoiceOver(L10n.text("mediaStream.announced.error"))
                         let alert = NSAlert(error: error)

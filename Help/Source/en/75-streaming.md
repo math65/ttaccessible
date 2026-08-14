@@ -23,6 +23,10 @@ a file carries video, the Video panel of the main window shows it.
 2. Enter the address of the stream, then click Stream. You can use the `http`, `https`, `rtmp`,
    `rtmps`, `rtsp` and `mms` schemes.
 
+The last address you streamed is offered straight away: press Return to start it again as it is.
+Earlier addresses are on the Down arrow, and typing the first few characters of one completes it.
+The last ten addresses are kept.
+
 ## Stream a device, apps or VoiceOver
 
 1. Choose Shortcuts > Stream Audio from This Mac, or press Option-Command-A.
