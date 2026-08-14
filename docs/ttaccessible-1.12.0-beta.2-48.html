@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ttaccessible-1.12.0-beta.2-48</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --code-bg: #f5f5f7;
+  --link: #0066cc;
+  --link-hover: #0040a0;
+  --rule: #e5e5ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #ececec;
+    --muted: #a0a0a0;
+    --code-bg: #2d2d2d;
+    --link: #4eaaff;
+    --link-hover: #82c4ff;
+    --rule: #3a3a3a;
+  }
+}
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  padding: 1rem 1.25rem 1.5rem;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.15rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.2em; }
+h3 { font-size: 1.02rem; }
+h4 { font-size: 0.95rem; color: var(--muted); }
+p { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; margin: 0.6em 0; }
+li { margin: 0.25em 0; }
+li > p { margin: 0.3em 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover, a:focus { color: var(--link-hover); text-decoration: underline; }
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.75em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+pre code { background: transparent; padding: 0; border-radius: 0; }
+blockquote {
+  border-left: 3px solid var(--rule);
+  margin: 0.8em 0;
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--muted);
+}
+hr { border: 0; border-top: 1px solid var(--rule); margin: 1.5em 0; }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<h2 id="v1120-beta2-build-48--2026-08-14">v1.12.0-beta.2 (build 48) —
+2026-08-14</h2>
+<p>This beta comes from a tester's report, and one of the things it
+found is serious: your microphone could stop being transmitted while
+everything still looked and sounded normal at your end. It now repairs
+itself and tells you. The rest is a handful of fixes to things that were
+plainly annoying — a space being deleted as you typed it, a person with
+no name at all — plus streamed addresses you no longer have to
+retype.</p>
+<h3 id="highlights">Highlights</h3>
+<ul>
+<li><strong>A microphone that stops being transmitted now restarts
+itself, and says so.</strong> It could previously stay mute for hours
+without a single sign.</li>
+<li><strong>The address of a stream you've already played is offered
+back to you.</strong> Press Return to start it again.</li>
+<li><strong>Typing a space in the General preferences no longer deletes
+it.</strong> Words stopped running into each other.</li>
+<li><strong>Someone with no nickname is now named</strong> instead of
+showing up as an empty line.</li>
+</ul>
+<h3 id="when-the-microphone-went-quiet">When the microphone went
+quiet</h3>
+<ul>
+<li><strong>Your voice could stop going out entirely, with nothing to
+warn you.</strong> After a channel change — or after an operator edited
+the channel you were in — the app could keep sending your voice in a
+form the channel no longer accepted. Everything looked normal: the
+microphone was on, you could see yourself listed as talking. A tester
+stayed like that for about twelve hours.</li>
+<li><strong>The cause is fixed</strong>, and a safety net now catches
+anything like it: after one second without a single frame of voice
+getting through, the microphone is restarted and you're told — "Your
+microphone had stopped being transmitted. It has been restarted." Like
+every other event, it can be switched off in Preferences &gt;
+Announcements &gt; Status.</li>
+<li><strong>If restarting doesn't work, the microphone is turned off
+loudly</strong> rather than left silently dead.</li>
+<li><strong>The audio log no longer fills up when this happens.</strong>
+It was writing dozens of lines a second — well over a hundred megabytes
+on the tester's Mac — which is enough on its own to slow an older
+machine down.</li>
+<li>If it ever happens to you again, the log now records exactly what
+went out of step: sending a report with it would let us finish the
+diagnosis.</li>
+</ul>
+<h3 id="streaming-a-url">Streaming a URL</h3>
+<ul>
+<li><strong>The last address you streamed comes back already filled in
+and selected.</strong> Return starts it again as it is, and typing
+replaces it without deleting anything first.</li>
+<li><strong>The addresses before it are one Down arrow away</strong>,
+and typing the first few characters completes one. The last ten are
+kept.</li>
+<li><strong>An address is only remembered once the stream actually
+started</strong>, so a typo never ends up on the list.</li>
+</ul>
+<h3 id="preferences">Preferences</h3>
+<ul>
+<li><strong>The space you typed in Default nickname, Default status
+message and Away message is no longer deleted.</strong> VoiceOver was
+announcing a deletion because there really was one, and the next word
+ran into the previous one: "Hello World" became "HelloWorld".</li>
+</ul>
+<h3 id="users">Users</h3>
+<ul>
+<li><strong>A user with neither a nickname nor an account name now shows
+as "NoName - #42"</strong>, with their number, like the original
+TeamTalk client. They used to appear as an empty name — you could hear a
+comma and a status, and nothing else.</li>
+</ul>
+<h3 id="older-versions-of-macos">Older versions of macOS</h3>
+<ul>
+<li><strong>The app menu gets its Quit item back, and the empty File
+menu disappears.</strong> On macOS 12 there was no way to quit from the
+menu bar at all — only the Dock or a force quit.</li>
+</ul>
+<h3 id="download">Download</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.12.0-beta.2/ttaccessible-1.12.0-beta.2-48.zip">ttaccessible-1.12.0-beta.2-48.zip</a></p>
+<h2 id="v1120-beta1-build-47--2026-08-10">v1.12.0-beta.1 (build 47) —
+2026-08-10</h2>
+<p>This beta is about streaming. You can now send several applications
+into a channel at once — your music player and VoiceOver together, say —
+or simply everything this Mac plays. And a live broadcast finally says
+what it does: it never pretended to pause, it mutes the source, and the
+controls now word it that way.</p>
+<h3 id="highlights-1">Highlights</h3>
+<ul>
+<li><strong>Stream several applications at once</strong>, VoiceOver
+among them.</li>
+<li><strong>Or all audio from this Mac</strong>, in a single tick.</li>
+<li><strong>A live source mutes instead of pausing</strong> — the
+broadcast stays up and goes silent, and the button says so.</li>
+<li><strong>No more elapsed time against a total of 00:00</strong> on
+something with no end.</li>
+</ul>
+<h3 id="choosing-what-to-stream">Choosing what to stream</h3>
+<ul>
+<li><strong>Option-Command-A is now "Stream Audio from This
+Mac"</strong>, and opens a list of tick boxes instead of a pop-up menu
+with a single choice.</li>
+<li><strong>Applications cumulate.</strong> Tick as many as you like,
+VoiceOver included, and they are mixed into one stream.</li>
+<li><strong>"All audio from this Mac"</strong> sits at the top of the
+list. tt-Accessible's own output is left out of the capture, otherwise
+the channel would hear itself come back. Notifications and system sounds
+do go out. Requires macOS 13 or later.</li>
+<li><strong>An input device still streams on its own</strong> — a
+different kind of capture entirely — so ticking one unticks the
+applications. Whatever a tick clears is spoken out loud.</li>
+<li><strong>Space ticks and unticks</strong> the selected line, and the
+arrow keys move through the list.</li>
+<li><strong>Your last selection is restored</strong>, even when it
+covered several applications.</li>
+<li><strong>"Mute this source on this Mac" is refused for all-system
+audio.</strong> Muting that capture would silence the whole Mac,
+VoiceOver with it.</li>
+</ul>
+<h3 id="the-broadcast-controls">The broadcast controls</h3>
+<ul>
+<li><strong>A device, an application or VoiceOver cannot be
+paused</strong>, because the stream keeps feeding the channel. The
+button now reads Mute and Unmute, and the broadcast stays up while the
+source is silent.</li>
+<li><strong>The position slider is gone when there is nothing to seek
+to</strong> — a live capture, but an internet radio too. It used to read
+"02:31 / 00:00" and take adjustments it could not honour.</li>
+<li><strong>Every toggle is announced</strong>, so you hear the new
+state even when the button doesn't have focus.</li>
+<li><strong>Option-Command-M silences a broadcast without ending
+it</strong>, from anywhere in the app.</li>
+<li><strong>An arrow key with nowhere to seek to now says so</strong>
+instead of doing nothing.</li>
+<li><strong>VoiceOver is no longer told an adjustment succeeded when it
+didn't</strong> on a stream without a position.</li>
+</ul>
+<h3 id="the-user-guide">The user guide</h3>
+<ul>
+<li>The streaming and shortcut pages are rewritten in both languages:
+the controls are in the main window and never were a separate window,
+the keys are listed for a media file and for a live source separately,
+and what can be ticked together is spelled out.</li>
+</ul>
+<h3 id="download-1">Download</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.12.0-beta.1/ttaccessible-1.12.0-beta.1-47.zip">ttaccessible-1.12.0-beta.1-47.zip</a></p>
+<h2 id="v1110-build-46--2026-08-04">v1.11.0 (build 46) — 2026-08-04</h2>
+<p>This release adds a complete user guide to the Help menu, and
+rebuilds how global shortcuts work: a microphone shortcut no longer asks
+for a system permission, and the key you press no longer ends up typed
+into whatever app you were using. Setting a volume to 0% now really does
+mean silence.</p>
+<h3 id="highlights-2">Highlights</h3>
+<ul>
+<li><strong>A complete user guide, in the Help menu (⌘?)</strong> — 18
+topics, in English and French.</li>
+<li><strong>A microphone shortcut used from another app no longer needs
+the Input Monitoring permission.</strong></li>
+<li><strong>The key you press is now truly taken.</strong> It no longer
+types into the app you are working in.</li>
+<li><strong>0% on a volume slider is silence.</strong> It used to be a
+quiet — but perfectly audible — level.</li>
+</ul>
+<h3 id="the-user-guide-1">The user guide</h3>
+<ul>
+<li><strong>⌘? opens a full guide in the macOS help viewer.</strong> It
+covers the first launch, adding a server, moving around the main window,
+channels, talking, messages, the channel mixer, setting up your audio,
+recording, streaming, users and administration, every preference pane,
+sounds and announcements, profiles, the complete shortcut list, and what
+to do when something doesn't work.</li>
+<li><strong>Written to be followed, not read.</strong> Each topic starts
+with what you can do, then gives numbered steps naming the exact menu,
+button and pop-up menu to use.</li>
+<li><strong>Available in English and French.</strong> The help viewer
+picks its language from your Mac's, not from the app's, so each home
+page links to the other language if you end up in the wrong one.</li>
+</ul>
+<h3 id="microphone-shortcuts-from-other-apps">Microphone shortcuts from
+other apps</h3>
+<ul>
+<li><strong>No more Input Monitoring permission</strong> for an ordinary
+shortcut — a key with Command, Control or Option. Only a shortcut made
+of modifier keys alone (pressed and released on their own) still asks
+for it.</li>
+<li><strong>The key no longer reaches the app in front.</strong>
+Previously your shortcut both toggled the microphone and typed its
+character into whatever you were using. Worth knowing: the app that used
+that same shortcut internally stops receiving it while yours is set —
+Reaper, for instance, loses its Control-Space for as long as you keep it
+bound.</li>
+<li><strong>A shortcut that would type is now refused while you record
+it</strong>, with the alternatives spoken out: F13 to F20, or add
+Command, Control or Option. A shortcut of that kind saved before this
+release is refused too, and Preferences tells you why, rather than
+silently eating that letter everywhere you type.</li>
+<li><strong>The User menu now shows the shortcut you actually
+chose</strong>, instead of always displaying ⌘⇧A.</li>
+<li><strong>F13 to F20 are named properly</strong> — they used to appear
+as "Key 105" and could not be shown in the menu, when they are exactly
+the keys worth choosing.</li>
+</ul>
+<h3 id="fixes">Fixes</h3>
+<ul>
+<li><strong>A re-bound microphone shortcut now works with tt-Accessible
+in front too.</strong> Once you changed it in Preferences, it worked
+everywhere except in the app itself.</li>
+<li><strong>The shortcut shown matches the key you pressed on AZERTY
+keyboards.</strong> A ⌘⇧ shortcut on the "1" key was displayed as
+⌘⇧&amp; in the menu and ⌘⇧1 in Preferences — two labels for one
+shortcut, read aloud as two different things.</li>
+<li><strong>Your shortcut is no longer registered twice at
+launch.</strong> Reported by Rocco Fiorentino.</li>
+<li><strong>VoiceOver now names two places it entered blind</strong>:
+the rights table when editing a user account, which announced itself as
+"table" and nothing else, and the scrolling areas of the server
+properties and user information windows.</li>
+<li><strong>A microphone shortcut stops responding while a password
+field is focused anywhere on your Mac.</strong> That is macOS protecting
+your typing, not a bug — it is now written down in the troubleshooting
+page.</li>
+</ul>
+<h3 id="download-2">Download</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.11.0/ttaccessible-1.11.0-46.zip">ttaccessible-1.11.0-46.zip</a></p>
+<h2 id="v1100-build-45--2026-07-26">v1.10.0 (build 45) — 2026-07-26</h2>
+<p>This release lets you stream an application's audio — or VoiceOver
+itself — into a channel, and keeps your voice in time with it.
+Auto-reconnect now reliably puts you back in the channel you were in,
+channel passwords are remembered, and moderators can move a whole
+channel's occupants in one go.</p>
+<h3 id="highlights-3">Highlights</h3>
+<ul>
+<li><strong>Stream any application's audio into your channel</strong> —
+or VoiceOver's — not just an input device. Press
+<strong>⌥⌘A</strong>.</li>
+<li><strong>Your voice stays in time with what you stream</strong>, so
+listeners hear both together.</li>
+<li><strong>Auto-reconnect actually brings you back</strong>, into the
+same channel, however many times the connection drops.</li>
+<li><strong>Channel passwords are remembered</strong>, so a protected
+channel stops asking every time.</li>
+</ul>
+<h3 id="streaming-an-application-or-voiceover">Streaming an application
+or VoiceOver</h3>
+<ul>
+<li><strong>⌥⌘A now offers three kinds of source</strong>: an input
+device, VoiceOver, or a running application. Applications are grouped in
+their own submenu.</li>
+<li><strong>You can pick an application that isn't running yet.</strong>
+Capture attaches by itself the moment it starts playing audio, and
+survives it quitting and relaunching mid-stream.</li>
+<li><strong>Optionally silence the source on your own Mac while you
+stream it</strong>, so only the channel hears it. Off by default, and
+never remembered between streams.</li>
+<li><strong>Your voice is delayed to match the stream.</strong>
+Streaming carries close to a second of latency, so without this you
+would arrive ahead of your own music or instrument. The delay is
+measured live and tracks drift while you talk.</li>
+<li>Applications and VoiceOver need macOS 14.2 or later. On macOS 13 to
+14.1 only already-running applications can be captured, and macOS 12
+offers input devices only.</li>
+</ul>
+<h3 id="reconnecting">Reconnecting</h3>
+<ul>
+<li><strong>A dropped connection now reliably reconnects, and puts you
+back in the channel you were in</strong> — by path, so it still works
+when the server restarts and renumbers its channels.</li>
+<li><strong>It works every time, not only once per session.</strong> A
+second drop used to leave you disconnected.</li>
+<li><strong>Being kicked or banned no longer reconnects you seconds
+later.</strong></li>
+<li>Attempts space themselves out — 5 seconds, then 10, 30 and 60 — and
+give up after about five minutes rather than hammering a server that is
+gone.</li>
+</ul>
+<h3 id="channel-passwords">Channel passwords</h3>
+<ul>
+<li><strong>A protected channel you have joined once stops
+asking.</strong> The password is kept in your keychain, per channel and
+per server.</li>
+<li><strong>This works at launch too</strong>, so "rejoin last channel"
+no longer drops you in the root of the server because it had no
+password.</li>
+<li><strong>"Forget Saved Password"</strong> on a channel's context
+menu, shown only when there is one to forget.</li>
+<li><strong>If the password changes on the server, the saved one is
+discarded</strong> rather than being submitted again and pre-filled into
+the prompt.</li>
+<li>Repointing a saved server at a different host or port clears its
+channel passwords, so they are never sent to another server.</li>
+</ul>
+<h3 id="moderation">Moderation</h3>
+<ul>
+<li><strong>Move everyone in a channel at once</strong>, from the
+channel's context menu — with a checklist so you can leave people
+behind, and a VoiceOver action on the channel row.</li>
+<li>The result is announced and reported once ("Moved 5 of 6 users
+to…"), instead of one dialog per person.</li>
+<li><strong>Destination channels are listed by their full path</strong>,
+so two channels with the same name under different parents can be told
+apart. This applies to the existing single-user move as well.</li>
+</ul>
+<h3 id="fixes-1">Fixes</h3>
+<ul>
+<li><strong>Channel Mixer announcements are no longer cut off.</strong>
+Volume, pan and mute changes were announced at the wrong priority since
+1.7.0, so VoiceOver could talk over them.</li>
+<li>The mixer's announcements and the move dialog now read correctly
+when a channel holds a single person.</li>
+</ul>
+<h3 id="thanks">Thanks</h3>
+<p>Nearly all of this was designed and built by <strong>Rocco
+Fiorentino</strong> — application and VoiceOver streaming, voice sync,
+reliable reconnection, channel passwords and bulk moves. Thanks as ever,
+and to everyone who keeps sending feedback.</p>
+<h3 id="download-3">Download</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.10.0/ttaccessible-1.10.0-45.zip">ttaccessible-1.10.0-45.zip</a></p>
+<h2 id="v190-build-44--2026-07-24">v1.9.0 (build 44) — 2026-07-24</h2>
+<p>This release rebuilds push-to-talk from the ground up: any key can be
+your talk key, it can work while you are busy in another app, and a new
+microphone mode lets you combine muting with push-to-talk. You can also
+now pick the app's language instead of following your Mac's.</p>
+<h3 id="highlights-4">Highlights</h3>
+<ul>
+<li><strong>Push-to-talk rebuilt.</strong> Any key works — a single key
+on its own, or a combination of modifier keys.</li>
+<li><strong>Your talk key and the microphone toggle can work from any
+app</strong>, not only when tt-Accessible is in front.</li>
+<li><strong>Choose the app's language</strong> — English or French —
+instead of following your Mac.</li>
+</ul>
+<h3 id="push-to-talk">Push-to-talk</h3>
+<ul>
+<li><strong>Any key can be your push-to-talk key.</strong> A single key
+on its own, or a combination of modifier keys such as Command-Control
+(press it and let go). Setting it is one button: activate it, then press
+the key you want.</li>
+<li><strong>The key field is properly accessible now.</strong> It is a
+real button that VoiceOver announces, and while you are recording a key
+it no longer trips over VoiceOver's own Control-Option presses.</li>
+<li><strong>New microphone mode: Both.</strong> ⌘⇧A mutes and unmutes as
+it always did. On top of that, holding your push-to-talk key lets you
+talk even while muted, and releasing it puts you back to silence. Choose
+it in Preferences › Audio.</li>
+<li><strong>An optional sound when transmission starts and
+stops</strong>, so you can hear that your key registered.</li>
+<li><strong>Hotkeys can work while another app is in front.</strong>
+Switch it on separately for push-to-talk and for the ⌘⇧A microphone
+toggle. macOS asks for the Input Monitoring permission the first
+time.</li>
+<li>Worth knowing: the key still reaches the app you are working in —
+tt-Accessible can see it go by, but cannot keep it to itself. So prefer
+a combination of modifier keys on their own, such as Command-Control, or
+a function key between F13 and F19: neither one types anything anywhere.
+Avoid single letters.</li>
+<li><strong>⌘⇧A no longer fires while the Finder is in
+front.</strong></li>
+<li>The push-to-talk key you were already using is carried over
+automatically.</li>
+</ul>
+<h3 id="language">Language</h3>
+<ul>
+<li><strong>Preferences › General now has a Language setting</strong> —
+System Default, English, or French. Restart the app to apply it
+everywhere.</li>
+<li><strong>The first time you launch the app, it asks which language
+you want.</strong></li>
+</ul>
+<h3 id="thanks-1">Thanks</h3>
+<p>Push-to-talk was designed and built by <strong>Rocco
+Fiorentino</strong>. The language setting was contributed by
+<strong>Gruia Chiscop</strong>. Thanks to both — and to everyone who
+keeps sending feedback.</p>
+<h3 id="download-4">Download</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.9.0/ttaccessible-1.9.0-44.zip">ttaccessible-1.9.0-44.zip</a></p>
+<h2 id="v180-build-43--2026-07-22">v1.8.0 (build 43) — 2026-07-22</h2>
+<p>This release adds live audio-device streaming into a channel, brings
+back support for macOS 12 (Monterey), and fixes audio going silent in
+"no recording" channels — plus mixer and recording refinements.</p>
+<h3 id="highlights-5">Highlights</h3>
+<ul>
+<li><strong>Stream a live audio device into your channel.</strong> Pick
+any input device — an audio interface, a virtual device, loopback — and
+broadcast it into the channel as a media stream alongside your voice.
+Press <strong>⌘⌥A</strong>.</li>
+<li><strong>macOS 12 Monterey is supported again.</strong> The app now
+runs on macOS 12 and later.</li>
+<li><strong>Audio no longer goes silent in "no recording"
+channels.</strong></li>
+</ul>
+<h3 id="live-device-streaming">Live device streaming</h3>
+<ul>
+<li><strong>⌘⌥A</strong> streams the selected input device into the
+current channel as a media stream, alongside your voice.</li>
+<li>It starts fast without freezing the channel, and stays low-latency —
+the stream uses Opus with very small frames so the server's analysis is
+near-instant.</li>
+<li>If the device goes quiet, silence is filled in automatically so the
+stream never drops out.</li>
+</ul>
+<h3 id="audio">Audio</h3>
+<ul>
+<li><strong>"No recording" channels now play sound again.</strong> In a
+channel flagged as no-recording, other people's voices were silent for
+you — even though they worked fine for people on the Qt or iPhone
+clients. That's fixed: you hear everyone again. Recording itself stays
+blocked in those channels, exactly as the server intends.</li>
+</ul>
+<h3 id="channel-mixer">Channel Mixer</h3>
+<ul>
+<li><strong>Independent stereo placement (pan) for each person's voice
+and their media.</strong> You can position someone's voice and their
+media stream separately in the stereo field.</li>
+</ul>
+<h3 id="recording">Recording</h3>
+<ul>
+<li><strong>⌘R records a single mixed file; ⌘⇧R records per-person stems
+(or both).</strong> The two shortcuts now pick the recording layout
+directly.</li>
+<li>Note if you used recording before: if you were on "single file", the
+toolbar button now records <strong>both</strong> a single file and
+per-person stems. Use <strong>⌘R</strong> for single-file only.</li>
+</ul>
+<h3 id="administration">Administration</h3>
+<ul>
+<li><strong>Per-channel disk quota</strong>, editable with a KB / MB /
+GB unit picker.</li>
+<li><strong>Full server properties</strong> — TCP/UDP ports and version
+info — in the server properties window.</li>
+<li><strong>Online-nickname column</strong> in the user accounts
+list.</li>
+</ul>
+<h3 id="accessibility--polish">Accessibility &amp; polish</h3>
+<ul>
+<li>Clearer VoiceOver in the Channel Mixer: spoken region announcements
+and mute-state labels in the toolbar.</li>
+<li><strong>Escape closes auxiliary windows.</strong></li>
+<li>Smaller fixes: no false intercept sound during login sync, live
+disk-quota unit conversion, and file uploads are no longer wrongly
+rejected by a client-side quota check.</li>
+</ul>
+<h3 id="download-5">Download</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.8.0/ttaccessible-1.8.0-43.zip">ttaccessible-1.8.0-43.zip</a></p>
+<h2 id="v170-build-42--2026-07-08">v1.7.0 (build 42) — 2026-07-08</h2>
+<p>This is the stable release that brings everything from the 1.7.0 beta
+line to everyone. If you were on 1.6.0, here is what has changed.</p>
+<h3 id="highlights-6">Highlights</h3>
+<ul>
+<li><strong>A brand-new per-user Channel Mixer.</strong> Every person in
+your channel gets their own voice volume, media volume, left/right
+placement, mute, and solo — all reachable from the keyboard and
+VoiceOver.</li>
+<li><strong>Sign in with a BearWare account.</strong> Use a free
+bearware.dk login to connect to servers that support it, without
+creating a separate account on each one.</li>
+<li><strong>A rebuilt, faster, steadier audio engine.</strong>
+Connecting is near-instant again, switching headphones or speakers no
+longer freezes the sound, and crowded channels stay smooth.</li>
+</ul>
+<h3 id="the-channel-mixer">The Channel Mixer</h3>
+<ul>
+<li>Each user in the channel has their own strip: <strong>voice volume,
+media volume, stereo placement (pan), mute, and solo</strong>.</li>
+<li>Drive it entirely from the keyboard while focused on a person:
+Up/Down for voice volume, Command+Up/Down for their media volume,
+Left/Right to move them in the stereo field, and V, P, M, S to hear or
+reset volume, pan, mute, and solo.</li>
+<li><strong>New: press Command+5 to jump straight to the mixer</strong>
+— it joins the Command+1 to Command+4 area shortcuts as a fifth focus
+target. (Thanks to Matthew Whitaker for the suggestion.)</li>
+<li>Each person's settings are remembered and come back the next time
+they join.</li>
+</ul>
+<h3 id="audio-1">Audio</h3>
+<ul>
+<li><strong>Switching your output device no longer freezes the
+sound.</strong> Change headphones or speakers while connected and the
+audio simply follows.</li>
+<li><strong>Connecting is quick again.</strong> On Macs with a lot of
+audio gear, opening a connection used to stall for around 13 seconds
+while every device was checked — that scan is gone, and it is now baked
+into every build for good.</li>
+<li><strong>Crowded and high-quality channels stay smooth.</strong>
+Channels using larger audio packets could sound choppy for everyone; the
+playback path was reworked so it holds up under load.</li>
+<li><strong>Your chosen microphone and output are remembered
+reliably</strong>, surviving unplugging, replugging, and restarts
+instead of quietly landing on the wrong device.</li>
+<li><strong>Standalone noise reduction.</strong> A new Microphone
+processing setting (Preferences › Audio) lets you pick None, Noise
+reduction, or Echo cancellation with noise reduction — and it applies
+live, even mid-transmission.</li>
+<li><strong>You can now hear your own streamed media</strong> when you
+play an audio or video file into a channel.</li>
+<li><strong>Per-user volumes are now kept per server</strong>, so
+volumes set on one server no longer bleed into another. A new setting
+lets you choose whether these are remembered always, only for the
+session, or not at all.</li>
+</ul>
+<h3 id="accessibility">Accessibility</h3>
+<ul>
+<li>The app is now named <strong>tt-Accessible</strong> so VoiceOver and
+speech synthesizers pronounce it correctly.</li>
+<li><strong>Press VoiceOver+Space to join</strong> the selected server
+or channel.</li>
+<li><strong>Sliders and the microphone button now speak their
+values</strong> as you change them — gain, output volume, and the
+various Preferences sliders.</li>
+<li>Preferences reads more cleanly in VoiceOver: no duplicate labels,
+each section is a proper heading, scroll areas are named, and Escape
+closes the window.</li>
+</ul>
+<h3 id="fixes-2">Fixes</h3>
+<ul>
+<li><strong>BearWare web login connects reliably</strong> on servers
+that respond in slightly non-standard ways.</li>
+<li><strong>An empty nickname</strong> now falls back to your default
+instead of failing to connect.</li>
+<li>The app <strong>launches faster</strong>.</li>
+</ul>
+<h3 id="thanks-2">Thanks</h3>
+<p>Huge thanks to <strong>Rocco Fiorentino</strong>, who designed and
+built the audio rewrite and the Channel Mixer, the accessibility and
+VoiceOver improvements, and the faster, steadier connecting in this
+release. Thanks to <strong>Matthew Whitaker</strong> for the Command+5
+suggestion — and to everyone who tested the betas and sent feedback.</p>
+<h3 id="install">Install</h3>
+<p>tt-Accessible will install this update for you automatically. To
+install by hand:</p>
+<ol type="1">
+<li>Download <code>ttaccessible-1.7.0-42.zip</code> below.</li>
+<li>Unzip and drag <code>ttaccessible.app</code> into your
+<code>/Applications</code> folder, replacing the previous version.</li>
+<li>Double-click — no Gatekeeper warning thanks to notarization.</li>
+</ol>
+<h3 id="download-6">Download</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.7.0/ttaccessible-1.7.0-42.zip">ttaccessible-1.7.0-42.zip</a></p>
+</body>
+</html>
