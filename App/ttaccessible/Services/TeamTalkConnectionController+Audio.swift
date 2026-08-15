@@ -175,6 +175,15 @@ extension TeamTalkConnectionController {
                 SoundPlayer.shared.play(.voxMeDisable)
             }
             self.publishSessionLocked(instance: instance, record: record)
+            // Same persisted intent the other modes write from
+            // activate/deactivateVoiceTransmission — it is what restores the mic on
+            // the next join. Without it "both" was the one mode whose gate no
+            // reconnect could ever give back: the engine dies with the session, and
+            // the rearm that follows is always gate-closed.
+            let preferencesStore = self.preferencesStore
+            DispatchQueue.main.async {
+                preferencesStore.updateLastVoiceTransmissionEnabled(opening)
+            }
             self.finishOnMain(.success(opening), completion: completion)
         }
     }
@@ -231,11 +240,22 @@ extension TeamTalkConnectionController {
             // "both" keeps the engine hot behind a closed gate, so nothing is
             // transmitted until the user opens it — and opening it is refused
             // upstream. Arming stays correct here; only the announcement is owed.
+            //
+            // Whether the engine was ALREADY hot is what tells a plain channel
+            // change from a fresh session: a channel change returns early from the
+            // arm and keeps the gate as the user left it, while a reconnect comes
+            // back engine-cold and is rearmed gate-closed.
+            let engineWasHot = voiceTransmissionEnabled
             armBothModeEngineIfNeededLocked(instance: instance)
-            // Give back the gate a silent channel took away, now that this one
-            // carries voice again. `armBothModeEngineIfNeeded` always rearms
-            // gate-closed, so this has to come after it.
-            if voiceAllowed, reopenVoiceWhenChannelAllowsIt, voiceTransmissionEnabled {
+            // Give the user back the mic they had — the one a silent channel took,
+            // or the one the session teardown did. `armBothModeEngineIfNeeded`
+            // always rearms gate-closed, so this has to come after it.
+            let restoresGate = Self.shouldRestoreBothModeGate(
+                engineWasHot: engineWasHot,
+                reopenAfterSilentChannel: reopenVoiceWhenChannelAllowsIt,
+                lastVoiceTransmissionEnabled: preferencesStore.preferences.lastVoiceTransmissionEnabled
+            )
+            if voiceAllowed, restoresGate, voiceTransmissionEnabled, bothGateOpen == false {
                 reopenVoiceWhenChannelAllowsIt = false
                 bothGateOpen = true
                 SoundPlayer.shared.play(.voxMeEnable)
@@ -263,6 +283,30 @@ extension TeamTalkConnectionController {
         } catch {
             AudioLogger.log("auto-restore mic on join failed: %@", error.localizedDescription)
         }
+    }
+
+    /// Whether joining a channel should reopen the "both" mode gate.
+    ///
+    /// Two ways the app can owe the user a gate it closed on its own:
+    ///
+    /// - a channel that carries no voice forced it shut, and we have just left it
+    ///   (`reopenAfterSilentChannel`), still inside the same session;
+    /// - the session itself ended — reconnect, auto-reconnect, or a relaunch. The
+    ///   engine dies with it, so the join that follows rearms gate-closed however
+    ///   the user had left it. `engineWasHot == false` is what marks that case: a
+    ///   plain channel change keeps the engine, returns early from the arm, and
+    ///   must not have the gate rewritten under it.
+    ///
+    /// In the second case the persisted intent decides, exactly as it does for
+    /// always-on and push-to-talk, whose mic `lastVoiceTransmissionEnabled`
+    /// restores on join. Nothing here opens a mic the user had closed.
+    static func shouldRestoreBothModeGate(
+        engineWasHot: Bool,
+        reopenAfterSilentChannel: Bool,
+        lastVoiceTransmissionEnabled: Bool
+    ) -> Bool {
+        if reopenAfterSilentChannel { return true }
+        return engineWasHot == false && lastVoiceTransmissionEnabled
     }
 
     /// Applies the current microphone hotkey settings (from the preferences
