@@ -69,6 +69,22 @@ struct ttaccessibleApp: App {
             CommandGroup(replacing: .newItem) {
             }
 
+            // Quit is normally AppKit's to add, and on current macOS it is there
+            // without asking. On macOS 12 it is not: an app whose only Scene is
+            // `Settings` gets an app menu without it, leaving the Dock or a force
+            // quit as the only ways out. Declaring it here puts it in the menu
+            // SwiftUI builds — on every system, at the placement AppKit would
+            // have used — instead of repairing a built menu afterwards, which is
+            // timing-dependent (SwiftUI rebuilds the menu whenever the state the
+            // commands observe changes). AppDelegate still repairs the menu, as
+            // the safety net for a system where even this doesn't land.
+            CommandGroup(replacing: .appTermination) {
+                Button(L10n.format("app.menu.quit", Self.appDisplayName)) {
+                    NSApp.terminate(nil)
+                }
+                .keyboardShortcut("q", modifiers: [.command])
+            }
+
             CommandMenu(L10n.text("savedServers.menu.title")) {
                 if menuState.mode == .savedServers {
                     Button(L10n.text("savedServers.menu.new")) {
@@ -468,6 +484,11 @@ struct ttaccessibleApp: App {
             }
         }
     }
+
+    /// The name AppKit itself puts in the app menu's title.
+    private static let appDisplayName = (Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
+        ?? (Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String)
+        ?? "tt-Accessible"
 
     private func mediaStreamPauseTitle(_ menuState: SavedServersMenuState) -> String {
         if menuState.isMediaStreamingLive {

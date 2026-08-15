@@ -105,6 +105,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var pendingUnsavedServerConfiguration: PendingUnsavedServerConfiguration?
 
     private var deviceChangeObserver: Any?
+    private var hasLoggedAppMenuLayout = false
 
     private lazy var updaterController: SPUStandardUpdaterController = SPUStandardUpdaterController(
         startingUpdater: true,
@@ -205,6 +206,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.repairMainMenuIfNeeded()
             }
         }
+        // Photographed well after the passes above, so the picture is of the
+        // menu the user actually gets rather than one still being assembled.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
+            self?.logAppMenuLayoutOnce()
+        }
+    }
+
+    /// Records what the app menu actually holds, once per launch — the only
+    /// report we get from the systems this app can't be run on. A tester's
+    /// audio.log then says whether Quit is there, instead of us inferring it
+    /// from what they thought to list.
+    private func logAppMenuLayoutOnce() {
+        guard hasLoggedAppMenuLayout == false,
+              let appMenu = NSApp.mainMenu?.items.first?.submenu else { return }
+        hasLoggedAppMenuLayout = true
+        let titles = appMenu.items.map { $0.isSeparatorItem ? "—" : $0.title }
+        AudioLogger.log("app menu: %@", titles.joined(separator: " | "))
     }
 
     /// Repairs what SwiftUI's menu leaves in an unusable state on older systems.
@@ -215,14 +233,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// quit. The same system keeps an empty File menu that
     /// `CommandGroup(replacing: .newItem) {}` removes on current macOS.
     ///
-    /// No public placement covers Quit (AppKit adds it, not SwiftUI), so both
-    /// are repaired here against the built menu rather than declared. Both
-    /// checks are no-ops when the menu is already right — which is the case on
+    /// Quit is declared in SwiftUI at `.appTermination`, which is where the fix
+    /// belongs — in the menu's own construction. This stays as the safety net
+    /// for a system that doesn't honor that placement either, and it can only
+    /// ever be a net: repairing a built menu is timing-dependent, since any
+    /// rebuild restores SwiftUI's version, which is why it is re-applied on
+    /// every menuState change. Hooking the menu itself was tried and dropped —
+    /// `NSMenu.didBeginTrackingNotification` never arrives here, and the app
+    /// menu already has a delegate of SwiftUI's own that must not be displaced.
+    /// Both checks are no-ops when the menu is already right — the case on
     /// macOS 13+, where this must stay invisible.
     private func repairMainMenuIfNeeded() {
         guard let mainMenu = NSApp.mainMenu, let appMenu = mainMenu.items.first?.submenu else { return }
 
-        if appMenu.items.contains(where: { $0.action == #selector(NSApplication.terminate(_:)) }) == false {
+        // Matched on the key equivalent as well as the action: the SwiftUI-declared
+        // Quit carries a closure, not `terminate(_:)`, and would otherwise be
+        // missed here — adding a second Quit next to the one already there.
+        let hasQuitItem = appMenu.items.contains { item in
+            item.action == #selector(NSApplication.terminate(_:))
+                || (item.keyEquivalent == "q" && item.keyEquivalentModifierMask == .command)
+        }
+        if hasQuitItem == false {
+            AudioLogger.log("app menu: no Quit item — adding one")
             appMenu.addItem(.separator())
             // Named from the app menu's own title, which AppKit fills with the
             // display name — and localized through L10n, so the wording follows
