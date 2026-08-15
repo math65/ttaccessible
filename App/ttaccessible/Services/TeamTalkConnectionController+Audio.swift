@@ -211,14 +211,47 @@ extension TeamTalkConnectionController {
         if isAnyMicrophoneEngineRunning {
             refreshAdvancedMicrophoneTargetIfNeededLocked(instance: instance)
         }
+        // A channel we can't speak in must not get the mic re-opened under us: the
+        // server drops the voice, so restoring transmission here would announce an
+        // open mic and play its sound while nothing goes out — the very symptom the
+        // stall guard exists to prevent, self-inflicted. Say it instead, once, and
+        // leave the mic closed. Announced (and switchable) like any other event.
+        // Reuses `.transmissionBlocked`, which was declared, localized and given its
+        // Preferences toggle long ago but never emitted by anything.
+        let voiceAllowed = canTransmitVoiceInCurrentChannelLocked(instance: instance)
+        if voiceAllowed == false {
+            appendTransmissionBlockedHistoryLocked()
+        } else {
+            // New channel, new codec, clean slate: attempts spent failing against the
+            // channel we just left must not count against this one.
+            voiceCaptureRecoveryAttempts = 0
+        }
+
         if currentMicrophoneMode == .both {
+            // "both" keeps the engine hot behind a closed gate, so nothing is
+            // transmitted until the user opens it — and opening it is refused
+            // upstream. Arming stays correct here; only the announcement is owed.
             armBothModeEngineIfNeededLocked(instance: instance)
+            // Give back the gate a silent channel took away, now that this one
+            // carries voice again. `armBothModeEngineIfNeeded` always rearms
+            // gate-closed, so this has to come after it.
+            if voiceAllowed, reopenVoiceWhenChannelAllowsIt, voiceTransmissionEnabled {
+                reopenVoiceWhenChannelAllowsIt = false
+                bothGateOpen = true
+                SoundPlayer.shared.play(.voxMeEnable)
+            }
             if let connectedRecord {
                 publishSessionLocked(instance: instance, record: connectedRecord)
             }
             return
         }
-        guard voiceTransmissionEnabled == false,
+        // Outside "both" the persisted `lastVoiceTransmissionEnabled` already
+        // restores the mic on join, so the flag only needs clearing here.
+        if voiceAllowed {
+            reopenVoiceWhenChannelAllowsIt = false
+        }
+        guard voiceAllowed,
+              voiceTransmissionEnabled == false,
               preferencesStore.preferences.lastVoiceTransmissionEnabled else { return }
         do {
             try ensureAdvancedMicrophoneInputReadyLocked(instance: instance)
@@ -1194,6 +1227,11 @@ extension TeamTalkConnectionController {
     /// genuinely wedged SDK from turning into a restart loop.
     func noteVoiceInsertOutcomeLocked(accepted: Bool, chunk: AdvancedMicrophoneAudioChunk) {
         if accepted {
+            // A block getting through is the only proof a restart worked, so it is
+            // what clears the attempt count — not `resetVoiceInsertFailureTracking`,
+            // which also runs just before each attempt and would reset the budget it
+            // is meant to spend, restoring the endless loop.
+            voiceCaptureRecoveryAttempts = 0
             if refusedVoiceInsertCount > 0 {
                 AudioLogger.log(
                     "TT_InsertAudioBlock: recovered after %d refused blocks (%.1f s)",
@@ -1213,11 +1251,18 @@ extension TeamTalkConnectionController {
 
         if refusedVoiceInsertCount == 1 || now - lastRefusedVoiceLogAt >= Self.refusedVoiceLogInterval {
             lastRefusedVoiceLogAt = now
+            // Deliberately does NOT name a cause. TT_InsertAudioBlock returns a bare
+            // FALSE and the SDK keeps its reason to itself — the older wording said
+            // "queue full", which is only one of the ways it can refuse, and reading
+            // it as fact sent a diagnosis down the wrong path.
             AudioLogger.log(
-                "TT_InsertAudioBlock: queue full, audio block dropped (%d refused, %.1f s of voice)",
+                "TT_InsertAudioBlock: refused, audio block dropped (%d refused, %.1f s of voice)",
                 refusedVoiceInsertCount,
                 refusedVoiceSeconds
             )
+        }
+        if refusedVoiceInsertCount == 1 {
+            logChannelDiagnosticsLocked(reason: "first refused voice block")
         }
 
         guard refusedVoiceSeconds >= Self.refusedVoiceRecoveryThreshold,
@@ -1233,6 +1278,69 @@ extension TeamTalkConnectionController {
         }
     }
 
+    /// Dumps everything the server exposes about the channel we're in, in one line.
+    ///
+    /// Written for the case no amount of reading has explained: a channel where the
+    /// app applies exactly the format the SDK reports for it, and every insert is
+    /// refused anyway, from the very first block. The SDK gives no reason, so this
+    /// prints the whole picture — channel type mask, full codec, voice timeout,
+    /// transmit list, our rights — rather than the one field a hunch points at.
+    /// Same approach that settled the NO_RECORDING silence.
+    func logChannelDiagnosticsLocked(reason: String) {
+        guard let instance else { return }
+        let channelID = TT_GetMyChannelID(instance)
+        guard channelID > 0 else {
+            AudioLogger.log("channel diag (%@): not in a channel", reason)
+            return
+        }
+        var channel = Channel()
+        guard TT_GetChannel(instance, channelID, &channel) != 0 else {
+            AudioLogger.log("channel diag (%@): TT_GetChannel failed for #%d", reason, channelID)
+            return
+        }
+
+        var transmitList: [String] = []
+        withUnsafeBytes(of: &channel.transmitUsers) { raw in
+            let entries = raw.bindMemory(to: Int32.self)
+            for entry in stride(from: 0, to: entries.count - 1, by: 2) where entries[entry] != 0 {
+                transmitList.append(String(format: "%d:0x%X", entries[entry], UInt32(bitPattern: entries[entry + 1])))
+            }
+        }
+
+        let codec = channel.audiocodec
+        let codecDescription: String
+        switch codec.nCodec {
+        case OPUS_CODEC:
+            let opus = codec.opus
+            codecDescription = String(
+                // Raw fields only — no derived values. A log that computes something
+                // is a log that can be wrong in a way nobody checks.
+                format: "opus rate=%d ch=%d frame=%dms txInterval=%dms bitrate=%d app=%d vbr=%d dtx=%d fec=%d complexity=%d",
+                opus.nSampleRate, opus.nChannels, opus.nFrameSizeMSec, opus.nTxIntervalMSec,
+                opus.nBitRate, opus.nApplication, opus.bVBR, opus.bDTX, opus.bFEC, opus.nComplexity
+            )
+        case NO_CODEC:
+            codecDescription = "NO_CODEC"
+        default:
+            codecDescription = String(format: "codec=%d (not opus)", codec.nCodec.rawValue)
+        }
+
+        AudioLogger.log(
+            "channel diag (%@): #%d \"%@\" type=0x%X codec=%@ voiceTimeout=%dms maxUsers=%d transmitUsers=[%@] myUserID=%d myRights=0x%X sending=%@",
+            reason,
+            channelID,
+            ttString(from: channel.szName),
+            channel.uChannelType,
+            codecDescription,
+            channel.nTimeOutTimerVoiceMSec,
+            channel.nMaxUsers,
+            transmitList.joined(separator: " "),
+            TT_GetMyUserID(instance),
+            TT_GetMyUserRights(instance),
+            advancedMicrophoneTargetFormat.map(Self.describe(targetFormat:)) ?? "none"
+        )
+    }
+
     private func resetVoiceInsertFailureTrackingLocked() {
         refusedVoiceInsertCount = 0
         refusedVoiceSeconds = 0
@@ -1243,7 +1351,53 @@ extension TeamTalkConnectionController {
     /// mute is not something the user can see, so it can't be fixed silently.
     private func recoverStalledVoiceCaptureLocked(refusedSeconds: Double) {
         guard let instance, inputAudioReady else { return }
-        AudioLogger.log("voice capture stalled: restarting after %.1f s of refused voice", refusedSeconds)
+
+        // Restarting cannot help where the channel carries no voice: the capture
+        // comes back on the same invented format, is refused again, and the guard
+        // announces itself every 30 s for as long as the user stays — measured on a
+        // real server. Close the mic once, say why, and stop trying.
+        guard canTransmitVoiceInCurrentChannelLocked(instance: instance) else {
+            AudioLogger.log("voice capture stalled: channel carries no voice — closing the mic instead of restarting")
+            reopenVoiceWhenChannelAllowsIt = microphoneGateOpenLocked
+            stopAdvancedMicrophoneInputLocked(instance: instance, reason: "channel carries no voice")
+            voiceTransmissionEnabled = false
+            bothGateOpen = false
+            SoundPlayer.shared.play(.voxMeDisable)
+            appendTransmissionBlockedHistoryLocked()
+            if let connectedRecord {
+                publishSessionLocked(instance: instance, record: connectedRecord)
+            }
+            return
+        }
+
+        // Restarts that changed nothing are not worth repeating: the fault isn't one
+        // a rebuild can reach, and going round again only costs the user another
+        // announcement. Turn the mic off and say so — that, they can act on.
+        guard voiceCaptureRecoveryAttempts < Self.maxVoiceCaptureRecoveryAttempts else {
+            AudioLogger.log(
+                "voice capture stalled: %d restarts changed nothing — turning the mic off",
+                voiceCaptureRecoveryAttempts
+            )
+            logChannelDiagnosticsLocked(reason: "giving up on voice capture")
+            stopAdvancedMicrophoneInputLocked(instance: instance, reason: "voice capture unrecoverable")
+            voiceTransmissionEnabled = false
+            bothGateOpen = false
+            lastAudioWarningMessage = L10n.text("connectedServer.audio.error.microphoneRestartFailed")
+            SoundPlayer.shared.play(.voxMeDisable)
+            appendMicrophoneStalledHistoryLocked(recovered: false)
+            if let connectedRecord {
+                publishSessionLocked(instance: instance, record: connectedRecord)
+            }
+            return
+        }
+        voiceCaptureRecoveryAttempts += 1
+
+        AudioLogger.log(
+            "voice capture stalled: restarting after %.1f s of refused voice (attempt %d/%d)",
+            refusedSeconds,
+            voiceCaptureRecoveryAttempts,
+            Self.maxVoiceCaptureRecoveryAttempts
+        )
 
         stopAdvancedMicrophoneInputLocked(instance: instance, reason: "voice capture stalled")
         do {
