@@ -9,7 +9,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .agents/skills/accessibility/scripts/hook.py",
+            "command": "python3 .claude/skills/accessibility/scripts/hook.py",
             "timeout": 30,
             "statusMessage": "Audit d'accessibilité"
           }
