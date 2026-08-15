@@ -12,12 +12,25 @@ public release. **Never run Phase B without an explicit go-ahead from the user.*
 
 **Scope control via arguments:**
 - Invoked with `notes` (e.g. `/release notes`) → run **Phase A only**, then stop.
-- Invoked with `publish` or no argument → run Phase A, then **pause and confirm**
-  before Phase B (**stable** channel — reaches every user).
-- Invoked with `beta` (e.g. `/release beta`, `/release publish beta`) → run Phase A,
-  then **pause and confirm** before Phase B, publishing to the **beta** channel
-  via `./build.sh --release --beta` (see "Beta releases" below). Only users who
-  enabled "Include beta versions" in Preferences > General receive it.
+- Invoked with `publish`, `beta`, or no argument → run Phase A, then **pause and
+  confirm** before Phase B.
+
+**The channel is decided by the version, not by the argument.** Read it first:
+
+```bash
+grep -m1 MARKETING_VERSION App/ttaccessible.xcodeproj/project.pbxproj
+```
+
+A version carrying a prerelease suffix (`1.12.0-beta.3`) is a **beta** and ships with
+`./build.sh --release --beta` — only users who enabled "Include beta versions" in
+Preferences > General receive it. A bare version (`1.12.0`) is **stable** and ships
+with `./build.sh --release`, reaching everyone.
+
+`/release` with no argument does **not** mean stable — it means "whatever channel
+this version declares". If the argument and the version disagree (a `-beta` version
+with `/release publish`, or a bare version with `/release beta`), stop and ask:
+one of the two is a mistake, and shipping a beta build to the stable channel pushes
+it to every user through the in-app updater, with no way back.
 
 Do not rely on session memory for what shipped — always query git.
 
@@ -139,9 +152,22 @@ public release that reaches every user via the in-app updater.
 
 - **Version bump committed**: update `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION`
   in `App/ttaccessible.xcodeproj/project.pbxproj`. (Do this now if not already done.)
-- `RELEASE_NOTES.md` updated (Phase A).
+  Each appears **twice** — the app target and the test target — so a correct bump
+  touches four lines. Bump the build number for every release, beta included:
+  Sparkle compares builds, not marketing versions.
+- **Help book regenerated at the new version**: `./scripts/build-help-book.sh <version> <build>`.
+  Its cache is keyed on the bundle's version, so shipping the old one makes the
+  viewer serve the previous release's pages. Needs pandoc; commit the result.
+- `RELEASE_NOTES.md` and `RELEASE_NOTES.fr.md` updated (Phase A).
 - Notarytool keychain profile `ttaccessible-notary` is stored.
-- On `main`, working tree clean.
+- On `main`, working tree clean, **and the commits pushed** — `build.sh` creates the
+  GitHub release against the remote, so anything still local won't be in it.
+- **Wipe the build directory: `rm -rf /tmp/ttaccessible-build`.** `build.sh` keeps its
+  derived data under `/tmp`, which macOS's periodic cleaner prunes by access time.
+  A build dir left over from a few days ago comes back with pieces missing — the
+  observed failure was Sparkle.framework's `Info.plist` deleted overnight, which
+  fails the build at `CodeSign` with "bundle format unrecognized, invalid, or
+  unsuitable". Nothing is published when that happens; wipe and re-run.
 
 ### B1. Build, sign, notarize, publish
 
@@ -160,6 +186,15 @@ This:
 
 Note: `build.sh --release` publishes the GitHub release **live** and pushes the
 appcast itself — it does not leave a draft despite older docs.
+
+**Never read the exit code as proof it worked.** A run that printed
+`** BUILD FAILED **` and published nothing still exited 0. Grep the output for
+`BUILD FAILED` and `error:`, and confirm the release is really there before
+reporting success:
+
+```bash
+gh release view v<X.Y.Z> --repo math65/ttaccessible
+```
 
 If you only need to fix release notes **after** publish (no binary change): re-render
 the HTML and run `gh release edit` — no rebuild or re-notarize required.
