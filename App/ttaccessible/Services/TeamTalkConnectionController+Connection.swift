@@ -1190,6 +1190,15 @@ extension TeamTalkConnectionController {
         appliedInputPreference = nil
         appliedOutputPreference = nil
         voiceTransmissionEnabled = false
+        // The transmit flags describe a live session and must not outlive one. The
+        // gate in particular: left set, `microphoneGateOpenLocked` reports an open
+        // mic to the next session before anything has been armed — and if the rearm
+        // then fails (mic permission revoked, device gone), the UI says "microphone
+        // on" over an engine that is not running.
+        bothGateOpen = false
+        pushToTalkPressed = false
+        reopenVoiceWhenChannelAllowsIt = false
+        voiceCaptureRecoveryAttempts = 0
         masterMuted = false
         hearMyselfEnabled = false
         previewMonitorEnabled = false
