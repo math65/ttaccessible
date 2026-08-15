@@ -151,6 +151,21 @@ final class TeamTalkConnectionController {
     /// lightweight flag decides whether captured audio is transmitted when PTT
     /// is not held. Releasing PTT closes it (see setPushToTalkPressed).
     var bothGateOpen = false
+    /// Set when the mic was open and a channel that carries no voice forced it
+    /// shut, so leaving that channel gives the user back the mic they had. Without
+    /// it "both" mode loses the gate for good: a normal channel change keeps the
+    /// gate because the engine is already running and `armBothModeEngineIfNeeded`
+    /// returns early, but once the engine has been torn down that same call rearms
+    /// it gate-closed. Being moved into a silent channel and back would otherwise
+    /// leave the user mute with no sign — the failure this whole path exists to end.
+    var reopenVoiceWhenChannelAllowsIt = false
+    /// Consecutive capture restarts that failed to get a single block accepted.
+    /// The guard restarts on a run of refused voice, but a restart only helps when
+    /// the fault is local and rebuildable; against anything else it used to retry
+    /// every 30 s forever, announcing itself each time and repairing nothing —
+    /// observed in the field. Past `maxVoiceCaptureRecoveryAttempts` it gives up
+    /// loudly instead. Reset by the first accepted block.
+    var voiceCaptureRecoveryAttempts = 0
     /// Run of consecutive voice blocks the SDK refused, and how much voice that
     /// adds up to. A refusal is normally transient, but the capture can settle
     /// into a state where every block is refused and nothing recovers on its
@@ -164,8 +179,13 @@ final class TeamTalkConnectionController {
     static let refusedVoiceLogInterval: CFAbsoluteTime = 5
     /// A second of refused voice is well past any transient queue pressure.
     static let refusedVoiceRecoveryThreshold: Double = 1
-    /// Keeps a wedged SDK from becoming a restart loop.
+    /// Spaces the restarts out; `maxVoiceCaptureRecoveryAttempts` is what actually
+    /// ends them — on its own this only slowed the loop down to one every 30 s.
     static let voiceCaptureRecoveryBackoff: CFAbsoluteTime = 30
+    /// Two restarts are enough to tell a rebuildable fault from one a restart will
+    /// never fix. Beyond that the mic is turned off and said to be off, which the
+    /// user can act on — unlike an announcement every 30 s that changes nothing.
+    static let maxVoiceCaptureRecoveryAttempts = 2
     var lastAudioWarningMessage: String?
     var masterMuted = false
     var hearMyselfEnabled = false

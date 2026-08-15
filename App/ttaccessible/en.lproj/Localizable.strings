@@ -144,6 +144,7 @@
 "connectedServer.audio.gain.resetAccessibilityAction" = "Reset to 50%";
 "connectedServer.audio.voiceEnabled" = "Microphone enabled.";
 "connectedServer.audio.voiceDisabled" = "Microphone muted.";
+"connectedServer.audio.voiceNotAllowedInChannel" = "You can't speak in this channel.";
 "connectedServer.audio.error.defaultDevicesUnavailable" = "Unable to find the default audio devices.";
 "connectedServer.audio.error.outputStartFailed" = "Unable to initialize audio output.";
 "connectedServer.audio.error.inputStartFailed" = "Unable to initialize audio input.";

@@ -637,6 +637,95 @@ extension TeamTalkConnectionController {
         }
     }
 
+    /// Whether we are allowed to transmit voice in the channel we are currently in.
+    ///
+    /// Mirrors the rule the server actually applies, read from its source rather
+    /// than guessed (`ServerNode::ReceivedPacket` → `Channel::CanTransmit`):
+    ///
+    /// - the account needs `USERRIGHT_TRANSMIT_VOICE`, or voice packets are dropped
+    ///   before the channel is even consulted;
+    /// - in a `CHANNEL_CLASSROOM` channel `transmitUsers` is an ALLOW list: our user
+    ///   ID, or `TT_CLASSROOM_FREEFORALL`, must appear in it carrying
+    ///   `STREAMTYPE_VOICE`;
+    /// - in every other channel the same array is a BLOCK list — being listed is
+    ///   what silences us.
+    ///
+    /// **There is no exception for channel operators or administrators.** The SDK
+    /// header points at `TT_IsChannelOperator` and `USERTYPE_ADMIN` here, but the
+    /// server grants neither: an operator absent from a classroom's list is as mute
+    /// as anyone else, and telling the user otherwise would be a lie.
+    ///
+    /// Returns true when not in a channel, so the caller's other guards decide.
+    func canTransmitVoiceInCurrentChannel() -> Bool {
+        guard let instance else { return true }
+        return queue.sync { canTransmitVoiceInCurrentChannelLocked(instance: instance) }
+    }
+
+    /// `canTransmitVoiceInCurrentChannel()` for callers already on `queue` — the
+    /// join path runs there, where `queue.sync` would deadlock.
+    func canTransmitVoiceInCurrentChannelLocked(instance: UnsafeMutableRawPointer) -> Bool {
+        // `USERRIGHT_NONE` is indistinguishable from "rights not known yet" — the
+        // join path can run while the login's rights are still settling. Refusing on
+        // that would silence the microphone in an ordinary channel, for everyone, so
+        // an empty mask is treated as unknown and lets the user through: the server
+        // still drops the voice if the account really lacks the right, which is the
+        // milder failure of the two.
+        let rights = TT_GetMyUserRights(instance)
+        if rights != UInt32(USERRIGHT_NONE.rawValue),
+           (rights & UInt32(USERRIGHT_TRANSMIT_VOICE.rawValue)) == 0 {
+            return false
+        }
+        let channelID = TT_GetMyChannelID(instance)
+        guard channelID > 0 else { return true }
+        var channel = Channel()
+        guard TT_GetChannel(instance, channelID, &channel) != 0 else { return true }
+
+        // A channel with no codec carries no voice at all — measured on a real
+        // server, where a channel named "absent" is kept silent exactly this way:
+        // not by withdrawing anyone's rights, but by removing the codec. The SDK
+        // then has nothing to encode with and refuses every block from the first
+        // one, while `transmitUsers` still reads "everyone may speak". Rights are
+        // beside the point here, so this comes first.
+        guard channel.audiocodec.nCodec != NO_CODEC else { return false }
+
+        return Self.isVoiceTransmissionAllowed(
+            isClassroom: (channel.uChannelType & UInt32(CHANNEL_CLASSROOM.rawValue)) != 0,
+            listedForVoice: Self.transmitUsersAllowVoice(in: &channel, userID: TT_GetMyUserID(instance)),
+            freeForAllForVoice: Self.transmitUsersAllowVoice(in: &channel, userID: Int32(TT_CLASSROOM_FREEFORALL))
+        )
+    }
+
+    /// The server's rule, on its own so a test can pin it down: the same list means
+    /// opposite things either side of `CHANNEL_CLASSROOM` — an allow list in a
+    /// classroom, a block list everywhere else. It reads like a bug and isn't one,
+    /// which is precisely why it needs a test rather than a comment.
+    static func isVoiceTransmissionAllowed(
+        isClassroom: Bool,
+        listedForVoice: Bool,
+        freeForAllForVoice: Bool
+    ) -> Bool {
+        guard isClassroom else { return listedForVoice == false }
+        return listedForVoice || freeForAllForVoice
+    }
+
+    /// Whether `channel.transmitUsers` holds an entry for `userID` carrying the voice
+    /// stream type. The array is a C `INT32[128][2]` — a nested tuple once imported —
+    /// terminated by a zero user ID, as the Qt client's `isFreeForAll` reads it too.
+    private static func transmitUsersAllowVoice(in channel: inout Channel, userID: Int32) -> Bool {
+        let voiceBit = UInt32(STREAMTYPE_VOICE.rawValue)
+        return withUnsafeBytes(of: &channel.transmitUsers) { raw in
+            let entries = raw.bindMemory(to: Int32.self)
+            for entry in stride(from: 0, to: entries.count - 1, by: 2) {
+                let entryUserID = entries[entry + Int(TT_TRANSMITUSERS_USERID_INDEX)]
+                guard entryUserID != 0 else { return false }
+                guard entryUserID == userID else { continue }
+                let streamTypes = UInt32(bitPattern: entries[entry + Int(TT_TRANSMITUSERS_STREAMTYPE_INDEX)])
+                return (streamTypes & voiceBit) != 0
+            }
+            return false
+        }
+    }
+
     // MARK: - Server management
 
     func getUserStatistics(userID: Int32) -> UserStatistics? {

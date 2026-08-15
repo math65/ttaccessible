@@ -144,6 +144,7 @@
 "connectedServer.audio.gain.resetAccessibilityAction" = "Réinitialiser à 50 %";
 "connectedServer.audio.voiceEnabled" = "Micro activé.";
 "connectedServer.audio.voiceDisabled" = "Micro coupé.";
+"connectedServer.audio.voiceNotAllowedInChannel" = "Vous ne pouvez pas parler dans ce canal.";
 "connectedServer.audio.error.defaultDevicesUnavailable" = "Impossible de trouver les périphériques audio par défaut.";
 "connectedServer.audio.error.outputStartFailed" = "Impossible d'initialiser la sortie audio.";
 "connectedServer.audio.error.inputStartFailed" = "Impossible d'initialiser l'entrée audio.";

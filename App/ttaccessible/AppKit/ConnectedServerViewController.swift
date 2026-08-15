@@ -1444,6 +1444,16 @@ final class ConnectedServerViewController: NSViewController {
     }
 
     func toggleMicrophone(announceStatus: Bool) {
+        // Turning the mic ON where the server will discard our voice is worse than
+        // refusing: the app would announce an open mic, play the confirmation sound,
+        // and leave the user talking to no one. Turning it OFF stays allowed in every
+        // case — a mic already open must always be closable.
+        if session.voiceTransmissionEnabled == false,
+           connectionController.canTransmitVoiceInCurrentChannel() == false {
+            announce(L10n.text("connectedServer.audio.voiceNotAllowedInChannel"))
+            return
+        }
+
         // In "both" mode ⌘⇧A toggles the always-on gate (lightweight) instead of
         // arming/disarming the mic engine — the engine stays hot for instant PTT.
         if connectionController.currentMicrophoneMode == .both {
