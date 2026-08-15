@@ -1,3 +1,16 @@
+## v1.12.0-beta.3 (build 49) — 2026-08-15
+
+A short beta with a single fix, for a single system. beta.2 announced that the app menu had its Quit item back on macOS 12. It did not: a tester on Monterey still had no way out of the app but the Dock. This one goes about it differently.
+
+### macOS 12 (Monterey)
+- **The app menu has a Quit item again, and ⌘Q quits.** beta.2 added the item to the menu once macOS had built it — a race that could only be lost, since the menu is rebuilt whenever the app's state changes, taking the repair with it. Quit is now declared alongside the app's other menus, so it belongs to the menu from the outset.
+- **The audio log now records the app menu as it was really built.** Should Quit still be missing on your Mac, sending us a report with the log attached will show us exactly what that menu contains.
+
+Nothing else has changed since beta.2.
+
+### Download
+[ttaccessible-1.12.0-beta.3-49.zip](https://github.com/math65/ttaccessible/releases/download/v1.12.0-beta.3/ttaccessible-1.12.0-beta.3-49.zip)
+
 ## v1.12.0-beta.2 (build 48) — 2026-08-14
 
 This beta comes from a tester's report, and one of the things it found is serious: your microphone could stop being transmitted while everything still looked and sounded normal at your end. It now repairs itself and tells you. The rest is a handful of fixes to things that were plainly annoying — a space being deleted as you typed it, a person with no name at all — plus streamed addresses you no longer have to retype.

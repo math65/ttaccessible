@@ -1,3 +1,16 @@
+## v1.12.0-beta.3 (build 49) — 15/08/2026
+
+Une bêta courte, un seul correctif, pour un seul système. La bêta 2 annonçait que le menu de l'application retrouvait sa commande Quitter sous macOS 12. Il n'en était rien : un testeur sous Monterey ne pouvait toujours quitter l'application que par le Dock. Celle-ci s'y prend autrement.
+
+### macOS 12 (Monterey)
+- **Le menu de l'application retrouve sa commande Quitter, et ⌘Q quitte bien l'application.** La bêta 2 ajoutait l'entrée au menu une fois celui-ci construit par macOS — une course perdue d'avance, puisque le menu est reconstruit à chaque changement d'état de l'application, emportant la réparation avec lui. Quitter est désormais déclarée avec les autres menus de l'application : elle en fait partie dès le départ.
+- **Le journal audio note maintenant le menu tel qu'il a réellement été construit.** Si la commande Quitter venait à manquer encore chez vous, nous envoyer un rapport accompagné du journal nous montrerait exactement ce que contient ce menu.
+
+Rien d'autre n'a changé depuis la bêta 2.
+
+### Téléchargement
+[ttaccessible-1.12.0-beta.3-49.zip](https://github.com/math65/ttaccessible/releases/download/v1.12.0-beta.3/ttaccessible-1.12.0-beta.3-49.zip)
+
 ## v1.12.0-beta.2 (build 48) — 14/08/2026
 
 Cette bêta est née du rapport d'un testeur, et l'un des défauts qu'il a permis de découvrir est sérieux : votre micro pouvait cesser d'être transmis alors que, de votre côté, tout semblait parfaitement normal. Il se répare désormais tout seul et vous prévient. Le reste corrige des désagréments bien concrets — un espace effacé au moment où vous le tapez, une personne dépourvue de nom — et vous évite de retaper les adresses que vous diffusez.
