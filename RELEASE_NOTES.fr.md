@@ -1,3 +1,18 @@
+## v1.12.0-beta.4 (build 50) — 15/08/2026
+
+Celle-ci nous vient d'un canal fait pour qu'on s'y taise. Bien des serveurs en ont un — « absent », « pause », un endroit où se garer le temps d'une nuit sans quitter le serveur. Votre micro y était inutile sans que rien ne vous en avertisse, et l'application vous annonçait des réparations qu'elle n'était pas en mesure de faire.
+
+### Un canal où personne ne peut parler
+- **Votre micro ne s'ouvre plus dans un canal qui ne transporte pas la voix.** Un canal de ce genre est le plus souvent rendu muet en lui retirant son codec audio, et non en retirant des droits à quiconque : tout semblait donc parfaitement normal. Le micro était ouvert, votre nom figurait parmi les personnes qui parlent, et pas un mot ne sortait de votre Mac.
+- **L'application vous le dit désormais** — « Vous ne pouvez pas parler dans ce canal » — au lieu d'ouvrir le micro dans le vide. ⌘⇧A y est refusé, en vous expliquant pourquoi. Vous couper le micro, en revanche, reste possible partout et en toutes circonstances.
+- **Le micro qu'un tel canal a fermé vous est rendu dès que vous en sortez**, exactement tel que vous l'aviez.
+- **L'annonce à répétition disparaît.** Le garde-fou apparu dans la bêta 2 relançait le micro toutes les 30 secondes en vous prévenant chaque fois, alors qu'il était incapable de corriger ce défaut-là. Il renonce maintenant au bout de deux tentatives et coupe franchement le micro — ce sur quoi, au moins, vous pouvez agir.
+
+Rien d'autre n'a changé depuis la bêta 3.
+
+### Téléchargement
+[ttaccessible-1.12.0-beta.4-50.zip](https://github.com/math65/ttaccessible/releases/download/v1.12.0-beta.4/ttaccessible-1.12.0-beta.4-50.zip)
+
 ## v1.12.0-beta.3 (build 49) — 15/08/2026
 
 Une bêta courte, un seul correctif, pour un seul système. La bêta 2 annonçait que le menu de l'application retrouvait sa commande Quitter sous macOS 12. Il n'en était rien : un testeur sous Monterey ne pouvait toujours quitter l'application que par le Dock. Celle-ci s'y prend autrement.

@@ -1,3 +1,18 @@
+## v1.12.0-beta.4 (build 50) — 2026-08-15
+
+This one comes from a channel built to keep people quiet. Plenty of servers have one — "absent", "away", somewhere to park yourself while you sleep without logging off. Your microphone was useless in those, with nothing to tell you, and the app kept announcing a repair it was in no position to make.
+
+### A channel where nobody can speak
+- **The microphone is no longer opened where the channel carries no voice.** Such a channel is usually silenced by removing its audio codec, not by taking anyone's rights away — so everything looked normal. The mic was on, you appeared among the people talking, and not a word left your Mac.
+- **The app tells you instead** — "You can't speak in this channel" — rather than opening the mic into nothing. Cmd+Shift+A is refused there, and says why. Muting yourself still works everywhere, always.
+- **The microphone such a channel closed is given back when you leave it**, exactly as you had it.
+- **The announcement on repeat is gone.** The safety net added in beta 2 restarted the microphone every 30 seconds and announced itself each time, while being unable to fix this particular fault. It now stops after two attempts and turns the mic off plainly — something you can actually act on.
+
+Nothing else has changed since beta 3.
+
+### Download
+[ttaccessible-1.12.0-beta.4-50.zip](https://github.com/math65/ttaccessible/releases/download/v1.12.0-beta.4/ttaccessible-1.12.0-beta.4-50.zip)
+
 ## v1.12.0-beta.3 (build 49) — 2026-08-15
 
 A short beta with a single fix, for a single system. beta.2 announced that the app menu had its Quit item back on macOS 12. It did not: a tester on Monterey still had no way out of the app but the Dock. This one goes about it differently.
