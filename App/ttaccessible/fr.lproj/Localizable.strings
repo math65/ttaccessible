@@ -1080,6 +1080,18 @@
 
 "update.menu.checkForUpdates" = "Vérifier les mises à jour…";
 "app.menu.quit" = "Quitter %@";
+"app.menu.services" = "Services";
+"app.menu.hide" = "Masquer %@";
+"app.menu.hideOthers" = "Masquer les autres";
+"app.menu.showAll" = "Tout afficher";
+"edit.menu.title" = "Édition";
+"edit.menu.undo" = "Annuler";
+"edit.menu.redo" = "Rétablir";
+"edit.menu.cut" = "Couper";
+"edit.menu.copy" = "Copier";
+"edit.menu.paste" = "Coller";
+"edit.menu.delete" = "Supprimer";
+"edit.menu.selectAll" = "Tout sélectionner";
 "help.menu.userGuide" = "Aide tt-Accessible";
 "help.menu.viewOnGitHub" = "Voir le projet sur GitHub";
 "help.menu.reportIssue" = "Signaler un problème…";
