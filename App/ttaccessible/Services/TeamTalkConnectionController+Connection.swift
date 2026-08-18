@@ -1130,6 +1130,9 @@ extension TeamTalkConnectionController {
         // Forget where we stood in a speaking queue, or reconnecting into a
         // solo-transmit channel would announce the end of a turn nobody took.
         lastTransmitQueuePosition = nil
+        // The instance is going away with its input session; the next turn on a
+        // fresh connection must not reuse an ID the old server may have retired.
+        voiceInputSessionActive = false
         voiceSyncEstimator.endSession()
         voiceSyncDelayLine.clear()
         deviceStreamSource?.stopAsynchronously()

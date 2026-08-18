@@ -1075,6 +1075,8 @@ extension TeamTalkConnectionController {
         // the flush below ends the SDK's input session.
         voiceSyncDelayLine.clear()
         _ = TT_InsertAudioBlock(instance, nil)
+        // The session this ID belonged to is gone; the next turn mints another.
+        voiceInputSessionActive = false
         inputAudioReady = false
         advancedMicrophoneTargetFormat = nil
         appliedAdvancedInputAudio = nil
@@ -1153,6 +1155,7 @@ extension TeamTalkConnectionController {
         }
         let inChannel = TT_GetMyChannelID(instance) > 0
         guard isEffectivelyTransmittingLocked, inChannel else {
+            endVoiceInputSessionLocked(instance: instance)
             AudioCaptureDiagnostics.shared.recordInsertAttempt(
                 sampleRate: chunk.sampleRate,
                 accepted: false,
@@ -1235,10 +1238,11 @@ extension TeamTalkConnectionController {
         // Re-checked at drain time: the channel may have been left while
         // chunks were queued — those drop, they don't retry.
         guard let instance, TT_GetMyChannelID(instance) > 0 else { return true }
+        beginVoiceInputSessionIfNeededLocked()
         return chunk.samples.withUnsafeBufferPointer { buffer -> Bool in
             guard let baseAddress = buffer.baseAddress else { return true }
             var audioBlock = AudioBlock()
-            audioBlock.nStreamID = chunk.streamID
+            audioBlock.nStreamID = currentVoiceStreamID
             audioBlock.nSampleRate = chunk.sampleRate
             audioBlock.nChannels = chunk.channels
             audioBlock.lpRawAudio = UnsafeMutableRawPointer(mutating: baseAddress)
@@ -1253,6 +1257,40 @@ extension TeamTalkConnectionController {
             noteVoiceInsertOutcomeLocked(accepted: accepted, chunk: chunk)
             return accepted
         }
+    }
+
+    /// Opens an audio-input session if none is running, minting a fresh stream ID.
+    ///
+    /// A server that runs its channel as a speaking queue (`CHANNEL_SOLO_TRANSMIT`)
+    /// does not merely drop you from the queue when your turn ends — it also
+    /// RETIRES the stream ID you were speaking under, and refuses everything
+    /// carrying it from then on ("Don't allow user to transmit until a new
+    /// stream (id) is started", `ServerChannel::CanTransmit`). The Qt client
+    /// gets a new one for free: each `TT_EnableVoiceTransmission(false/true)`
+    /// starts a session. We feed blocks instead, and our ID used to be minted
+    /// once when the capture engine started — so it never changed for a whole
+    /// session, whatever the mic gate did. First turn worked; every turn after
+    /// it was refused in silence, in every mic mode.
+    ///
+    /// So the ID now belongs to a turn, not to the engine.
+    func beginVoiceInputSessionIfNeededLocked() {
+        guard voiceInputSessionActive == false else { return }
+        currentVoiceStreamID = nextVoiceStreamIDLocked()
+        voiceInputSessionActive = true
+    }
+
+    /// Closes the audio-input session the SDK holds, so the next turn starts a
+    /// genuinely new stream rather than resuming the old one.
+    ///
+    /// Deferred while the voice-sync delay line still holds chunks: those belong
+    /// to the turn being closed and must go out under its own ID. The gate stays
+    /// shut and mic chunks keep arriving, so this is retried until the line
+    /// drains — no timer needed.
+    func endVoiceInputSessionLocked(instance: UnsafeMutableRawPointer) {
+        guard voiceInputSessionActive, voiceSyncDelayLine.isEmpty else { return }
+        voiceInputSessionActive = false
+        // Passing no block is how the SDK is told the input session is over.
+        _ = TT_InsertAudioBlock(instance, nil)
     }
 
     /// Tracks a run of refused inserts and heals it.

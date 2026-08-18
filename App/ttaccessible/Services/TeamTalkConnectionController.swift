@@ -321,6 +321,22 @@ final class TeamTalkConnectionController {
     /// what came before — the server sends the whole queue every time, never the
     /// change itself.
     var lastTransmitQueuePosition: Int?
+    /// Whether an audio-input session is open with the SDK — i.e. whether voice
+    /// blocks are currently flowing under `currentVoiceStreamID`.
+    var voiceInputSessionActive = false
+    /// Stream ID carried by the voice blocks of the session in progress. A new
+    /// one is minted every time the mic gate reopens, because a server can
+    /// refuse a stream ID it has already retired — see
+    /// `beginVoiceInputSessionIfNeededLocked`.
+    var currentVoiceStreamID: Int32 = 0
+    private var voiceStreamIDCounter: Int32 = 0
+
+    /// Next stream ID, wrapping at Int32.max and never returning 0 (the SDK
+    /// treats 0 as "no session").
+    func nextVoiceStreamIDLocked() -> Int32 {
+        voiceStreamIDCounter = voiceStreamIDCounter == Int32.max ? 1 : voiceStreamIDCounter + 1
+        return voiceStreamIDCounter
+    }
     /// Coalesced session-publish state: the message poll is fast (for smooth
     /// per-user audio), but the expensive full-tree `publishSessionLocked` is
     /// throttled to ~old cadence so it doesn't rebuild every tick during the
