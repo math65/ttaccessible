@@ -614,8 +614,21 @@ final class OutputAudioRenderEngine {
                 case .localMedia:
                     // Deeper buffer + high ceiling: the decoder can deliver in bursts
                     // and run slightly off the device clock without dropping/glitching.
-                    prime = max(Int(0.090 * rate), 64)
-                    maxF = max(Int(0.500 * rate), prime + 64)
+                    //
+                    // 90 ms was too tight to survive its own arithmetic. A single
+                    // pump can consume `targetFillFrames` at once — 45 ms — and
+                    // blocks land a whole tx interval at a time, 40 ms here: a
+                    // 90 ms reserve therefore ran on 5 ms of margin, and any
+                    // block five milliseconds late emptied it. A tester's log
+                    // shows what that costs: 192 underruns over 70 minutes, each
+                    // one 90 ms of silence while the source re-primes, on a
+                    // stream whose blocks all arrived, complete and on time
+                    // (288-294 delivered per 290 expected, window after window).
+                    // 250 ms buys ~165 ms of real margin. It is latency on the
+                    // local monitor of what WE broadcast — never on the voice
+                    // path, and never on what listeners receive.
+                    prime = max(Int(0.250 * rate), 64)
+                    maxF = max(Int(0.700 * rate), prime + 64)
                 }
                 source = PerUserMixSource(
                     channels: channels,
