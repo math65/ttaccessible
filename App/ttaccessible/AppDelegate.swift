@@ -268,6 +268,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             appMenu.addItem(quitItem)
         }
 
+        // The SwiftUI-declared Services submenu renders as a plain NSMenu that
+        // nothing has claimed. Claiming it is what makes the system fill it in,
+        // and a menu rebuild hands us a NEW unclaimed one — so re-wire on every
+        // pass, not just once.
+        if let servicesItem = appMenu.items.first(where: {
+            $0.submenu != nil && $0.title == L10n.text("app.menu.services")
+        }), let submenu = servicesItem.submenu, NSApp.servicesMenu !== submenu {
+            NSApp.servicesMenu = submenu
+        }
+
         repairAppMenuStandardItemsIfNeeded(appMenu: appMenu, appName: mainMenu.items[0].title)
 
         // Only the menus this app never declares are candidates: our own
