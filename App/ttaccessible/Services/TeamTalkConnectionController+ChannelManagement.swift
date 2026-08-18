@@ -58,6 +58,75 @@ extension TeamTalkConnectionController {
     }
 
 
+    // MARK: - Speaking queue (CHANNEL_SOLO_TRANSMIT)
+
+    /// Our position in the current channel's speaking queue, announced when it
+    /// changes. In a solo-transmit channel only one person is heard at a time:
+    /// everyone else waits in a server-held queue, and the server hands the
+    /// floor to whoever is at its head. The Qt client marks the two ends of a
+    /// turn with a sound; a client people navigate by ear can say where in the
+    /// line you actually stand, which is the part you cannot see.
+    ///
+    /// Returns whether anything was announced, so the caller can invalidate the
+    /// history it just added to.
+    @discardableResult
+    func updateTransmitQueueStateLocked(instance: UnsafeMutableRawPointer) -> Bool {
+        let myChannelID = TT_GetMyChannelID(instance)
+        var channel = Channel()
+        guard myChannelID > 0, TT_GetChannel(instance, myChannelID, &channel) != 0 else {
+            lastTransmitQueuePosition = nil
+            return false
+        }
+        // Every other channel type has no queue at all — forget any position
+        // silently rather than announcing a turn that just ended by leaving.
+        guard (channel.uChannelType & UInt32(CHANNEL_SOLO_TRANSMIT.rawValue)) != 0 else {
+            lastTransmitQueuePosition = nil
+            return false
+        }
+
+        let position = Self.transmitQueuePosition(in: &channel, userID: TT_GetMyUserID(instance))
+        let previous = lastTransmitQueuePosition
+        guard position != previous else { return false }
+        lastTransmitQueuePosition = position
+
+        if position == 0 {
+            SoundPlayer.shared.play(.txQueueStart)
+            appendHistoryLocked(kind: .transmitQueueChanged,
+                                message: L10n.text("history.transmitQueue.yourTurn"))
+            return true
+        }
+        if previous == 0 {
+            SoundPlayer.shared.play(.txQueueStop)
+            appendHistoryLocked(kind: .transmitQueueChanged,
+                                message: L10n.text("history.transmitQueue.turnEnded"))
+            return true
+        }
+        guard let position else {
+            // Left the queue without ever reaching its head: nothing happened
+            // that the user needs telling about.
+            return false
+        }
+        appendHistoryLocked(kind: .transmitQueueChanged,
+                            message: L10n.format("history.transmitQueue.position", position + 1))
+        return true
+    }
+
+    /// Index of `userID` in `channel.transmitUsersQueue`, or nil when absent.
+    /// The array is a C `INT32[16]` — a tuple once imported — in turn order and
+    /// terminated by a zero user ID, the way the Qt client reads its head.
+    static func transmitQueuePosition(in channel: inout Channel, userID: Int32) -> Int? {
+        guard userID > 0 else { return nil }
+        return withUnsafeBytes(of: &channel.transmitUsersQueue) { raw in
+            let entries = raw.bindMemory(to: Int32.self)
+            for index in entries.indices {
+                let queued = entries[index]
+                guard queued != 0 else { return nil }
+                if queued == userID { return index }
+            }
+            return nil
+        }
+    }
+
     func channelInfo(forChannelID channelID: Int32) -> ChannelInfo? {
         var channel = Channel()
         guard let instance, TT_GetChannel(instance, channelID, &channel) != 0 else {

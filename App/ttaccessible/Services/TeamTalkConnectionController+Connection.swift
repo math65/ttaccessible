@@ -997,6 +997,12 @@ extension TeamTalkConnectionController {
                     let currentUserID = TT_GetMyUserID(instance)
                     // Channel membership may have changed → reconcile per-user audio.
                     perUserAudioNeedsRefresh = true
+                    // A solo-transmit channel publishes its speaking queue through
+                    // the same channel update, so our own place in it is only ever
+                    // learned by comparing one update with the last.
+                    if updateTransmitQueueStateLocked(instance: instance) {
+                        publishInvalidation.insert(.history)
+                    }
                     switch message.nClientEvent {
                     case CLIENTEVENT_CMD_USER_LOGGEDIN:
                         if isSuppressingLoginHistoryLocked == false {
@@ -1132,6 +1138,9 @@ extension TeamTalkConnectionController {
             reusableInstance = instance
         }
 
+        // Forget where we stood in a speaking queue, or reconnecting into a
+        // solo-transmit channel would announce the end of a turn nobody took.
+        lastTransmitQueuePosition = nil
         voiceSyncEstimator.endSession()
         voiceSyncDelayLine.clear()
         deviceStreamSource?.stopAsynchronously()
@@ -1418,6 +1427,10 @@ extension TeamTalkConnectionController {
                     let currentUserID = TT_GetMyUserID(instance)
                     // Channel membership may have changed → reconcile per-user audio.
                     perUserAudioNeedsRefresh = true
+                    // A solo-transmit channel publishes its speaking queue through
+                    // the same channel update, so our own place in it is only ever
+                    // learned by comparing one update with the last.
+                    updateTransmitQueueStateLocked(instance: instance)
                     switch message.nClientEvent {
                     case CLIENTEVENT_CMD_USER_LOGGEDIN:
                         if isSuppressingLoginHistoryLocked == false {
