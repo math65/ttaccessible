@@ -1079,6 +1079,10 @@
 "user.menu.move" = "Déplacer vers un canal";
 
 "update.menu.checkForUpdates" = "Vérifier les mises à jour…";
+"history.transmitQueue.yourTurn" = "C'est à vous de parler";
+"history.transmitQueue.turnEnded" = "Votre tour de parole est terminé";
+"history.transmitQueue.position" = "Vous êtes en position %d dans la file d'attente";
+"preferences.historyEvent.transmitQueueChanged" = "Tour de parole en file d'attente";
 "app.menu.quit" = "Quitter %@";
 "app.menu.services" = "Services";
 "app.menu.hide" = "Masquer %@";

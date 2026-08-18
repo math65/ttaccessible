@@ -1081,6 +1081,10 @@
 "user.menu.move" = "Move to Channel";
 
 "update.menu.checkForUpdates" = "Check for Updates…";
+"history.transmitQueue.yourTurn" = "It's your turn to speak";
+"history.transmitQueue.turnEnded" = "Your turn to speak has ended";
+"history.transmitQueue.position" = "You are number %d in the speaking queue";
+"preferences.historyEvent.transmitQueueChanged" = "Speaking turn in a queue";
 "app.menu.quit" = "Quit %@";
 "app.menu.services" = "Services";
 "app.menu.hide" = "Hide %@";

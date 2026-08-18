@@ -316,6 +316,11 @@ final class TeamTalkConnectionController {
     /// Set when channel membership changes; the message loop reconciles per-user
     /// audio events on its next tick.
     var perUserAudioNeedsRefresh = false
+    /// Our own place in a solo-transmit channel's speaking queue, zero-based, or
+    /// nil when we are not queued at all. Kept so an update can be compared with
+    /// what came before — the server sends the whole queue every time, never the
+    /// change itself.
+    var lastTransmitQueuePosition: Int?
     /// Coalesced session-publish state: the message poll is fast (for smooth
     /// per-user audio), but the expensive full-tree `publishSessionLocked` is
     /// throttled to ~old cadence so it doesn't rebuild every tick during the
