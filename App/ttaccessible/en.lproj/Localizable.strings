@@ -259,6 +259,13 @@
 "connectedServer.channel.form.soloTransmit" = "Solo transmit (one speaker at a time)";
 "connectedServer.channel.form.noVoiceActivation" = "Disable voice activation (push-to-talk only)";
 "connectedServer.channel.form.noRecording" = "No audio recording";
+"connectedServer.channel.form.classroom" = "Classroom (only users an operator lists may speak)";
+"connectedServer.channel.form.operatorRecvOnly" = "Only operators hear transmissions";
+"connectedServer.channel.form.hidden" = "Hidden channel";
+"connectedServer.channel.form.operatorPassword" = "Operator password";
+"connectedServer.channel.form.transmitQueueDelay" = "Speaking queue: delay before the next person (ms)";
+"connectedServer.channel.form.voiceTimeOut" = "Voice time limit in seconds (0 for none)";
+"connectedServer.channel.form.mediaTimeOut" = "Media time limit in seconds (0 for none)";
 "connectedServer.channel.form.codec.title" = "Audio Codec";
 "connectedServer.channel.form.codec.channels" = "Audio channels";
 "connectedServer.channel.form.codec.channels.mono" = "Mono";

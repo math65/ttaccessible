@@ -37,6 +37,11 @@ extension ConnectedServerViewController {
         let props = ChannelProperties(
             name: "", topic: "", password: "", maxUsers: 200,
             isPermanent: false, isSoloTransmit: false, isNoVoiceActivation: false, isNoRecording: false,
+            isClassroom: false, isOperatorRecvOnly: false, isHidden: false,
+            operatorPassword: "",
+            // The SDK's own default: half a second before the floor moves on.
+            transmitQueueDelayMSec: 500,
+            voiceTimeOutMSec: 0, mediaFileTimeOutMSec: 0,
             opusCodec: parentCodec ?? OpusCodecSettings.defaultSettings,
             diskQuotaBytes: 0
         )
@@ -63,6 +68,22 @@ extension ConnectedServerViewController {
         }
     }
 
+    /// The SDK stores both time limits in milliseconds; the dialog shows seconds,
+    /// as the official client does. Zero reads as "no limit" and stays "0".
+    static func secondsText(fromMSec mSec: Int32) -> String {
+        guard mSec > 0 else { return "0" }
+        let seconds = Double(mSec) / 1000
+        return seconds == seconds.rounded()
+            ? String(Int(seconds))
+            : String(format: "%.1f", seconds)
+    }
+
+    static func mSec(fromSecondsText text: String) -> Int32 {
+        let normalized = text.replacingOccurrences(of: ",", with: ".")
+        guard let seconds = Double(normalized), seconds > 0 else { return 0 }
+        return Int32(max(0, min(Double(Int32.max), (seconds * 1000).rounded())))
+    }
+
     func promptUpdateChannel() {
         guard let window = view.window,
               let channel = selectedChannel else { return }
@@ -74,6 +95,13 @@ extension ConnectedServerViewController {
             maxUsers: info.maxUsers, isPermanent: info.isPermanent,
             isSoloTransmit: info.isSoloTransmit, isNoVoiceActivation: info.isNoVoiceActivation,
             isNoRecording: info.isNoRecording,
+            isClassroom: info.isClassroom,
+            isOperatorRecvOnly: info.isOperatorRecvOnly,
+            isHidden: info.isHidden,
+            operatorPassword: info.operatorPassword,
+            transmitQueueDelayMSec: info.transmitQueueDelayMSec,
+            voiceTimeOutMSec: info.voiceTimeOutMSec,
+            mediaFileTimeOutMSec: info.mediaFileTimeOutMSec,
             opusCodec: info.opusCodec,
             diskQuotaBytes: info.diskQuotaBytes
         )
@@ -196,6 +224,41 @@ extension ConnectedServerViewController {
         noRecCheck.state = properties.isNoRecording ? .on : .off
         noRecCheck.setAccessibilityLabel(L10n.text("connectedServer.channel.form.noRecording"))
 
+        let classroomCheck = NSButton(checkboxWithTitle: L10n.text("connectedServer.channel.form.classroom"), target: nil, action: nil)
+        classroomCheck.state = properties.isClassroom ? .on : .off
+        classroomCheck.setAccessibilityLabel(L10n.text("connectedServer.channel.form.classroom"))
+
+        let opRecvOnlyCheck = NSButton(checkboxWithTitle: L10n.text("connectedServer.channel.form.operatorRecvOnly"), target: nil, action: nil)
+        opRecvOnlyCheck.state = properties.isOperatorRecvOnly ? .on : .off
+        opRecvOnlyCheck.setAccessibilityLabel(L10n.text("connectedServer.channel.form.operatorRecvOnly"))
+
+        let hiddenCheck = NSButton(checkboxWithTitle: L10n.text("connectedServer.channel.form.hidden"), target: nil, action: nil)
+        hiddenCheck.state = properties.isHidden ? .on : .off
+        hiddenCheck.setAccessibilityLabel(L10n.text("connectedServer.channel.form.hidden"))
+
+        // Operator password: whoever joins with it becomes channel operator.
+        let opPasswordLabel = NSTextField(labelWithString: L10n.text("connectedServer.channel.form.operatorPassword"))
+        let opPasswordField = NSTextField(string: properties.operatorPassword)
+        opPasswordField.setAccessibilityLabel(L10n.text("connectedServer.channel.form.operatorPassword"))
+
+        // The three timings the official client keeps here. The queue delay sits
+        // in the form rather than behind a button of its own — where the Qt
+        // client hides it — because a dialog reached by keyboard should not make
+        // anyone go looking for a setting in a second window.
+        let queueDelayLabel = NSTextField(labelWithString: L10n.text("connectedServer.channel.form.transmitQueueDelay"))
+        let queueDelayField = NSTextField(string: String(properties.transmitQueueDelayMSec))
+        queueDelayField.setAccessibilityLabel(L10n.text("connectedServer.channel.form.transmitQueueDelay"))
+
+        // Both time limits are milliseconds in the SDK and seconds on screen,
+        // the way the official client shows them.
+        let voiceTimeOutLabel = NSTextField(labelWithString: L10n.text("connectedServer.channel.form.voiceTimeOut"))
+        let voiceTimeOutField = NSTextField(string: Self.secondsText(fromMSec: properties.voiceTimeOutMSec))
+        voiceTimeOutField.setAccessibilityLabel(L10n.text("connectedServer.channel.form.voiceTimeOut"))
+
+        let mediaTimeOutLabel = NSTextField(labelWithString: L10n.text("connectedServer.channel.form.mediaTimeOut"))
+        let mediaTimeOutField = NSTextField(string: Self.secondsText(fromMSec: properties.mediaFileTimeOutMSec))
+        mediaTimeOutField.setAccessibilityLabel(L10n.text("connectedServer.channel.form.mediaTimeOut"))
+
         // Audio codec controls
         let codecLabel = NSTextField(labelWithString: L10n.text("connectedServer.channel.form.codec.title"))
         codecLabel.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
@@ -277,8 +340,20 @@ extension ConnectedServerViewController {
         stack.addArrangedSubview(separator)
         NSLayoutConstraint.activate([separator.widthAnchor.constraint(equalToConstant: 320)])
 
-        for check in [permanentCheck, soloCheck, noVoxCheck, noRecCheck] {
+        for check in [permanentCheck, soloCheck, noVoxCheck, noRecCheck,
+                      classroomCheck, opRecvOnlyCheck, hiddenCheck] {
             stack.addArrangedSubview(check)
+        }
+
+        for item in [opPasswordLabel, opPasswordField,
+                     queueDelayLabel, queueDelayField,
+                     voiceTimeOutLabel, voiceTimeOutField,
+                     mediaTimeOutLabel, mediaTimeOutField] {
+            item.translatesAutoresizingMaskIntoConstraints = false
+            stack.addArrangedSubview(item)
+            if item is NSTextField, (item as? NSTextField)?.isEditable == true {
+                NSLayoutConstraint.activate([item.widthAnchor.constraint(equalToConstant: 320)])
+            }
         }
 
         // Codec section
@@ -351,6 +426,13 @@ extension ConnectedServerViewController {
                 isSoloTransmit: soloCheck.state == .on,
                 isNoVoiceActivation: noVoxCheck.state == .on,
                 isNoRecording: noRecCheck.state == .on,
+                isClassroom: classroomCheck.state == .on,
+                isOperatorRecvOnly: opRecvOnlyCheck.state == .on,
+                isHidden: hiddenCheck.state == .on,
+                operatorPassword: opPasswordField.stringValue,
+                transmitQueueDelayMSec: max(0, Int32(queueDelayField.stringValue) ?? 0),
+                voiceTimeOutMSec: Self.mSec(fromSecondsText: voiceTimeOutField.stringValue),
+                mediaFileTimeOutMSec: Self.mSec(fromSecondsText: mediaTimeOutField.stringValue),
                 opusCodec: codec,
                 diskQuotaBytes: diskQuotaBytes
             )

@@ -259,6 +259,13 @@
 "connectedServer.channel.form.soloTransmit" = "Transmission solo (un seul à la fois)";
 "connectedServer.channel.form.noVoiceActivation" = "Désactiver l'activation vocale (PTT uniquement)";
 "connectedServer.channel.form.noRecording" = "Pas d'enregistrement audio";
+"connectedServer.channel.form.classroom" = "Salle de classe (seules les personnes autorisées par un opérateur peuvent parler)";
+"connectedServer.channel.form.operatorRecvOnly" = "Seuls les opérateurs entendent les transmissions";
+"connectedServer.channel.form.hidden" = "Canal masqué";
+"connectedServer.channel.form.operatorPassword" = "Mot de passe opérateur";
+"connectedServer.channel.form.transmitQueueDelay" = "File d'attente : délai avant de donner la parole au suivant (ms)";
+"connectedServer.channel.form.voiceTimeOut" = "Durée maximale de la voix en secondes (0 pour aucune)";
+"connectedServer.channel.form.mediaTimeOut" = "Durée maximale du média en secondes (0 pour aucune)";
 "connectedServer.channel.form.codec.title" = "Codec audio";
 "connectedServer.channel.form.codec.channels" = "Canaux audio";
 "connectedServer.channel.form.codec.channels.mono" = "Mono";

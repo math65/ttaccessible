@@ -156,6 +156,13 @@ extension TeamTalkConnectionController {
             isSoloTransmit: (chanType & UInt32(CHANNEL_SOLO_TRANSMIT.rawValue)) != 0,
             isNoVoiceActivation: (chanType & UInt32(CHANNEL_NO_VOICEACTIVATION.rawValue)) != 0,
             isNoRecording: (chanType & UInt32(CHANNEL_NO_RECORDING.rawValue)) != 0,
+            isClassroom: (chanType & UInt32(CHANNEL_CLASSROOM.rawValue)) != 0,
+            isOperatorRecvOnly: (chanType & UInt32(CHANNEL_OPERATOR_RECVONLY.rawValue)) != 0,
+            isHidden: (chanType & UInt32(CHANNEL_HIDDEN.rawValue)) != 0,
+            operatorPassword: ttString(from: channel.szOpPassword),
+            transmitQueueDelayMSec: channel.nTransmitUsersQueueDelayMSec,
+            voiceTimeOutMSec: channel.nTimeOutTimerVoiceMSec,
+            mediaFileTimeOutMSec: channel.nTimeOutTimerMediaFileMSec,
             opusCodec: codec,
             diskQuotaBytes: channel.nDiskQuota
         )
@@ -188,7 +195,14 @@ extension TeamTalkConnectionController {
             if properties.isSoloTransmit { chanType |= UInt32(CHANNEL_SOLO_TRANSMIT.rawValue) }
             if properties.isNoVoiceActivation { chanType |= UInt32(CHANNEL_NO_VOICEACTIVATION.rawValue) }
             if properties.isNoRecording { chanType |= UInt32(CHANNEL_NO_RECORDING.rawValue) }
+            if properties.isClassroom { chanType |= UInt32(CHANNEL_CLASSROOM.rawValue) }
+            if properties.isOperatorRecvOnly { chanType |= UInt32(CHANNEL_OPERATOR_RECVONLY.rawValue) }
+            if properties.isHidden { chanType |= UInt32(CHANNEL_HIDDEN.rawValue) }
             chan.uChannelType = chanType
+            self.copyTTString(properties.operatorPassword, into: &chan.szOpPassword)
+            chan.nTransmitUsersQueueDelayMSec = properties.transmitQueueDelayMSec
+            chan.nTimeOutTimerVoiceMSec = properties.voiceTimeOutMSec
+            chan.nTimeOutTimerMediaFileMSec = properties.mediaFileTimeOutMSec
 
             // Apply audio codec: use provided settings or copy from parent
             if let opus = properties.opusCodec {
@@ -275,12 +289,22 @@ extension TeamTalkConnectionController {
                 | UInt32(CHANNEL_SOLO_TRANSMIT.rawValue)
                 | UInt32(CHANNEL_NO_VOICEACTIVATION.rawValue)
                 | UInt32(CHANNEL_NO_RECORDING.rawValue)
+                | UInt32(CHANNEL_CLASSROOM.rawValue)
+                | UInt32(CHANNEL_OPERATOR_RECVONLY.rawValue)
+                | UInt32(CHANNEL_HIDDEN.rawValue)
             chanType &= ~managedFlags
             if properties.isPermanent { chanType |= UInt32(CHANNEL_PERMANENT.rawValue) }
             if properties.isSoloTransmit { chanType |= UInt32(CHANNEL_SOLO_TRANSMIT.rawValue) }
             if properties.isNoVoiceActivation { chanType |= UInt32(CHANNEL_NO_VOICEACTIVATION.rawValue) }
             if properties.isNoRecording { chanType |= UInt32(CHANNEL_NO_RECORDING.rawValue) }
+            if properties.isClassroom { chanType |= UInt32(CHANNEL_CLASSROOM.rawValue) }
+            if properties.isOperatorRecvOnly { chanType |= UInt32(CHANNEL_OPERATOR_RECVONLY.rawValue) }
+            if properties.isHidden { chanType |= UInt32(CHANNEL_HIDDEN.rawValue) }
             chan.uChannelType = chanType
+            self.copyTTString(properties.operatorPassword, into: &chan.szOpPassword)
+            chan.nTransmitUsersQueueDelayMSec = properties.transmitQueueDelayMSec
+            chan.nTimeOutTimerVoiceMSec = properties.voiceTimeOutMSec
+            chan.nTimeOutTimerMediaFileMSec = properties.mediaFileTimeOutMSec
 
             if let opus = properties.opusCodec {
                 chan.audiocodec.nCodec = OPUS_CODEC
