@@ -259,7 +259,7 @@
 "connectedServer.channel.form.soloTransmit" = "Transmission solo (un seul à la fois)";
 "connectedServer.channel.form.noVoiceActivation" = "Désactiver l'activation vocale (PTT uniquement)";
 "connectedServer.channel.form.noRecording" = "Pas d'enregistrement audio";
-"connectedServer.channel.form.classroom" = "Salle de classe (seules les personnes autorisées par un opérateur peuvent parler)";
+"connectedServer.channel.form.classroom" = "Salle de classe — seules les personnes autorisées peuvent parler ; cette app ne sait pas encore donner la parole, gérez la liste depuis un autre client";
 "connectedServer.channel.form.operatorRecvOnly" = "Seuls les opérateurs entendent les transmissions";
 "connectedServer.channel.form.hidden" = "Canal masqué";
 "connectedServer.channel.form.operatorPassword" = "Mot de passe opérateur";
