@@ -268,6 +268,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             appMenu.addItem(quitItem)
         }
 
+        repairAppMenuStandardItemsIfNeeded(appMenu: appMenu, appName: mainMenu.items[0].title)
+
         // Only the menus this app never declares are candidates: our own
         // command menus can legitimately be empty for a while (the User menu is
         // built empty and hidden until connected), and dropping one would take
@@ -281,6 +283,104 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard ownMenuTitles.contains(item.title) == false else { continue }
             mainMenu.removeItem(item)
         }
+
+        // Last, so an empty Edit menu left behind by SwiftUI is dropped by the
+        // sweep above before this puts a working one in its place.
+        installEditMenuIfNeeded(mainMenu: mainMenu)
+    }
+
+    /// The rest of what macOS 12 leaves out of the app menu: Services, Hide,
+    /// Hide Others, Show All. Same cause as the missing Quit — an app whose
+    /// only Scene is `Settings` gets a stub app menu there — and the same
+    /// no-op on macOS 13+, where AppKit fills them in itself.
+    private func repairAppMenuStandardItemsIfNeeded(appMenu: NSMenu, appName: String) {
+        let hideSelector = #selector(NSApplication.hide(_:))
+        guard appMenu.items.contains(where: { $0.action == hideSelector }) == false else { return }
+        AudioLogger.log("app menu: no Hide item — adding the standard block")
+
+        // Before the separator that precedes Quit, which is where AppKit puts
+        // this block; appended if Quit somehow isn't there to anchor them.
+        var insertion = appMenu.items.count
+        if let quitIndex = appMenu.items.firstIndex(where: {
+            $0.action == #selector(NSApplication.terminate(_:))
+                || ($0.keyEquivalent == "q" && $0.keyEquivalentModifierMask == .command)
+        }) {
+            insertion = quitIndex
+            if insertion > 0, appMenu.items[insertion - 1].isSeparatorItem {
+                insertion -= 1
+            }
+        }
+
+        let servicesItem = NSMenuItem(title: L10n.text("app.menu.services"), action: nil, keyEquivalent: "")
+        let servicesMenu = NSMenu(title: L10n.text("app.menu.services"))
+        servicesItem.submenu = servicesMenu
+        // Handing it to NSApp is what makes the system populate it; an
+        // unclaimed submenu would stay empty forever.
+        NSApp.servicesMenu = servicesMenu
+
+        let hideItem = NSMenuItem(title: L10n.format("app.menu.hide", appName),
+                                  action: hideSelector, keyEquivalent: "h")
+        hideItem.target = NSApp
+
+        let hideOthersItem = NSMenuItem(title: L10n.text("app.menu.hideOthers"),
+                                        action: #selector(NSApplication.hideOtherApplications(_:)),
+                                        keyEquivalent: "h")
+        hideOthersItem.keyEquivalentModifierMask = [.command, .option]
+        hideOthersItem.target = NSApp
+
+        let showAllItem = NSMenuItem(title: L10n.text("app.menu.showAll"),
+                                     action: #selector(NSApplication.unhideAllApplications(_:)),
+                                     keyEquivalent: "")
+        showAllItem.target = NSApp
+
+        for item in [NSMenuItem.separator(), servicesItem, NSMenuItem.separator(),
+                     hideItem, hideOthersItem, showAllItem] {
+            appMenu.insertItem(item, at: insertion)
+            insertion += 1
+        }
+    }
+
+    /// Builds the Edit menu when the system didn't. macOS 12 costs this app the
+    /// whole menu, and with it every editing key equivalent: Command-V does
+    /// nothing in a text field unless a menu item claims that shortcut and
+    /// forwards it down the responder chain. A tester on a Mac mini could not
+    /// paste a stream address into the URL prompt at all.
+    ///
+    /// Every action is left targetless on purpose — that is what sends it to
+    /// whatever is editing, rather than to a fixed object.
+    private func installEditMenuIfNeeded(mainMenu: NSMenu) {
+        let pasteSelector = #selector(NSText.paste(_:))
+        let alreadyThere = mainMenu.items.contains { item in
+            item.submenu?.items.contains { $0.action == pasteSelector } == true
+        }
+        guard alreadyThere == false else { return }
+        AudioLogger.log("main menu: no Edit menu — building one")
+
+        let editMenu = NSMenu(title: L10n.text("edit.menu.title"))
+        // Undo and Redo take a sender, so they have no @objc counterpart to
+        // point #selector at — unlike the five below, which NSText declares.
+        editMenu.addItem(withTitle: L10n.text("edit.menu.undo"),
+                         action: NSSelectorFromString("undo:"), keyEquivalent: "z")
+        let redoItem = editMenu.addItem(withTitle: L10n.text("edit.menu.redo"),
+                                        action: NSSelectorFromString("redo:"), keyEquivalent: "z")
+        redoItem.keyEquivalentModifierMask = [.command, .shift]
+        editMenu.addItem(.separator())
+        editMenu.addItem(withTitle: L10n.text("edit.menu.cut"),
+                         action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        editMenu.addItem(withTitle: L10n.text("edit.menu.copy"),
+                         action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        editMenu.addItem(withTitle: L10n.text("edit.menu.paste"),
+                         action: pasteSelector, keyEquivalent: "v")
+        editMenu.addItem(withTitle: L10n.text("edit.menu.delete"),
+                         action: #selector(NSText.delete(_:)), keyEquivalent: "")
+        editMenu.addItem(.separator())
+        editMenu.addItem(withTitle: L10n.text("edit.menu.selectAll"),
+                         action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+
+        let editItem = NSMenuItem(title: L10n.text("edit.menu.title"), action: nil, keyEquivalent: "")
+        editItem.submenu = editMenu
+        // Right after the app menu, the place every Mac user reaches for it.
+        mainMenu.insertItem(editItem, at: min(1, mainMenu.items.count))
     }
 
     private func applyUserMenuVisibility() {
@@ -1789,11 +1889,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.accessoryView = urlField
         alert.window.initialFirstResponder = urlField
 
+        // Nothing to stream while the field is empty, so Start stays dimmed —
+        // the same contract the source sheet already honours (Stream is dimmed
+        // until a source is ticked). Emptiness is the only thing gated here:
+        // dimming a half-typed address would leave the button silently unusable
+        // with no way to hear why, whereas confirming a malformed one says so.
+        let startButton = alert.buttons.first
+        let syncStartButton = { [weak urlField, weak startButton] in
+            let typed = urlField?.stringValue.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            startButton?.isEnabled = !typed.isEmpty
+        }
+        let urlFieldWatcher = MediaStreamURLFieldWatcher(onChange: syncStartButton)
+        urlField.delegate = urlFieldWatcher
+        syncStartButton()
+
         guard let parentWindow = NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first else { return }
         // After the sheet is on screen: the field editor doesn't exist until the
         // combo box is first responder, so selecting any earlier is a no-op.
         DispatchQueue.main.async { urlField.selectText(nil) }
         alert.beginSheetModal(for: parentWindow) { [weak self] response in
+            // Holds the watcher for the sheet's lifetime — a combo box's
+            // delegate is weak, so nothing else keeps it alive.
+            withExtendedLifetime(urlFieldWatcher) {}
             guard response == .alertFirstButtonReturn, let self else { return }
             let raw = urlField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
             guard let url = URL(string: raw),
@@ -2791,6 +2908,30 @@ extension AppDelegate: NSWindowDelegate {
         guard menuState.mode == .connectedServer else { return true }
         disconnectServer()
         return false
+    }
+}
+
+/// Watches the media-stream URL field so the prompt's Start button can follow
+/// what it holds. A combo box needs both callbacks: typing (and pasting, and
+/// the inline completion) arrives as a text change, while picking a recent
+/// address off the list only arrives as a selection change.
+private final class MediaStreamURLFieldWatcher: NSObject, NSComboBoxDelegate {
+    private let onChange: () -> Void
+
+    init(onChange: @escaping () -> Void) {
+        self.onChange = onChange
+        super.init()
+    }
+
+    func controlTextDidChange(_ obj: Notification) {
+        onChange()
+    }
+
+    /// Sent BEFORE the combo box adopts the picked value, so the check is
+    /// deferred by one runloop pass — reading stringValue here still returns
+    /// the text the field had a moment ago.
+    func comboBoxSelectionDidChange(_ notification: Notification) {
+        DispatchQueue.main.async { [onChange] in onChange() }
     }
 }
 
