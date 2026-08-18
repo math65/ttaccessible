@@ -1,3 +1,21 @@
+## v1.12.0-beta.5 (build 51) — 2026-08-18
+
+Nearly all of this beta comes from one tester's evenings: a Mac mini on Monterey, and a nightly show relayed into a channel. Between them they turned up a menu macOS never built, a paste command that had no way of working, and a broadcast that broke up for reasons that had nothing to do with the broadcast.
+
+### Streaming
+- **Listening to your own broadcast no longer breaks up every few seconds.** The app keeps a small reserve of audio ahead of what it plays. For a stream, that reserve held about a tenth of a second — barely more than the app can take from it in one go — so anything arriving a hair late emptied it, and every time it emptied cost a tenth of a second of silence. It is now nearly three times deeper. This concerns what **you** hear of your own broadcast: your listeners receive the stream from the server, and were never affected by it.
+- **The Start button in the stream address window stays dimmed until there is an address to stream.**
+
+### macOS 12 (Monterey)
+- **Copy and paste work again, everywhere in the app.** The Edit menu was missing entirely on Monterey — and on macOS a keyboard shortcut only does something when a menu item claims it. With no Edit menu there was no Cut, Copy, Paste or Select All anywhere, which is why an address could not be pasted into the stream URL field.
+- **The app menu has Services, Hide, Hide Others and Show All back.** Same cause as the missing Quit item fixed in beta 3: on this system the app is handed a stub menu, and it now fills in what is missing.
+
+### Microphone
+- **A reconnection no longer leaves the microphone shut in "Both" mode.** In that mode the open or closed state of the mic was never written down anywhere, so reconnecting always came back with it closed, whatever you had before. It is now remembered like the other modes, and handed back when you rejoin.
+
+### Download
+[ttaccessible-1.12.0-beta.5-51.zip](https://github.com/math65/ttaccessible/releases/download/v1.12.0-beta.5/ttaccessible-1.12.0-beta.5-51.zip)
+
 ## v1.12.0-beta.4 (build 50) — 2026-08-15
 
 This one comes from a channel built to keep people quiet. Plenty of servers have one — "absent", "away", somewhere to park yourself while you sleep without logging off. Your microphone was useless in those, with nothing to tell you, and the app kept announcing a repair it was in no position to make.

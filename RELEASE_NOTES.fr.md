@@ -1,3 +1,21 @@
+## v1.12.0-beta.5 (build 51) — 18/08/2026
+
+Cette bêta doit presque tout aux soirées d'un testeur : un Mac mini sous Monterey, et une émission relayée chaque soir dans un canal. À eux deux, ils ont mis au jour un menu que macOS n'avait jamais construit, un coller qui n'avait aucune chance de fonctionner, et une diffusion qui se hachait pour des raisons étrangères à la diffusion.
+
+### Diffusion
+- **L'écoute de votre propre diffusion ne se hache plus toutes les quelques secondes.** L'application garde une petite réserve d'audio en avance sur ce qu'elle joue. Pour un flux, cette réserve tenait environ un dixième de seconde, à peine plus que ce que l'application peut y puiser d'un seul coup : le moindre retard la vidait, et chaque fois qu'elle se vidait, c'était un dixième de seconde de silence. Elle est désormais près de trois fois plus profonde. Cela concerne ce que **vous** entendez de votre propre diffusion : vos auditeurs, eux, reçoivent le flux depuis le serveur et n'ont jamais été concernés.
+- **Le bouton Diffuser reste estompé tant qu'aucune adresse n'a été saisie** dans la fenêtre de diffusion par adresse.
+
+### macOS 12 (Monterey)
+- **Copier et coller fonctionnent de nouveau, partout dans l'application.** Le menu Édition manquait purement et simplement sous Monterey — or, sous macOS, un raccourci clavier n'agit que si une entrée de menu le revendique. Sans menu Édition, il n'y avait donc ni Couper, ni Copier, ni Coller, ni Tout sélectionner nulle part : voilà pourquoi il était impossible de coller une adresse dans le champ de diffusion.
+- **Le menu de l'application retrouve Services, Masquer, Masquer les autres et Tout afficher.** Même origine que la commande Quitter corrigée dans la bêta 3 : sur ce système, l'application hérite d'un menu incomplet, et elle comble désormais ce qui manque.
+
+### Micro
+- **Une reconnexion ne vous laisse plus le micro fermé en mode « Les deux ».** Dans ce mode, l'état ouvert ou fermé du micro n'était consigné nulle part : toute reconnexion revenait donc micro fermé, quel que soit votre réglage précédent. Il est maintenant mémorisé comme dans les autres modes, et vous est rendu dès que vous rejoignez un canal.
+
+### Téléchargement
+[ttaccessible-1.12.0-beta.5-51.zip](https://github.com/math65/ttaccessible/releases/download/v1.12.0-beta.5/ttaccessible-1.12.0-beta.5-51.zip)
+
 ## v1.12.0-beta.4 (build 50) — 15/08/2026
 
 Celle-ci nous vient d'un canal fait pour qu'on s'y taise. Bien des serveurs en ont un — « absent », « pause », un endroit où se garer le temps d'une nuit sans quitter le serveur. Votre micro y était inutile sans que rien ne vous en avertisse, et l'application vous annonçait des réparations qu'elle n'était pas en mesure de faire.
