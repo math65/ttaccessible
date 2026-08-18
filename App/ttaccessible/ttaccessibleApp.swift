@@ -85,6 +85,34 @@ struct ttaccessibleApp: App {
                 .keyboardShortcut("q", modifiers: [.command])
             }
 
+            // Same macOS 12 hole, same cure as Quit above. A field report showed
+            // the AppKit-side repair being wiped: it inserts these items, then
+            // SwiftUI rebuilds the app menu and takes them with it — the Edit
+            // menu survives that report because it is a top-level menu SwiftUI
+            // doesn't own. Declared here, they belong to the menu's own
+            // construction and survive every rebuild.
+            CommandGroup(replacing: .appVisibility) {
+                Button(L10n.format("app.menu.hide", Self.appDisplayName)) {
+                    NSApp.hide(nil)
+                }
+                .keyboardShortcut("h", modifiers: [.command])
+                Button(L10n.text("app.menu.hideOthers")) {
+                    NSApp.hideOtherApplications(nil)
+                }
+                .keyboardShortcut("h", modifiers: [.command, .option])
+                Button(L10n.text("app.menu.showAll")) {
+                    NSApp.unhideAllApplications(nil)
+                }
+            }
+
+            // Services is a submenu, not a button — and it only fills once the
+            // NSMenu behind it is handed to NSApp.servicesMenu, which SwiftUI
+            // gives no way to do. AppDelegate's repair pass wires it after the
+            // menu is built (and re-wires it after every rebuild).
+            CommandGroup(replacing: .systemServices) {
+                Menu(L10n.text("app.menu.services")) {}
+            }
+
             CommandMenu(L10n.text("savedServers.menu.title")) {
                 if menuState.mode == .savedServers {
                     Button(L10n.text("savedServers.menu.new")) {
