@@ -552,7 +552,7 @@ final class ChannelFilesViewController: NSViewController {
     /// of the "reconnecting…" state.
     private func presentActionError(_ error: Error) {
         guard !TeamTalkConnectionError.isReconnectingDrop(error) else { return }
-        presentActionError(error)
+        presentActionError(error.localizedDescription)
     }
 
     private func announceNewTransfers(_ transfers: [FileTransferProgress]) {
