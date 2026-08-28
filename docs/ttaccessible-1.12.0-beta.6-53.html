@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ttaccessible-1.12.0-beta.6-53</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --code-bg: #f5f5f7;
+  --link: #0066cc;
+  --link-hover: #0040a0;
+  --rule: #e5e5ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #ececec;
+    --muted: #a0a0a0;
+    --code-bg: #2d2d2d;
+    --link: #4eaaff;
+    --link-hover: #82c4ff;
+    --rule: #3a3a3a;
+  }
+}
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  padding: 1rem 1.25rem 1.5rem;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.15rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.2em; }
+h3 { font-size: 1.02rem; }
+h4 { font-size: 0.95rem; color: var(--muted); }
+p { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; margin: 0.6em 0; }
+li { margin: 0.25em 0; }
+li > p { margin: 0.3em 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover, a:focus { color: var(--link-hover); text-decoration: underline; }
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.75em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+pre code { background: transparent; padding: 0; border-radius: 0; }
+blockquote {
+  border-left: 3px solid var(--rule);
+  margin: 0.8em 0;
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--muted);
+}
+hr { border: 0; border-top: 1px solid var(--rule); margin: 1.5em 0; }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<h2 id="v1120-beta6-build-53--2026-08-28">v1.12.0-beta.6 (build 53) —
+2026-08-28</h2>
+<p>Two fixes, both from testers' reports. One of them is a crash that
+has been in every release since 1.10.0, and it is also out today as
+v1.11.1 for everyone still on the stable channel.</p>
+<h3 id="fixes">Fixes</h3>
+<ul>
+<li><strong>A refused action now shows you the reason, instead of
+quitting the app.</strong> Whenever the server turned down a request —
+editing a channel, kicking or moving a user, sending a message,
+transferring a file — the app was supposed to open an alert explaining
+what happened. Instead it closed on the spot, losing your connection and
+anything you were in the middle of. Found thanks to a crash report from
+<strong>Ron J.</strong>, who noticed it always happened on one
+particular channel and took the trouble to narrow it down.</li>
+<li><strong>The app menu really does have Services, Hide, Hide Others
+and Show All back on macOS 12.</strong> Beta 5 claimed this and was
+wrong: the items were inserted, then SwiftUI rebuilt the menu and took
+them straight back out. They are now declared where the menu itself is
+built, the same cure that made Quit stick in beta 3. Reported, and
+disproved, by <strong>Ron J.</strong></li>
+</ul>
+<h3 id="known">Known</h3>
+<p>Error messages coming from the server are still shown in English,
+whatever language you use the app in — "Command not authorized" and its
+44 siblings come from the TeamTalk library untranslated. Now that these
+alerts appear at all, translating them is next.</p>
+<h3 id="install">Install</h3>
+<p>tt-Accessible will install this update for you automatically. To
+install by hand:</p>
+<ol type="1">
+<li>Download <code>ttaccessible-1.12.0-beta.6-53.zip</code> below.</li>
+<li>Unzip and drag <code>ttaccessible.app</code> into your
+<code>/Applications</code> folder, replacing the previous version.</li>
+<li>Double-click — no Gatekeeper warning thanks to notarization.</li>
+</ol>
+<h3 id="download">Download</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.12.0-beta.6/ttaccessible-1.12.0-beta.6-53.zip">ttaccessible-1.12.0-beta.6-53.zip</a></p>
+</body>
+</html>
