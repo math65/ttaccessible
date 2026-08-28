@@ -1406,7 +1406,7 @@ final class ConnectedServerViewController: NSViewController {
     /// genuine connection failure.
     func presentActionError(_ error: Error) {
         guard !TeamTalkConnectionError.isReconnectingDrop(error) else { return }
-        presentActionError(error)
+        presentActionError(error.localizedDescription)
     }
 
     @objc
