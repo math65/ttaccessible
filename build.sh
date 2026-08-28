@@ -30,6 +30,22 @@ if [[ $BETA -eq 1 ]]; then
     echo "==> Mode BETA : appcast taggé 'beta', release GitHub en prerelease"
 fi
 
+# `gh release create` sans --target pose le tag sur le dernier commit que le
+# REMOTE connaît, pas sur celui qu'on vient de construire. Le 2026-08-28, en
+# publiant 1.11.1 depuis une branche jamais poussée, les deux tags ont atterri
+# sur le commit de la beta.5. Vérifié ici, AVANT le build : découvrir ça après
+# 30 min de notarisation coûte la publication entière.
+if [[ $RELEASE -eq 1 ]] && command -v gh &> /dev/null; then
+    HEAD_SHA=$(git rev-parse HEAD)
+    if ! gh api "repos/{owner}/{repo}/commits/$HEAD_SHA" --silent 2>/dev/null; then
+        CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+        echo "✗ Le commit courant n'existe pas sur origin : $HEAD_SHA"
+        echo "  Le tag serait posé ailleurs que sur ce qui va être construit."
+        echo "  Poussez d'abord :  git push -u origin $CURRENT_BRANCH"
+        exit 1
+    fi
+fi
+
 echo "==> Build $SCHEME ($CONFIGURATION)..."
 xcodebuild \
     -project "$PROJECT" \
@@ -203,6 +219,7 @@ if [[ $RELEASE -eq 1 ]]; then
         gh release upload "$TAG" "$ZIP_PATH" --clobber
     else
         gh release create "$TAG" "$ZIP_PATH" \
+            --target "$HEAD_SHA" \
             --title "$TITLE" \
             --notes-file "$NOTES_FILE" \
             "${PRERELEASE_ARGS[@]}"
