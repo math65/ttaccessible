@@ -219,6 +219,13 @@ struct ConnectedServerSession: Equatable {
     let inputAudioReady: Bool
     let voiceTransmissionEnabled: Bool
     let canSendBroadcast: Bool
+    /// Server-side rule (ServerNode::UserBan): banning needs USERRIGHT_BAN_USERS,
+    /// NOT an admin account. Gating the ban actions on `isAdministrator` hid them
+    /// from accounts the server would have accepted — reported by David, 2026-08-28.
+    let canBanUsers: Bool
+    /// Same rule, for kicking off the server (ServerNode::UserKick, chanid == 0):
+    /// USERRIGHT_KICK_USERS, not an admin account.
+    let canKickUsers: Bool
     let isNicknameLocked: Bool
     let isStatusLocked: Bool
     let audioStatusText: String

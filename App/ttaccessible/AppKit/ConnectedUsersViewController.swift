@@ -365,9 +365,14 @@ final class ConnectedUsersViewController: NSViewController {
 
     /// Mirrors the gating in `ConnectedServerViewController.validateMenuItem` /
     /// `+OutlineDelegate`: moderation actions require the right privileges.
-    private var currentUserRights: (canModerate: Bool, isAdmin: Bool) {
-        guard let me = serverViewController?.session.currentUser else { return (false, false) }
-        return (me.isAdministrator || me.isChannelOperator, me.isAdministrator)
+    private var currentUserRights: (canModerate: Bool, canKickFromServer: Bool, canBan: Bool) {
+        guard let session = serverViewController?.session, let me = session.currentUser else {
+            return (false, false, false)
+        }
+        // Kicking off the server and banning are separate server-side RIGHTS
+        // (USERRIGHT_KICK_USERS / USERRIGHT_BAN_USERS), not an admin account —
+        // see ServerNode::UserKick and ::UserBan.
+        return (me.isAdministrator || me.isChannelOperator, session.canKickUsers, session.canBanUsers)
     }
 
     // MARK: - Actions
@@ -436,11 +441,13 @@ final class ConnectedUsersViewController: NSViewController {
                 return true
             })
         }
-        if rights.isAdmin {
+        if rights.canKickFromServer {
             actions.append(NSAccessibilityCustomAction(name: L10n.text("connectedUsers.action.kickServer")) { [weak self] in
                 self?.perform(user) { ctrl, u in ctrl.presentingWindow.map { ctrl.serverViewController?.performKick(u, fromServer: true, presentingWindow: $0) } }
                 return true
             })
+        }
+        if rights.canBan {
             actions.append(NSAccessibilityCustomAction(name: L10n.text("connectedUsers.action.kickBan")) { [weak self] in
                 self?.perform(user) { ctrl, u in ctrl.presentingWindow.map { ctrl.serverViewController?.performKickBan(u, presentingWindow: $0) } }
                 return true
@@ -488,7 +495,7 @@ final class ConnectedUsersViewController: NSViewController {
         opItem.target = self
         menu.addItem(opItem)
 
-        if rights.canModerate || rights.isAdmin {
+        if rights.canModerate || rights.canKickFromServer || rights.canBan {
             menu.addItem(.separator())
         }
         if rights.canModerate {
@@ -500,11 +507,12 @@ final class ConnectedUsersViewController: NSViewController {
             kickChannelItem.target = self
             menu.addItem(kickChannelItem)
         }
-        if rights.isAdmin {
+        if rights.canKickFromServer {
             let kickServerItem = NSMenuItem(title: L10n.text("connectedUsers.action.kickServer"), action: #selector(menuKickServer), keyEquivalent: "")
             kickServerItem.target = self
             menu.addItem(kickServerItem)
-
+        }
+        if rights.canBan {
             let kickBanItem = NSMenuItem(title: L10n.text("connectedUsers.action.kickBan"), action: #selector(menuKickBan), keyEquivalent: "")
             kickBanItem.target = self
             menu.addItem(kickBanItem)

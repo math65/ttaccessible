@@ -223,7 +223,8 @@ struct ttaccessibleApp: App {
                         appDelegate.openBannedUsers()
                     }
                     .keyboardShortcut("b", modifiers: [.command, .shift])
-                    .disabled(menuState.mode != .connectedServer || menuState.isAdministrator == false)
+                    // Listing bans needs USERRIGHT_BAN_USERS, not an admin account.
+                    .disabled(menuState.mode != .connectedServer || menuState.canBanUsers == false)
 
                     Button(L10n.text("serverProperties.menu.open")) {
                         appDelegate.openServerProperties()
@@ -323,12 +324,12 @@ struct ttaccessibleApp: App {
                         appDelegate.kickSelectedUserFromServer()
                     }
                     .keyboardShortcut("k", modifiers: [.command, .shift])
-                    .disabled(menuState.hasSingleSelectedOtherUser == false || menuState.isAdministrator == false)
+                    .disabled(menuState.hasSingleSelectedOtherUser == false || menuState.canKickUsers == false)
 
                     Button(L10n.text("user.menu.kickBan")) {
                         appDelegate.kickBanSelectedUser()
                     }
-                    .disabled(menuState.hasSingleSelectedOtherUser == false || menuState.isAdministrator == false)
+                    .disabled(menuState.hasSingleSelectedOtherUser == false || menuState.canBanUsers == false)
 
                     Button(L10n.text("user.menu.move")) {
                         appDelegate.moveSelectedUser()

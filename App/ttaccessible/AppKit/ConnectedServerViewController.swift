@@ -628,6 +628,8 @@ final class ConnectedServerViewController: NSViewController {
             inputAudioReady: update.inputAudioReady,
             voiceTransmissionEnabled: update.voiceTransmissionEnabled,
             canSendBroadcast: session.canSendBroadcast,
+            canBanUsers: session.canBanUsers,
+            canKickUsers: session.canKickUsers,
             isNicknameLocked: session.isNicknameLocked,
             isStatusLocked: session.isStatusLocked,
             audioStatusText: update.audioStatusText,
@@ -859,6 +861,8 @@ final class ConnectedServerViewController: NSViewController {
             inputAudioReady: session.inputAudioReady,
             voiceTransmissionEnabled: session.voiceTransmissionEnabled,
             canSendBroadcast: session.canSendBroadcast,
+            canBanUsers: session.canBanUsers,
+            canKickUsers: session.canKickUsers,
             isNicknameLocked: session.isNicknameLocked,
             isStatusLocked: session.isStatusLocked,
             audioStatusText: session.audioStatusText,
@@ -898,6 +902,8 @@ final class ConnectedServerViewController: NSViewController {
             inputAudioReady: session.inputAudioReady,
             voiceTransmissionEnabled: session.voiceTransmissionEnabled,
             canSendBroadcast: session.canSendBroadcast,
+            canBanUsers: session.canBanUsers,
+            canKickUsers: session.canKickUsers,
             isNicknameLocked: session.isNicknameLocked,
             isStatusLocked: session.isStatusLocked,
             audioStatusText: session.audioStatusText,
@@ -1209,9 +1215,9 @@ final class ConnectedServerViewController: NSViewController {
         case #selector(kickUserAction):
             return isOther && canModerate
         case #selector(kickUserFromServerAction):
-            return isOther && session.isAdministrator
+            return isOther && session.canKickUsers
         case #selector(kickBanUserAction):
-            return isOther && session.isAdministrator
+            return isOther && session.canBanUsers
         case #selector(moveUserAction):
             // Current user can move themselves; otherwise admin/op required
             let selectedUsers = selectedUserNodes()

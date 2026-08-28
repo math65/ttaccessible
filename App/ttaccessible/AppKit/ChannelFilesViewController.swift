@@ -148,6 +148,8 @@ final class ChannelFilesViewController: NSViewController {
             inputAudioReady: session.inputAudioReady,
             voiceTransmissionEnabled: session.voiceTransmissionEnabled,
             canSendBroadcast: session.canSendBroadcast,
+            canBanUsers: session.canBanUsers,
+            canKickUsers: session.canKickUsers,
             isNicknameLocked: session.isNicknameLocked,
             isStatusLocked: session.isStatusLocked,
             audioStatusText: session.audioStatusText,

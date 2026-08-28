@@ -319,6 +319,10 @@ extension TeamTalkConnectionController {
             && (myAccount.uUserType & UInt32(USERTYPE_ADMIN.rawValue)) != 0
         let canSendBroadcast = hasMyAccount
             && (myAccount.uUserRights & UInt32(USERRIGHT_TEXTMESSAGE_BROADCAST.rawValue)) != 0
+        let canBanUsers = hasMyAccount
+            && (myAccount.uUserRights & UInt32(USERRIGHT_BAN_USERS.rawValue)) != 0
+        let canKickUsers = hasMyAccount
+            && (myAccount.uUserRights & UInt32(USERRIGHT_KICK_USERS.rawValue)) != 0
         let isNicknameLocked = hasMyAccount
             && (myAccount.uUserRights & UInt32(USERRIGHT_LOCKED_NICKNAME.rawValue)) != 0
         let isStatusLocked = hasMyAccount
@@ -355,6 +359,8 @@ extension TeamTalkConnectionController {
             inputAudioReady: inputAudioReady,
             voiceTransmissionEnabled: microphoneGateOpenLocked,
             canSendBroadcast: canSendBroadcast,
+            canBanUsers: canBanUsers,
+            canKickUsers: canKickUsers,
             isNicknameLocked: isNicknameLocked,
             isStatusLocked: isStatusLocked,
             audioStatusText: makeAudioStatusText(),

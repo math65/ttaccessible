@@ -23,6 +23,8 @@ final class SavedServersMenuState: ObservableObject {
     @Published private(set) var isInChannel = false
     @Published private(set) var isAdministrator = false
     @Published private(set) var canSendBroadcast = false
+    @Published private(set) var canBanUsers = false
+    @Published private(set) var canKickUsers = false
     @Published private(set) var isNicknameLocked = false
     @Published private(set) var isStatusLocked = false
     @Published private(set) var hasSelectedUsers = false
@@ -82,6 +84,14 @@ final class SavedServersMenuState: ObservableObject {
 
     func setCanSendBroadcast(_ value: Bool) {
         if canSendBroadcast != value { canSendBroadcast = value }
+    }
+
+    func setCanBanUsers(_ value: Bool) {
+        if canBanUsers != value { canBanUsers = value }
+    }
+
+    func setCanKickUsers(_ value: Bool) {
+        if canKickUsers != value { canKickUsers = value }
     }
 
     func setNicknameLocked(_ value: Bool) {

@@ -2293,7 +2293,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func openBannedUsers() {
-        guard menuState.mode == .connectedServer, menuState.isAdministrator else { return }
+        // USERRIGHT_BAN_USERS, not an admin account — the server lists bans for
+        // anyone holding the right (ServerNode::ListUserBans).
+        guard menuState.mode == .connectedServer, menuState.canBanUsers else { return }
         if bannedUsersWindowController == nil {
             let vc = BannedUsersViewController(connectionController: connectionController)
             bannedUsersViewController = vc
@@ -2741,6 +2743,8 @@ extension AppDelegate: TeamTalkConnectionControllerDelegate {
         lastObservedSessionHistory = session.sessionHistory
         menuState.setAdministrator(session.isAdministrator)
         menuState.setCanSendBroadcast(session.canSendBroadcast)
+        menuState.setCanBanUsers(session.canBanUsers)
+        menuState.setCanKickUsers(session.canKickUsers)
         menuState.setNicknameLocked(session.isNicknameLocked)
         menuState.setStatusLocked(session.isStatusLocked)
         showConnectedServerWindow(session: session)
