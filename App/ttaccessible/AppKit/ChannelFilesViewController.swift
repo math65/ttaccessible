@@ -204,7 +204,7 @@ final class ChannelFilesViewController: NSViewController {
 
         let nameColumn = NSTableColumn(identifier: Col.name)
         nameColumn.title = L10n.text("files.column.name")
-        nameColumn.width = 280
+        nameColumn.width = 420
         nameColumn.sortDescriptorPrototype = NSSortDescriptor(key: "name", ascending: true)
 
         let sizeColumn = NSTableColumn(identifier: Col.size)

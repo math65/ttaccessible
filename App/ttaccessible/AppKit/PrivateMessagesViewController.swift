@@ -214,6 +214,11 @@ final class PrivateMessagesViewController: NSViewController {
         sendButton.action = #selector(sendCurrentMessage)
         sendButton.setAccessibilityLabel(L10n.text("privateMessages.send.accessibilityLabel"))
 
+        // Without this the field keeps its intrinsic width and the row leaves a wide gap
+        // before Send — the field was a third of the space it had.
+        messageField.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        sendButton.setContentHuggingPriority(.defaultHigh, for: .horizontal)
+
         let inputStack = NSStackView(views: [messageField, sendButton])
         inputStack.orientation = .horizontal
         inputStack.alignment = .centerY

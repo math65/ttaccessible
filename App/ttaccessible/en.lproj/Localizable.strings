@@ -252,7 +252,8 @@
 "connectedServer.channel.form.topic" = "Topic";
 "connectedServer.channel.form.password" = "Password";
 "connectedServer.channel.form.maxUsers" = "Maximum users";
-"connectedServer.channel.form.diskQuota" = "Disk quota for files (0 = only admins can upload)";
+"connectedServer.channel.form.diskQuota" = "Disk quota for files";
+"connectedServer.channel.form.diskQuota.hint" = "0 = only administrators can upload.";
 "connectedServer.channel.form.diskQuota.unit" = "Disk quota unit";
 "common.unit.kb" = "KB";
 "common.unit.mb" = "MB";

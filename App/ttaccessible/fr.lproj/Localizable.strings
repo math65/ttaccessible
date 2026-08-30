@@ -252,7 +252,8 @@
 "connectedServer.channel.form.topic" = "Sujet";
 "connectedServer.channel.form.password" = "Mot de passe";
 "connectedServer.channel.form.maxUsers" = "Nombre max d'utilisateurs";
-"connectedServer.channel.form.diskQuota" = "Quota de stockage des fichiers (0 = seuls les admins peuvent envoyer)";
+"connectedServer.channel.form.diskQuota" = "Quota de stockage des fichiers";
+"connectedServer.channel.form.diskQuota.hint" = "0 = seuls les administrateurs peuvent envoyer.";
 "connectedServer.channel.form.diskQuota.unit" = "Unité du quota de stockage";
 "common.unit.kb" = "Ko";
 "common.unit.mb" = "Mo";
