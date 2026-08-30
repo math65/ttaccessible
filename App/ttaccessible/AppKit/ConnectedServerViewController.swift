@@ -83,6 +83,8 @@ final class ConnectedServerViewController: NSViewController {
     let embeddedMediaStreamingControls = MediaStreamingPlayerViewController()
     var lastVideoDisplayState = VideoDisplayState.empty
     lazy var contextMenu: NSMenu = makeContextMenu()
+    /// The window's two panes; kept so the first launch can position the divider.
+    private weak var connectedSplitView: ConnectedServerSplitView?
 
     var session: ConnectedServerSession
     var localMuteState: [Int32: Bool] = [:]
@@ -143,6 +145,7 @@ final class ConnectedServerViewController: NSViewController {
 
     override func viewDidAppear() {
         super.viewDidAppear()
+        connectedSplitView?.applyDefaultPositionIfNeeded()
         configureKeyViewLoop()
         focusOutlineIfNeeded()
         startRelativeTimestampTimerIfNeeded()
@@ -455,8 +458,16 @@ final class ConnectedServerViewController: NSViewController {
         addChild(embeddedMediaStreamingControls)
         embeddedMediaStreamingControls.view.translatesAutoresizingMaskIntoConstraints = false
 
-        // -- Layout en colonne unique --
-        // Ordre : titre, statut, recherche, liste canaux, gains, audio, chat, message, historique
+        // -- Two-pane layout --
+        // The window used to be ONE tall column: server identity, channel tree, mixer, chat
+        // and history all stacked, each with its own minimum height, fighting over a window
+        // that was never tall enough — while a third of its width sat empty. The tree now
+        // lives in a sidebar and everything else in the content pane, which is what gives
+        // the mixer and the chat room to breathe.
+        //
+        // Reading order is deliberately UNCHANGED — sidebar (identity, mic, channels) then
+        // content (video, media, mixer, chat, input, history) — so VoiceOver walks the app
+        // in the same sequence as before, and Cmd+1…5 still land where they used to.
 
         let inputStack = NSStackView(views: [messageField, sendButton])
         inputStack.orientation = .horizontal
@@ -479,12 +490,23 @@ final class ConnectedServerViewController: NSViewController {
         audioControlsStack.spacing = 8
         audioControlsStack.translatesAutoresizingMaskIntoConstraints = false
 
-        let mainStack = NSStackView(views: [
+        // Sidebar: who you are, your mic, and where you can go.
+        let sidebarStack = NSStackView(views: [
             titleLabel,
             statusLabel,
             audioStatusLabel,
             microphoneButton,
-            channelsScrollView,
+            channelsScrollView
+        ])
+        sidebarStack.orientation = .vertical
+        sidebarStack.alignment = .leading
+        sidebarStack.spacing = 8
+        sidebarStack.setCustomSpacing(14, after: audioStatusLabel)
+        sidebarStack.setCustomSpacing(14, after: microphoneButton)
+        sidebarStack.translatesAutoresizingMaskIntoConstraints = false
+
+        // Content: what is being heard and said.
+        let mainStack = NSStackView(views: [
             collapsibleVideoPanel,
             audioControlsStack,
             channelMixerSectionView,
@@ -497,9 +519,32 @@ final class ConnectedServerViewController: NSViewController {
         mainStack.orientation = .vertical
         mainStack.alignment = .leading
         mainStack.spacing = 10
+        mainStack.setCustomSpacing(4, after: chatTitleLabel)
+        mainStack.setCustomSpacing(4, after: historyTitleLabel)
         mainStack.translatesAutoresizingMaskIntoConstraints = false
 
-        view.addSubview(mainStack)
+        let sidebarContainer = NSVisualEffectView()
+        sidebarContainer.material = .sidebar
+        sidebarContainer.blendingMode = .behindWindow
+        sidebarContainer.state = .followsWindowActiveState
+        sidebarContainer.translatesAutoresizingMaskIntoConstraints = false
+
+        let contentContainer = NSView()
+        contentContainer.translatesAutoresizingMaskIntoConstraints = false
+
+        sidebarContainer.addSubview(sidebarStack)
+        contentContainer.addSubview(mainStack)
+
+        let splitView = ConnectedServerSplitView()
+        splitView.isVertical = true
+        splitView.dividerStyle = .thin
+        splitView.translatesAutoresizingMaskIntoConstraints = false
+        splitView.addArrangedSubview(sidebarContainer)
+        splitView.addArrangedSubview(contentContainer)
+        splitView.autosaveName = "ConnectedServerSplit.v2"
+
+        view.addSubview(splitView)
+        connectedSplitView = splitView
 
         // A floor and a ceiling, both below `required` so the layout stays satisfiable:
         // the mixer keeps a usable size in a short window, and never eats a tall one.
@@ -508,13 +553,29 @@ final class ConnectedServerViewController: NSViewController {
         let mixerMaximumHeight = channelMixerSectionView.heightAnchor.constraint(lessThanOrEqualToConstant: 320)
         mixerMaximumHeight.priority = .defaultHigh
 
+        // The history is the one thing that can yield: it keeps a floor, but the chat is
+        // what should grow when the window does.
+        let historyHeight = historyScrollView.heightAnchor.constraint(equalToConstant: 150)
+        historyHeight.priority = .defaultLow
+
         NSLayoutConstraint.activate([
-            mainStack.topAnchor.constraint(equalTo: view.topAnchor, constant: 20),
-            mainStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            mainStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            mainStack.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -20),
-            channelsScrollView.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
+            splitView.topAnchor.constraint(equalTo: view.topAnchor),
+            splitView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            splitView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            splitView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+
+            sidebarStack.topAnchor.constraint(equalTo: sidebarContainer.topAnchor, constant: 20),
+            sidebarStack.leadingAnchor.constraint(equalTo: sidebarContainer.leadingAnchor, constant: 18),
+            sidebarStack.trailingAnchor.constraint(equalTo: sidebarContainer.trailingAnchor, constant: -18),
+            sidebarStack.bottomAnchor.constraint(equalTo: sidebarContainer.bottomAnchor, constant: -18),
+            channelsScrollView.widthAnchor.constraint(equalTo: sidebarStack.widthAnchor),
             channelsScrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 200),
+            microphoneButton.widthAnchor.constraint(equalTo: sidebarStack.widthAnchor),
+
+            mainStack.topAnchor.constraint(equalTo: contentContainer.topAnchor, constant: 20),
+            mainStack.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor, constant: 20),
+            mainStack.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor, constant: -20),
+            mainStack.bottomAnchor.constraint(equalTo: contentContainer.bottomAnchor, constant: -20),
             collapsibleVideoPanel.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
             channelMixerSectionView.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
             mixerMinimumHeight,
@@ -522,12 +583,12 @@ final class ConnectedServerViewController: NSViewController {
             audioControlsStack.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
             embeddedMediaStreamingControls.view.widthAnchor.constraint(equalTo: audioControlsStack.widthAnchor),
             chatScrollView.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
-            chatScrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 160),
+            chatScrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 180),
             inputStack.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
             historyScrollView.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
-            historyScrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 120),
-            sendButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 110),
-            microphoneButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 150)
+            historyScrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 110),
+            historyHeight,
+            sendButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 110)
         ])
     }
 

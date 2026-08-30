@@ -155,14 +155,19 @@ final class SavedServersWindowController: NSWindowController {
     /// that is below it (never shrink one the user has sized up, never exceed the screen).
     private func applyWindowSizing(for mode: SavedServersMenuState.Mode) {
         guard let window else { return }
-        let minimumHeight: CGFloat = mode == .connectedServer ? 820 : 420
-        window.minSize = NSSize(width: 680, height: minimumHeight)
-        let screenHeight = (window.screen ?? NSScreen.main)?.visibleFrame.height ?? minimumHeight
-        let target = min(minimumHeight, screenHeight)
-        guard window.frame.height < target else { return }
+        let connected = mode == .connectedServer
+        // The connected view is two panes wide — sidebar plus content — where the saved
+        // server list is a single short table.
+        let minimum = NSSize(width: connected ? 900 : 680, height: connected ? 820 : 420)
+        window.minSize = minimum
+        let visible = (window.screen ?? NSScreen.main)?.visibleFrame.size
+        let target = NSSize(width: min(connected ? 1060 : minimum.width, visible?.width ?? minimum.width),
+                            height: min(minimum.height, visible?.height ?? minimum.height))
+        guard window.frame.width < target.width || window.frame.height < target.height else { return }
         var frame = window.frame
-        frame.origin.y -= target - frame.height        // grow downward, keep the title bar put
-        frame.size.height = target
+        frame.origin.y -= max(0, target.height - frame.height)   // grow downward, title bar stays put
+        frame.size.width = max(frame.width, target.width)
+        frame.size.height = max(frame.height, target.height)
         window.setFrame(window.constrainFrameRect(frame, to: window.screen), display: true)
     }
 

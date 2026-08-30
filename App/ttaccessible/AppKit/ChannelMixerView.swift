@@ -80,6 +80,8 @@ private struct MixerFader: View {
             Slider(value: Binding(get: { value }, set: set), in: range)
             Text(display(value)).monospacedDigit().frame(width: 72, alignment: .trailing)
         }
+        // A fader spanning the whole content pane looks like a progress bar, not a control.
+        .frame(maxWidth: 620, alignment: .leading)
     }
 }
 
