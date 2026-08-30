@@ -59,6 +59,7 @@ final class SavedServersWindowController: NSWindowController {
             .sink { [weak self] newMode in
                 self?.rebuildToolbarItemsIfNeeded(for: newMode)
                 self?.refreshToolbarItems()
+                self?.applyWindowSizing(for: newMode)
             }
             .store(in: &cancellables)
 
@@ -146,6 +147,23 @@ final class SavedServersWindowController: NSWindowController {
                 break
             }
         }
+    }
+
+    /// The saved-servers list is a short window; the connected view is not — channel tree,
+    /// mixer, chat and history each carry their own minimum, and at 480 pt the history was
+    /// cut off by the window's own edge. Raise the floor with the mode, and grow a window
+    /// that is below it (never shrink one the user has sized up, never exceed the screen).
+    private func applyWindowSizing(for mode: SavedServersMenuState.Mode) {
+        guard let window else { return }
+        let minimumHeight: CGFloat = mode == .connectedServer ? 820 : 420
+        window.minSize = NSSize(width: 680, height: minimumHeight)
+        let screenHeight = (window.screen ?? NSScreen.main)?.visibleFrame.height ?? minimumHeight
+        let target = min(minimumHeight, screenHeight)
+        guard window.frame.height < target else { return }
+        var frame = window.frame
+        frame.origin.y -= target - frame.height        // grow downward, keep the title bar put
+        frame.size.height = target
+        window.setFrame(window.constrainFrameRect(frame, to: window.screen), display: true)
     }
 
     private func defaultIdentifiers(for mode: SavedServersMenuState.Mode) -> [NSToolbarItem.Identifier] {

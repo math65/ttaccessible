@@ -28,10 +28,19 @@ struct MixerDisplayStrip: Identifiable, Equatable {
     var soloed: Bool
 }
 
-/// One global level exposed by the mixer's "General" strip. Backed by the window's
-/// AudioGainControlViews rather than a second source of truth, so the strip and the
-/// window sliders always agree and share one persistence path. Values are in dB
-/// (-24…+24, 0 = unity) and shown as the same 0–100 % the window sliders speak.
+/// One global level's row in the VISIBLE mixer, mirroring MixerDisplayStrip. The General
+/// strip exists for the eye as well as for VoiceOver: these levels live nowhere else in
+/// the window's UI, so a sighted user must be able to reach them here.
+struct MixerDisplayGain: Identifiable, Equatable {
+    let id: Int          // position in globalGains
+    let label: String
+    var percent: Double
+}
+
+/// One global level exposed by the mixer's "General" strip — output, media bus,
+/// microphone, sound effects. Reads and writes go straight to the session/preferences
+/// through the window's applyXGain methods, which own normalisation, persistence and the
+/// push to the audio layer. Values are in dB (-24…+24, 0 = unity), shown as 0–100 %.
 struct MixerGlobalGain {
     let label: String
     let get: @MainActor @Sendable () -> Double
@@ -42,6 +51,8 @@ struct MixerGlobalGain {
 final class ChannelMixerCoordinator: ObservableObject {
     /// Published snapshot driving the on-screen SwiftUI strips (accessibilityHidden on mac).
     @Published private(set) var displayStrips: [MixerDisplayStrip] = []
+    /// The General strip, for the visible rendering.
+    @Published private(set) var displayGlobalGains: [MixerDisplayGain] = []
     let overlay = A11yVirtualGridOverlayView(frame: .zero)
     private weak var controller: TeamTalkConnectionController?
     private var session: ConnectedServerSession?
@@ -67,8 +78,13 @@ final class ChannelMixerCoordinator: ObservableObject {
     /// The global levels shown by the General strip, injected by the window (empty
     /// until then, in which case the strip is simply not built).
     var globalGains: [MixerGlobalGain] = [] {
-        didSet { overlay.rebuildStrips() }
+        didSet { overlay.rebuildStrips(); refreshGlobalGains() }
     }
+    /// Which of those levels the keyboard is aimed at. The General strip is navigated as
+    /// ONE element — VoiceOver's cursor stays on the group, exactly as it does on a user
+    /// strip — so left/right picks the level and up/down moves it. Its four controls stay
+    /// in the tree for whoever does step into them.
+    private var selectedGlobalGain = 0
 
     // Adjustment steps (VO swipe + keyboard arrows share these).
     private let volumeStep: Double = 2     // percent
@@ -131,14 +147,23 @@ final class ChannelMixerCoordinator: ObservableObject {
     }
 
     /// The "General" strip: the levels that belong to nobody in particular — output,
-    /// media bus, microphone, sound effects. It lives only in the accessibility overlay;
-    /// sighted users get the same four sliders drawn in the window's audio controls.
+    /// media bus, microphone, sound effects. Rendered both ways, like the user strips:
+    /// here for VoiceOver, and in ChannelMixerView for the eye.
     private func generalDescriptor() -> MixerStripDescriptor {
         MixerStripDescriptor(
             id: Self.generalStripID,
-            label: { L10n.text("mixer.general.label") },
+            label: { [weak self] in self?.generalStripLabel() },
             controls: globalGains.map { .slider(globalGainConfig($0)) }
         )
+    }
+
+    /// "General, Output volume" — which level the arrows are armed on, and NOT its value:
+    /// VoiceOver re-reads the focused element when its label changes, so a value in here
+    /// would be spoken a second time, late, after every single arrow press.
+    private func generalStripLabel() -> String {
+        let general = L10n.text("mixer.general.label")
+        guard let gain = selectedGain else { return general }
+        return [general, gain.label].joined(separator: ", ")
     }
 
     /// dB in, percent out — the window sliders' own mapping, so both routes speak the
@@ -153,6 +178,61 @@ final class ChannelMixerCoordinator: ObservableObject {
             decrementValue: { [volumeStep] v in max(0, v - volumeStep) },
             minValue: 0, maxValue: 100, resetValue: 50
         )
+    }
+
+    /// One step on the General strip's level at `index` (its position in the strip).
+    /// Routed through the very config the overlay exposes, so the arrow keys and the
+    /// VoiceOver increment/decrement gestures can never drift apart.
+    /// `step` overrides the mixer's own 2 % step — Cmd+arrows have moved these levels by
+    /// 1 % since long before the mixer existed, and that is not something to change here.
+    func nudgeGlobalGain(_ index: Int, up: Bool, step: Double? = nil) -> String? {
+        guard globalGains.indices.contains(index) else { return nil }
+        selectedGlobalGain = index
+        let config = globalGainConfig(globalGains[index])
+        guard let current = config.getValue() else { return nil }
+        let delta = step ?? volumeStep
+        let value = min(100, max(0, current + (up ? delta : -delta)))
+        config.setValue(value)
+        refreshGlobalGains()
+        return config.getDisplayString(value)
+    }
+
+    /// Up/Down on the General strip itself: move the selected level.
+    func nudgeSelectedGlobalGain(up: Bool) -> String? {
+        nudgeGlobalGain(selectedGlobalGain, up: up)
+    }
+
+    /// Left/Right on the General strip: pick the level the arrows act on. Announced with
+    /// its name AND value, since this is the only thing that says which one is armed.
+    func selectGlobalGain(next: Bool) -> String? {
+        guard !globalGains.isEmpty else { return nil }
+        let count = globalGains.count
+        selectedGlobalGain = ((selectedGlobalGain + (next ? 1 : -1)) % count + count) % count
+        return announceSelectedGlobalGain()
+    }
+
+    /// "Output volume, 50 %" — the selected level, name included.
+    func announceSelectedGlobalGain() -> String? {
+        guard let gain = selectedGain else { return nil }
+        return [gain.label, globalGainPercentString(gain)].joined(separator: ", ")
+    }
+
+    /// Double-tap V on the General strip, mirroring a user strip's voice reset.
+    func resetSelectedGlobalGain() -> String? {
+        guard let gain = selectedGain else { return nil }
+        let config = globalGainConfig(gain)
+        guard let reset = config.resetValue else { return nil }
+        config.setValue(reset)
+        refreshGlobalGains()
+        return [gain.label, config.getDisplayString(reset)].joined(separator: ", ")
+    }
+
+    private var selectedGain: MixerGlobalGain? {
+        globalGains.indices.contains(selectedGlobalGain) ? globalGains[selectedGlobalGain] : nil
+    }
+
+    private func globalGainPercentString(_ gain: MixerGlobalGain) -> String {
+        L10n.format("mixer.value.percent", Int(AudioGainControlView.percent(forGainDB: gain.get()).rounded()))
     }
 
     private func descriptor(for user: ConnectedServerUser) -> MixerStripDescriptor {
@@ -370,6 +450,7 @@ final class ChannelMixerCoordinator: ObservableObject {
 
     /// Rebuild the published snapshot for the on-screen strips from current state.
     func refreshDisplay() {
+        refreshGlobalGains()
         displayStrips = usersInChannel().map { u in
             MixerDisplayStrip(id: u.id, name: u.displayName,
                               voicePercent: currentVoicePercent(u.id),
@@ -379,6 +460,24 @@ final class ChannelMixerCoordinator: ObservableObject {
                               muted: isMuted(u.id),
                               soloed: isSoloed(u.id))
         }
+    }
+
+    /// Republish the General strip's levels for the visible mixer. Cheap (four reads), so
+    /// it rides along with every display refresh and every keyboard nudge.
+    private func refreshGlobalGains() {
+        displayGlobalGains = globalGains.enumerated().map { index, gain in
+            MixerDisplayGain(id: index, label: gain.label,
+                             percent: AudioGainControlView.percent(forGainDB: gain.get()))
+        }
+    }
+
+    /// The visible fader's write path (mouse). Also arms that level for the keyboard, so
+    /// the two routes agree on which level is current.
+    func setGlobalGain(_ index: Int, percent: Double) {
+        guard globalGains.indices.contains(index) else { return }
+        selectedGlobalGain = index
+        globalGains[index].set(AudioGainControlView.gainDB(forPercent: percent))
+        refreshGlobalGains()
     }
 
     func currentVoicePercent(_ id: Int32) -> Double { voicePercent(id) }

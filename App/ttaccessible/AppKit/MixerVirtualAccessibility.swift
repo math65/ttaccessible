@@ -109,6 +109,10 @@ final class VirtualControlView: NSView {
     }
 
     let config: Config
+    /// "channel-strip-<stripID>-control-<index>", set by the owning strip. The keyboard
+    /// controller reads it off VoiceOver's AX cursor to know WHICH control is focused —
+    /// the General strip's arrows act on the focused level, not on a fixed one.
+    var axIdentifier: String?
     private var announceToggle = false
     private var cachedPickerController: VirtualPickerController?
 
@@ -132,6 +136,8 @@ final class VirtualControlView: NSView {
     // MARK: Accessibility identity
 
     override func isAccessibilityElement() -> Bool { true }
+
+    override func accessibilityIdentifier() -> String { axIdentifier ?? "" }
 
     override func accessibilityRole() -> NSAccessibility.Role? {
         switch config {
@@ -442,8 +448,9 @@ final class VirtualStripView: NSView, MixerRegionAnnouncing {
         self.labelProvider = descriptor.label
         super.init(frame: .zero)
         setAccessibilityIdentifier("channel-strip-\(descriptor.id)")
-        for cfg in descriptor.controls {
+        for (index, cfg) in descriptor.controls.enumerated() {
             let control = VirtualControlView(config: cfg)
+            control.axIdentifier = "channel-strip-\(descriptor.id)-control-\(index)"
             addSubview(control)
             childElements.append(control)
         }
