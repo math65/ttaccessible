@@ -12,6 +12,9 @@
 //    v / p / m      -> announce voice volume / voice pan / mute (single tap); reset 50% /
 //                      center / toggle mute (double tap)
 //    Cmd+p          -> announce media pan (single tap); reset media pan to center (double)
+//    Cmd+Shift+Up/Down -> the MEDIA BUS level (every media stream at once), from anywhere
+//                      in the window — the point is to duck the music without first
+//                      navigating to the mixer.
 //  Single/double-tap and key-repeat use the ported KeyCommandHandler / ArrowRepeatHandler.
 //  The focused user is resolved from VoiceOver's AX cursor (the "channel-strip-<id>"
 //  identifier set by the virtual-accessibility tree), so plain arrows are only hijacked
@@ -27,14 +30,19 @@ final class ChannelMixerKeyboardController {
     private weak var coordinator: ChannelMixerCoordinator?
     /// Adjust the master/output volume one step (up==true) and return the announcement.
     private let masterVolumeAdjust: (Bool) -> String?
+    /// Same, for the media bus (Cmd+Shift+Up/Down).
+    private let mediaVolumeAdjust: (Bool) -> String?
 
     private var monitor: Any?
     private let keyHandler = KeyCommandHandler()
     private let arrowRepeat = ArrowRepeatHandler()
 
-    init(coordinator: ChannelMixerCoordinator, masterVolumeAdjust: @escaping (Bool) -> String?) {
+    init(coordinator: ChannelMixerCoordinator,
+         masterVolumeAdjust: @escaping (Bool) -> String?,
+         mediaVolumeAdjust: @escaping (Bool) -> String?) {
         self.coordinator = coordinator
         self.masterVolumeAdjust = masterVolumeAdjust
+        self.mediaVolumeAdjust = mediaVolumeAdjust
     }
 
     func start() {
@@ -70,13 +78,28 @@ final class ChannelMixerKeyboardController {
 
         let mods = event.modifierFlags
         let cmd = mods.contains(.command)
-        let plain = !cmd && !mods.contains(.option) && !mods.contains(.control)
+        let shift = mods.contains(.shift)
+        let plain = !cmd && !shift && !mods.contains(.option) && !mods.contains(.control)
+
+        // Cmd+Shift+Up/Down -> the media bus, wherever the cursor is. Deliberately NOT
+        // gated on the mixer: ducking every media stream is the one level you want to
+        // reach while reading the channel tree, mid-conversation.
+        if cmd, shift, !mods.contains(.option), !mods.contains(.control),
+           let arrow, arrow == .up || arrow == .down {
+            arrowRepeat.start(key: arrow) { [weak self] in
+                if let text = self?.mediaVolumeAdjust(arrow == .up) { self?.announce(text) }
+            }
+            return true
+        }
 
         // Cmd+Up/Down:
         //   • on a mixer strip -> that user's media-file volume
         //   • anywhere else     -> master (output) volume
-        if cmd, !mods.contains(.option), !mods.contains(.control),
+        if cmd, !shift, !mods.contains(.option), !mods.contains(.control),
            let arrow, arrow == .up || arrow == .down {
+            // On the General strip VoiceOver already drives the focused slider itself —
+            // stealing the arrows there would move the wrong level.
+            if isFocusOnGeneralStrip() { arrowRepeat.stop(); return false }
             if let uid = findFocusedStripUserID() {
                 arrowRepeat.start(key: arrow) { [weak self] in
                     guard let self, let c = self.coordinator else { return }
@@ -93,9 +116,10 @@ final class ChannelMixerKeyboardController {
         // Cmd+Left/Right -> the focused user's MEDIA-file pan (mirrors Cmd+Up/Down media
         // volume). Strip-gated only: unlike media volume, media pan has no off-strip
         // meaning, so off a strip these pass straight through.
-        if cmd, !mods.contains(.option), !mods.contains(.control),
+        if cmd, !shift, !mods.contains(.option), !mods.contains(.control),
            let arrow, arrow == .left || arrow == .right {
-            guard let uid = findFocusedStripUserID() else { arrowRepeat.stop(); return false }
+            guard let uid = findFocusedStripUserID(), uid != ChannelMixerCoordinator.generalStripID
+            else { arrowRepeat.stop(); return false }
             arrowRepeat.start(key: arrow) { [weak self] in
                 guard let self, let c = self.coordinator else { return }
                 self.announce(c.nudgeMediaPan(uid, right: arrow == .right))
@@ -105,9 +129,10 @@ final class ChannelMixerKeyboardController {
 
         // Cmd+P -> announce (single) / reset-center (double) the focused user's media pan,
         // mirroring plain P for voice pan. Strip-gated, so off a strip Cmd+P is untouched.
-        if cmd, !mods.contains(.option), !mods.contains(.control),
+        if cmd, !shift, !mods.contains(.option), !mods.contains(.control),
            event.charactersIgnoringModifiers?.lowercased() == "p" {
-            guard let uid = findFocusedStripUserID() else { return false }
+            guard let uid = findFocusedStripUserID(), uid != ChannelMixerCoordinator.generalStripID
+            else { return false }
             keyHandler.handle(key: "cmd-p",
                 onSingle: { [weak self] in self?.announceFrom { $0.announceMediaPan(uid) } },
                 onDouble: { [weak self] in self?.announceFrom { $0.resetMediaPan(uid) } })
@@ -124,7 +149,8 @@ final class ChannelMixerKeyboardController {
             || ((event.charactersIgnoringModifiers?.lowercased()).map { ["v", "p", "m", "s"].contains($0) } ?? false)
         guard isMixerKey else { return false }
 
-        guard let uid = findFocusedStripUserID(), coordinator != nil else {
+        guard let uid = findFocusedStripUserID(), coordinator != nil,
+              uid != ChannelMixerCoordinator.generalStripID else {
             arrowRepeat.stop(); return false
         }
 
@@ -192,6 +218,10 @@ final class ChannelMixerKeyboardController {
         case NSRightArrowFunctionKey: return .right
         default: return nil
         }
+    }
+
+    private func isFocusOnGeneralStrip() -> Bool {
+        findFocusedStripUserID() == ChannelMixerCoordinator.generalStripID
     }
 
     /// Walk the AX parent chain of VoiceOver's focused element for a "channel-strip-<id>".

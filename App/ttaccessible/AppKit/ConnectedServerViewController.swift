@@ -65,7 +65,8 @@ final class ConnectedServerViewController: NSViewController {
     lazy var channelMixerSectionView: NSView = buildChannelMixerSection()
     lazy var channelMixerKeyboardController = ChannelMixerKeyboardController(
         coordinator: channelMixerCoordinator,
-        masterVolumeAdjust: { [weak self] up in self?.outputGainControl.adjustAndDescribe(up: up) }
+        masterVolumeAdjust: { [weak self] up in self?.outputGainControl.adjustAndDescribe(up: up) },
+        mediaVolumeAdjust: { [weak self] up in self?.mediaGainControl.adjustAndDescribe(up: up) }
     )
     let embeddedMediaStreamingControls = MediaStreamingPlayerViewController()
     var lastVideoDisplayState = VideoDisplayState.empty
@@ -80,6 +81,12 @@ final class ConnectedServerViewController: NSViewController {
         accessibilityLabel: L10n.text("connectedServer.audio.outputGain.accessibilityLabel")
     ) { [weak self] value in
         self?.applyOutputGain(value)
+    }
+    lazy var mediaGainControl = AudioGainControlView(
+        title: L10n.text("connectedServer.audio.mediaGain.label"),
+        accessibilityLabel: L10n.text("connectedServer.audio.mediaGain.accessibilityLabel")
+    ) { [weak self] value in
+        self?.applyMediaGain(value)
     }
     lazy var soundEffectsGainControl = AudioGainControlView(
         title: L10n.text("connectedServer.audio.soundEffectsGain.label"),
@@ -475,6 +482,7 @@ final class ConnectedServerViewController: NSViewController {
 
         let audioControlsStack = NSStackView(views: [
             outputGainControl,
+            mediaGainControl,
             inputGainControl,
             soundEffectsGainControl,
             embeddedMediaStreamingControls.view
@@ -518,6 +526,7 @@ final class ConnectedServerViewController: NSViewController {
             audioControlsStack.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
             outputGainControl.widthAnchor.constraint(equalTo: audioControlsStack.widthAnchor),
             inputGainControl.widthAnchor.constraint(equalTo: audioControlsStack.widthAnchor),
+            mediaGainControl.widthAnchor.constraint(equalTo: audioControlsStack.widthAnchor),
             soundEffectsGainControl.widthAnchor.constraint(equalTo: audioControlsStack.widthAnchor),
             embeddedMediaStreamingControls.view.widthAnchor.constraint(equalTo: audioControlsStack.widthAnchor),
             chatScrollView.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
@@ -733,6 +742,7 @@ final class ConnectedServerViewController: NSViewController {
         }
         inputGainControl.setValue(session.inputGainDB)
         outputGainControl.setValue(session.outputGainDB)
+        mediaGainControl.setValue(preferencesStore.preferences.mediaGainDB)
         soundEffectsGainControl.setValue(preferencesStore.preferences.soundEffectsGainDB)
     }
 
@@ -915,6 +925,14 @@ final class ConnectedServerViewController: NSViewController {
             mediaStreamingHasVideo: session.mediaStreamingHasVideo
         )
         updateAudioControls()
+    }
+
+    func applyMediaGain(_ value: Double) {
+        // The media bus level is global (not per-session): persist it, then hand it to
+        // the render engine, which applies it to every media source at mix time.
+        let normalized = AppPreferences.clampGainDB(value)
+        preferencesStore.updateMediaGainDB(normalized)
+        connectionController.applyMediaGainDB(normalized)
     }
 
     func applySoundEffectsGain(_ value: Double) {

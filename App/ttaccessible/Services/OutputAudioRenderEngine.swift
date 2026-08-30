@@ -47,6 +47,15 @@ struct OutputUserMixSettings: Equatable {
     var muted: Bool = false
 }
 
+/// Which mix bus a source belongs to. Voice and media are separate sources in our
+/// per-user mix (see `outputMediaSourceKey`), so a single bus gain can duck EVERY
+/// media stream — remote streamers, bots, and our own monitored stream — without
+/// touching a single voice, and without disturbing the per-user volumes the SDK holds.
+enum OutputMixBus {
+    case voice
+    case media
+}
+
 /// Buffering profile for a mix source, picked by how its PCM is delivered.
 enum OutputSourceBufferProfile {
     /// Regularly-clocked real-time source (the local mic "hear myself" monitor):
@@ -150,6 +159,7 @@ private final class PerUserMixSource {
     private var head: Int = 0
     let channels: Int
     var settings: OutputUserMixSettings
+    var bus: OutputMixBus = .voice
     private let primeFrames: Int
     private let maxFrames: Int
     private var isPrimed = false
@@ -266,6 +276,8 @@ final class OutputAudioRenderEngine {
 
     // MARK: Per-user mix sources (serial queue only)
     private var userSources: [Int32: PerUserMixSource] = [:]
+    /// Linear gain applied to every `.media` source at mix time (engineQueue only).
+    private var mediaBusGain: Float = 1
     private var defaultUserSettings: [Int32: OutputUserMixSettings] = [:]
 
     // Effective channel count per source key (1 mono / 2 stereo) for the mixer's
@@ -542,6 +554,16 @@ final class OutputAudioRenderEngine {
         muteCell.pointee = muted ? 1 : 0
     }
 
+    /// Gain for the whole media bus — every media-file stream, remote or our own
+    /// monitored one. Unlike the master (a cell read by the render callback), this is
+    /// applied per source at mix time, so it hops to the queue that owns `userSources`.
+    func setMediaBusGainDB(_ gainDB: Double) {
+        let linear = Float(AppPreferences.linearGain(forGainDB: gainDB))
+        engineQueue.async { [weak self] in
+            self?.mediaBusGain = linear
+        }
+    }
+
     // MARK: - Per-user controls (engineQueue)
 
     func setUserSettings(_ settings: OutputUserMixSettings, for userID: Int32) {
@@ -593,7 +615,7 @@ final class OutputAudioRenderEngine {
 
     /// `profile` selects the buffering target by how this source is delivered (see
     /// OutputSourceBufferProfile). Defaults to `.network` (remote users).
-    func enqueueUser(_ userID: Int32, pcm: [Int16], frames: Int, channels: Int, sampleRate: Double, profile: OutputSourceBufferProfile = .network) {
+    func enqueueUser(_ userID: Int32, pcm: [Int16], frames: Int, channels: Int, sampleRate: Double, profile: OutputSourceBufferProfile = .network, bus: OutputMixBus = .voice) {
         engineQueue.async { [weak self] in
             guard let self, self.isRunning, frames > 0, channels > 0, self.deviceSampleRate > 0 else { return }
 
@@ -638,6 +660,7 @@ final class OutputAudioRenderEngine {
                 )
                 self.userSources[userID] = source
             }
+            source.bus = bus
 
             if abs(sampleRate - self.deviceSampleRate) < 0.5 {
                 source.append(pcm)
@@ -681,7 +704,8 @@ final class OutputAudioRenderEngine {
             guard let acc = accBuf.baseAddress else { return }
             ttac_mix_clear(acc, Int32(needed))
             for src in active {
-                let (lg, rg) = Self.panGains(volume: src.settings.volume, pan: src.settings.pan)
+                let busGain = src.bus == .media ? mediaBusGain : 1
+                let (lg, rg) = Self.panGains(volume: src.settings.volume * busGain, pan: src.settings.pan)
                 // A stereo sender panned off center is downmixed to mono first, so
                 // the pan repositions the sound instead of just fading one channel's
                 // content ("lopsided stereo"). Centered stereo stays true stereo.

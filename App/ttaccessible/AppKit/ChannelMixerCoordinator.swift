@@ -28,6 +28,16 @@ struct MixerDisplayStrip: Identifiable, Equatable {
     var soloed: Bool
 }
 
+/// One global level exposed by the mixer's "General" strip. Backed by the window's
+/// AudioGainControlViews rather than a second source of truth, so the strip and the
+/// window sliders always agree and share one persistence path. Values are in dB
+/// (-24…+24, 0 = unity) and shown as the same 0–100 % the window sliders speak.
+struct MixerGlobalGain {
+    let label: String
+    let get: @MainActor @Sendable () -> Double
+    let set: @MainActor @Sendable (Double) -> Void
+}
+
 @MainActor
 final class ChannelMixerCoordinator: ObservableObject {
     /// Published snapshot driving the on-screen SwiftUI strips (accessibilityHidden on mac).
@@ -50,6 +60,15 @@ final class ChannelMixerCoordinator: ObservableObject {
     private var soloed: Set<Int32> = []
     private var lastKnownIDs: [Int32] = []
     private var soloWasActive = false
+
+    /// Reserved strip id for the "General" strip — negative, so it can never collide
+    /// with a user id (positive) or a media source key (positive, high bit set).
+    static let generalStripID: Int32 = -100
+    /// The global levels shown by the General strip, injected by the window (empty
+    /// until then, in which case the strip is simply not built).
+    var globalGains: [MixerGlobalGain] = [] {
+        didSet { overlay.rebuildStrips() }
+    }
 
     // Adjustment steps (VO swipe + keyboard arrows share these).
     private let volumeStep: Double = 2     // percent
@@ -106,7 +125,34 @@ final class ChannelMixerCoordinator: ObservableObject {
     }
 
     private func buildDescriptors() -> [MixerStripDescriptor] {
-        usersInChannel().map { descriptor(for: $0) }
+        let users = usersInChannel().map { descriptor(for: $0) }
+        guard !globalGains.isEmpty else { return users }
+        return [generalDescriptor()] + users
+    }
+
+    /// The "General" strip: the levels that belong to nobody in particular — output,
+    /// media bus, microphone, sound effects. It lives only in the accessibility overlay;
+    /// sighted users get the same four sliders drawn in the window's audio controls.
+    private func generalDescriptor() -> MixerStripDescriptor {
+        MixerStripDescriptor(
+            id: Self.generalStripID,
+            label: { L10n.text("mixer.general.label") },
+            controls: globalGains.map { .slider(globalGainConfig($0)) }
+        )
+    }
+
+    /// dB in, percent out — the window sliders' own mapping, so both routes speak the
+    /// same number for the same level (50 % = unity).
+    private func globalGainConfig(_ gain: MixerGlobalGain) -> VirtualSliderConfig {
+        VirtualSliderConfig(
+            label: gain.label,
+            getValue: { AudioGainControlView.percent(forGainDB: gain.get()) },
+            getDisplayString: { v in L10n.format("mixer.value.percent", Int(v.rounded())) },
+            setValue: { v in gain.set(AudioGainControlView.gainDB(forPercent: v)) },
+            incrementValue: { [volumeStep] v in min(100, v + volumeStep) },
+            decrementValue: { [volumeStep] v in max(0, v - volumeStep) },
+            minValue: 0, maxValue: 100, resetValue: 50
+        )
     }
 
     private func descriptor(for user: ConnectedServerUser) -> MixerStripDescriptor {

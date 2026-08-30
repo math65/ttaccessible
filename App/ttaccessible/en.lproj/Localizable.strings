@@ -139,6 +139,8 @@
 "connectedServer.audio.inputGain.accessibilityLabel" = "Microphone input volume";
 "connectedServer.audio.outputGain.label" = "Output volume";
 "connectedServer.audio.outputGain.accessibilityLabel" = "Audio output volume";
+"connectedServer.audio.mediaGain.label" = "Media volume";
+"connectedServer.audio.mediaGain.accessibilityLabel" = "Volume of every media stream";
 "connectedServer.audio.soundEffectsGain.label" = "Sound effects volume";
 "connectedServer.audio.soundEffectsGain.accessibilityLabel" = "Sound effects volume";
 "connectedServer.audio.gain.resetAccessibilityAction" = "Reset to 50%";
@@ -745,6 +747,11 @@
 "mixer.area.announce" = "Channel Mixer";
 "mixer.area.roleDescription" = "area";
 "mixer.strip.roleDescription" = "channel strip";
+"mixer.general.label" = "General";
+"mixer.general.output" = "Output volume";
+"mixer.general.media" = "Media volume";
+"mixer.general.input" = "Microphone volume";
+"mixer.general.soundEffects" = "Sound effects volume";
 "mixer.control.slider.roleDescription" = "slider";
 "mixer.control.button.roleDescription" = "button";
 "mixer.control.picker.roleDescription" = "pop up button";

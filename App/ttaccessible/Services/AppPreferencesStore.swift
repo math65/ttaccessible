@@ -263,6 +263,10 @@ final class AppPreferencesStore: ObservableObject {
         SoundPlayer.shared.setMasterGainDB(clamped)
     }
 
+    func updateMediaGainDB(_ value: Double) {
+        mutate { $0.mediaGainDB = AppPreferences.clampGainDB(value) }
+    }
+
     func updateSoundEffectsGainDB(_ value: Double) {
         let clamped = AppPreferences.clampGainDB(value)
         mutate { $0.soundEffectsGainDB = clamped }

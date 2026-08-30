@@ -570,6 +570,14 @@ extension TeamTalkConnectionController {
         }
     }
 
+    /// Gain of the media bus (every media-file stream, remote or our own monitored
+    /// one). Unlike the output gain this needs no SDK instance — it is entirely ours,
+    /// applied per source in the render engine — so it takes effect even before the
+    /// pump has a stream to feed.
+    func applyMediaGainDB(_ value: Double) {
+        outputRenderEngine.setMediaBusGainDB(AppPreferences.clampGainDB(value))
+    }
+
     func applyOutputGainDB(_ value: Double) {
         let clamped = AppPreferences.clampGainDB(value)
         queue.async { [weak self] in
@@ -913,6 +921,7 @@ extension TeamTalkConnectionController {
             return
         }
         outputRenderEngine.setMasterGainDB(preferencesStore.preferences.outputGainDB)
+        outputRenderEngine.setMediaBusGainDB(preferencesStore.preferences.mediaGainDB)
         outputRenderEngine.setMuted(masterMuted)
         do {
             try outputRenderEngine.start(deviceID: device.deviceID)
