@@ -8,7 +8,7 @@ import AppKit
 final class ConnectedUsersWindowController: NSWindowController {
     init(contentViewController: NSViewController) {
         let window = EscapeClosableWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 720, height: 420),
+            contentRect: NSRect(x: 0, y: 0, width: 900, height: 460),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
@@ -17,6 +17,13 @@ final class ConnectedUsersWindowController: NSWindowController {
         window.isReleasedWhenClosed = false
         window.center()
         window.contentViewController = contentViewController
+        // Assigning contentViewController makes the window adopt that view's fittingSize
+        // and discard contentRect — which is why several windows opened far smaller than
+        // intended (Channel files at a third of its width, Preferences as a bare title
+        // bar). Load the view, then restore the size actually asked for.
+        _ = window.contentViewController?.view
+        window.setContentSize(NSSize(width: 900, height: 460))
+        window.center()
         super.init(window: window)
     }
 

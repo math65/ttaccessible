@@ -139,6 +139,8 @@
 "connectedServer.audio.inputGain.accessibilityLabel" = "Volume d'entrée du microphone";
 "connectedServer.audio.outputGain.label" = "Volume de sortie";
 "connectedServer.audio.outputGain.accessibilityLabel" = "Volume de sortie audio";
+"connectedServer.audio.mediaGain.label" = "Volume des médias";
+"connectedServer.audio.mediaGain.accessibilityLabel" = "Volume de tous les flux médias";
 "connectedServer.audio.soundEffectsGain.label" = "Volume des effets sonores";
 "connectedServer.audio.soundEffectsGain.accessibilityLabel" = "Volume des effets sonores";
 "connectedServer.audio.gain.resetAccessibilityAction" = "Réinitialiser à 50 %";
@@ -250,7 +252,8 @@
 "connectedServer.channel.form.topic" = "Sujet";
 "connectedServer.channel.form.password" = "Mot de passe";
 "connectedServer.channel.form.maxUsers" = "Nombre max d'utilisateurs";
-"connectedServer.channel.form.diskQuota" = "Quota de stockage des fichiers (0 = seuls les admins peuvent envoyer)";
+"connectedServer.channel.form.diskQuota" = "Quota de stockage des fichiers";
+"connectedServer.channel.form.diskQuota.hint" = "0 = seuls les administrateurs peuvent envoyer.";
 "connectedServer.channel.form.diskQuota.unit" = "Unité du quota de stockage";
 "common.unit.kb" = "Ko";
 "common.unit.mb" = "Mo";
@@ -745,6 +748,11 @@
 "mixer.area.announce" = "Mixeur du canal";
 "mixer.area.roleDescription" = "zone";
 "mixer.strip.roleDescription" = "tranche de console";
+"mixer.general.label" = "Général";
+"mixer.general.output" = "Volume de sortie";
+"mixer.general.media" = "Volume des médias";
+"mixer.general.input" = "Volume du microphone";
+"mixer.general.soundEffects" = "Volume des effets sonores";
 "mixer.control.slider.roleDescription" = "curseur";
 "mixer.control.button.roleDescription" = "bouton";
 "mixer.control.picker.roleDescription" = "bouton contextuel";

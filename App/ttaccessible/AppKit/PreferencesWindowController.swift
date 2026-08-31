@@ -79,15 +79,20 @@ final class PreferencesWindowController: NSWindowController {
         )
 
         let window = EscapeClosableWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 700, height: 420),
-            styleMask: [.titled, .closable, .miniaturizable],
+            contentRect: NSRect(x: 0, y: 0, width: 760, height: 560),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
         window.title = L10n.text("preferences.window.title")
         window.isReleasedWhenClosed = false
-        window.center()
         window.contentViewController = contentViewController
+        // Assigning contentViewController overrides contentRect with the controller's own
+        // view size — an empty NSView — which is why Preferences opened as a bare title
+        // bar. Set the size back afterwards, and give it a floor.
+        window.setContentSize(NSSize(width: 760, height: 560))
+        window.minSize = NSSize(width: 700, height: 460)
+        window.center()
 
         super.init(window: window)
     }
@@ -167,7 +172,7 @@ private final class PreferencesContainerViewController: NSViewController {
     // isn't one (macOS 14+ silently creates an empty view — the behavior this
     // class was unknowingly relying on).
     override func loadView() {
-        view = NSView()
+        view = NSView(frame: NSRect(x: 0, y: 0, width: 760, height: 560))
     }
 
     override func viewDidLoad() {
@@ -251,8 +256,8 @@ private final class PreferencesContainerViewController: NSViewController {
     }
 
     private func configureLayout() {
-        view = NSView()
-
+        // No `view = NSView()` here: loadView() already made one, sized — replacing it
+        // with a zero-sized view is what collapsed the window to a bare title bar.
         let sidebarView = sidebarViewController.view
         let contentView = contentHostViewController.view
         let separator = NSBox()
@@ -283,7 +288,14 @@ private final class PreferencesContainerViewController: NSViewController {
             contentView.topAnchor.constraint(equalTo: view.topAnchor),
             contentView.leadingAnchor.constraint(equalTo: separator.trailingAnchor),
             contentView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            contentView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            contentView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+
+            // A window with a contentViewController sizes itself from that view's
+            // fittingSize, computed when the view loads — after any setContentSize. With
+            // panes that carry no intrinsic height, that fitting size was zero, which is
+            // what actually opened Preferences as a bare title bar.
+            view.widthAnchor.constraint(greaterThanOrEqualToConstant: 760),
+            view.heightAnchor.constraint(greaterThanOrEqualToConstant: 560)
         ])
     }
 }

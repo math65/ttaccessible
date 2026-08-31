@@ -133,7 +133,9 @@ extension ConnectedServerViewController {
         alert.addButton(withTitle: L10n.text("common.ok"))
         alert.addButton(withTitle: L10n.text("common.cancel"))
 
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: 340, height: 0))
+        // 460 rather than 340: at 340 the disk-quota explanation and "Fréquence
+        // d'échantillonnage" were both clipped mid-word.
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: 460, height: 0))
 
         let nameLabel = NSTextField(labelWithString: L10n.text("connectedServer.channel.form.name"))
         let nameField = NSTextField(frame: .zero)
@@ -166,7 +168,11 @@ extension ConnectedServerViewController {
         let diskQuotaLabel = NSTextField(labelWithString: L10n.text("connectedServer.channel.form.diskQuota"))
         let diskQuotaField = NSTextField(frame: .zero)
         diskQuotaField.placeholderString = "0"
-        diskQuotaField.setAccessibilityLabel(L10n.text("connectedServer.channel.form.diskQuota"))
+        // VoiceOver keeps the whole sentence on the field; the sheet shows it as a hint
+        // line under the row, because as one label it ran past the sheet's width.
+        diskQuotaField.setAccessibilityLabel(
+            L10n.text("connectedServer.channel.form.diskQuota") + ". "
+            + L10n.text("connectedServer.channel.form.diskQuota.hint"))
 
         let diskQuotaUnitPopUp = NSPopUpButton()
         for key in ["common.unit.kb", "common.unit.mb", "common.unit.gb"] {
@@ -255,7 +261,7 @@ extension ConnectedServerViewController {
             item.translatesAutoresizingMaskIntoConstraints = false
             stack.addArrangedSubview(item)
             if item !== nameLabel, item !== topicLabel, item !== passwordLabel, item !== maxUsersLabel {
-                NSLayoutConstraint.activate([item.widthAnchor.constraint(equalToConstant: 320)])
+                NSLayoutConstraint.activate([item.widthAnchor.constraint(equalToConstant: 440)])
             }
         }
 
@@ -267,15 +273,23 @@ extension ConnectedServerViewController {
         diskQuotaField.translatesAutoresizingMaskIntoConstraints = false
         diskQuotaUnitPopUp.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            diskQuotaField.widthAnchor.constraint(equalToConstant: 232),
+            diskQuotaField.widthAnchor.constraint(equalToConstant: 352),
             diskQuotaUnitPopUp.widthAnchor.constraint(equalToConstant: 80)
         ])
         stack.addArrangedSubview(diskQuotaRow)
 
+        let diskQuotaHint = NSTextField(labelWithString: L10n.text("connectedServer.channel.form.diskQuota.hint"))
+        diskQuotaHint.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
+        diskQuotaHint.textColor = .secondaryLabelColor
+        // Already spoken as part of the field's accessibility label — do not make VoiceOver
+        // read it twice.
+        diskQuotaHint.setAccessibilityElement(false)
+        stack.addArrangedSubview(diskQuotaHint)
+
         let separator = NSBox()
         separator.boxType = .separator
         stack.addArrangedSubview(separator)
-        NSLayoutConstraint.activate([separator.widthAnchor.constraint(equalToConstant: 320)])
+        NSLayoutConstraint.activate([separator.widthAnchor.constraint(equalToConstant: 440)])
 
         for check in [permanentCheck, soloCheck, noVoxCheck, noRecCheck] {
             stack.addArrangedSubview(check)
@@ -285,7 +299,7 @@ extension ConnectedServerViewController {
         let codecSeparator = NSBox()
         codecSeparator.boxType = .separator
         stack.addArrangedSubview(codecSeparator)
-        NSLayoutConstraint.activate([codecSeparator.widthAnchor.constraint(equalToConstant: 320)])
+        NSLayoutConstraint.activate([codecSeparator.widthAnchor.constraint(equalToConstant: 440)])
 
         stack.addArrangedSubview(codecLabel)
         for (lbl, control) in [(channelsLabel, channelsPopUp), (sampleRateLabel, sampleRatePopUp), (applicationLabel, applicationPopUp)] as [(NSTextField, NSPopUpButton)] {
@@ -293,7 +307,7 @@ extension ConnectedServerViewController {
             row.orientation = .horizontal
             row.spacing = 8
             lbl.translatesAutoresizingMaskIntoConstraints = false
-            NSLayoutConstraint.activate([lbl.widthAnchor.constraint(equalToConstant: 120)])
+            NSLayoutConstraint.activate([lbl.widthAnchor.constraint(equalToConstant: 180)])
             stack.addArrangedSubview(row)
         }
         let bitrateRow = NSStackView(views: [bitrateLabel, bitrateField])
@@ -302,7 +316,7 @@ extension ConnectedServerViewController {
         bitrateLabel.translatesAutoresizingMaskIntoConstraints = false
         bitrateField.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            bitrateLabel.widthAnchor.constraint(equalToConstant: 120),
+            bitrateLabel.widthAnchor.constraint(equalToConstant: 180),
             bitrateField.widthAnchor.constraint(equalToConstant: 80)
         ])
         stack.addArrangedSubview(bitrateRow)
@@ -311,7 +325,7 @@ extension ConnectedServerViewController {
             let joinSeparator = NSBox()
             joinSeparator.boxType = .separator
             stack.addArrangedSubview(joinSeparator)
-            NSLayoutConstraint.activate([joinSeparator.widthAnchor.constraint(equalToConstant: 320)])
+            NSLayoutConstraint.activate([joinSeparator.widthAnchor.constraint(equalToConstant: 440)])
             stack.addArrangedSubview(joinCheck)
         }
 

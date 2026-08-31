@@ -59,6 +59,7 @@ final class SavedServersWindowController: NSWindowController {
             .sink { [weak self] newMode in
                 self?.rebuildToolbarItemsIfNeeded(for: newMode)
                 self?.refreshToolbarItems()
+                self?.applyWindowSizing(for: newMode)
             }
             .store(in: &cancellables)
 
@@ -146,6 +147,28 @@ final class SavedServersWindowController: NSWindowController {
                 break
             }
         }
+    }
+
+    /// The saved-servers list is a short window; the connected view is not — channel tree,
+    /// mixer, chat and history each carry their own minimum, and at 480 pt the history was
+    /// cut off by the window's own edge. Raise the floor with the mode, and grow a window
+    /// that is below it (never shrink one the user has sized up, never exceed the screen).
+    private func applyWindowSizing(for mode: SavedServersMenuState.Mode) {
+        guard let window else { return }
+        let connected = mode == .connectedServer
+        // The connected view is two panes wide — sidebar plus content — where the saved
+        // server list is a single short table.
+        let minimum = NSSize(width: connected ? 900 : 680, height: connected ? 820 : 420)
+        window.minSize = minimum
+        let visible = (window.screen ?? NSScreen.main)?.visibleFrame.size
+        let target = NSSize(width: min(connected ? 1060 : minimum.width, visible?.width ?? minimum.width),
+                            height: min(minimum.height, visible?.height ?? minimum.height))
+        guard window.frame.width < target.width || window.frame.height < target.height else { return }
+        var frame = window.frame
+        frame.origin.y -= max(0, target.height - frame.height)   // grow downward, title bar stays put
+        frame.size.width = max(frame.width, target.width)
+        frame.size.height = max(frame.height, target.height)
+        window.setFrame(window.constrainFrameRect(frame, to: window.screen), display: true)
     }
 
     private func defaultIdentifiers(for mode: SavedServersMenuState.Mode) -> [NSToolbarItem.Identifier] {

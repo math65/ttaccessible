@@ -148,12 +148,14 @@ final class AudioBlockPump {
                   streamType: STREAMTYPE_VOICE, engineKey: userID, profile: .network)
             drain(instance: instance, engine: engine, userID: userID,
                   streamType: STREAMTYPE_MEDIAFILE_AUDIO,
-                  engineKey: TeamTalkConnectionController.outputMediaSourceKey(userID), profile: .network)
+                  engineKey: TeamTalkConnectionController.outputMediaSourceKey(userID), profile: .network,
+                  bus: .media)
         }
         if localMediaMode != .off {
             drain(instance: instance, engine: engine, userID: TT_LOCAL_USERID,
                   streamType: STREAMTYPE_MEDIAFILE_AUDIO,
                   engineKey: TeamTalkConnectionController.localMediaEngineKey, profile: .localMedia,
+                  bus: .media,
                   enqueueToEngine: localMediaMode == .monitor, feedEstimator: true)
         }
     }
@@ -169,6 +171,7 @@ final class AudioBlockPump {
         streamType: StreamType,
         engineKey: Int32,
         profile: OutputSourceBufferProfile,
+        bus: OutputMixBus = .voice,
         enqueueToEngine: Bool = true,
         feedEstimator: Bool = false
     ) {
@@ -196,7 +199,7 @@ final class AudioBlockPump {
                         engineKey,
                         pcm: pcm,
                         frames: frames, channels: channels, sampleRate: Double(sampleRate),
-                        profile: profile
+                        profile: profile, bus: bus
                     )
                     updateStereoJudgement(pcm: pcm, frames: frames, channels: channels,
                                           engineKey: engineKey, engine: engine)

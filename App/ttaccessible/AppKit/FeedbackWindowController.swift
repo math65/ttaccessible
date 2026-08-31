@@ -29,6 +29,13 @@ final class FeedbackWindowController: NSWindowController {
             self?.window?.close()
         }
         window.contentViewController = NSHostingController(rootView: view)
+        // Assigning contentViewController makes the window adopt that view's fittingSize
+        // and discard contentRect — which is why several windows opened far smaller than
+        // intended (Channel files at a third of its width, Preferences as a bare title
+        // bar). Load the view, then restore the size actually asked for.
+        _ = window.contentViewController?.view
+        window.setContentSize(NSSize(width: 480, height: 460))
+        window.center()
     }
 
     @available(*, unavailable)

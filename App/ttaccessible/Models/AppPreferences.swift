@@ -88,6 +88,7 @@ struct AppPreferences: Codable, Equatable {
         case voiceOverAnnouncements
         case inputGainDB
         case outputGainDB
+        case mediaGainDB
         case soundEffectsGainDB
         case savedServersSort
         case autoJoinRootChannel
@@ -190,6 +191,10 @@ struct AppPreferences: Codable, Equatable {
     var voiceOverAnnouncements: VoiceOverAnnouncementPreferences
     var inputGainDB: Double
     var outputGainDB: Double
+    // Level of the whole media bus (dB): every media-file stream, remote or our own
+    // monitored one. Applied per source in OutputAudioRenderEngine, so it ducks the
+    // music without touching a single voice or any per-user volume.
+    var mediaGainDB: Double
     // Base level for app notification sound effects (dB). The effective playback
     // volume is this gain combined with the output (master) volume, so master
     // scales the sound effects too.
@@ -258,6 +263,7 @@ struct AppPreferences: Codable, Equatable {
         voiceOverAnnouncements: VoiceOverAnnouncementPreferences = VoiceOverAnnouncementPreferences(),
         inputGainDB: Double = 0,
         outputGainDB: Double = 0,
+        mediaGainDB: Double = 0,
         soundEffectsGainDB: Double = 0,
         savedServersSort: SavedServersSortPreferences = SavedServersSortPreferences(),
         autoJoinRootChannel: Bool = true,
@@ -328,6 +334,7 @@ struct AppPreferences: Codable, Equatable {
         self.voiceOverAnnouncements = voiceOverAnnouncements
         self.inputGainDB = Self.clampGainDB(inputGainDB)
         self.outputGainDB = Self.clampGainDB(outputGainDB)
+        self.mediaGainDB = Self.clampGainDB(mediaGainDB)
         self.soundEffectsGainDB = Self.clampGainDB(soundEffectsGainDB)
         self.savedServersSort = savedServersSort
         self.autoJoinRootChannel = autoJoinRootChannel
@@ -475,6 +482,7 @@ struct AppPreferences: Codable, Equatable {
         voiceOverAnnouncements = try container.decodeIfPresent(VoiceOverAnnouncementPreferences.self, forKey: .voiceOverAnnouncements) ?? VoiceOverAnnouncementPreferences()
         inputGainDB = Self.clampGainDB(try container.decodeIfPresent(Double.self, forKey: .inputGainDB) ?? 0)
         outputGainDB = Self.clampGainDB(try container.decodeIfPresent(Double.self, forKey: .outputGainDB) ?? 0)
+        mediaGainDB = Self.clampGainDB(try container.decodeIfPresent(Double.self, forKey: .mediaGainDB) ?? 0)
         soundEffectsGainDB = Self.clampGainDB(try container.decodeIfPresent(Double.self, forKey: .soundEffectsGainDB) ?? 0)
         savedServersSort = try container.decodeIfPresent(SavedServersSortPreferences.self, forKey: .savedServersSort) ?? SavedServersSortPreferences()
         autoJoinRootChannel = try container.decodeIfPresent(Bool.self, forKey: .autoJoinRootChannel) ?? true
@@ -563,6 +571,7 @@ struct AppPreferences: Codable, Equatable {
         try container.encode(voiceOverAnnouncements, forKey: .voiceOverAnnouncements)
         try container.encode(Self.clampGainDB(inputGainDB), forKey: .inputGainDB)
         try container.encode(Self.clampGainDB(outputGainDB), forKey: .outputGainDB)
+        try container.encode(Self.clampGainDB(mediaGainDB), forKey: .mediaGainDB)
         try container.encode(Self.clampGainDB(soundEffectsGainDB), forKey: .soundEffectsGainDB)
         try container.encode(savedServersSort, forKey: .savedServersSort)
         try container.encode(autoJoinRootChannel, forKey: .autoJoinRootChannel)
