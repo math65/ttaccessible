@@ -126,6 +126,7 @@ s'appliquent à celle qui est sélectionnée dans l'arbre des canaux.
 | Commande + Flèche gauche ou Flèche droite | Panoramique du média |
 | V, P, M, S | Annoncer le volume, le panoramique, la sourdine ou le solo ; deux appuis réinitialisent ou changent le réglage |
 | Commande + P | Annoncer le panoramique du média ; deux appuis le recentrent |
+| Commande + Majuscule + Flèche haut ou Flèche bas | Le volume des médias, depuis n'importe où dans la fenêtre |
 
 ## Dans les listes
 

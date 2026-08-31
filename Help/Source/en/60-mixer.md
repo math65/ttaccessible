@@ -6,13 +6,28 @@ anchor: mixer
 ---
 
 The channel mixer turns the people in your channel into a small mixing desk, with one channel strip
-per person. You can place someone on the left and someone else on the right, or bring back a person
-who is too quiet, without touching anyone else.
+per person, and a General strip at its head for the levels that belong to nobody in particular. You
+can place someone on the left and someone else on the right, or bring back a person who is too
+quiet, without touching anyone else.
 
 ## Open the mixer
 
-Press Command-5. When you're alone in the channel, the mixer reports *No other users in this
-channel.*
+Press Command-5. You land on the General strip, and the people follow. When you're alone in the
+channel, the General strip is still there and the mixer reports *No other users in this channel.*
+
+## Set the general levels
+
+The General strip carries the four levels that apply to the whole app: **Output volume**, **Media
+volume**, **Microphone volume** and **Sound effects volume**. They are nowhere else in the window —
+this strip is where they live, for the mouse as much as for the keyboard.
+
+Left Arrow and Right Arrow choose which level the arrows act on, and it is announced with its
+value. Up Arrow and Down Arrow move it. V speaks it, and pressing V twice puts it back to 50%. M
+speaks the master mute, and pressing it twice turns it on or off.
+
+**Media volume** turns down every media stream in the channel at once — your own included — without
+touching anyone's voice. Command-Shift-Up Arrow and Command-Shift-Down Arrow reach it from anywhere
+in the window, so you can duck the music without leaving the channel tree.
 
 ## Adjust a person
 
@@ -44,6 +59,7 @@ text field, so the chat is never affected.
 | M | Speak the mute state; press twice to change it |
 | S | Speak the solo state; press twice to change it |
 | Command-P | Speak the media pan; press twice to centre it |
+| Command-Shift-Up Arrow or Command-Shift-Down Arrow | The media level, from anywhere in the window |
 
 Press the two presses quickly, one after the other. Hold an arrow key to repeat it, slowly at first
 and then faster.

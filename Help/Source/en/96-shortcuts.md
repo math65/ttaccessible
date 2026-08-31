@@ -126,6 +126,7 @@ the one selected in the channel tree.
 | Command-Left Arrow or Command-Right Arrow | Media pan |
 | V, P, M, S | Speak the volume, pan, mute or solo; press twice to reset or change it |
 | Command-P | Speak the media pan; press twice to centre it |
+| Command-Shift-Up Arrow or Command-Shift-Down Arrow | The media level, from anywhere in the window |
 
 ## In lists
 

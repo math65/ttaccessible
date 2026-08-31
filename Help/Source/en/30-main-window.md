@@ -6,8 +6,11 @@ anchor: main-window
 ---
 
 When you're connected, the window is titled Connected Server followed by the name of the server. It
-holds the channel tree, the chat, the session history, the audio controls and the channel mixer, so
-you never have to leave it.
+is split into two panes. A sidebar holds the server name, its status lines, the microphone button
+and the channel tree; the pane beside it holds the mixer, the chat, the message box and the session
+history. Everything you need is there, so you never have to leave it.
+
+The divider between the two panes can be dragged, and tt-Accessible remembers where you left it.
 
 ## Move between the areas
 
@@ -52,8 +55,11 @@ To save the conversation, press Shift-Command-S.
 
 ## Use the audio controls
 
-Below the lists you'll find the microphone button and three sliders: **Input volume**, **Output
-volume** and **Sound effects volume**. Each slider offers the VoiceOver action *Reset to 50%*.
+The microphone button sits in the sidebar, under the channel tree.
+
+The volumes themselves — **Output volume**, **Media volume**, **Microphone volume** and **Sound
+effects volume** — are gathered at the head of the channel mixer, on a strip called General. Press
+Command-5 to land on it; see [Balance a channel with the mixer](mixer.html).
 
 To hear the current audio status at any time — whether output is active, whether the microphone is
 transmitting, and whether a recording is running — press F9.

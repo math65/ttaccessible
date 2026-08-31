@@ -1,21 +1,31 @@
-## v1.12.0-beta.6 (build 53) — 28/08/2026
+## v1.12.0-beta.7 (build 54) — 31/08/2026
 
-Deux corrections, toutes deux issues de retours de testeurs. La première concerne un plantage présent dans chaque version depuis la 1.10.0 ; il paraît aussi aujourd'hui sous le nom de v1.11.1, pour les personnes restées sur le canal stable.
+La fenêtre de connexion a été refaite, et tous les volumes de l'application ont rejoint le mixeur. C'est le plus gros remaniement de la disposition depuis la sortie de tt-Accessible — et personne ne l'a encore entendu dans un vrai canal. C'est précisément ce qu'on attend de cette bêta.
+
+### Nouveautés
+- **La fenêtre de connexion se partage maintenant en deux volets, au lieu d'une seule colonne.** Le nom du serveur, ses lignes d'état, le bouton du microphone et l'arborescence des canaux tiennent dans une barre latérale ; le mixeur, la discussion, la zone de saisie et l'historique occupent le reste. La séparation entre les deux se déplace, et l'application retient où vous l'avez laissée. **L'ordre de lecture, lui, ne change pas** : VoiceOver parcourt exactement la même suite qu'avant, la barre latérale d'abord, puis le volet principal. La seule nouveauté que vous rencontrerez est la séparation elle-même.
+- **Tous les volumes généraux se trouvent désormais en tête du mixeur, sur une bande appelée Général.** La sortie, les médias, le microphone et les effets sonores, dans cet ordre. Command+5 vous y dépose directement. Les flèches gauche et droite choisissent le niveau sur lequel agir, les flèches haut et bas le règlent, V l'annonce, deux appuis sur V le ramènent à sa valeur normale, et M coupe ou rétablit tout le son. Les quatre curseurs qui occupaient la fenêtre ont disparu : la bande Général les remplace, à la souris autant qu'au clavier, et ces niveaux n'existent plus qu'à un seul endroit au lieu de deux.
+- **Un seul réglage pour tous les flux médias à la fois.** Quand quelqu'un diffuse de la musique dans un canal pendant que d'autres parlent, vous pouvez maintenant baisser la musique seule, sans toucher à la voix de personne et sans passer chacun en revue dans le mixeur. Command+Majuscule+Flèche haut et bas la règle depuis n'importe où dans l'application, ce qui vous permet de baisser le fond sonore en pleine conversation. Une diffusion qui démarre ensuite est prise en compte toute seule, et votre propre diffusion baisse avec les autres. Proposé par **Yannick**.
 
 ### Corrections
-- **Une action refusée vous en donne maintenant la raison, au lieu de fermer l'application.** Chaque fois que le serveur opposait un refus — modification d'un canal, expulsion ou déplacement d'un utilisateur, envoi d'un message, transfert d'un fichier —, une alerte devait s'ouvrir pour vous expliquer ce qui s'était passé. L'application se fermait à la place, emportant votre connexion et tout ce que vous étiez en train de faire. Repéré grâce au rapport de plantage de **Ron J.**, qui avait remarqué que cela se produisait toujours sur un canal bien précis et a pris la peine de cerner le problème.
-- **Le menu de l'application retrouve réellement Services, Masquer, Masquer les autres et Tout afficher sous macOS 12.** La bêta 5 l'annonçait à tort : les éléments étaient bien insérés, puis SwiftUI reconstruisait le menu et les emportait aussitôt. Ils sont désormais déclarés là où le menu se construit, le remède qui avait déjà fait tenir Quitter en bêta 3. Signalé, puis démenti, par **Ron J.**
+- **Le bannissement et l'expulsion suivent maintenant les droits que votre serveur vous a donnés, et non le fait d'être administrateur ou non.** Un compte disposant des droits de bannir et de débannir, sans être administrateur pour autant, voyait les options grisées sans la moindre explication. Le serveur a toujours demandé le droit, jamais le type de compte ; l'application, elle, posait la mauvaise question à six endroits — la fenêtre Utilisateurs bannis, Expulser du serveur et Expulser et bannir, aussi bien dans le menu Utilisateur que dans le menu contextuel de l'arborescence, et leurs jumeaux dans la fenêtre des utilisateurs connectés, où détenir un droit sans l'autre vous montrait les deux ou aucun. Signalé par **David**.
+- **Des fenêtres qui s'ouvraient bien plus petites que prévu.** Les Préférences se réduisaient à leur barre de titre : ni barre latérale, ni panneaux, rien sur quoi cliquer. Les fichiers du canal s'ouvraient au tiers de leur largeur, les noms de fichiers tronqués et les colonnes Taille et Envoyé par hors de l'écran. Les utilisateurs connectés n'affichaient tout simplement pas leurs colonnes Adresse IP, Version et ID. Corrigé au passage : le champ des messages privés n'occupait qu'un tiers de sa ligne, et la fiche d'un canal coupait « Fréquence d'échantillonnage » ainsi que son libellé de quota en plein milieu. Trouvé en ouvrant chaque fenêtre et en la regardant, ce que personne n'avait fait : cette application est conçue pour VoiceOver, et aucun de ces défauts ne s'entend.
+- **VoiceOver passait à côté du mixeur.** En avançant avec VO+Flèche droite, il l'enjambait complètement, alors qu'en reculant il le trouvait. Deux éléments se superposaient exactement, et VoiceOver retenait celui qui était vide.
+- **Les lettres du mixeur ne traînent plus.** Chaque appui attendait un tiers de seconde, au cas où un deuxième arrive. Et garder M enfoncé ne coupe plus le son en boucle.
 
 ### À savoir
-Les messages d'erreur venant du serveur s'affichent toujours en anglais, quelle que soit la langue dans laquelle vous utilisez l'application : « Command not authorized » et ses 44 semblables proviennent de la bibliothèque TeamTalk, non traduits. Maintenant que ces alertes s'affichent enfin, leur traduction est la prochaine étape.
+- **Rien de tout cela n'a encore été entendu dans un canal animé.** La disposition est juste à l'écran et correcte dans l'arborescence d'accessibilité, mais une capture d'écran ne dira jamais si elle est agréable à parcourir. Si quelque chose vous gêne, dites-le : c'est le retour que cette bêta réclame.
+- Sur la bande d'une personne, VoiceOver annonce le pourcentage deux fois.
+- La correction du bannissement et de l'expulsion demande un compte détenant le droit sans être administrateur, et personne ne l'a encore vérifiée face à un serveur.
+- Les messages d'erreur venant du serveur s'affichent toujours en anglais, quelle que soit la langue dans laquelle vous utilisez l'application. Ils proviennent de la bibliothèque TeamTalk, non traduits ; leur traduction reste la prochaine étape.
 
 ### Installation
 
 tt-Accessible installe cette mise à jour pour vous automatiquement. Pour l'installer à la main :
 
-1. Téléchargez `ttaccessible-1.12.0-beta.6-53.zip` ci-dessous.
+1. Téléchargez `ttaccessible-1.12.0-beta.7-54.zip` ci-dessous.
 2. Décompressez-le et glissez `ttaccessible.app` dans votre dossier `/Applications`, en remplaçant la version précédente.
 3. Double-cliquez — aucun avertissement Gatekeeper grâce à la notarisation.
 
 ### Téléchargement
-[ttaccessible-1.12.0-beta.6-53.zip](https://github.com/math65/ttaccessible/releases/download/v1.12.0-beta.6/ttaccessible-1.12.0-beta.6-53.zip)
+[ttaccessible-1.12.0-beta.7-54.zip](https://github.com/math65/ttaccessible/releases/download/v1.12.0-beta.7/ttaccessible-1.12.0-beta.7-54.zip)

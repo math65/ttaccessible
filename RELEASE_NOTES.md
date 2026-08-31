@@ -1,21 +1,31 @@
-## v1.12.0-beta.6 (build 53) — 2026-08-28
+## v1.12.0-beta.7 (build 54) — 2026-08-31
 
-Two fixes, both from testers' reports. One of them is a crash that has been in every release since 1.10.0, and it is also out today as v1.11.1 for everyone still on the stable channel.
+The connected window has been rebuilt, and every volume in the app now lives inside the mixer. This is the largest layout change since tt-Accessible shipped — and nobody has listened to it yet in a real channel. That is what this beta is for.
+
+### New
+- **The connected window is now two panes instead of one tall column.** The server name, its status lines, the microphone button and the channel tree sit in a sidebar; the mixer, chat, message box and history fill the rest. The divider between them can be dragged and is remembered. **The reading order has not changed** — VoiceOver walks exactly the same sequence as before, sidebar first, then the content pane. The only new thing you will meet is the divider itself.
+- **Every global volume now sits at the head of the mixer, on a strip called General.** Output, media, microphone and sound effects, in that order. Press Command+5 and that is where you land. Left and Right pick which level the arrows act on, Up and Down move it, V says it out loud, V twice puts it back to normal, and M mutes or unmutes everything. The four sliders that used to sit in the window are gone — the General strip replaces them, for the mouse just as much as for the keyboard, and those levels now exist in one place instead of two.
+- **One level for every media stream at once.** When somebody streams music into a channel while people are talking, you can now turn the music down on its own — without touching a single person's voice, and without going through the mixer person by person. Command+Shift+Up and Down adjusts it from anywhere in the app, so you can duck the music in the middle of a conversation. A stream that starts afterwards is caught automatically, and your own stream is turned down along with everyone else's. Suggested by **Yannick**.
 
 ### Fixes
-- **A refused action now shows you the reason, instead of quitting the app.** Whenever the server turned down a request — editing a channel, kicking or moving a user, sending a message, transferring a file — the app was supposed to open an alert explaining what happened. Instead it closed on the spot, losing your connection and anything you were in the middle of. Found thanks to a crash report from **Ron J.**, who noticed it always happened on one particular channel and took the trouble to narrow it down.
-- **The app menu really does have Services, Hide, Hide Others and Show All back on macOS 12.** Beta 5 claimed this and was wrong: the items were inserted, then SwiftUI rebuilt the menu and took them straight back out. They are now declared where the menu itself is built, the same cure that made Quit stick in beta 3. Reported, and disproved, by **Ron J.**
+- **Banning and kicking now follow the rights your server gave you, rather than whether you are an administrator.** An account holding the ban and unban rights, without being a full admin, found the options dimmed and was told nothing. The server has always asked for the right, not for the account type; the app asked the wrong question in six places — the Banned Users window, Kick from server and Kick and ban, both in the User menu and in the channel tree, and their twins in the Connected Users window, where holding one right without the other showed you both or neither. Reported by **David**.
+- **Windows that opened far smaller than they were meant to.** Preferences opened as a bare title bar — no sidebar, no panes, nothing to click. Channel Files opened at a third of its width, with file names cut short and the Size and Uploader columns off-screen. Connected Users simply did not show its IP Address, Version and ID columns. Also fixed along the way: the private-message field used a third of its row, and the channel sheet cut its sample-rate and disk-quota labels mid-sentence. Found by opening every window and looking at it, which nobody had done — this app is built for VoiceOver, and none of these defects makes a sound.
+- **VoiceOver went straight past the mixer.** Moving forward with VO+Right jumped over it entirely, while moving backward found it. Two elements sat at the same place, and VoiceOver kept the empty one.
+- **The mixer's letter keys no longer feel slow.** They used to wait a third of a second on every press, in case a second one was coming. And holding M down no longer toggles mute over and over.
 
 ### Known
-Error messages coming from the server are still shown in English, whatever language you use the app in — "Command not authorized" and its 44 siblings come from the TeamTalk library untranslated. Now that these alerts appear at all, translating them is next.
+- **None of this has been heard yet in a busy channel.** The layout is right on screen and correct in the accessibility tree, but whether it is pleasant to navigate is not something a screenshot can tell. If something is awkward, say so — that is the feedback this beta is asking for.
+- On a person's strip, VoiceOver reads the percentage twice.
+- The ban and kick fix needs an account that holds the right without being an administrator, and nobody has confirmed it against a live server yet.
+- Server error messages are still shown in English whatever language you use the app in. They come from the TeamTalk library untranslated; translating them is still next.
 
 ### Install
 
 tt-Accessible will install this update for you automatically. To install by hand:
 
-1. Download `ttaccessible-1.12.0-beta.6-53.zip` below.
+1. Download `ttaccessible-1.12.0-beta.7-54.zip` below.
 2. Unzip and drag `ttaccessible.app` into your `/Applications` folder, replacing the previous version.
 3. Double-click — no Gatekeeper warning thanks to notarization.
 
 ### Download
-[ttaccessible-1.12.0-beta.6-53.zip](https://github.com/math65/ttaccessible/releases/download/v1.12.0-beta.6/ttaccessible-1.12.0-beta.6-53.zip)
+[ttaccessible-1.12.0-beta.7-54.zip](https://github.com/math65/ttaccessible/releases/download/v1.12.0-beta.7/ttaccessible-1.12.0-beta.7-54.zip)

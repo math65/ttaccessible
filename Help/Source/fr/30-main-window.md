@@ -5,9 +5,12 @@ keywords: fenêtre principale, zones, focus, arbre des canaux, historique de ses
 anchor: main-window
 ---
 
-Une fois connecté, la fenêtre s'intitule Serveur connecté, suivi du nom du serveur. Elle réunit
-l'arbre des canaux, le chat, l'historique de session, les commandes audio et le mixeur : vous
-n'avez jamais besoin d'en sortir.
+Une fois connecté, la fenêtre s'intitule Serveur connecté, suivi du nom du serveur. Elle se partage
+en deux volets. Une barre latérale réunit le nom du serveur, ses lignes d'état, le bouton du micro
+et l'arbre des canaux ; le volet voisin contient le mixeur, le chat, la saisie du message et
+l'historique de session. Tout s'y trouve : vous n'avez jamais besoin d'en sortir.
+
+La séparation entre les deux volets se déplace, et tt-Accessible retient où vous l'avez laissée.
 
 ## Circuler entre les zones
 
@@ -54,9 +57,12 @@ Pour conserver la conversation, appuyez sur Maj + Commande + S.
 
 ## Utiliser les commandes audio
 
-Sous les listes se trouvent le bouton du micro et trois curseurs : **Volume d'entrée**, **Volume de
-sortie** et **Volume des effets sonores**. Chaque curseur propose l'action VoiceOver *Réinitialiser
-à 50 %*.
+Le bouton du micro se trouve dans la barre latérale, sous l'arbre des canaux.
+
+Les volumes, eux, sont réunis en tête du mixeur du canal, sur une bande appelée Général :
+**Volume de sortie**, **Volume des médias**, **Volume du microphone** et **Volume des effets
+sonores**. Commande + 5 vous y dépose ; consultez
+[Équilibrer un canal avec le mixeur](mixer.html).
 
 Pour connaître l'état audio à tout moment — sortie active ou non, micro en train de transmettre ou
 non, enregistrement en cours ou non —, appuyez sur F9.

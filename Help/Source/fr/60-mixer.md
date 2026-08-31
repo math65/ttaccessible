@@ -6,13 +6,30 @@ anchor: mixer
 ---
 
 Le mixeur du canal transforme les personnes présentes en une petite console, avec une tranche par
-personne. Vous pouvez placer quelqu'un à gauche et quelqu'un d'autre à droite, ou remonter une
+personne, et une tranche Général en tête pour les niveaux qui n'appartiennent à personne en
+particulier. Vous pouvez placer quelqu'un à gauche et quelqu'un d'autre à droite, ou remonter une
 personne trop faible, sans toucher aux autres.
 
 ## Ouvrir le mixeur
 
-Appuyez sur Commande + 5. Quand vous êtes seul dans le canal, le mixeur indique *Aucun autre
+Appuyez sur Commande + 5. Vous arrivez sur la tranche Général, les personnes viennent ensuite. Quand
+vous êtes seul dans le canal, la tranche Général reste en place et le mixeur indique *Aucun autre
 utilisateur dans ce canal.*
+
+## Régler les niveaux généraux
+
+La tranche Général réunit les quatre niveaux qui valent pour toute l'application : **Volume de
+sortie**, **Volume des médias**, **Volume du microphone** et **Volume des effets sonores**. Ils ne
+figurent nulle part ailleurs dans la fenêtre : c'est ici qu'ils vivent, à la souris comme au
+clavier.
+
+Les flèches gauche et droite choisissent le niveau sur lequel vous agissez — il est annoncé avec sa
+valeur —, les flèches haut et bas le règlent. V l'annonce, et deux appuis sur V le remettent à
+50 %. M annonce la sourdine générale, et deux appuis la changent.
+
+Le **volume des médias** baisse d'un coup toutes les diffusions du canal, la vôtre comprise, sans
+toucher à la voix de personne. Commande + Majuscule + Flèche haut ou Flèche bas l'atteint depuis
+n'importe où dans la fenêtre : vous pouvez baisser la musique sans quitter l'arbre des canaux.
 
 ## Régler une personne
 
@@ -44,6 +61,7 @@ pendant que vous écrivez dans un champ de texte : le chat n'est jamais perturb�
 | M | Annoncer l'état de la sourdine ; deux appuis le changent |
 | S | Annoncer l'état du solo ; deux appuis le changent |
 | Commande + P | Annoncer le panoramique du média ; deux appuis le recentrent |
+| Commande + Majuscule + Flèche haut ou Flèche bas | Le volume des médias, depuis n'importe où dans la fenêtre |
 
 Les deux appuis doivent se suivre rapidement. Maintenez une flèche pour la répéter, d'abord
 lentement puis plus vite.
