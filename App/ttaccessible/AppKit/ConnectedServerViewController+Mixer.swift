@@ -34,6 +34,12 @@ extension ConnectedServerViewController {
         // between the floor and ceiling set on the section in the window's layout.
         hosting.setContentHuggingPriority(.init(rawValue: 1), for: .vertical)
         hosting.setContentCompressionResistancePriority(.init(rawValue: 1), for: .vertical)
+        // SwiftUI's accessibilityHidden hides the CONTENT, but the hosting view itself
+        // stayed in the AX tree as an empty group sharing the overlay's exact frame. Two
+        // elements at one position: VoiceOver kept the empty one going forward and the
+        // mixer going backward, so VO+Right skipped the mixer entirely. The visible
+        // rendering must be invisible to VoiceOver, container included.
+        hosting.setAccessibilityElement(false)
 
         let overlay = channelMixerCoordinator.overlay
         overlay.translatesAutoresizingMaskIntoConstraints = false
