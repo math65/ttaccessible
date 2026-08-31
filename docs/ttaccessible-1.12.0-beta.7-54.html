@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ttaccessible-1.12.0-beta.7-54</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --code-bg: #f5f5f7;
+  --link: #0066cc;
+  --link-hover: #0040a0;
+  --rule: #e5e5ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #ececec;
+    --muted: #a0a0a0;
+    --code-bg: #2d2d2d;
+    --link: #4eaaff;
+    --link-hover: #82c4ff;
+    --rule: #3a3a3a;
+  }
+}
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  padding: 1rem 1.25rem 1.5rem;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.15rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.2em; }
+h3 { font-size: 1.02rem; }
+h4 { font-size: 0.95rem; color: var(--muted); }
+p { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; margin: 0.6em 0; }
+li { margin: 0.25em 0; }
+li > p { margin: 0.3em 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover, a:focus { color: var(--link-hover); text-decoration: underline; }
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.75em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+pre code { background: transparent; padding: 0; border-radius: 0; }
+blockquote {
+  border-left: 3px solid var(--rule);
+  margin: 0.8em 0;
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--muted);
+}
+hr { border: 0; border-top: 1px solid var(--rule); margin: 1.5em 0; }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<h2 id="v1120-beta7-build-54--2026-08-31">v1.12.0-beta.7 (build 54) —
+2026-08-31</h2>
+<p>The connected window has been rebuilt, and every volume in the app
+now lives inside the mixer. This is the largest layout change since
+tt-Accessible shipped — and nobody has listened to it yet in a real
+channel. That is what this beta is for.</p>
+<h3 id="new">New</h3>
+<ul>
+<li><strong>The connected window is now two panes instead of one tall
+column.</strong> The server name, its status lines, the microphone
+button and the channel tree sit in a sidebar; the mixer, chat, message
+box and history fill the rest. The divider between them can be dragged
+and is remembered. <strong>The reading order has not changed</strong> —
+VoiceOver walks exactly the same sequence as before, sidebar first, then
+the content pane. The only new thing you will meet is the divider
+itself.</li>
+<li><strong>Every global volume now sits at the head of the mixer, on a
+strip called General.</strong> Output, media, microphone and sound
+effects, in that order. Press Command+5 and that is where you land. Left
+and Right pick which level the arrows act on, Up and Down move it, V
+says it out loud, V twice puts it back to normal, and M mutes or unmutes
+everything. The four sliders that used to sit in the window are gone —
+the General strip replaces them, for the mouse just as much as for the
+keyboard, and those levels now exist in one place instead of two.</li>
+<li><strong>One level for every media stream at once.</strong> When
+somebody streams music into a channel while people are talking, you can
+now turn the music down on its own — without touching a single person's
+voice, and without going through the mixer person by person.
+Command+Shift+Up and Down adjusts it from anywhere in the app, so you
+can duck the music in the middle of a conversation. A stream that starts
+afterwards is caught automatically, and your own stream is turned down
+along with everyone else's. Suggested by <strong>Yannick</strong>.</li>
+</ul>
+<h3 id="fixes">Fixes</h3>
+<ul>
+<li><strong>Banning and kicking now follow the rights your server gave
+you, rather than whether you are an administrator.</strong> An account
+holding the ban and unban rights, without being a full admin, found the
+options dimmed and was told nothing. The server has always asked for the
+right, not for the account type; the app asked the wrong question in six
+places — the Banned Users window, Kick from server and Kick and ban,
+both in the User menu and in the channel tree, and their twins in the
+Connected Users window, where holding one right without the other showed
+you both or neither. Reported by <strong>David</strong>.</li>
+<li><strong>Sizes and durations were shown in French, whatever language
+you run the app in.</strong> The server statistics reported an uptime of
+"10j 6h 35min" and a total sent of "37.6 Go" — French abbreviations,
+reaching English users untouched. The file sizes in Channel Files did
+the same. So did the space French puts before a colon, which turned up
+in the statistics labels, in the ban dialog, and in every chat line
+VoiceOver reads out. English now gets "10d 6h 35min", "37.6 GB", and no
+space before the colon; French is unchanged. The file-transfer footer
+was in the same state — VoiceOver announced it in French to everyone —
+and is now translated too. Reported by <strong>Ron J.</strong></li>
+<li><strong>Windows that opened far smaller than they were meant
+to.</strong> Preferences opened as a bare title bar — no sidebar, no
+panes, nothing to click. Channel Files opened at a third of its width,
+with file names cut short and the Size and Uploader columns off-screen.
+Connected Users simply did not show its IP Address, Version and ID
+columns. Also fixed along the way: the private-message field used a
+third of its row, and the channel sheet cut its sample-rate and
+disk-quota labels mid-sentence. Found by opening every window and
+looking at it, which nobody had done — this app is built for VoiceOver,
+and none of these defects makes a sound.</li>
+<li><strong>VoiceOver went straight past the mixer.</strong> Moving
+forward with VO+Right jumped over it entirely, while moving backward
+found it. Two elements sat at the same place, and VoiceOver kept the
+empty one.</li>
+<li><strong>The mixer's letter keys no longer feel slow.</strong> They
+used to wait a third of a second on every press, in case a second one
+was coming. And holding M down no longer toggles mute over and
+over.</li>
+</ul>
+<h3 id="known">Known</h3>
+<ul>
+<li><strong>None of this has been heard yet in a busy channel.</strong>
+The layout is right on screen and correct in the accessibility tree, but
+whether it is pleasant to navigate is not something a screenshot can
+tell. If something is awkward, say so — that is the feedback this beta
+is asking for.</li>
+<li>On a person's strip, VoiceOver reads the percentage twice.</li>
+<li>The ban and kick fix needs an account that holds the right without
+being an administrator, and nobody has confirmed it against a live
+server yet.</li>
+<li>Server error messages are still shown in English whatever language
+you use the app in. They come from the TeamTalk library untranslated;
+translating them is still next.</li>
+</ul>
+<h3 id="install">Install</h3>
+<p>tt-Accessible will install this update for you automatically. To
+install by hand:</p>
+<ol type="1">
+<li>Download <code>ttaccessible-1.12.0-beta.7-54.zip</code> below.</li>
+<li>Unzip and drag <code>ttaccessible.app</code> into your
+<code>/Applications</code> folder, replacing the previous version.</li>
+<li>Double-click — no Gatekeeper warning thanks to notarization.</li>
+</ol>
+<h3 id="download">Download</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.12.0-beta.7/ttaccessible-1.12.0-beta.7-54.zip">ttaccessible-1.12.0-beta.7-54.zip</a></p>
+</body>
+</html>
