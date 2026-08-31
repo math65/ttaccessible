@@ -70,7 +70,7 @@ final class StatsViewController: NSViewController {
         let rows = buildRows(from: placeholder)
 
         for row in rows {
-            let labelField = NSTextField(labelWithString: row.label + " :")
+            let labelField = NSTextField(labelWithString: L10n.format("common.labelWithColon", row.label))
             labelField.alignment = .right
             labelField.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
 
@@ -101,18 +101,18 @@ final class StatsViewController: NSViewController {
         let days    = totalSeconds / 86400
         let hours   = (totalSeconds % 86400) / 3600
         let minutes = (totalSeconds % 3600) / 60
-        if days > 0 { return "\(days)j \(hours)h \(minutes)min" }
-        if hours > 0 { return "\(hours)h \(minutes)min" }
-        return "\(minutes) min"
+        if days > 0 { return L10n.format("unit.duration.daysHoursMinutes", days, hours, minutes) }
+        if hours > 0 { return L10n.format("unit.duration.hoursMinutes", hours, minutes) }
+        return L10n.format("unit.duration.minutes", minutes)
     }
 
     private func formatBytes(_ bytes: Int64) -> String {
-        guard bytes > 0 else { return "0 o" }
+        guard bytes > 0 else { return L10n.format("unit.bytes", Int64(0)) }
         let kb = Double(bytes) / 1024
         let mb = kb / 1024
         let gb = mb / 1024
-        if gb >= 1 { return String(format: "%.1f Go", gb) }
-        if mb >= 1 { return String(format: "%.1f Mo", mb) }
-        return String(format: "%.1f Ko", kb)
+        if gb >= 1 { return L10n.format("unit.gigabytes", gb) }
+        if mb >= 1 { return L10n.format("unit.megabytes", mb) }
+        return L10n.format("unit.kilobytes", kb)
     }
 }

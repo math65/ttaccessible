@@ -1212,3 +1212,28 @@
 "profile.delete.success" = "Profil « %@ » supprimé.";
 "profile.delete.error.currentRunning" = "Le profil « %@ » est celui en cours d'exécution dans cette fenêtre. Quittez d'abord cette instance, puis supprimez-le depuis une autre instance.";
 "profile.delete.error.otherInstanceRunning" = "Une autre instance de ttaccessible utilise déjà le profil « %@ ». Quittez-la d'abord.";
+
+
+// Units and shared formatting
+// Sizes and durations were hardcoded in French ("Go", "j") and reached English
+// users unchanged — reported by Ron J. The colon separator lives here too: French
+// puts a space before it, English does not.
+"unit.bytes" = "%lld o";
+"unit.kilobytes" = "%.1f Ko";
+"unit.megabytes" = "%.1f Mo";
+"unit.gigabytes" = "%.1f Go";
+"unit.duration.daysHoursMinutes" = "%1$dj %2$dh %3$dmin";
+"unit.duration.hoursMinutes" = "%1$dh %2$dmin";
+"unit.duration.minutes" = "%d min";
+"common.labelWithColon" = "%@ :";
+
+// File transfer footer
+"files.transfer.footer.name" = "%1$@ : %2$@";
+"files.transfer.footer.remaining" = ", %@ restantes";
+"files.transfer.footer.accessibilityLabel" = "%1$@ : %2$@, %3$d %%, %4$@ sur %5$@, %6$@ par seconde%7$@";
+
+// Unbanning several people at once
+"bans.unban.multiple" = "%d utilisateurs";
+
+// A chat line: who said it, then what they said
+"chat.line.senderMessage" = "%1$@ : %2$@";

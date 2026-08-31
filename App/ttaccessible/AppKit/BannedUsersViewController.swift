@@ -148,7 +148,7 @@ final class BannedUsersViewController: NSViewController {
 
         let name = selectedBans.count == 1
             ? selectedBans[0].displayName
-            : "\(selectedBans.count) utilisateurs"
+            : L10n.format("bans.unban.multiple", selectedBans.count)
 
         let alert = NSAlert()
         alert.messageText = L10n.format("bans.unban.title", name)
@@ -181,7 +181,7 @@ final class BannedUsersViewController: NSViewController {
 
         let container = NSView(frame: NSRect(x: 0, y: 0, width: 320, height: 66))
 
-        let typeLabel = NSTextField(labelWithString: L10n.text("bans.add.type") + " :")
+        let typeLabel = NSTextField(labelWithString: L10n.format("common.labelWithColon", L10n.text("bans.add.type")))
         typeLabel.frame = NSRect(x: 0, y: 42, width: 140, height: 20)
         container.addSubview(typeLabel)
 
@@ -190,7 +190,7 @@ final class BannedUsersViewController: NSViewController {
         typePopUp.addItem(withTitle: L10n.text("bans.add.type.username"))
         container.addSubview(typePopUp)
 
-        let valueLabel = NSTextField(labelWithString: L10n.text("bans.add.value") + " :")
+        let valueLabel = NSTextField(labelWithString: L10n.format("common.labelWithColon", L10n.text("bans.add.value")))
         valueLabel.frame = NSRect(x: 0, y: 8, width: 140, height: 20)
         container.addSubview(valueLabel)
 

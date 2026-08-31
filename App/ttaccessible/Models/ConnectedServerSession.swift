@@ -185,11 +185,11 @@ struct ChannelFile: Equatable, Identifiable {
     var formattedSize: String {
         let bytes = Double(size)
         if bytes < 1024 {
-            return "\(size) o"
+            return L10n.format("unit.bytes", size)
         } else if bytes < 1_048_576 {
-            return String(format: "%.1f Ko", bytes / 1024)
+            return L10n.format("unit.kilobytes", bytes / 1024)
         } else {
-            return String(format: "%.1f Mo", bytes / 1_048_576)
+            return L10n.format("unit.megabytes", bytes / 1_048_576)
         }
     }
 }

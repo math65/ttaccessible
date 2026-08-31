@@ -1320,7 +1320,7 @@ final class ConnectedServerViewController: NSViewController {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         let lines = session.channelChatHistory.map { msg in
             let time = DateFormatter.localizedString(from: msg.receivedAt, dateStyle: .short, timeStyle: .short)
-            return "[\(time)] \(msg.senderDisplayName) : \(msg.message)"
+            return "[\(time)] " + L10n.format("chat.line.senderMessage", msg.senderDisplayName, msg.message)
         }
         try? lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
     }

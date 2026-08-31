@@ -26,7 +26,7 @@ extension ConnectedServerViewController {
     func chatAccessibilityText(for message: ChannelChatMessage) -> String {
         let timestamp = formattedTime(for: message.receivedAt)
         let senderName = message.isOwnMessage ? L10n.text("chat.sender.you") : message.senderDisplayName
-        return "\(senderName) : \(message.message), \(timestamp)"
+        return L10n.format("chat.line.senderMessage", senderName, message.message) + ", \(timestamp)"
     }
 
     func historyAccessibilityText(for entry: SessionHistoryEntry) -> String {

@@ -386,7 +386,7 @@ final class ChannelFilesViewController: NSViewController {
         let direction = transfer.isDownload
             ? L10n.text("files.transfer.footer.download")
             : L10n.text("files.transfer.footer.upload")
-        transferNameLabel.stringValue = "\(direction) : \(transfer.fileName)"
+        transferNameLabel.stringValue = L10n.format("files.transfer.footer.name", direction, transfer.fileName)
 
         let fmt = ByteCountFormatter()
         fmt.countStyle = .file
@@ -404,14 +404,15 @@ final class ChannelFilesViewController: NSViewController {
             timeFmt.maximumUnitCount = 2
             if let formatted = timeFmt.string(from: secondsLeft) {
                 statsText += "  ·  \(formatted)"
-                remainingText = ", \(formatted) restantes"
+                remainingText = L10n.format("files.transfer.footer.remaining", formatted)
             }
         }
         transferStatsLabel.stringValue = statsText
 
         // Label VoiceOver sur le conteneur
         transferFooterView.setAccessibilityLabel(
-            "\(direction) : \(transfer.fileName), \(pct) %, \(done) sur \(total), \(speed) par seconde\(remainingText)"
+            L10n.format("files.transfer.footer.accessibilityLabel",
+                        direction, transfer.fileName, pct, done, total, speed, remainingText)
         )
 
         transferFooterView.isHidden = false
