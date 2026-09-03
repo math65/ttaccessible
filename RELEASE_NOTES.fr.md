@@ -1,3 +1,31 @@
+## v1.12.0-beta.8 (build 55) — 03/09/2026
+
+Un seul réglage nouveau, demandé par un utilisateur : choisir comment les personnes sont nommées, par leur pseudo, par leur nom d'utilisateur, ou par les deux. Tout ce que la bêta 7 apportait est toujours là, et attend toujours d'être entendu dans un canal animé.
+
+### Nouveautés
+- **Les personnes peuvent être désignées par leur pseudo, par leur nom d'utilisateur, ou par les deux.** Préférences > Général gagne un menu « Afficher les personnes par », à trois positions : pseudo et nom d'utilisateur, pseudo seulement, ou nom d'utilisateur seulement. Le choix vaut partout où quelqu'un est nommé : l'arborescence des canaux et son ordre, les lignes de discussion, les annonces, l'historique, le titre des conversations privées, la fenêtre des utilisateurs connectés et les bandes du mixeur. Il s'applique à l'instant même, sans vous reconnecter. Quand le nom que vous avez choisi est vide, c'est l'autre qui est affiché : personne ne reste sans nom. Par défaut, pseudo et nom d'utilisateur, comme l'arborescence l'a toujours fait.
+
+### Changements
+- **Les lignes de discussion et les annonces nomment désormais les personnes comme l'arborescence.** Elles ne disaient que le pseudo ; avec le réglage par défaut, elles disent maintenant le pseudo suivi du nom d'utilisateur entre parenthèses, si bien qu'un message et la ligne de son auteur ne se contredisent plus. Si c'est plus que vous ne souhaitez entendre, choisissez « Pseudo seulement » dans Préférences > Général.
+
+### À savoir
+- **Ce réglage n'a été essayé que par une personne, le temps d'une session.** Savoir si les noms plus longs dans la discussion aident ou encombrent dans un canal animé, c'est précisément la question que pose cette bêta : dites-le.
+- La fenêtre en deux volets et le mixeur de la bêta 7 attendent le même verdict.
+- Sur la bande d'une personne, VoiceOver annonce le pourcentage deux fois.
+- La correction du bannissement et de l'expulsion demande un compte détenant le droit sans être administrateur, et personne ne l'a encore vérifiée face à un serveur.
+- Les messages d'erreur venant du serveur s'affichent toujours en anglais, quelle que soit la langue dans laquelle vous utilisez l'application. Ils proviennent de la bibliothèque TeamTalk, non traduits ; leur traduction reste la prochaine étape.
+
+### Installation
+
+tt-Accessible installe cette mise à jour pour vous automatiquement. Pour l'installer à la main :
+
+1. Téléchargez `ttaccessible-1.12.0-beta.8-55.zip` ci-dessous.
+2. Décompressez-le et glissez `ttaccessible.app` dans votre dossier `/Applications`, en remplaçant la version précédente.
+3. Double-cliquez — aucun avertissement Gatekeeper grâce à la notarisation.
+
+### Téléchargement
+[ttaccessible-1.12.0-beta.8-55.zip](https://github.com/math65/ttaccessible/releases/download/v1.12.0-beta.8/ttaccessible-1.12.0-beta.8-55.zip)
+
 ## v1.12.0-beta.7 (build 54) — 31/08/2026
 
 La fenêtre de connexion a été refaite, et tous les volumes de l'application ont rejoint le mixeur. C'est le plus gros remaniement de la disposition depuis la sortie de tt-Accessible — et personne ne l'a encore entendu dans un vrai canal. C'est précisément ce qu'on attend de cette bêta.

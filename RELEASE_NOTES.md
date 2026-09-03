@@ -1,3 +1,31 @@
+## v1.12.0-beta.8 (build 55) — 2026-09-03
+
+One new setting, asked for by a user: choose how people are named — by nickname, by username, or by both. Everything beta 7 brought is still in here, and still waiting to be heard in a busy channel.
+
+### New
+- **Show people by nickname, by username, or by both.** Preferences > General has a new menu, "Show people as", with three choices: nickname and username, nickname only, or username only. It applies everywhere someone is named — the channel tree and its order, chat lines, announcements, the history, the titles of private conversations, the Connected Users window and the mixer strips — and takes effect the moment you change it, without reconnecting. When the name you chose is empty, the other one is shown, so nobody goes nameless. The default is nickname and username, which is what the channel tree has always shown.
+
+### Changed
+- **Chat lines and announcements now name people the way the channel tree does.** They used to say the nickname alone; with the default setting they now say the nickname followed by the username in parentheses, so a message and its author's row never disagree. If that is more than you want to hear, choose "Nickname only" in Preferences > General.
+
+### Known
+- **The new setting has been tried by one person, in one session.** Whether the longer names in chat help or get in the way in a busy channel is exactly the question this beta asks — say which.
+- The two-pane window and the mixer from beta 7 are still waiting for the same verdict.
+- On a person's strip, VoiceOver reads the percentage twice.
+- The ban and kick fix needs an account that holds the right without being an administrator, and nobody has confirmed it against a live server yet.
+- Server error messages are still shown in English whatever language you use the app in. They come from the TeamTalk library untranslated; translating them is still next.
+
+### Install
+
+tt-Accessible will install this update for you automatically. To install by hand:
+
+1. Download `ttaccessible-1.12.0-beta.8-55.zip` below.
+2. Unzip and drag `ttaccessible.app` into your `/Applications` folder, replacing the previous version.
+3. Double-click — no Gatekeeper warning thanks to notarization.
+
+### Download
+[ttaccessible-1.12.0-beta.8-55.zip](https://github.com/math65/ttaccessible/releases/download/v1.12.0-beta.8/ttaccessible-1.12.0-beta.8-55.zip)
+
 ## v1.12.0-beta.7 (build 54) — 2026-08-31
 
 The connected window has been rebuilt, and every volume in the app now lives inside the mixer. This is the largest layout change since tt-Accessible shipped — and nobody has listened to it yet in a real channel. That is what this beta is for.
