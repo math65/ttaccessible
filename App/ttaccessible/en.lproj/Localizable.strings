@@ -382,6 +382,11 @@
 "preferences.general.language.english" = "English";
 "preferences.general.language.french" = "French";
 "preferences.general.language.help" = "The app keeps using the system language unless you choose another one. Restart ttaccessible to apply the change everywhere.";
+"preferences.general.userNameDisplayStyle.label" = "Show people as";
+"preferences.general.userNameDisplayStyle.both" = "Nickname and username";
+"preferences.general.userNameDisplayStyle.nickname" = "Nickname only";
+"preferences.general.userNameDisplayStyle.username" = "Username only";
+"preferences.general.userNameDisplayStyle.help" = "Applies to the channel tree, the chats, the announcements and every window that names someone. When the chosen name is empty, the other one is shown.";
 "firstLaunch.language.title" = "Choose Your Language";
 "firstLaunch.language.message" = "Which language would you like ttaccessible to use? You can change this later in Preferences.";
 "preferences.general.autoJoinRootChannel" = "Automatically join the main channel on connect";

@@ -202,11 +202,10 @@ extension TeamTalkConnectionController {
             }
 
             func makeUser(from user: User, channelPathComponents: [String]) -> ConnectedServerUser {
-                let nickname = cachedDisplayNames[user.nUserID] ?? ""
                 return ConnectedServerUser(
                     id: user.nUserID,
                     username: ttString(from: user.szUsername),
-                    nickname: nickname,
+                    nickname: ttString(from: user.szNickname),
                     channelID: user.nChannelID,
                     statusMode: TeamTalkStatusMode(bitmask: user.nStatusMode),
                     statusMessage: ttString(from: user.szStatusMsg),
@@ -232,7 +231,8 @@ extension TeamTalkConnectionController {
                             (option, option.isLocallyEnabled(for: user))
                         }
                     ),
-                    channelPathComponents: channelPathComponents
+                    channelPathComponents: channelPathComponents,
+                    nameDisplayStyle: cachedUserNameDisplayStyle
                 )
             }
 

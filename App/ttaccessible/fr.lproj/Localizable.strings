@@ -382,6 +382,11 @@
 "preferences.general.language.english" = "Anglais";
 "preferences.general.language.french" = "Français";
 "preferences.general.language.help" = "L'application continue d'utiliser la langue du système sauf si vous en choisissez une autre. Redémarrez ttaccessible pour appliquer le changement partout.";
+"preferences.general.userNameDisplayStyle.label" = "Afficher les personnes par";
+"preferences.general.userNameDisplayStyle.both" = "Pseudo et nom d'utilisateur";
+"preferences.general.userNameDisplayStyle.nickname" = "Pseudo seulement";
+"preferences.general.userNameDisplayStyle.username" = "Nom d'utilisateur seulement";
+"preferences.general.userNameDisplayStyle.help" = "S'applique à l'arbre des canaux, aux discussions, aux annonces et à toute fenêtre qui nomme quelqu'un. Quand le nom choisi est vide, l'autre est affiché.";
 "firstLaunch.language.title" = "Choisissez votre langue";
 "firstLaunch.language.message" = "Quelle langue souhaitez-vous utiliser pour ttaccessible ? Vous pourrez modifier ce choix plus tard dans les Préférences.";
 "preferences.general.autoJoinRootChannel" = "Rejoindre automatiquement le canal principal à la connexion";

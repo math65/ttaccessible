@@ -19,6 +19,62 @@ struct AppPreferences: Codable, Equatable {
         case userCount
     }
 
+    /// Which of a person's two names the app shows — in the channel tree, the
+    /// chats, the announcements and every dialog that names someone.
+    /// `nicknameAndUsername` is the historical behaviour ("Jean-Pierre (jean)").
+    /// The Qt client only offers a two-state "show username instead of
+    /// nickname" switch; this is a superset of it.
+    enum UserNameDisplayStyle: String, Codable, CaseIterable {
+        case nicknameAndUsername
+        case nicknameOnly
+        case usernameOnly
+
+        var localizationKey: String {
+            switch self {
+            case .nicknameAndUsername:
+                return "preferences.general.userNameDisplayStyle.both"
+            case .nicknameOnly:
+                return "preferences.general.userNameDisplayStyle.nickname"
+            case .usernameOnly:
+                return "preferences.general.userNameDisplayStyle.username"
+            }
+        }
+
+        /// THE name resolver: the one place that decides how a person is
+        /// called, from the raw nickname and account name. The chosen name
+        /// falls back to the other one when it is empty, and to a per-user
+        /// placeholder when both are (an anonymous login, which servers may
+        /// allow) — the result is never empty.
+        func displayName(nickname: String, username: String, userID: Int32) -> String {
+            let fallback = ConnectedServerUser.fallbackDisplayName(userID: userID)
+            switch self {
+            case .nicknameAndUsername:
+                if nickname.isEmpty {
+                    return username.isEmpty ? fallback : username
+                }
+                if username.isEmpty {
+                    return nickname
+                }
+                // When the nickname and username are effectively the same, show
+                // it once (otherwise VoiceOver reads e.g. "dom (dom)").
+                if nickname.caseInsensitiveCompare(username) == .orderedSame {
+                    return nickname
+                }
+                return "\(nickname) (\(username))"
+            case .nicknameOnly:
+                if nickname.isEmpty == false {
+                    return nickname
+                }
+                return username.isEmpty ? fallback : username
+            case .usernameOnly:
+                if username.isEmpty == false {
+                    return username
+                }
+                return nickname.isEmpty ? fallback : nickname
+            }
+        }
+    }
+
     enum MicrophoneMode: String, Codable, CaseIterable {
         case alwaysOn
         case pushToTalk
@@ -125,6 +181,7 @@ struct AppPreferences: Codable, Equatable {
         case skipKickConfirmation
         case adaptiveJitterBuffer
         case channelSortMode
+        case userNameDisplayStyle
         case autoCheckForUpdates
         case includeBetaUpdates
         case microphoneMode
@@ -208,6 +265,7 @@ struct AppPreferences: Codable, Equatable {
     var skipKickConfirmation: Bool
     var adaptiveJitterBuffer: Bool
     var channelSortMode: ChannelSortMode
+    var userNameDisplayStyle: UserNameDisplayStyle
     var autoCheckForUpdates: Bool
     var includeBetaUpdates: Bool
     var microphoneMode: MicrophoneMode
@@ -300,6 +358,7 @@ struct AppPreferences: Codable, Equatable {
         skipKickConfirmation: Bool = false,
         adaptiveJitterBuffer: Bool = false,
         channelSortMode: ChannelSortMode = .name,
+        userNameDisplayStyle: UserNameDisplayStyle = .nicknameAndUsername,
         autoCheckForUpdates: Bool = true,
         includeBetaUpdates: Bool = false,
         microphoneMode: MicrophoneMode = .alwaysOn,
@@ -371,6 +430,7 @@ struct AppPreferences: Codable, Equatable {
         self.skipKickConfirmation = skipKickConfirmation
         self.adaptiveJitterBuffer = adaptiveJitterBuffer
         self.channelSortMode = channelSortMode
+        self.userNameDisplayStyle = userNameDisplayStyle
         self.autoCheckForUpdates = autoCheckForUpdates
         self.includeBetaUpdates = includeBetaUpdates
         self.microphoneMode = microphoneMode
@@ -532,6 +592,7 @@ struct AppPreferences: Codable, Equatable {
         skipKickConfirmation = try container.decodeIfPresent(Bool.self, forKey: .skipKickConfirmation) ?? false
         adaptiveJitterBuffer = try container.decodeIfPresent(Bool.self, forKey: .adaptiveJitterBuffer) ?? false
         channelSortMode = try container.decodeIfPresent(ChannelSortMode.self, forKey: .channelSortMode) ?? .name
+        userNameDisplayStyle = try container.decodeIfPresent(UserNameDisplayStyle.self, forKey: .userNameDisplayStyle) ?? .nicknameAndUsername
         autoCheckForUpdates = try container.decodeIfPresent(Bool.self, forKey: .autoCheckForUpdates) ?? true
         includeBetaUpdates = try container.decodeIfPresent(Bool.self, forKey: .includeBetaUpdates) ?? false
         microphoneMode = try container.decodeIfPresent(MicrophoneMode.self, forKey: .microphoneMode) ?? .alwaysOn
@@ -608,6 +669,7 @@ struct AppPreferences: Codable, Equatable {
         try container.encode(skipKickConfirmation, forKey: .skipKickConfirmation)
         try container.encode(adaptiveJitterBuffer, forKey: .adaptiveJitterBuffer)
         try container.encode(channelSortMode, forKey: .channelSortMode)
+        try container.encode(userNameDisplayStyle, forKey: .userNameDisplayStyle)
         try container.encode(autoCheckForUpdates, forKey: .autoCheckForUpdates)
         try container.encode(includeBetaUpdates, forKey: .includeBetaUpdates)
         try container.encode(microphoneMode, forKey: .microphoneMode)

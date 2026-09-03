@@ -116,6 +116,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var nicknameCancellable: AnyCancellable?
     private var userMenuVisibilityCancellable: AnyCancellable?
     private var hotkeyPrefsCancellable: AnyCancellable?
+    private var userNameDisplayStyleCancellable: AnyCancellable?
     private let pushToTalkMonitor = HotkeyMonitor()
     private let muteHotkeyMonitor = HotkeyMonitor()
 
@@ -526,6 +527,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .removeDuplicates { HotkeyPrefsKey(preferences: $0) == HotkeyPrefsKey(preferences: $1) }
             .sink { [weak self] prefs in
                 self?.configureHotkeyMonitors(with: prefs)
+            }
+
+        // Same willSet caveat: act on the delivered value. The controller rebuilds
+        // the tree so every name changes on the spot, without a reconnect; the
+        // replay at subscription is a no-op (the controller seeded the same value).
+        userNameDisplayStyleCancellable = preferencesStore.$preferences
+            .map(\.userNameDisplayStyle)
+            .removeDuplicates()
+            .sink { [weak self] style in
+                self?.connectionController.updateUserNameDisplayStyle(style)
             }
     }
 

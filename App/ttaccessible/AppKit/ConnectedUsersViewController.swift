@@ -312,7 +312,7 @@ final class ConnectedUsersViewController: NSViewController {
 
     func update(users newUsers: [ConnectedServerUser]) {
         let sorted = newUsers.sorted {
-            $0.nickname.localizedCaseInsensitiveCompare($1.nickname) == .orderedAscending
+            $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
         }
         // Skip the reload when nothing the table displays has changed. This avoids
         // disturbing the VoiceOver cursor on every unrelated session publish.
@@ -562,7 +562,9 @@ final class ConnectedUsersViewController: NSViewController {
 
     private func text(for user: ConnectedServerUser, column: Column) -> String {
         switch column {
-        case .nickname: return user.nickname
+        // The raw nickname; a person who has none is still named here (by their
+        // account name, or the per-user placeholder) so no row goes nameless.
+        case .nickname: return user.nickname.isEmpty ? user.displayName : user.nickname
         case .status:   return user.statusMessage
         case .username: return user.username
         case .channel:  return channelPath(for: user)

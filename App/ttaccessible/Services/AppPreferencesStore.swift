@@ -170,6 +170,12 @@ final class AppPreferencesStore: ObservableObject {
         mutate { $0.languagePreference = languagePreference }
     }
 
+    /// Nickname, username, or both — applied live by the AppDelegate sink that
+    /// forwards it to the connection controller.
+    func updateUserNameDisplayStyle(_ style: AppPreferences.UserNameDisplayStyle) {
+        mutate { $0.userNameDisplayStyle = style }
+    }
+
     func markInitialLanguageChosen() {
         mutate { $0.hasChosenInitialLanguage = true }
     }

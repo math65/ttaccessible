@@ -31,20 +31,15 @@ struct ConnectedServerUser: Equatable, Identifiable {
     let volumeMediaFile: Int32
     let subscriptionStates: [UserSubscriptionOption: Bool]
     let channelPathComponents: [String]
+    /// Which of the two names to show — the user's preference, captured when the
+    /// snapshot was built so every consumer of `displayName` (rows, mixer strips,
+    /// dialogs) agrees with the chat and the announcements.
+    let nameDisplayStyle: AppPreferences.UserNameDisplayStyle
 
+    /// `nickname` and `username` are the raw values from the server; this is the
+    /// one to show. Never empty — see `UserNameDisplayStyle.displayName`.
     var displayName: String {
-        if nickname.isEmpty {
-            return username.isEmpty ? Self.fallbackDisplayName(userID: id) : username
-        }
-        if username.isEmpty {
-            return nickname
-        }
-        // When the nickname and username are effectively the same, show it once
-        // (otherwise VoiceOver reads e.g. "dom (dom)" — the same name twice).
-        if nickname.caseInsensitiveCompare(username) == .orderedSame {
-            return nickname
-        }
-        return "\(nickname) (\(username))"
+        nameDisplayStyle.displayName(nickname: nickname, username: username, userID: id)
     }
 
     /// Stands in for a user who has neither nickname nor account name — an

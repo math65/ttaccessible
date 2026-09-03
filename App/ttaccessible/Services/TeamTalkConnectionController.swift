@@ -146,6 +146,11 @@ final class TeamTalkConnectionController {
     /// threads. Seeded at init, updated via applyMicrophoneHotkeySettings.
     var cachedMicrophoneMode: AppPreferences.MicrophoneMode = .alwaysOn
     var cachedPushToTalkKeyConfigured = false
+    /// Queue-side cache of how people are named (nickname, username, or both):
+    /// `displayName(for:)` runs per user per snapshot and from the message loop,
+    /// so it must not read the @Published preferences struct. Seeded at init,
+    /// updated via updateUserNameDisplayStyle.
+    var cachedUserNameDisplayStyle: AppPreferences.UserNameDisplayStyle = .nicknameAndUsername
     /// "Both" mode only: the always-on gate toggled by ⌘⇧A. The mic engine stays
     /// hot (voiceTransmissionEnabled) the whole time so PTT is instant; this
     /// lightweight flag decides whether captured audio is transmitted when PTT
@@ -381,6 +386,7 @@ final class TeamTalkConnectionController {
         // preferences sink keeps them current afterward.
         cachedMicrophoneMode = preferencesStore.preferences.microphoneMode
         cachedPushToTalkKeyConfigured = preferencesStore.preferences.pushToTalkKey?.isValid ?? false
+        cachedUserNameDisplayStyle = preferencesStore.preferences.userNameDisplayStyle
         audioBlockPump.mediaSyncEstimator = voiceSyncEstimator
         voiceSyncDelayLine.insertHandler = { [weak self] chunk in
             // Runs on the controller queue (the delay line's timer lives there).
@@ -393,6 +399,19 @@ final class TeamTalkConnectionController {
     /// without needing a reconnect.
     func updateUserVolumeMemoryMode(_ mode: AppPreferences.UserVolumeMemoryMode) {
         userVolumeStore.setMemoryMode(mode)
+    }
+
+    /// Push the "show people as" preference to the queue-side cache and, when a
+    /// session is up, rebuild the tree so every row, mixer strip and window title
+    /// is renamed on the spot — no reconnect. Chat lines and history entries
+    /// already written keep the name they were written with.
+    func updateUserNameDisplayStyle(_ style: AppPreferences.UserNameDisplayStyle) {
+        queue.async { [weak self] in
+            guard let self, self.cachedUserNameDisplayStyle != style else { return }
+            self.cachedUserNameDisplayStyle = style
+            guard let instance = self.instance, let connectedRecord = self.connectedRecord else { return }
+            self.publishSessionLocked(instance: instance, record: connectedRecord, invalidation: [.rootTree])
+        }
     }
 
     // MARK: - Channel passwords
@@ -592,16 +611,15 @@ final class TeamTalkConnectionController {
         return Array(users.prefix(Int(actualCount)))
     }
 
+    /// How a person is named in chat lines, announcements, history and the tree
+    /// sort. Same resolver as `ConnectedServerUser.displayName`, so the two never
+    /// disagree. Queue-side: reads the cached preference, never the store.
     func displayName(for user: User) -> String {
-        let nickname = ttString(from: user.szNickname)
-        if nickname.isEmpty == false {
-            return nickname
-        }
-        let username = ttString(from: user.szUsername)
-        if username.isEmpty == false {
-            return username
-        }
-        return ConnectedServerUser.fallbackDisplayName(userID: user.nUserID)
+        cachedUserNameDisplayStyle.displayName(
+            nickname: ttString(from: user.szNickname),
+            username: ttString(from: user.szUsername),
+            userID: user.nUserID
+        )
     }
 
     func effectiveNickname(for record: SavedServerRecord, override nicknameOverride: String? = nil) -> String {

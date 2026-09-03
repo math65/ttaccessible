@@ -20,6 +20,7 @@ la fenêtre.
 | **Genre** | Neutre |
 | **Délai avant absence automatique**, en minutes — 0 la désactive | 3 |
 | **Message d'absence** | vide |
+| **Afficher les personnes par** — Pseudo et nom d'utilisateur, Pseudo seulement, ou Nom d'utilisateur seulement | Pseudo et nom d'utilisateur |
 | **Utiliser des horodatages relatifs**, du type « il y a 2 min » | désactivé |
 | **Utiliser la détection automatique du fichier TeamTalk lors de l'import** | activé |
 | **Langue** — Langue du système, Anglais ou Français | Langue du système |

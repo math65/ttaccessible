@@ -19,6 +19,7 @@ of the seven panes in the sidebar. Press Escape to close the window.
 | **Gender** | Neutral |
 | **Away timeout**, in minutes — 0 turns automatic away off | 3 |
 | **Away message** | empty |
+| **Show people as** — Nickname and username, Nickname only, or Username only | Nickname and username |
 | **Use relative timestamps**, such as "2 min ago" | off |
 | **Automatically detect the TeamTalk file format during import** | on |
 | **Language** — System Default, English or French | System Default |

@@ -117,6 +117,28 @@ struct PreferencesGeneralView: View {
 
                 Divider()
 
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(L10n.text("preferences.general.userNameDisplayStyle.label"))
+                        .accessibilityHidden(true)
+                    Picker(
+                        L10n.text("preferences.general.userNameDisplayStyle.label"),
+                        selection: Binding(
+                            get: { rootStore.preferences.userNameDisplayStyle },
+                            set: { rootStore.updateUserNameDisplayStyle($0) }
+                        )
+                    ) {
+                        ForEach(AppPreferences.UserNameDisplayStyle.allCases, id: \.self) { style in
+                            Text(L10n.text(style.localizationKey)).tag(style)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .accessibilityLabel(L10n.text("preferences.general.userNameDisplayStyle.label"))
+
+                    Text(L10n.text("preferences.general.userNameDisplayStyle.help"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 Toggle(isOn: Binding(
                     get: { rootStore.preferences.useRelativeTimestamps },
                     set: { rootStore.updateUseRelativeTimestamps($0) }

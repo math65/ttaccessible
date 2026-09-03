@@ -858,7 +858,8 @@ final class ConnectedServerViewController: NSViewController {
                     volumeVoice: user.volumeVoice,
                     volumeMediaFile: user.volumeMediaFile,
                     subscriptionStates: user.subscriptionStates,
-                    channelPathComponents: user.channelPathComponents
+                    channelPathComponents: user.channelPathComponents,
+                    nameDisplayStyle: user.nameDisplayStyle
                 )
             }
             let updatedChildren = updateAudioState(in: channel.children, updates: updates, changedUserIDs: &changedUserIDs)
