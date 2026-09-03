@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ttaccessible-1.12.0-beta.8-55.fr</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --code-bg: #f5f5f7;
+  --link: #0066cc;
+  --link-hover: #0040a0;
+  --rule: #e5e5ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #ececec;
+    --muted: #a0a0a0;
+    --code-bg: #2d2d2d;
+    --link: #4eaaff;
+    --link-hover: #82c4ff;
+    --rule: #3a3a3a;
+  }
+}
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  padding: 1rem 1.25rem 1.5rem;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.15rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.2em; }
+h3 { font-size: 1.02rem; }
+h4 { font-size: 0.95rem; color: var(--muted); }
+p { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; margin: 0.6em 0; }
+li { margin: 0.25em 0; }
+li > p { margin: 0.3em 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover, a:focus { color: var(--link-hover); text-decoration: underline; }
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.75em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+pre code { background: transparent; padding: 0; border-radius: 0; }
+blockquote {
+  border-left: 3px solid var(--rule);
+  margin: 0.8em 0;
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--muted);
+}
+hr { border: 0; border-top: 1px solid var(--rule); margin: 1.5em 0; }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<h2 id="v1120-beta8-build-55--03092026">v1.12.0-beta.8 (build 55) —
+03/09/2026</h2>
+<p>Un seul réglage nouveau, demandé par un utilisateur : choisir comment
+les personnes sont nommées, par leur pseudo, par leur nom d'utilisateur,
+ou par les deux. Tout ce que la bêta 7 apportait est toujours là, et
+attend toujours d'être entendu dans un canal animé.</p>
+<h3 id="nouveautés">Nouveautés</h3>
+<ul>
+<li><strong>Les personnes peuvent être désignées par leur pseudo, par
+leur nom d'utilisateur, ou par les deux.</strong> Préférences &gt;
+Général gagne un menu « Afficher les personnes par », à trois positions
+: pseudo et nom d'utilisateur, pseudo seulement, ou nom d'utilisateur
+seulement. Le choix vaut partout où quelqu'un est nommé : l'arborescence
+des canaux et son ordre, les lignes de discussion, les annonces,
+l'historique, le titre des conversations privées, la fenêtre des
+utilisateurs connectés et les bandes du mixeur. Il s'applique à
+l'instant même, sans vous reconnecter. Quand le nom que vous avez choisi
+est vide, c'est l'autre qui est affiché : personne ne reste sans nom.
+Par défaut, pseudo et nom d'utilisateur, comme l'arborescence l'a
+toujours fait.</li>
+</ul>
+<h3 id="changements">Changements</h3>
+<ul>
+<li><strong>Les lignes de discussion et les annonces nomment désormais
+les personnes comme l'arborescence.</strong> Elles ne disaient que le
+pseudo ; avec le réglage par défaut, elles disent maintenant le pseudo
+suivi du nom d'utilisateur entre parenthèses, si bien qu'un message et
+la ligne de son auteur ne se contredisent plus. Si c'est plus que vous
+ne souhaitez entendre, choisissez « Pseudo seulement » dans Préférences
+&gt; Général.</li>
+</ul>
+<h3 id="à-savoir">À savoir</h3>
+<ul>
+<li><strong>Ce réglage n'a été essayé que par une personne, le temps
+d'une session.</strong> Savoir si les noms plus longs dans la discussion
+aident ou encombrent dans un canal animé, c'est précisément la question
+que pose cette bêta : dites-le.</li>
+<li>La fenêtre en deux volets et le mixeur de la bêta 7 attendent le
+même verdict.</li>
+<li>Sur la bande d'une personne, VoiceOver annonce le pourcentage deux
+fois.</li>
+<li>La correction du bannissement et de l'expulsion demande un compte
+détenant le droit sans être administrateur, et personne ne l'a encore
+vérifiée face à un serveur.</li>
+<li>Les messages d'erreur venant du serveur s'affichent toujours en
+anglais, quelle que soit la langue dans laquelle vous utilisez
+l'application. Ils proviennent de la bibliothèque TeamTalk, non traduits
+; leur traduction reste la prochaine étape.</li>
+</ul>
+<h3 id="installation">Installation</h3>
+<p>tt-Accessible installe cette mise à jour pour vous automatiquement.
+Pour l'installer à la main :</p>
+<ol type="1">
+<li>Téléchargez <code>ttaccessible-1.12.0-beta.8-55.zip</code>
+ci-dessous.</li>
+<li>Décompressez-le et glissez <code>ttaccessible.app</code> dans votre
+dossier <code>/Applications</code>, en remplaçant la version
+précédente.</li>
+<li>Double-cliquez — aucun avertissement Gatekeeper grâce à la
+notarisation.</li>
+</ol>
+<h3 id="téléchargement">Téléchargement</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.12.0-beta.8/ttaccessible-1.12.0-beta.8-55.zip">ttaccessible-1.12.0-beta.8-55.zip</a></p>
+<h2 id="v1120-beta7-build-54--31082026">v1.12.0-beta.7 (build 54) —
+31/08/2026</h2>
+<p>La fenêtre de connexion a été refaite, et tous les volumes de
+l'application ont rejoint le mixeur. C'est le plus gros remaniement de
+la disposition depuis la sortie de tt-Accessible — et personne ne l'a
+encore entendu dans un vrai canal. C'est précisément ce qu'on attend de
+cette bêta.</p>
+<h3 id="nouveautés-1">Nouveautés</h3>
+<ul>
+<li><strong>La fenêtre de connexion se partage maintenant en deux
+volets, au lieu d'une seule colonne.</strong> Le nom du serveur, ses
+lignes d'état, le bouton du microphone et l'arborescence des canaux
+tiennent dans une barre latérale ; le mixeur, la discussion, la zone de
+saisie et l'historique occupent le reste. La séparation entre les deux
+se déplace, et l'application retient où vous l'avez laissée.
+<strong>L'ordre de lecture, lui, ne change pas</strong> : VoiceOver
+parcourt exactement la même suite qu'avant, la barre latérale d'abord,
+puis le volet principal. La seule nouveauté que vous rencontrerez est la
+séparation elle-même.</li>
+<li><strong>Tous les volumes généraux se trouvent désormais en tête du
+mixeur, sur une bande appelée Général.</strong> La sortie, les médias,
+le microphone et les effets sonores, dans cet ordre. Command+5 vous y
+dépose directement. Les flèches gauche et droite choisissent le niveau
+sur lequel agir, les flèches haut et bas le règlent, V l'annonce, deux
+appuis sur V le ramènent à sa valeur normale, et M coupe ou rétablit
+tout le son. Les quatre curseurs qui occupaient la fenêtre ont disparu :
+la bande Général les remplace, à la souris autant qu'au clavier, et ces
+niveaux n'existent plus qu'à un seul endroit au lieu de deux.</li>
+<li><strong>Un seul réglage pour tous les flux médias à la
+fois.</strong> Quand quelqu'un diffuse de la musique dans un canal
+pendant que d'autres parlent, vous pouvez maintenant baisser la musique
+seule, sans toucher à la voix de personne et sans passer chacun en revue
+dans le mixeur. Command+Majuscule+Flèche haut et bas la règle depuis
+n'importe où dans l'application, ce qui vous permet de baisser le fond
+sonore en pleine conversation. Une diffusion qui démarre ensuite est
+prise en compte toute seule, et votre propre diffusion baisse avec les
+autres. Proposé par <strong>Yannick</strong>.</li>
+</ul>
+<h3 id="corrections">Corrections</h3>
+<ul>
+<li><strong>Le bannissement et l'expulsion suivent maintenant les droits
+que votre serveur vous a donnés, et non le fait d'être administrateur ou
+non.</strong> Un compte disposant des droits de bannir et de débannir,
+sans être administrateur pour autant, voyait les options grisées sans la
+moindre explication. Le serveur a toujours demandé le droit, jamais le
+type de compte ; l'application, elle, posait la mauvaise question à six
+endroits — la fenêtre Utilisateurs bannis, Expulser du serveur et
+Expulser et bannir, aussi bien dans le menu Utilisateur que dans le menu
+contextuel de l'arborescence, et leurs jumeaux dans la fenêtre des
+utilisateurs connectés, où détenir un droit sans l'autre vous montrait
+les deux ou aucun. Signalé par <strong>David</strong>.</li>
+<li><strong>Les tailles et les durées s'affichaient en français, quelle
+que soit la langue de l'application.</strong> Les statistiques du
+serveur annonçaient « 10j 6h 35min » de disponibilité et « 37,6 Go »
+envoyés à des utilisateurs anglophones ; les tailles de fichiers du
+canal faisaient de même. L'espace que le français place avant les
+deux-points suivait le même chemin : dans les libellés des statistiques,
+dans la fenêtre de bannissement, et dans chaque ligne de discussion lue
+par VoiceOver. L'anglais reçoit désormais « 10d 6h 35min », « 37.6 GB »
+et pas d'espace avant les deux-points ; le français ne bouge pas. Le
+pied de page des transferts de fichiers était dans le même cas —
+VoiceOver l'annonçait en français à tout le monde — et il est traduit
+lui aussi. Signalé par <strong>Ron J.</strong></li>
+<li><strong>Des fenêtres qui s'ouvraient bien plus petites que
+prévu.</strong> Les Préférences se réduisaient à leur barre de titre :
+ni barre latérale, ni panneaux, rien sur quoi cliquer. Les fichiers du
+canal s'ouvraient au tiers de leur largeur, les noms de fichiers
+tronqués et les colonnes Taille et Envoyé par hors de l'écran. Les
+utilisateurs connectés n'affichaient tout simplement pas leurs colonnes
+Adresse IP, Version et ID. Corrigé au passage : le champ des messages
+privés n'occupait qu'un tiers de sa ligne, et la fiche d'un canal
+coupait « Fréquence d'échantillonnage » ainsi que son libellé de quota
+en plein milieu. Trouvé en ouvrant chaque fenêtre et en la regardant, ce
+que personne n'avait fait : cette application est conçue pour VoiceOver,
+et aucun de ces défauts ne s'entend.</li>
+<li><strong>VoiceOver passait à côté du mixeur.</strong> En avançant
+avec VO+Flèche droite, il l'enjambait complètement, alors qu'en reculant
+il le trouvait. Deux éléments se superposaient exactement, et VoiceOver
+retenait celui qui était vide.</li>
+<li><strong>Les lettres du mixeur ne traînent plus.</strong> Chaque
+appui attendait un tiers de seconde, au cas où un deuxième arrive. Et
+garder M enfoncé ne coupe plus le son en boucle.</li>
+</ul>
+<h3 id="à-savoir-1">À savoir</h3>
+<ul>
+<li><strong>Rien de tout cela n'a encore été entendu dans un canal
+animé.</strong> La disposition est juste à l'écran et correcte dans
+l'arborescence d'accessibilité, mais une capture d'écran ne dira jamais
+si elle est agréable à parcourir. Si quelque chose vous gêne, dites-le :
+c'est le retour que cette bêta réclame.</li>
+<li>Sur la bande d'une personne, VoiceOver annonce le pourcentage deux
+fois.</li>
+<li>La correction du bannissement et de l'expulsion demande un compte
+détenant le droit sans être administrateur, et personne ne l'a encore
+vérifiée face à un serveur.</li>
+<li>Les messages d'erreur venant du serveur s'affichent toujours en
+anglais, quelle que soit la langue dans laquelle vous utilisez
+l'application. Ils proviennent de la bibliothèque TeamTalk, non traduits
+; leur traduction reste la prochaine étape.</li>
+</ul>
+<h3 id="installation-1">Installation</h3>
+<p>tt-Accessible installe cette mise à jour pour vous automatiquement.
+Pour l'installer à la main :</p>
+<ol type="1">
+<li>Téléchargez <code>ttaccessible-1.12.0-beta.7-54.zip</code>
+ci-dessous.</li>
+<li>Décompressez-le et glissez <code>ttaccessible.app</code> dans votre
+dossier <code>/Applications</code>, en remplaçant la version
+précédente.</li>
+<li>Double-cliquez — aucun avertissement Gatekeeper grâce à la
+notarisation.</li>
+</ol>
+<h3 id="téléchargement-1">Téléchargement</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.12.0-beta.7/ttaccessible-1.12.0-beta.7-54.zip">ttaccessible-1.12.0-beta.7-54.zip</a></p>
+</body>
+</html>
