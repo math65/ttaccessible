@@ -18,7 +18,7 @@
 <p>Press Command-5. You land on the General strip, and the people follow. When you're alone in the channel, the General strip is still there and the mixer reports <em>No other users in this channel.</em></p>
 <h2 id="set-the-general-levels">Set the general levels</h2>
 <p>The General strip carries the four levels that apply to the whole app: <strong>Output volume</strong>, <strong>Media volume</strong>, <strong>Microphone volume</strong> and <strong>Sound effects volume</strong>. They are nowhere else in the window — this strip is where they live, for the mouse as much as for the keyboard.</p>
-<p>Left Arrow and Right Arrow choose which level the arrows act on, and it is announced with its value. Up Arrow and Down Arrow move it. V speaks it, and pressing V twice puts it back to 50%. M speaks the master mute, and pressing it twice turns it on or off.</p>
+<p>Left Arrow and Right Arrow choose which level the arrows act on, and it is announced with its value. Up Arrow and Down Arrow move it by 1%, Page Up and Page Down by 10%, and Home and End take it straight to 100% or 0%. V speaks it, and pressing V twice puts it back to 50%. M speaks the master mute, and pressing it twice turns it on or off.</p>
 <p><strong>Media volume</strong> turns down every media stream in the channel at once — your own included — without touching anyone's voice. Command-Shift-Up Arrow and Command-Shift-Down Arrow reach it from anywhere in the window, so you can duck the music without leaving the channel tree.</p>
 <h2 id="adjust-a-person">Adjust a person</h2>
 <p>Each strip carries the following controls, and is named after the person, followed by their level and by <em>muted</em> when it applies.</p>
@@ -68,7 +68,15 @@
 <tbody>
 <tr>
 <td>Up Arrow or Down Arrow</td>
-<td>Change the voice volume</td>
+<td>Change the voice volume by 1%</td>
+</tr>
+<tr>
+<td>Page Up or Page Down</td>
+<td>Change the voice volume by 10%</td>
+</tr>
+<tr>
+<td>Home or End</td>
+<td>Set the voice volume to 100% or 0%</td>
 </tr>
 <tr>
 <td>Left Arrow or Right Arrow</td>
@@ -108,7 +116,8 @@
 </tr>
 </tbody>
 </table>
-<p>Press the two presses quickly, one after the other. Hold an arrow key to repeat it, slowly at first and then faster.</p>
+<p>Page Up, Page Down, Home and End take the same modifiers as the arrows while you are on a strip: with Command they act on the media volume, and with Command-Shift on the media level. Outside a strip they are left to the list you are reading, so Command-Home and Command-End still take you through it.</p>
+<p>Press the two presses quickly, one after the other. Hold an arrow or a page key to repeat it, slowly at first and then faster.</p>
 <p>Every action is spoken as you make it, so you can balance a channel entirely by ear.</p>
 <h2 id="keep-your-levels">Keep your levels</h2>
 <p>The mixer sets the same per-person levels as <strong>Adjust volume</strong> does. To choose whether they survive a reconnection or a relaunch, open Preferences, click Audio, then use <strong>Per-user volume memory</strong>.</p>

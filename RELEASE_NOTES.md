@@ -1,60 +1,51 @@
-## v1.12.0-beta.8 (build 55) — 2026-09-03
+## v1.12.0 (build 56) — 2026-09-04
 
-One new setting, asked for by a user: choose how people are named — by nickname, by username, or by both. Everything beta 7 brought is still in here, and still waiting to be heard in a busy channel.
+The connected window has been rebuilt into two panes, every volume in the app now lives inside the channel mixer, and the app speaks Turkish. If you have been on the stable channel since 1.11.1, this release also brings you everything the 1.12 betas have been testing all summer.
 
-### New
-- **Show people by nickname, by username, or by both.** Preferences > General has a new menu, "Show people as", with three choices: nickname and username, nickname only, or username only. It applies everywhere someone is named — the channel tree and its order, chat lines, announcements, the history, the titles of private conversations, the Connected Users window and the mixer strips — and takes effect the moment you change it, without reconnecting. When the name you chose is empty, the other one is shown, so nobody goes nameless. The default is nickname and username, which is what the channel tree has always shown.
+### Highlights
+- **The connected window is now two panes instead of one tall column** — and VoiceOver reads it in exactly the same order as before.
+- **Every volume in the app now lives in the mixer**, on a strip called General, reachable with Command+5.
+- **The app is fully localised in Turkish**, and no longer falls back to French for people whose language it doesn't ship.
+- **A microphone that stops being transmitted restarts itself, and says so** instead of leaving you silent for hours.
+- **Ban and kick follow the rights your server actually gave you**, not just the administrator flag.
 
-### Changed
-- **Chat lines and announcements now name people the way the channel tree does.** They used to say the nickname alone; with the default setting they now say the nickname followed by the username in parentheses, so a message and its author's row never disagree. If that is more than you want to hear, choose "Nickname only" in Preferences > General.
+### The connected window and the mixer
+- **Two panes.** The server name, its status lines, the microphone button and the channel tree sit in a sidebar; the mixer, chat, message box and history fill the rest. The divider can be dragged and is remembered between sessions. The reading order has not changed — VoiceOver walks the sidebar first, then the content pane, exactly as before.
+- **The mixer is reachable again.** VoiceOver used to walk straight past it.
+- **Every global level is on the General strip** — output, media, microphone and sound effects, in that order. Command+5 lands you there. Left and Right choose which level you are on, Up and Down move it, V speaks it, V twice puts it back to normal, and M mutes or unmutes everything. The four sliders that used to sit in the window are gone: those levels now exist in one place instead of two.
+- **One level for every media stream at once.** When someone streams music into a channel while people are talking, Command+Shift+Up and Down turns the music down on its own, from anywhere in the window, without touching a single person's voice. A stream that starts afterwards is caught automatically, and your own stream goes down with everyone else's.
+- **The keys move levels the way you would expect.** The arrows move by 1%, Page Up and Page Down by 10%, and Home and End go straight to 100% and 0%. Two percent per press was too coarse to land on a value, and reaching either end took fifty presses. Home, End and the page keys act on whichever level the arrows act on, so they work on a person's strip and on the General strip alike.
+- **Windows open at the size they were meant to have.** Several opened at a fraction of it.
 
-### Known
-- **The new setting has been tried by one person, in one session.** Whether the longer names in chat help or get in the way in a busy channel is exactly the question this beta asks — say which.
-- The two-pane window and the mixer from beta 7 are still waiting for the same verdict.
-- On a person's strip, VoiceOver reads the percentage twice.
-- The ban and kick fix needs an account that holds the right without being an administrator, and nobody has confirmed it against a live server yet.
-- Server error messages are still shown in English whatever language you use the app in. They come from the TeamTalk library untranslated; translating them is still next.
+### Your microphone
+- **A microphone that stops being transmitted now restarts itself, and tells you.** It could previously stay mute for hours without a single sign that anything was wrong.
+- **A reconnect no longer swallows the microphone you had open.** It comes back the way you left it.
+- **A channel that carries no voice now says so**, instead of opening a microphone into nothing.
+- **New: you can choose to always arrive with the microphone off.** Preferences > Connection, off by default. Until now the app always gave you back the microphone the last session left open, which on a busy server means broadcasting first and finding out afterwards. Changing channel is unaffected, and a channel that confiscated your microphone still gives it back.
 
-### Install
+### Languages
+- **Turkish.** All 1,200 strings, including every announcement, not just the menus. Choose it in Preferences > General > Language, or let the app follow a Mac already set to Turkish. Asked for by Serkan Türkyılmaz. It has not yet been read by a native speaker, so corrections are very welcome.
+- **The app no longer falls back to French.** It declared French as its fallback language, so anyone whose Mac was set to a language the app doesn't ship — Turkish, German, Spanish — got a French app, and the Language preference could not repair the menus macOS draws itself. The fallback is now English.
+- **French units and the French colon are no longer served to English-speaking users** in server statistics, file sizes, transfer footers and chat lines.
 
-tt-Accessible will install this update for you automatically. To install by hand:
-
-1. Download `ttaccessible-1.12.0-beta.8-55.zip` below.
-2. Unzip and drag `ttaccessible.app` into your `/Applications` folder, replacing the previous version.
-3. Double-click — no Gatekeeper warning thanks to notarization.
-
-### Download
-[ttaccessible-1.12.0-beta.8-55.zip](https://github.com/math65/ttaccessible/releases/download/v1.12.0-beta.8/ttaccessible-1.12.0-beta.8-55.zip)
-
-## v1.12.0-beta.7 (build 54) — 2026-08-31
-
-The connected window has been rebuilt, and every volume in the app now lives inside the mixer. This is the largest layout change since tt-Accessible shipped — and nobody has listened to it yet in a real channel. That is what this beta is for.
-
-### New
-- **The connected window is now two panes instead of one tall column.** The server name, its status lines, the microphone button and the channel tree sit in a sidebar; the mixer, chat, message box and history fill the rest. The divider between them can be dragged and is remembered. **The reading order has not changed** — VoiceOver walks exactly the same sequence as before, sidebar first, then the content pane. The only new thing you will meet is the divider itself.
-- **Every global volume now sits at the head of the mixer, on a strip called General.** Output, media, microphone and sound effects, in that order. Press Command+5 and that is where you land. Left and Right pick which level the arrows act on, Up and Down move it, V says it out loud, V twice puts it back to normal, and M mutes or unmutes everything. The four sliders that used to sit in the window are gone — the General strip replaces them, for the mouse just as much as for the keyboard, and those levels now exist in one place instead of two.
-- **One level for every media stream at once.** When somebody streams music into a channel while people are talking, you can now turn the music down on its own — without touching a single person's voice, and without going through the mixer person by person. Command+Shift+Up and Down adjusts it from anywhere in the app, so you can duck the music in the middle of a conversation. A stream that starts afterwards is caught automatically, and your own stream is turned down along with everyone else's. Suggested by **Yannick**.
+### People and moderation
+- **Show people by nickname, by username, or by both.** A new menu in Preferences > General, applying everywhere someone is named: the channel tree and its order, chat lines, announcements, the history, private conversation titles, the Connected Users window and the mixer strips. It takes effect immediately, without reconnecting, and when the name you chose is empty the other one is shown. This preference now sits in Preferences > Connection, next to "Sort channels by".
+- **Ban and kick follow the server's rights.** A moderator granted the right without the administrator flag can finally use them.
 
 ### Fixes
-- **Banning and kicking now follow the rights your server gave you, rather than whether you are an administrator.** An account holding the ban and unban rights, without being a full admin, found the options dimmed and was told nothing. The server has always asked for the right, not for the account type; the app asked the wrong question in six places — the Banned Users window, Kick from server and Kick and ban, both in the User menu and in the channel tree, and their twins in the Connected Users window, where holding one right without the other showed you both or neither. Reported by **David**.
-- **Sizes and durations were shown in French, whatever language you run the app in.** The server statistics reported an uptime of "10j 6h 35min" and a total sent of "37.6 Go" — French abbreviations, reaching English users untouched. The file sizes in Channel Files did the same. So did the space French puts before a colon, which turned up in the statistics labels, in the ban dialog, and in every chat line VoiceOver reads out. English now gets "10d 6h 35min", "37.6 GB", and no space before the colon; French is unchanged. The file-transfer footer was in the same state — VoiceOver announced it in French to everyone — and is now translated too. Reported by **Ron J.**
-- **Windows that opened far smaller than they were meant to.** Preferences opened as a bare title bar — no sidebar, no panes, nothing to click. Channel Files opened at a third of its width, with file names cut short and the Size and Uploader columns off-screen. Connected Users simply did not show its IP Address, Version and ID columns. Also fixed along the way: the private-message field used a third of its row, and the channel sheet cut its sample-rate and disk-quota labels mid-sentence. Found by opening every window and looking at it, which nobody had done — this app is built for VoiceOver, and none of these defects makes a sound.
-- **VoiceOver went straight past the mixer.** Moving forward with VO+Right jumped over it entirely, while moving backward found it. Two elements sat at the same place, and VoiceOver kept the empty one.
-- **The mixer's letter keys no longer feel slow.** They used to wait a third of a second on every press, in case a second one was coming. And holding M down no longer toggles mute over and over.
-
-### Known
-- **None of this has been heard yet in a busy channel.** The layout is right on screen and correct in the accessibility tree, but whether it is pleasant to navigate is not something a screenshot can tell. If something is awkward, say so — that is the feedback this beta is asking for.
-- On a person's strip, VoiceOver reads the percentage twice.
-- The ban and kick fix needs an account that holds the right without being an administrator, and nobody has confirmed it against a live server yet.
-- Server error messages are still shown in English whatever language you use the app in. They come from the TeamTalk library untranslated; translating them is still next.
+- **A refused action shows you the reason instead of quitting the app** — a crash present in every release since 1.10.0. Also released on its own as 1.11.1.
+- **macOS 12:** the app menu keeps Quit, Services, Hide, Hide Others and Show All, and the Edit menu is built. Reported and patiently re-tested by Ron J.
+- **Media streaming no longer runs on five milliseconds of margin**, which is what made it stop for no visible reason.
+- **The addresses of streams you have already played are offered back to you.** Press Return to start one again.
+- Typing a space in the General preferences no longer deletes it, and someone with no nickname is named rather than showing up as an empty line.
 
 ### Install
 
 tt-Accessible will install this update for you automatically. To install by hand:
 
-1. Download `ttaccessible-1.12.0-beta.7-54.zip` below.
+1. Download `ttaccessible-1.12.0-56.zip` below.
 2. Unzip and drag `ttaccessible.app` into your `/Applications` folder, replacing the previous version.
 3. Double-click — no Gatekeeper warning thanks to notarization.
 
 ### Download
-[ttaccessible-1.12.0-beta.7-54.zip](https://github.com/math65/ttaccessible/releases/download/v1.12.0-beta.7/ttaccessible-1.12.0-beta.7-54.zip)
+[ttaccessible-1.12.0-56.zip](https://github.com/math65/ttaccessible/releases/download/v1.12.0/ttaccessible-1.12.0-56.zip)
