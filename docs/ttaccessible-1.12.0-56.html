@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ttaccessible-1.12.0-56</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --code-bg: #f5f5f7;
+  --link: #0066cc;
+  --link-hover: #0040a0;
+  --rule: #e5e5ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #ececec;
+    --muted: #a0a0a0;
+    --code-bg: #2d2d2d;
+    --link: #4eaaff;
+    --link-hover: #82c4ff;
+    --rule: #3a3a3a;
+  }
+}
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  padding: 1rem 1.25rem 1.5rem;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.15rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.2em; }
+h3 { font-size: 1.02rem; }
+h4 { font-size: 0.95rem; color: var(--muted); }
+p { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; margin: 0.6em 0; }
+li { margin: 0.25em 0; }
+li > p { margin: 0.3em 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover, a:focus { color: var(--link-hover); text-decoration: underline; }
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.75em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+pre code { background: transparent; padding: 0; border-radius: 0; }
+blockquote {
+  border-left: 3px solid var(--rule);
+  margin: 0.8em 0;
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--muted);
+}
+hr { border: 0; border-top: 1px solid var(--rule); margin: 1.5em 0; }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<h2 id="v1120-build-56--2026-09-04">v1.12.0 (build 56) — 2026-09-04</h2>
+<p>The connected window has been rebuilt into two panes, every volume in
+the app now lives inside the channel mixer, and the app speaks Turkish.
+If you have been on the stable channel since 1.11.1, this release also
+brings you everything the 1.12 betas have been testing all summer.</p>
+<h3 id="highlights">Highlights</h3>
+<ul>
+<li><strong>The connected window is now two panes instead of one tall
+column</strong> — and VoiceOver reads it in exactly the same order as
+before.</li>
+<li><strong>Every volume in the app now lives in the mixer</strong>, on
+a strip called General, reachable with Command+5.</li>
+<li><strong>The app is fully localised in Turkish</strong>, and no
+longer falls back to French for people whose language it doesn't
+ship.</li>
+<li><strong>A microphone that stops being transmitted restarts itself,
+and says so</strong> instead of leaving you silent for hours.</li>
+<li><strong>Ban and kick follow the rights your server actually gave
+you</strong>, not just the administrator flag.</li>
+</ul>
+<h3 id="the-connected-window-and-the-mixer">The connected window and the
+mixer</h3>
+<ul>
+<li><strong>Two panes.</strong> The server name, its status lines, the
+microphone button and the channel tree sit in a sidebar; the mixer,
+chat, message box and history fill the rest. The divider can be dragged
+and is remembered between sessions. The reading order has not changed —
+VoiceOver walks the sidebar first, then the content pane, exactly as
+before.</li>
+<li><strong>The mixer is reachable again.</strong> VoiceOver used to
+walk straight past it.</li>
+<li><strong>Every global level is on the General strip</strong> —
+output, media, microphone and sound effects, in that order. Command+5
+lands you there. Left and Right choose which level you are on, Up and
+Down move it, V speaks it, V twice puts it back to normal, and M mutes
+or unmutes everything. The four sliders that used to sit in the window
+are gone: those levels now exist in one place instead of two.</li>
+<li><strong>One level for every media stream at once.</strong> When
+someone streams music into a channel while people are talking,
+Command+Shift+Up and Down turns the music down on its own, from anywhere
+in the window, without touching a single person's voice. A stream that
+starts afterwards is caught automatically, and your own stream goes down
+with everyone else's.</li>
+<li><strong>The keys move levels the way you would expect.</strong> The
+arrows move by 1%, Page Up and Page Down by 10%, and Home and End go
+straight to 100% and 0%. Two percent per press was too coarse to land on
+a value, and reaching either end took fifty presses. Home, End and the
+page keys act on whichever level the arrows act on, so they work on a
+person's strip and on the General strip alike.</li>
+<li><strong>Windows open at the size they were meant to have.</strong>
+Several opened at a fraction of it.</li>
+</ul>
+<h3 id="your-microphone">Your microphone</h3>
+<ul>
+<li><strong>A microphone that stops being transmitted now restarts
+itself, and tells you.</strong> It could previously stay mute for hours
+without a single sign that anything was wrong.</li>
+<li><strong>A reconnect no longer swallows the microphone you had
+open.</strong> It comes back the way you left it.</li>
+<li><strong>A channel that carries no voice now says so</strong>,
+instead of opening a microphone into nothing.</li>
+<li><strong>New: you can choose to always arrive with the microphone
+off.</strong> Preferences &gt; Connection, off by default. Until now the
+app always gave you back the microphone the last session left open,
+which on a busy server means broadcasting first and finding out
+afterwards. Changing channel is unaffected, and a channel that
+confiscated your microphone still gives it back.</li>
+</ul>
+<h3 id="languages">Languages</h3>
+<ul>
+<li><strong>Turkish.</strong> All 1,200 strings, including every
+announcement, not just the menus. Choose it in Preferences &gt; General
+&gt; Language, or let the app follow a Mac already set to Turkish. Asked
+for by Serkan Türkyılmaz. It has not yet been read by a native speaker,
+so corrections are very welcome.</li>
+<li><strong>The app no longer falls back to French.</strong> It declared
+French as its fallback language, so anyone whose Mac was set to a
+language the app doesn't ship — Turkish, German, Spanish — got a French
+app, and the Language preference could not repair the menus macOS draws
+itself. The fallback is now English.</li>
+<li><strong>French units and the French colon are no longer served to
+English-speaking users</strong> in server statistics, file sizes,
+transfer footers and chat lines.</li>
+</ul>
+<h3 id="people-and-moderation">People and moderation</h3>
+<ul>
+<li><strong>Show people by nickname, by username, or by both.</strong> A
+new menu in Preferences &gt; General, applying everywhere someone is
+named: the channel tree and its order, chat lines, announcements, the
+history, private conversation titles, the Connected Users window and the
+mixer strips. It takes effect immediately, without reconnecting, and
+when the name you chose is empty the other one is shown. This preference
+now sits in Preferences &gt; Connection, next to "Sort channels
+by".</li>
+<li><strong>Ban and kick follow the server's rights.</strong> A
+moderator granted the right without the administrator flag can finally
+use them.</li>
+</ul>
+<h3 id="fixes">Fixes</h3>
+<ul>
+<li><strong>A refused action shows you the reason instead of quitting
+the app</strong> — a crash present in every release since 1.10.0. Also
+released on its own as 1.11.1.</li>
+<li><strong>macOS 12:</strong> the app menu keeps Quit, Services, Hide,
+Hide Others and Show All, and the Edit menu is built. Reported and
+patiently re-tested by Ron J.</li>
+<li><strong>Media streaming no longer runs on five milliseconds of
+margin</strong>, which is what made it stop for no visible reason.</li>
+<li><strong>The addresses of streams you have already played are offered
+back to you.</strong> Press Return to start one again.</li>
+<li>Typing a space in the General preferences no longer deletes it, and
+someone with no nickname is named rather than showing up as an empty
+line.</li>
+</ul>
+<h3 id="install">Install</h3>
+<p>tt-Accessible will install this update for you automatically. To
+install by hand:</p>
+<ol type="1">
+<li>Download <code>ttaccessible-1.12.0-56.zip</code> below.</li>
+<li>Unzip and drag <code>ttaccessible.app</code> into your
+<code>/Applications</code> folder, replacing the previous version.</li>
+<li>Double-click — no Gatekeeper warning thanks to notarization.</li>
+</ol>
+<h3 id="download">Download</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.12.0/ttaccessible-1.12.0-56.zip">ttaccessible-1.12.0-56.zip</a></p>
+</body>
+</html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ttaccessible-1.12.0-56.fr</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --code-bg: #f5f5f7;
+  --link: #0066cc;
+  --link-hover: #0040a0;
+  --rule: #e5e5ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #ececec;
+    --muted: #a0a0a0;
+    --code-bg: #2d2d2d;
+    --link: #4eaaff;
+    --link-hover: #82c4ff;
+    --rule: #3a3a3a;
+  }
+}
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  padding: 1rem 1.25rem 1.5rem;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.15rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.2em; }
+h3 { font-size: 1.02rem; }
+h4 { font-size: 0.95rem; color: var(--muted); }
+p { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; margin: 0.6em 0; }
+li { margin: 0.25em 0; }
+li > p { margin: 0.3em 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover, a:focus { color: var(--link-hover); text-decoration: underline; }
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.75em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+pre code { background: transparent; padding: 0; border-radius: 0; }
+blockquote {
+  border-left: 3px solid var(--rule);
+  margin: 0.8em 0;
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--muted);
+}
+hr { border: 0; border-top: 1px solid var(--rule); margin: 1.5em 0; }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<h2 id="v1120-build-56--4-septembre-2026">v1.12.0 (build 56) — 4
+septembre 2026</h2>
+<p>La fenêtre de connexion s'organise maintenant en deux volets, tous
+les volumes de l'application se règlent depuis le mixeur, et
+l'application parle turc. Si vous êtes resté sur le canal stable depuis
+la 1.11.1, cette version vous apporte aussi tout ce que les bêtas de
+l'été ont mis au point.</p>
+<h3 id="lessentiel">L'essentiel</h3>
+<ul>
+<li><strong>La fenêtre de connexion est en deux volets</strong> au lieu
+d'une seule longue colonne — et VoiceOver la parcourt exactement dans le
+même ordre qu'avant.</li>
+<li><strong>Tous les volumes se règlent depuis le mixeur</strong>, sur
+une tranche appelée Général, où Commande + 5 vous emmène
+directement.</li>
+<li><strong>L'application est traduite en turc</strong>, et elle ne
+bascule plus en français chez ceux dont la langue n'est pas prise en
+charge.</li>
+<li><strong>Un micro qui cesse d'émettre se relance tout seul et vous
+prévient</strong>, au lieu de vous laisser muet pendant des heures.</li>
+<li><strong>L'expulsion et le bannissement suivent les droits que le
+serveur vous a réellement donnés</strong>, et non le seul statut
+d'administrateur.</li>
+</ul>
+<h3 id="la-fenêtre-et-le-mixeur">La fenêtre et le mixeur</h3>
+<ul>
+<li><strong>Deux volets.</strong> Le nom du serveur, ses lignes d'état,
+le bouton du micro et l'arborescence des canaux occupent une barre
+latérale ; le mixeur, le chat, la zone de saisie et l'historique
+occupent le reste. La séparation entre les deux se déplace à la souris
+et sa position est conservée d'une fois sur l'autre. L'ordre de lecture
+ne bouge pas : VoiceOver parcourt d'abord la barre latérale, puis le
+contenu, comme avant.</li>
+<li><strong>Le mixeur est de nouveau accessible.</strong> VoiceOver
+passait droit devant sans s'y arrêter.</li>
+<li><strong>Tous les niveaux généraux tiennent sur la tranche
+Général</strong> : sortie, médias, micro et effets sonores, dans cet
+ordre. Commande + 5 vous y dépose. Les flèches gauche et droite
+choisissent le niveau, les flèches haut et bas le règlent, V l'annonce,
+deux appuis sur V le remettent au repos, et M coupe ou rétablit tout.
+Les quatre curseurs qui traînaient dans la fenêtre ont disparu : ces
+niveaux n'existent plus qu'à un seul endroit.</li>
+<li><strong>Un seul réglage pour toutes les diffusions à la
+fois.</strong> Quand quelqu'un diffuse de la musique pendant que les
+autres parlent, Commande + Majuscule + les flèches haut et bas baissent
+la musique seule, depuis n'importe où dans la fenêtre, sans toucher à la
+voix de personne. Une diffusion qui démarre ensuite est prise en compte
+automatiquement, et la vôtre baisse avec les autres.</li>
+<li><strong>Les touches règlent les niveaux comme vous vous y
+attendez.</strong> Les flèches avancent de 1 %, Page précédente et Page
+suivante de 10 %, Début et Fin vont d'un coup à 100 % et à 0 %. Avec 2 %
+par appui, impossible de tomber juste, et il fallait cinquante appuis
+pour atteindre une extrémité. Ces touches agissent sur le niveau que
+règlent déjà les flèches : elles fonctionnent donc aussi bien sur la
+tranche d'une personne que sur la tranche Général.</li>
+<li><strong>Les fenêtres s'ouvrent à la taille prévue.</strong>
+Plusieurs s'ouvraient minuscules.</li>
+</ul>
+<h3 id="votre-micro">Votre micro</h3>
+<ul>
+<li><strong>Un micro qui cesse d'émettre se relance tout seul, et vous
+le dit.</strong> Il pouvait rester muet des heures sans que rien ne le
+signale.</li>
+<li><strong>Une reconnexion ne vous prend plus le micro</strong> que
+vous aviez ouvert : vous le retrouvez comme vous l'aviez laissé.</li>
+<li><strong>Un canal qui ne transporte pas la voix vous le dit</strong>,
+au lieu d'ouvrir un micro dans le vide.</li>
+<li><strong>Nouveau : vous pouvez arriver systématiquement avec le micro
+coupé.</strong> C'est dans Préférences &gt; Connexion, désactivé par
+défaut. Jusqu'ici l'application vous rendait toujours le micro tel que
+la session précédente l'avait laissé, ce qui, sur un serveur fréquenté,
+revient à émettre d'abord et s'en apercevoir ensuite. Un changement de
+canal n'y change rien, et un canal qui vous avait confisqué le micro
+vous le rend toujours.</li>
+</ul>
+<h3 id="les-langues">Les langues</h3>
+<ul>
+<li><strong>Le turc.</strong> Les 1 200 textes de l'application,
+annonces comprises, et pas seulement les menus. Choisissez-le dans
+Préférences &gt; Général &gt; Langue, ou laissez faire l'application si
+votre Mac est déjà en turc. Demandé par Serkan Türkyılmaz. Aucun
+turcophone ne l'a encore relu : les corrections sont les
+bienvenues.</li>
+<li><strong>L'application ne bascule plus en français.</strong> Elle
+déclarait le français comme langue de repli : toute personne dont le Mac
+était réglé sur une langue non prise en charge — turc, allemand,
+espagnol — se retrouvait avec une application en français, et le réglage
+de langue ne pouvait rien pour les menus dessinés par macOS lui-même.
+C'est l'anglais désormais.</li>
+<li><strong>Les anglophones ne reçoivent plus d'unités
+françaises</strong> dans les statistiques du serveur, la taille des
+fichiers, le pied des transferts et les lignes de chat.</li>
+</ul>
+<h3 id="les-personnes-et-la-modération">Les personnes et la
+modération</h3>
+<ul>
+<li><strong>Affichez les personnes par pseudo, par nom d'utilisateur, ou
+par les deux.</strong> Un nouveau menu, qui s'applique partout où
+quelqu'un est nommé : l'arborescence des canaux et son tri, le chat, les
+annonces, l'historique, le titre des conversations privées, la fenêtre
+des utilisateurs connectés et les tranches du mixeur. L'effet est
+immédiat, sans reconnexion, et si le nom choisi est vide, c'est l'autre
+qui s'affiche. Ce réglage se trouve maintenant dans Préférences &gt;
+Connexion, à côté du tri des canaux.</li>
+<li><strong>L'expulsion et le bannissement suivent les droits du
+serveur.</strong> Un modérateur qui a le droit sans avoir le statut
+d'administrateur peut enfin s'en servir.</li>
+</ul>
+<h3 id="corrections">Corrections</h3>
+<ul>
+<li><strong>Une action refusée vous en donne la raison au lieu de fermer
+l'application</strong> — un plantage présent dans toutes les versions
+depuis la 1.10.0. Déjà publié seul en 1.11.1.</li>
+<li><strong>macOS 12 :</strong> le menu de l'application conserve
+Quitter, Services, Masquer, Masquer les autres et Tout afficher, et le
+menu Édition est bien construit. Signalé et vérifié patiemment par Ron
+J.</li>
+<li><strong>La diffusion ne fonctionne plus avec cinq millisecondes de
+marge</strong>, ce qui expliquait ses arrêts sans raison apparente.</li>
+<li><strong>Les adresses que vous avez déjà diffusées vous sont
+proposées.</strong> Appuyez sur Retour pour en relancer une.</li>
+<li>Une espace tapée dans les préférences générales n'est plus effacée,
+et une personne sans pseudo est nommée au lieu d'apparaître comme une
+ligne vide.</li>
+</ul>
+<h3 id="installation">Installation</h3>
+<p>tt-Accessible installe cette mise à jour toute seule. Pour
+l'installer à la main :</p>
+<ol type="1">
+<li>Téléchargez <code>ttaccessible-1.12.0-56.zip</code> ci-dessous.</li>
+<li>Décompressez et glissez <code>ttaccessible.app</code> dans votre
+dossier <code>/Applications</code>, en remplaçant la version
+précédente.</li>
+<li>Double-cliquez — aucun avertissement Gatekeeper, l'application est
+notarisée.</li>
+</ol>
+<h3 id="téléchargement">Téléchargement</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.12.0/ttaccessible-1.12.0-56.zip">ttaccessible-1.12.0-56.zip</a></p>
+</body>
+</html>
