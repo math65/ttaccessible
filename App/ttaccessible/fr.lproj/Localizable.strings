@@ -381,6 +381,7 @@
 "preferences.general.language.system" = "Langue du système";
 "preferences.general.language.english" = "Anglais";
 "preferences.general.language.french" = "Français";
+"preferences.general.language.turkish" = "Turc";
 "preferences.general.language.help" = "L'application continue d'utiliser la langue du système sauf si vous en choisissez une autre. Redémarrez ttaccessible pour appliquer le changement partout.";
 "preferences.general.userNameDisplayStyle.label" = "Afficher les personnes par";
 "preferences.general.userNameDisplayStyle.both" = "Pseudo et nom d'utilisateur";

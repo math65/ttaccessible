@@ -11,6 +11,7 @@ enum AppLanguagePreference: String, Codable, CaseIterable {
     case system
     case english
     case french
+    case turkish
 
     var localizationKey: String {
         switch self {
@@ -20,6 +21,8 @@ enum AppLanguagePreference: String, Codable, CaseIterable {
             return "preferences.general.language.english"
         case .french:
             return "preferences.general.language.french"
+        case .turkish:
+            return "preferences.general.language.turkish"
         }
     }
 
@@ -31,6 +34,8 @@ enum AppLanguagePreference: String, Codable, CaseIterable {
             return "en"
         case .french:
             return "fr"
+        case .turkish:
+            return "tr"
         }
     }
 }

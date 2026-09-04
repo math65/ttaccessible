@@ -381,6 +381,7 @@
 "preferences.general.language.system" = "System Default";
 "preferences.general.language.english" = "English";
 "preferences.general.language.french" = "French";
+"preferences.general.language.turkish" = "Turkish";
 "preferences.general.language.help" = "The app keeps using the system language unless you choose another one. Restart ttaccessible to apply the change everywhere.";
 "preferences.general.userNameDisplayStyle.label" = "Show people as";
 "preferences.general.userNameDisplayStyle.both" = "Nickname and username";
