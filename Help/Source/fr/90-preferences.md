@@ -20,7 +20,6 @@ la fenêtre.
 | **Genre** | Neutre |
 | **Délai avant absence automatique**, en minutes — 0 la désactive | 3 |
 | **Message d'absence** | vide |
-| **Afficher les personnes par** — Pseudo et nom d'utilisateur, Pseudo seulement, ou Nom d'utilisateur seulement | Pseudo et nom d'utilisateur |
 | **Utiliser des horodatages relatifs**, du type « il y a 2 min » | désactivé |
 | **Utiliser la détection automatique du fichier TeamTalk lors de l'import** | activé |
 | **Langue** — Langue du système, Anglais ou Français | Langue du système |
@@ -42,9 +41,11 @@ La section Mises à jour contient **Vérifier les mises à jour automatiquement*
 | **Reconnexion automatique en cas de perte de connexion** | activé |
 | **Rejoindre automatiquement le dernier canal après une reconnexion** | activé |
 | **Se connecter au dernier serveur utilisé au démarrage** | désactivé |
+| **Se connecter toujours avec le micro coupé** | désactivé |
 | **Ne pas demander de confirmation lors de l'expulsion** | désactivé |
 | **Buffer de gigue adaptatif**, qui améliore l'audio sur les connexions instables | désactivé |
 | **Trier les canaux par** — Nom, ou Nombre d'utilisateurs | Nom |
+| **Afficher les personnes par** — Pseudo et nom d'utilisateur, Pseudo seulement, ou Nom d'utilisateur seulement | Pseudo et nom d'utilisateur |
 
 **Abonnements par défaut** détermine ce que tout le monde peut vous envoyer dès la connexion :
 messages privés, messages de canal, messages généraux, audio, partages d'écran et fichiers médias.

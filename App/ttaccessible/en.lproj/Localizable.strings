@@ -1083,6 +1083,8 @@
 "backgroundAnnouncement.privateMessage" = "New private message from %@: %@";
 "backgroundAnnouncement.channelMessage" = "New channel message from %@: %@";
 "backgroundAnnouncement.broadcastMessage" = "Broadcast from %@: %@";
+"preferences.connection.startWithMicrophoneMuted" = "Always connect with the microphone off";
+"preferences.connection.startWithMicrophoneMuted.help" = "Your microphone stays off when you arrive on a server, whatever state you left it in. Changing channel is unaffected.";
 "preferences.connection.skipKickConfirmation" = "Skip confirmation when kicking users";
 "preferences.connection.adaptiveJitterBuffer" = "Adaptive jitter buffer (improves audio on unstable connections)";
 "preferences.connection.channelSortMode" = "Sort channels by";

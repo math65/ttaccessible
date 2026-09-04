@@ -253,7 +253,8 @@ extension TeamTalkConnectionController {
             let restoresGate = Self.shouldRestoreBothModeGate(
                 engineWasHot: engineWasHot,
                 reopenAfterSilentChannel: reopenVoiceWhenChannelAllowsIt,
-                lastVoiceTransmissionEnabled: preferencesStore.preferences.lastVoiceTransmissionEnabled
+                lastVoiceTransmissionEnabled: preferencesStore.preferences.lastVoiceTransmissionEnabled,
+                startWithMicrophoneMuted: preferencesStore.preferences.startWithMicrophoneMuted
             )
             if voiceAllowed, restoresGate, voiceTransmissionEnabled, bothGateOpen == false {
                 reopenVoiceWhenChannelAllowsIt = false
@@ -266,13 +267,20 @@ extension TeamTalkConnectionController {
             return
         }
         // Outside "both" the persisted `lastVoiceTransmissionEnabled` already
-        // restores the mic on join, so the flag only needs clearing here.
+        // restores the mic on join, so the flag only needs clearing here — but it
+        // has to be READ first: it is what tells the mic a silent channel took,
+        // mid-session, from the one a fresh session is about to hand back.
+        let reopenAfterSilentChannel = reopenVoiceWhenChannelAllowsIt
         if voiceAllowed {
             reopenVoiceWhenChannelAllowsIt = false
         }
         guard voiceAllowed,
               voiceTransmissionEnabled == false,
-              preferencesStore.preferences.lastVoiceTransmissionEnabled else { return }
+              Self.shouldRestoreMicrophoneOnJoin(
+                  reopenAfterSilentChannel: reopenAfterSilentChannel,
+                  lastVoiceTransmissionEnabled: preferencesStore.preferences.lastVoiceTransmissionEnabled,
+                  startWithMicrophoneMuted: preferencesStore.preferences.startWithMicrophoneMuted
+              ) else { return }
         do {
             try ensureAdvancedMicrophoneInputReadyLocked(instance: instance)
             voiceTransmissionEnabled = true
@@ -300,13 +308,35 @@ extension TeamTalkConnectionController {
     /// In the second case the persisted intent decides, exactly as it does for
     /// always-on and push-to-talk, whose mic `lastVoiceTransmissionEnabled`
     /// restores on join. Nothing here opens a mic the user had closed.
+    ///
+    /// `startWithMicrophoneMuted` refuses that second case only. Arriving on a
+    /// server is what the user asked to be silent; a channel that confiscated the
+    /// mic in this very session still gives it back, because the user opened it
+    /// here, deliberately, after arriving.
     static func shouldRestoreBothModeGate(
         engineWasHot: Bool,
         reopenAfterSilentChannel: Bool,
-        lastVoiceTransmissionEnabled: Bool
+        lastVoiceTransmissionEnabled: Bool,
+        startWithMicrophoneMuted: Bool
     ) -> Bool {
         if reopenAfterSilentChannel { return true }
+        if startWithMicrophoneMuted { return false }
         return engineWasHot == false && lastVoiceTransmissionEnabled
+    }
+
+    /// The same question outside "both" mode, where the engine IS the gate and a
+    /// closed mic has already written `lastVoiceTransmissionEnabled` false — so
+    /// unlike the gate above, the persisted intent is required even when leaving a
+    /// silent channel. Kept as its own rule rather than folded into that one: the
+    /// two modes really do decide differently, and pretending otherwise would
+    /// change behaviour that has been in the field for versions.
+    static func shouldRestoreMicrophoneOnJoin(
+        reopenAfterSilentChannel: Bool,
+        lastVoiceTransmissionEnabled: Bool,
+        startWithMicrophoneMuted: Bool
+    ) -> Bool {
+        guard lastVoiceTransmissionEnabled else { return false }
+        return reopenAfterSilentChannel || startWithMicrophoneMuted == false
     }
 
     /// Applies the current microphone hotkey settings (from the preferences

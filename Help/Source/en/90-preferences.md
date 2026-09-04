@@ -19,7 +19,6 @@ of the seven panes in the sidebar. Press Escape to close the window.
 | **Gender** | Neutral |
 | **Away timeout**, in minutes — 0 turns automatic away off | 3 |
 | **Away message** | empty |
-| **Show people as** — Nickname and username, Nickname only, or Username only | Nickname and username |
 | **Use relative timestamps**, such as "2 min ago" | off |
 | **Automatically detect the TeamTalk file format during import** | on |
 | **Language** — System Default, English or French | System Default |
@@ -41,9 +40,11 @@ versions**, which is off.
 | **Automatically reconnect on connection loss** | on |
 | **Automatically rejoin the last channel after reconnecting** | on |
 | **Connect to the last used server on launch** | off |
+| **Always connect with the microphone off** | off |
 | **Skip confirmation when kicking users** | off |
 | **Adaptive jitter buffer**, which improves audio on unstable connections | off |
 | **Sort channels by** — Name, or User count | Name |
+| **Show people as** — Nickname and username, Nickname only, or Username only | Nickname and username |
 
 **Default subscriptions** decides what everyone may send you as soon as you connect: private
 messages, channel messages, broadcast messages, voice, desktop sessions and media file streams. All

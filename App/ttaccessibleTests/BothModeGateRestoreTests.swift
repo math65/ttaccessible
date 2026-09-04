@@ -25,7 +25,7 @@ final class BothModeGateRestoreTests: XCTestCase {
     /// The bug: mic open, disconnect, reconnect. Engine cold on the way back.
     func testReconnectRestoresGateTheUserHadOpen() {
         XCTAssertTrue(TeamTalkConnectionController.shouldRestoreBothModeGate(
-            engineWasHot: false, reopenAfterSilentChannel: false, lastVoiceTransmissionEnabled: true
+            engineWasHot: false, reopenAfterSilentChannel: false, lastVoiceTransmissionEnabled: true, startWithMicrophoneMuted: false
         ))
     }
 
@@ -33,7 +33,7 @@ final class BothModeGateRestoreTests: XCTestCase {
     /// one without the user asking is the worse failure of the two.
     func testReconnectLeavesGateClosedWhenTheUserHadClosedIt() {
         XCTAssertFalse(TeamTalkConnectionController.shouldRestoreBothModeGate(
-            engineWasHot: false, reopenAfterSilentChannel: false, lastVoiceTransmissionEnabled: false
+            engineWasHot: false, reopenAfterSilentChannel: false, lastVoiceTransmissionEnabled: false, startWithMicrophoneMuted: false
         ))
     }
 
@@ -44,7 +44,7 @@ final class BothModeGateRestoreTests: XCTestCase {
     /// the mic in this session would have it reopened under them at every hop.
     func testChannelChangeWithHotEngineDoesNotRewriteTheGate() {
         XCTAssertFalse(TeamTalkConnectionController.shouldRestoreBothModeGate(
-            engineWasHot: true, reopenAfterSilentChannel: false, lastVoiceTransmissionEnabled: true
+            engineWasHot: true, reopenAfterSilentChannel: false, lastVoiceTransmissionEnabled: true, startWithMicrophoneMuted: false
         ))
     }
 
@@ -53,7 +53,7 @@ final class BothModeGateRestoreTests: XCTestCase {
     /// the flag is what carries the intent — it was set from the live gate.
     func testLeavingASilentChannelGivesTheGateBack() {
         XCTAssertTrue(TeamTalkConnectionController.shouldRestoreBothModeGate(
-            engineWasHot: false, reopenAfterSilentChannel: true, lastVoiceTransmissionEnabled: false
+            engineWasHot: false, reopenAfterSilentChannel: true, lastVoiceTransmissionEnabled: false, startWithMicrophoneMuted: false
         ))
     }
 
@@ -61,7 +61,62 @@ final class BothModeGateRestoreTests: XCTestCase {
     /// good — the flag stands on its own and does not need a cold engine.
     func testSilentChannelFlagWinsOverAHotEngine() {
         XCTAssertTrue(TeamTalkConnectionController.shouldRestoreBothModeGate(
-            engineWasHot: true, reopenAfterSilentChannel: true, lastVoiceTransmissionEnabled: false
+            engineWasHot: true, reopenAfterSilentChannel: true, lastVoiceTransmissionEnabled: false, startWithMicrophoneMuted: false
+        ))
+    }
+
+    // MARK: - "Always connect with the microphone off" (Clément, 2026-09-04)
+
+    /// The point of the option: the mic the last session left open is NOT handed
+    /// back on arrival.
+    func testStartMutedRefusesTheGateAFreshSessionWouldRestore() {
+        XCTAssertFalse(TeamTalkConnectionController.shouldRestoreBothModeGate(
+            engineWasHot: false, reopenAfterSilentChannel: false,
+            lastVoiceTransmissionEnabled: true, startWithMicrophoneMuted: true
+        ))
+    }
+
+    /// It speaks about arriving on a server, not about moving around one. A channel
+    /// that carries no voice confiscates a mic the user opened deliberately, in this
+    /// session, after arriving — leaving it shut would be a bug, not the option.
+    func testStartMutedStillGivesBackWhatASilentChannelTook() {
+        XCTAssertTrue(TeamTalkConnectionController.shouldRestoreBothModeGate(
+            engineWasHot: false, reopenAfterSilentChannel: true,
+            lastVoiceTransmissionEnabled: false, startWithMicrophoneMuted: true
+        ))
+    }
+
+    // MARK: - Always-on and push-to-talk
+
+    /// Unchanged behaviour, option off: the persisted intent restores the mic.
+    func testOtherModesRestoreTheMicTheUserHadOpen() {
+        XCTAssertTrue(TeamTalkConnectionController.shouldRestoreMicrophoneOnJoin(
+            reopenAfterSilentChannel: false,
+            lastVoiceTransmissionEnabled: true, startWithMicrophoneMuted: false
+        ))
+    }
+
+    func testOtherModesRefuseOnArrivalWhenStartingMuted() {
+        XCTAssertFalse(TeamTalkConnectionController.shouldRestoreMicrophoneOnJoin(
+            reopenAfterSilentChannel: false,
+            lastVoiceTransmissionEnabled: true, startWithMicrophoneMuted: true
+        ))
+    }
+
+    func testOtherModesStillGiveBackWhatASilentChannelTook() {
+        XCTAssertTrue(TeamTalkConnectionController.shouldRestoreMicrophoneOnJoin(
+            reopenAfterSilentChannel: true,
+            lastVoiceTransmissionEnabled: true, startWithMicrophoneMuted: true
+        ))
+    }
+
+    /// Outside "both" a closed mic has already written the flag false, so it is
+    /// required even on the silent-channel path — unlike the gate above. Pinning
+    /// the difference, since it is the one thing that would tempt a merge.
+    func testOtherModesNeverOpenAMicTheFlagSaysWasClosed() {
+        XCTAssertFalse(TeamTalkConnectionController.shouldRestoreMicrophoneOnJoin(
+            reopenAfterSilentChannel: true,
+            lastVoiceTransmissionEnabled: false, startWithMicrophoneMuted: false
         ))
     }
 }

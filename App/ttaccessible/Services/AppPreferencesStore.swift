@@ -373,6 +373,10 @@ final class AppPreferencesStore: ObservableObject {
         mutate { $0.channelSortMode = mode }
     }
 
+    func mutateStartWithMicrophoneMuted(_ enabled: Bool) {
+        mutate { $0.startWithMicrophoneMuted = enabled }
+    }
+
     func mutateMicrophoneMode(_ mode: AppPreferences.MicrophoneMode) {
         mutate { $0.microphoneMode = mode }
     }
@@ -567,6 +571,8 @@ final class ConnectionPreferencesStore: ObservableObject {
         var skipKickConfirmation: Bool
         var adaptiveJitterBuffer: Bool
         var channelSortMode: AppPreferences.ChannelSortMode
+        var startWithMicrophoneMuted: Bool
+        var userNameDisplayStyle: AppPreferences.UserNameDisplayStyle
     }
 
     @Published private(set) var state: State
@@ -637,6 +643,14 @@ final class ConnectionPreferencesStore: ObservableObject {
         rootStore.mutateChannelSortMode(mode)
     }
 
+    func updateStartWithMicrophoneMuted(_ enabled: Bool) {
+        rootStore.mutateStartWithMicrophoneMuted(enabled)
+    }
+
+    func updateUserNameDisplayStyle(_ style: AppPreferences.UserNameDisplayStyle) {
+        rootStore.updateUserNameDisplayStyle(style)
+    }
+
     func isSubscriptionEnabledByDefault(_ option: UserSubscriptionOption) -> Bool {
         state.subscriptions[option] ?? false
     }
@@ -664,7 +678,9 @@ final class ConnectionPreferencesStore: ObservableObject {
             ),
             skipKickConfirmation: preferences.skipKickConfirmation,
             adaptiveJitterBuffer: preferences.adaptiveJitterBuffer,
-            channelSortMode: preferences.channelSortMode
+            channelSortMode: preferences.channelSortMode,
+            startWithMicrophoneMuted: preferences.startWithMicrophoneMuted,
+            userNameDisplayStyle: preferences.userNameDisplayStyle
         )
     }
 }

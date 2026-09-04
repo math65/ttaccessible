@@ -164,6 +164,7 @@ struct AppPreferences: Codable, Equatable {
         case interceptMediaFile
         case soundNotificationsEnabled
         case lastVoiceTransmissionEnabled
+        case startWithMicrophoneMuted
         case privateMessagesBackgroundMode
         case channelMessagesBackgroundMode
         case broadcastMessagesBackgroundMode
@@ -233,6 +234,14 @@ struct AppPreferences: Codable, Equatable {
     var interceptMediaFile: Bool
     var soundNotificationsEnabled: Bool
     var lastVoiceTransmissionEnabled: Bool
+    /// Whether a new session always starts with the mic closed, whatever
+    /// `lastVoiceTransmissionEnabled` remembers. Off by default: the mic has been
+    /// given back since long before this option existed, and quietly stopping
+    /// would be the worse surprise. Clément's request, 2026-09-04 — arriving on a
+    /// server without broadcasting first and finding out after. It speaks about
+    /// ARRIVING: a channel hop, and the mic a silent channel confiscated, are
+    /// unaffected. See `shouldRestoreMicrophoneOnJoin`.
+    var startWithMicrophoneMuted: Bool
     var privateMessagesBackgroundMode: BackgroundMessageAnnouncementMode
     var channelMessagesBackgroundMode: BackgroundMessageAnnouncementMode
     var broadcastMessagesBackgroundMode: BackgroundMessageAnnouncementMode
@@ -341,6 +350,7 @@ struct AppPreferences: Codable, Equatable {
         interceptMediaFile: Bool = false,
         soundNotificationsEnabled: Bool = true,
         lastVoiceTransmissionEnabled: Bool = false,
+        startWithMicrophoneMuted: Bool = false,
         privateMessagesBackgroundMode: BackgroundMessageAnnouncementMode = .systemNotification,
         channelMessagesBackgroundMode: BackgroundMessageAnnouncementMode = .systemNotification,
         broadcastMessagesBackgroundMode: BackgroundMessageAnnouncementMode = .systemNotification,
@@ -413,6 +423,7 @@ struct AppPreferences: Codable, Equatable {
         self.interceptMediaFile = interceptMediaFile
         self.soundNotificationsEnabled = soundNotificationsEnabled
         self.lastVoiceTransmissionEnabled = lastVoiceTransmissionEnabled
+        self.startWithMicrophoneMuted = startWithMicrophoneMuted
         self.privateMessagesBackgroundMode = privateMessagesBackgroundMode.normalizedForBackground
         self.channelMessagesBackgroundMode = channelMessagesBackgroundMode.normalizedForBackground
         self.broadcastMessagesBackgroundMode = broadcastMessagesBackgroundMode.normalizedForBackground
@@ -562,6 +573,7 @@ struct AppPreferences: Codable, Equatable {
         interceptMediaFile = try container.decodeIfPresent(Bool.self, forKey: .interceptMediaFile) ?? false
         soundNotificationsEnabled = try container.decodeIfPresent(Bool.self, forKey: .soundNotificationsEnabled) ?? true
         lastVoiceTransmissionEnabled = try container.decodeIfPresent(Bool.self, forKey: .lastVoiceTransmissionEnabled) ?? false
+        startWithMicrophoneMuted = try container.decodeIfPresent(Bool.self, forKey: .startWithMicrophoneMuted) ?? false
         privateMessagesBackgroundMode = (try container.decodeIfPresent(BackgroundMessageAnnouncementMode.self, forKey: .privateMessagesBackgroundMode) ?? .systemNotification).normalizedForBackground
         channelMessagesBackgroundMode = (try container.decodeIfPresent(BackgroundMessageAnnouncementMode.self, forKey: .channelMessagesBackgroundMode) ?? .systemNotification).normalizedForBackground
         broadcastMessagesBackgroundMode = (try container.decodeIfPresent(BackgroundMessageAnnouncementMode.self, forKey: .broadcastMessagesBackgroundMode) ?? .systemNotification).normalizedForBackground
@@ -652,6 +664,7 @@ struct AppPreferences: Codable, Equatable {
         try container.encode(interceptMediaFile, forKey: .interceptMediaFile)
         try container.encode(soundNotificationsEnabled, forKey: .soundNotificationsEnabled)
         try container.encode(lastVoiceTransmissionEnabled, forKey: .lastVoiceTransmissionEnabled)
+        try container.encode(startWithMicrophoneMuted, forKey: .startWithMicrophoneMuted)
         try container.encode(privateMessagesBackgroundMode, forKey: .privateMessagesBackgroundMode)
         try container.encode(channelMessagesBackgroundMode, forKey: .channelMessagesBackgroundMode)
         try container.encode(broadcastMessagesBackgroundMode, forKey: .broadcastMessagesBackgroundMode)

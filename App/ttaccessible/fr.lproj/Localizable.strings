@@ -1081,6 +1081,8 @@
 "backgroundAnnouncement.privateMessage" = "Nouveau message privé de %@ : %@";
 "backgroundAnnouncement.channelMessage" = "Nouveau message de canal de %@ : %@";
 "backgroundAnnouncement.broadcastMessage" = "Message général de %@ : %@";
+"preferences.connection.startWithMicrophoneMuted" = "Se connecter toujours avec le micro coupé";
+"preferences.connection.startWithMicrophoneMuted.help" = "Votre micro reste coupé quand vous arrivez sur un serveur, quel que soit l'état dans lequel vous l'aviez laissé. Sans effet lors d'un changement de canal.";
 "preferences.connection.skipKickConfirmation" = "Ne pas demander de confirmation lors de l'expulsion";
 "preferences.connection.adaptiveJitterBuffer" = "Buffer de gigue adaptatif (améliore l'audio sur les connexions instables)";
 "preferences.connection.channelSortMode" = "Trier les canaux par";
