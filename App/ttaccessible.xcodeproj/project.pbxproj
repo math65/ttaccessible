@@ -198,7 +198,7 @@
 				};
 			};
 			buildConfigurationList = 943281C12F68C35A00682D6B /* Build configuration list for PBXProject "ttaccessible" */;
-			developmentRegion = fr;
+			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				fr,
