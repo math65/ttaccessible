@@ -29,7 +29,7 @@ The official TeamTalk Qt client on Mac has significant accessibility issues — 
 - **Auto-reconnect** — with last channel rejoin
 - **.tt file import/export** — and tt:// link support
 - **Automatic updates** — signed and notarized releases delivered in-app via [Sparkle](https://sparkle-project.org)
-- **English and French localization** — follows the system language, or force one in Preferences
+- **English, French and Turkish localization** — follows the system language, or force one in Preferences
 - **In-app feedback** — report a problem, with diagnostics and logs attached, without a GitHub account
 
 ## Requirements
