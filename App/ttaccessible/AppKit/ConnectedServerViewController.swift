@@ -65,13 +65,13 @@ final class ConnectedServerViewController: NSViewController {
     lazy var channelMixerSectionView: NSView = buildChannelMixerSection()
     lazy var channelMixerKeyboardController = ChannelMixerKeyboardController(
         coordinator: channelMixerCoordinator,
-        // 1 % per press, the step these shortcuts have always used — the mixer's own
-        // arrows move by 2 %.
-        masterVolumeAdjust: { [weak self] up in
-            self?.channelMixerCoordinator.nudgeGlobalGain(GlobalGainSlot.output.rawValue, up: up, step: 1)
+        // The mixer's own moves: 1 % per arrow (the step these shortcuts have always
+        // used), 10 % per page key, Home/End to the ends.
+        masterVolumeAdjust: { [weak self] move in
+            self?.channelMixerCoordinator.nudgeGlobalGain(GlobalGainSlot.output.rawValue, move: move)
         },
-        mediaVolumeAdjust: { [weak self] up in
-            self?.channelMixerCoordinator.nudgeGlobalGain(GlobalGainSlot.media.rawValue, up: up, step: 1)
+        mediaVolumeAdjust: { [weak self] move in
+            self?.channelMixerCoordinator.nudgeGlobalGain(GlobalGainSlot.media.rawValue, move: move)
         },
         masterMuteState: { [weak self] in
             guard let self else { return nil }

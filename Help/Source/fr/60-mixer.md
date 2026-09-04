@@ -24,7 +24,8 @@ figurent nulle part ailleurs dans la fenêtre : c'est ici qu'ils vivent, à la s
 clavier.
 
 Les flèches gauche et droite choisissent le niveau sur lequel vous agissez — il est annoncé avec sa
-valeur —, les flèches haut et bas le règlent. V l'annonce, et deux appuis sur V le remettent à
+valeur —, les flèches haut et bas le règlent de 1 %, Page précédente et Page suivante de 10 %, et
+Début et Fin le portent d'un coup à 100 % ou à 0 %. V l'annonce, et deux appuis sur V le remettent à
 50 %. M annonce la sourdine générale, et deux appuis la changent.
 
 Le **volume des médias** baisse d'un coup toutes les diffusions du canal, la vôtre comprise, sans
@@ -52,7 +53,9 @@ pendant que vous écrivez dans un champ de texte : le chat n'est jamais perturb�
 
 | Touche | Action |
 |---|---|
-| Flèche haut ou Flèche bas | Modifier le volume de la voix |
+| Flèche haut ou Flèche bas | Modifier le volume de la voix de 1 % |
+| Page précédente ou Page suivante | Modifier le volume de la voix de 10 % |
+| Début ou Fin | Mettre le volume de la voix à 100 % ou à 0 % |
 | Flèche gauche ou Flèche droite | Modifier le panoramique de la voix |
 | Commande + Flèche haut ou Flèche bas | Modifier le volume du média, ou le volume principal hors d'une tranche |
 | Commande + Flèche gauche ou Flèche droite | Modifier le panoramique du média |
@@ -63,8 +66,13 @@ pendant que vous écrivez dans un champ de texte : le chat n'est jamais perturb�
 | Commande + P | Annoncer le panoramique du média ; deux appuis le recentrent |
 | Commande + Majuscule + Flèche haut ou Flèche bas | Le volume des médias, depuis n'importe où dans la fenêtre |
 
-Les deux appuis doivent se suivre rapidement. Maintenez une flèche pour la répéter, d'abord
-lentement puis plus vite.
+Page précédente, Page suivante, Début et Fin acceptent les mêmes modificateurs que les flèches
+tant que vous êtes sur une tranche : avec Commande, elles agissent sur le volume du média ; avec
+Commande + Majuscule, sur le volume des médias. Hors d'une tranche, elles restent à la liste que
+vous parcourez : Commande + Début et Commande + Fin vous y déplacent comme d'habitude.
+
+Les deux appuis doivent se suivre rapidement. Maintenez une flèche ou une touche de page pour la
+répéter, d'abord lentement puis plus vite.
 
 Chaque action est annoncée à mesure : vous pouvez équilibrer un canal entièrement à l'oreille.
 

@@ -17,6 +17,11 @@
 //    Cmd+Shift+Up/Down -> the MEDIA BUS level (every media stream at once), from anywhere
 //                      in the window — the point is to duck the music without first
 //                      navigating to the mixer.
+//  Page Up/Down, Home, End -> wherever Up/Down move a level, these move it by ten and
+//                      jump to 100 % / 0 %; the arrows move by one. They take the same
+//                      modifiers as the arrows, but only ON a strip: off one, Cmd+Home
+//                      and Cmd+End belong to the list under the cursor.
+//                      See MixerLevelMove.
 //  On the GENERAL strip (the global levels): Left/Right pick the level — output, media,
 //  microphone, sound effects — and Up/Down move it, with v announcing it (double tap
 //  resets to 50 %). The keys address the STRIP, like every user strip: VoiceOver's cursor
@@ -37,10 +42,10 @@ import AppKit
 @MainActor
 final class ChannelMixerKeyboardController {
     private weak var coordinator: ChannelMixerCoordinator?
-    /// Adjust the master/output volume one step (up==true) and return the announcement.
-    private let masterVolumeAdjust: (Bool) -> String?
-    /// Same, for the media bus (Cmd+Shift+Up/Down).
-    private let mediaVolumeAdjust: (Bool) -> String?
+    /// Move the master/output volume and return the announcement.
+    private let masterVolumeAdjust: (MixerLevelMove) -> String?
+    /// Same, for the media bus (Cmd+Shift + a level key).
+    private let mediaVolumeAdjust: (MixerLevelMove) -> String?
     /// The master mute, as m on the General strip: state to announce (single tap) and the
     /// very action Cmd+M runs (double tap) — one implementation, one announcement, one
     /// sound, whichever route the user takes.
@@ -49,11 +54,11 @@ final class ChannelMixerKeyboardController {
 
     private var monitor: Any?
     private let keyHandler = KeyCommandHandler()
-    private let arrowRepeat = ArrowRepeatHandler()
+    private let keyRepeat = ArrowRepeatHandler()
 
     init(coordinator: ChannelMixerCoordinator,
-         masterVolumeAdjust: @escaping (Bool) -> String?,
-         mediaVolumeAdjust: @escaping (Bool) -> String?,
+         masterVolumeAdjust: @escaping (MixerLevelMove) -> String?,
+         mediaVolumeAdjust: @escaping (MixerLevelMove) -> String?,
          masterMuteState: @escaping () -> String?,
          masterMuteToggle: @escaping () -> Void) {
         self.coordinator = coordinator
@@ -74,7 +79,7 @@ final class ChannelMixerKeyboardController {
     func stop() {
         if let monitor { NSEvent.removeMonitor(monitor) }
         monitor = nil
-        arrowRepeat.stop()
+        keyRepeat.stop()
     }
 
     deinit { if let monitor { NSEvent.removeMonitor(monitor) } }
@@ -82,14 +87,14 @@ final class ChannelMixerKeyboardController {
     // MARK: Dispatch
 
     private func handle(_ event: NSEvent) -> Bool {
-        guard NSApp.isActive else { arrowRepeat.stop(); return false }
+        guard NSApp.isActive else { keyRepeat.stop(); return false }
         // Never intercept while typing in a text field.
         if NSApp.keyWindow?.firstResponder is NSTextView { return false }
 
-        let arrow = arrowKey(from: event)
+        let key = mixerKey(from: event)
 
         if event.type == .keyUp {
-            if let arrow { arrowRepeat.stop(key: arrow) }
+            if let key { keyRepeat.stop(key: key) }
             return false
         }
         guard event.type == .keyDown else { return false }
@@ -98,34 +103,45 @@ final class ChannelMixerKeyboardController {
         let cmd = mods.contains(.command)
         let shift = mods.contains(.shift)
         let plain = !cmd && !shift && !mods.contains(.option) && !mods.contains(.control)
+        // What the key does to a level — nil for Left/Right (pan, or picking a level).
+        let move = key?.levelMove
 
-        // Cmd+Shift+Up/Down -> the media bus, wherever the cursor is. Deliberately NOT
-        // gated on the mixer: ducking every media stream is the one level you want to
-        // reach while reading the channel tree, mid-conversation.
+        // Cmd+Shift + a level key -> the media bus. For the ARROWS this is deliberately
+        // NOT gated on the mixer: ducking every media stream is the one level you want to
+        // reach while reading the channel tree, mid-conversation. Home/End and the page
+        // keys ARE gated, because off a strip they belong to the list under the cursor.
+        // Resolving the focus costs ~8 AX calls, paid only on those rarer keys.
         if cmd, shift, !mods.contains(.option), !mods.contains(.control),
-           let arrow, arrow == .up || arrow == .down {
-            arrowRepeat.start(key: arrow) { [weak self] in
-                if let text = self?.mediaVolumeAdjust(arrow == .up) { self?.announce(text) }
+           let key, let move {
+            guard !key.hasListMeaning || findFocusedStrip() != nil else {
+                keyRepeat.stop(); return false
+            }
+            keyRepeat.start(key: key) { [weak self] in
+                if let text = self?.mediaVolumeAdjust(move) { self?.announce(text) }
             }
             return true
         }
 
-        // Cmd+Up/Down:
+        // Cmd + a level key:
         //   • on a mixer strip -> that user's media-file volume
-        //   • anywhere else     -> master (output) volume
+        //   • anywhere else     -> master (output) volume, for the arrows only
         if cmd, !shift, !mods.contains(.option), !mods.contains(.control),
-           let arrow, arrow == .up || arrow == .down {
+           let key, let move {
+            let strip = findFocusedStripUserID()
             // The General strip is not a user strip: it has no per-user media volume, so
             // Cmd+arrows keep their window-wide meaning (the output level) there.
-            if let uid = findFocusedStripUserID(), uid != ChannelMixerCoordinator.generalStripID {
-                arrowRepeat.start(key: arrow) { [weak self] in
+            if let uid = strip, uid != ChannelMixerCoordinator.generalStripID {
+                keyRepeat.start(key: key) { [weak self] in
                     guard let self, let c = self.coordinator else { return }
-                    self.announce(c.nudgeMedia(uid, up: arrow == .up))
+                    self.announce(c.nudgeMedia(uid, move: move))
+                }
+            } else if !key.hasListMeaning || strip != nil {
+                keyRepeat.start(key: key) { [weak self] in
+                    if let text = self?.masterVolumeAdjust(move) { self?.announce(text) }
                 }
             } else {
-                arrowRepeat.start(key: arrow) { [weak self] in
-                    if let text = self?.masterVolumeAdjust(arrow == .up) { self?.announce(text) }
-                }
+                // Cmd+Home/End/Page off a strip: the list under the cursor keeps them.
+                keyRepeat.stop(); return false
             }
             return true
         }
@@ -134,12 +150,12 @@ final class ChannelMixerKeyboardController {
         // volume). Strip-gated only: unlike media volume, media pan has no off-strip
         // meaning, so off a strip these pass straight through.
         if cmd, !shift, !mods.contains(.option), !mods.contains(.control),
-           let arrow, arrow == .left || arrow == .right {
+           let key, key == .left || key == .right {
             guard let uid = findFocusedStripUserID(), uid != ChannelMixerCoordinator.generalStripID
-            else { arrowRepeat.stop(); return false }
-            arrowRepeat.start(key: arrow) { [weak self] in
+            else { keyRepeat.stop(); return false }
+            keyRepeat.start(key: key) { [weak self] in
                 guard let self, let c = self.coordinator else { return }
-                self.announce(c.nudgeMediaPan(uid, right: arrow == .right))
+                self.announce(c.nudgeMediaPan(uid, right: key == .right))
             }
             return true
         }
@@ -158,18 +174,18 @@ final class ChannelMixerKeyboardController {
 
         // Everything else needs a focused user strip — but resolving it is up to ~8
         // system-wide AXUIElementCopyAttributeValue calls, far too costly to run on
-        // every keystroke (and key-repeat). Only the plain arrows and v/p/m/s act on a
-        // strip, so gate the AX walk on those; typing, modified keys and unrelated
+        // every keystroke (and key-repeat). Only the plain level/pan keys and v/p/m/s act
+        // on a strip, so gate the AX walk on those; typing, modified keys and unrelated
         // shortcuts pass straight through without paying for the IPC.
         guard plain else { return false }
         // Holding a letter down must not read as a double tap (which would toggle mute).
-        if event.isARepeat, arrow == nil { return false }
-        let isMixerKey = arrow != nil
+        if event.isARepeat, key == nil { return false }
+        let isMixerKey = key != nil
             || ((event.charactersIgnoringModifiers?.lowercased()).map { ["v", "p", "m", "s"].contains($0) } ?? false)
         guard isMixerKey else { return false }
 
         guard let focus = findFocusedStrip(), coordinator != nil else {
-            arrowRepeat.stop(); return false
+            keyRepeat.stop(); return false
         }
 
         // The General strip. VoiceOver's cursor stays on the strip's GROUP here, exactly as
@@ -179,19 +195,18 @@ final class ChannelMixerKeyboardController {
         // level (the one thing left/right can mean here) and up/down moves it. When the
         // cursor IS inside a control, that control wins.
         if focus.id == ChannelMixerCoordinator.generalStripID {
-            if let arrow {
-                arrowRepeat.start(key: arrow) { [weak self] in
+            if let key {
+                keyRepeat.start(key: key) { [weak self] in
                     guard let self, let c = self.coordinator else { return }
                     let text: String?
-                    switch arrow {
-                    case .up, .down:
+                    if let move = key.levelMove {
                         if let index = focus.controlIndex {
-                            text = c.nudgeGlobalGain(index, up: arrow == .up)
+                            text = c.nudgeGlobalGain(index, move: move)
                         } else {
-                            text = c.nudgeSelectedGlobalGain(up: arrow == .up)
+                            text = c.nudgeSelectedGlobalGain(move: move)
                         }
-                    case .left, .right:
-                        text = c.selectGlobalGain(next: arrow == .right)
+                    } else {
+                        text = c.selectGlobalGain(next: key == .right)
                     }
                     if let text { self.announce(text) }
                 }
@@ -220,15 +235,14 @@ final class ChannelMixerKeyboardController {
 
         let uid = focus.id
 
-        if plain, let arrow {
-            arrowRepeat.start(key: arrow) { [weak self] in
+        if plain, let key {
+            keyRepeat.start(key: key) { [weak self] in
                 guard let self, let c = self.coordinator else { return }
                 let text: String
-                switch arrow {
-                case .up: text = c.nudgeVoice(uid, up: true)
-                case .down: text = c.nudgeVoice(uid, up: false)
-                case .left: text = c.nudgeVoicePan(uid, right: false)
-                case .right: text = c.nudgeVoicePan(uid, right: true)
+                if let move = key.levelMove {
+                    text = c.nudgeVoice(uid, move: move)
+                } else {
+                    text = c.nudgeVoicePan(uid, right: key == .right)
                 }
                 self.announce(text)
             }
@@ -280,13 +294,17 @@ final class ChannelMixerKeyboardController {
                                         .priority: NSAccessibilityPriorityLevel.high.rawValue])
     }
 
-    private func arrowKey(from event: NSEvent) -> ArrowKey? {
+    private func mixerKey(from event: NSEvent) -> MixerKey? {
         guard let scalar = event.charactersIgnoringModifiers?.unicodeScalars.first else { return nil }
         switch Int(scalar.value) {
         case NSUpArrowFunctionKey: return .up
         case NSDownArrowFunctionKey: return .down
         case NSLeftArrowFunctionKey: return .left
         case NSRightArrowFunctionKey: return .right
+        case NSPageUpFunctionKey: return .pageUp
+        case NSPageDownFunctionKey: return .pageDown
+        case NSHomeFunctionKey: return .home
+        case NSEndFunctionKey: return .end
         default: return nil
         }
     }
@@ -338,7 +356,45 @@ final class ChannelMixerKeyboardController {
 
 // MARK: - Ported timing helpers (from Rocco's Mixer app)
 
-enum ArrowKey { case up, down, left, right }
+/// The keys that drive a strip. Up/Down, Page Up/Down, Home and End move a level;
+/// Left/Right pan it, or pick a level on the General strip.
+enum MixerKey: Hashable {
+    case up, down, left, right, pageUp, pageDown, home, end
+
+    /// What the key does to a level — nil for Left/Right.
+    var levelMove: MixerLevelMove? {
+        switch self {
+        case .up: return .step(up: true)
+        case .down: return .step(up: false)
+        case .pageUp: return .page(up: true)
+        case .pageDown: return .page(up: false)
+        case .home: return .toMax
+        case .end: return .toMin
+        case .left, .right: return nil
+        }
+    }
+
+    /// True for the keys macOS gives a meaning of their own in a list or a document:
+    /// Home, End and the page keys all move through one. The mixer claims the ARROWS
+    /// window-wide because under Command they mean nothing to a list; claiming these
+    /// would cost the channel tree and the history their navigation, so off a strip they
+    /// are left alone — Cmd+End must reach the last message, not silence the output.
+    var hasListMeaning: Bool {
+        switch self {
+        case .home, .end, .pageUp, .pageDown: return true
+        case .up, .down, .left, .right: return false
+        }
+    }
+
+    /// Home and End jump once — there is nowhere further to go, and repeating them would
+    /// only repeat the announcement.
+    var repeats: Bool {
+        switch self {
+        case .home, .end: return false
+        default: return true
+        }
+    }
+}
 
 /// Single vs double-tap discrimination for the v/p/m keys (0.35s window).
 @MainActor
@@ -364,21 +420,23 @@ final class KeyCommandHandler {
     }
 }
 
-/// Key-repeat for the arrow keys (0.3s initial delay, then 0.15s).
+/// Key-repeat for the arrow and page keys (0.3s initial delay, then 0.15s). A key that
+/// doesn't repeat (Home, End) still counts as held until its keyUp, so the system's own
+/// auto-repeat keyDowns are swallowed instead of re-running the action.
 @MainActor
 final class ArrowRepeatHandler {
     private var pending: DispatchWorkItem?
     private var timer: Timer?
-    private var activeKey: ArrowKey?
+    private var activeKey: MixerKey?
     private let initialDelay: TimeInterval = 0.3
     private let repeatInterval: TimeInterval = 0.15
 
-    func start(key: ArrowKey, action: @escaping () -> Void) {
+    func start(key: MixerKey, action: @escaping () -> Void) {
         if activeKey == key { return }
         stop()
         activeKey = key
         action()
-        guard activeKey == key else { return }
+        guard activeKey == key, key.repeats else { return }
         let work = DispatchWorkItem { [weak self] in
             guard let self else { return }
             self.timer = Timer.scheduledTimer(withTimeInterval: self.repeatInterval, repeats: true) { _ in action() }
@@ -387,7 +445,7 @@ final class ArrowRepeatHandler {
         DispatchQueue.main.asyncAfter(deadline: .now() + initialDelay, execute: work)
     }
 
-    func stop(key: ArrowKey) { guard activeKey == key else { return }; stop() }
+    func stop(key: MixerKey) { guard activeKey == key else { return }; stop() }
 
     func stop() {
         pending?.cancel(); pending = nil

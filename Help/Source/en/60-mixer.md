@@ -22,8 +22,9 @@ volume**, **Microphone volume** and **Sound effects volume**. They are nowhere e
 this strip is where they live, for the mouse as much as for the keyboard.
 
 Left Arrow and Right Arrow choose which level the arrows act on, and it is announced with its
-value. Up Arrow and Down Arrow move it. V speaks it, and pressing V twice puts it back to 50%. M
-speaks the master mute, and pressing it twice turns it on or off.
+value. Up Arrow and Down Arrow move it by 1%, Page Up and Page Down by 10%, and Home and End take it
+straight to 100% or 0%. V speaks it, and pressing V twice puts it back to 50%. M speaks the master
+mute, and pressing it twice turns it on or off.
 
 **Media volume** turns down every media stream in the channel at once — your own included — without
 touching anyone's voice. Command-Shift-Up Arrow and Command-Shift-Down Arrow reach it from anywhere
@@ -50,7 +51,9 @@ text field, so the chat is never affected.
 
 | Key | Action |
 |---|---|
-| Up Arrow or Down Arrow | Change the voice volume |
+| Up Arrow or Down Arrow | Change the voice volume by 1% |
+| Page Up or Page Down | Change the voice volume by 10% |
+| Home or End | Set the voice volume to 100% or 0% |
 | Left Arrow or Right Arrow | Change the voice pan |
 | Command-Up Arrow or Command-Down Arrow | Change the media volume, or the master volume outside a strip |
 | Command-Left Arrow or Command-Right Arrow | Change the media pan |
@@ -61,8 +64,13 @@ text field, so the chat is never affected.
 | Command-P | Speak the media pan; press twice to centre it |
 | Command-Shift-Up Arrow or Command-Shift-Down Arrow | The media level, from anywhere in the window |
 
-Press the two presses quickly, one after the other. Hold an arrow key to repeat it, slowly at first
-and then faster.
+Page Up, Page Down, Home and End take the same modifiers as the arrows while you are on a strip:
+with Command they act on the media volume, and with Command-Shift on the media level. Outside a
+strip they are left to the list you are reading, so Command-Home and Command-End still take you
+through it.
+
+Press the two presses quickly, one after the other. Hold an arrow or a page key to repeat it, slowly
+at first and then faster.
 
 Every action is spoken as you make it, so you can balance a channel entirely by ear.
 

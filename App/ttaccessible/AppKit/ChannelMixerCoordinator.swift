@@ -28,6 +28,31 @@ struct MixerDisplayStrip: Identifiable, Equatable {
     var soloed: Bool
 }
 
+/// How far a key moves a level, in percent of the 0–100 range. The arrows step by one,
+/// Page Up/Down by ten, Home/End jump to the ends. Two per arrow (the mixer's original
+/// step) was too coarse to land on a value, and reaching 0 or 100 took fifty presses —
+/// Mathieu's request, 2026-09-03. Home is the top (100 %) and End the bottom (0 %), the
+/// way he named them.
+enum MixerLevelMove: Equatable {
+    case step(up: Bool)
+    case page(up: Bool)
+    case toMax
+    case toMin
+
+    static let stepPercent: Double = 1
+    static let pagePercent: Double = 10
+
+    /// The new level, clamped to 0…100.
+    func apply(to percent: Double) -> Double {
+        switch self {
+        case .step(let up): return min(100, max(0, percent + (up ? Self.stepPercent : -Self.stepPercent)))
+        case .page(let up): return min(100, max(0, percent + (up ? Self.pagePercent : -Self.pagePercent)))
+        case .toMax: return 100
+        case .toMin: return 0
+        }
+    }
+}
+
 /// One global level's row in the VISIBLE mixer, mirroring MixerDisplayStrip. The General
 /// strip exists for the eye as well as for VoiceOver: these levels live nowhere else in
 /// the window's UI, so a sighted user must be able to reach them here.
@@ -87,7 +112,7 @@ final class ChannelMixerCoordinator: ObservableObject {
     private var selectedGlobalGain = 0
 
     // Adjustment steps (VO swipe + keyboard arrows share these).
-    private let volumeStep: Double = 2     // percent
+    private let volumeStep: Double = MixerLevelMove.stepPercent     // percent
     private let panStep: Double = 0.05     // -1...+1
 
     init(controller: TeamTalkConnectionController) {
@@ -180,26 +205,25 @@ final class ChannelMixerCoordinator: ObservableObject {
         )
     }
 
-    /// One step on the General strip's level at `index` (its position in the strip).
-    /// Routed through the very config the overlay exposes, so the arrow keys and the
-    /// VoiceOver increment/decrement gestures can never drift apart.
-    /// `step` overrides the mixer's own 2 % step — Cmd+arrows have moved these levels by
-    /// 1 % since long before the mixer existed, and that is not something to change here.
-    func nudgeGlobalGain(_ index: Int, up: Bool, step: Double? = nil) -> String? {
+    /// One move on the General strip's level at `index` (its position in the strip).
+    /// Routed through the very config the overlay exposes, so the keys and the VoiceOver
+    /// increment/decrement gestures can never drift apart. Cmd+arrows (the window-wide
+    /// output and media levels) come through here too: they moved these levels by 1 %
+    /// since long before the mixer existed, and the mixer's own step now matches.
+    func nudgeGlobalGain(_ index: Int, move: MixerLevelMove) -> String? {
         guard globalGains.indices.contains(index) else { return nil }
         selectedGlobalGain = index
         let config = globalGainConfig(globalGains[index])
         guard let current = config.getValue() else { return nil }
-        let delta = step ?? volumeStep
-        let value = min(100, max(0, current + (up ? delta : -delta)))
+        let value = move.apply(to: current)
         config.setValue(value)
         refreshGlobalGains()
         return config.getDisplayString(value)
     }
 
-    /// Up/Down on the General strip itself: move the selected level.
-    func nudgeSelectedGlobalGain(up: Bool) -> String? {
-        nudgeGlobalGain(selectedGlobalGain, up: up)
+    /// Up/Down, Page Up/Down, Home/End on the General strip itself: move the selected level.
+    func nudgeSelectedGlobalGain(move: MixerLevelMove) -> String? {
+        nudgeGlobalGain(selectedGlobalGain, move: move)
     }
 
     /// Left/Right on the General strip: pick the level the arrows act on. Announced with
@@ -489,13 +513,13 @@ final class ChannelMixerCoordinator: ObservableObject {
 
     // MARK: Keyboard actions (return the VoiceOver announcement string)
 
-    func nudgeVoice(_ id: Int32, up: Bool) -> String {
-        let v = min(100, max(0, currentVoicePercent(id) + (up ? volumeStep : -volumeStep)))
+    func nudgeVoice(_ id: Int32, move: MixerLevelMove) -> String {
+        let v = move.apply(to: currentVoicePercent(id))
         setVoice(id: id, percent: v)
         return L10n.format("mixer.value.percent", Int(v.rounded()))
     }
-    func nudgeMedia(_ id: Int32, up: Bool) -> String {
-        let v = min(100, max(0, currentMediaPercent(id) + (up ? volumeStep : -volumeStep)))
+    func nudgeMedia(_ id: Int32, move: MixerLevelMove) -> String {
+        let v = move.apply(to: currentMediaPercent(id))
         setMedia(id: id, percent: v)
         // Qualified so VoiceOver distinguishes it from the plain-arrow voice nudge.
         return L10n.format("mixer.media.label", L10n.format("mixer.value.percent", Int(v.rounded())))

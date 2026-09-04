@@ -120,13 +120,19 @@ s'appliquent à celle qui est sélectionnée dans l'arbre des canaux.
 
 | Touche | Action |
 |---|---|
-| Flèche haut ou Flèche bas | Volume de la voix |
+| Flèche haut ou Flèche bas | Volume de la voix, de 1 % |
+| Page précédente ou Page suivante | Volume de la voix, de 10 % |
+| Début ou Fin | Volume de la voix à 100 % ou à 0 % |
 | Flèche gauche ou Flèche droite | Panoramique de la voix |
 | Commande + Flèche haut ou Flèche bas | Volume du média, ou volume principal hors d'une tranche |
 | Commande + Flèche gauche ou Flèche droite | Panoramique du média |
 | V, P, M, S | Annoncer le volume, le panoramique, la sourdine ou le solo ; deux appuis réinitialisent ou changent le réglage |
 | Commande + P | Annoncer le panoramique du média ; deux appuis le recentrent |
 | Commande + Majuscule + Flèche haut ou Flèche bas | Le volume des médias, depuis n'importe où dans la fenêtre |
+
+Page précédente, Page suivante, Début et Fin acceptent les mêmes modificateurs que les flèches
+tant que vous êtes sur une tranche. Hors d'une tranche, elles restent à la liste que vous
+parcourez.
 
 ## Dans les listes
 

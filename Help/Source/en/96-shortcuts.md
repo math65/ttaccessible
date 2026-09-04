@@ -120,13 +120,18 @@ the one selected in the channel tree.
 
 | Key | Action |
 |---|---|
-| Up Arrow or Down Arrow | Voice volume |
+| Up Arrow or Down Arrow | Voice volume, by 1% |
+| Page Up or Page Down | Voice volume, by 10% |
+| Home or End | Voice volume to 100% or 0% |
 | Left Arrow or Right Arrow | Voice pan |
 | Command-Up Arrow or Command-Down Arrow | Media volume, or the master volume outside a strip |
 | Command-Left Arrow or Command-Right Arrow | Media pan |
 | V, P, M, S | Speak the volume, pan, mute or solo; press twice to reset or change it |
 | Command-P | Speak the media pan; press twice to centre it |
 | Command-Shift-Up Arrow or Command-Shift-Down Arrow | The media level, from anywhere in the window |
+
+Page Up, Page Down, Home and End take the same modifiers as the arrows while you are on a strip.
+Outside one they are left to the list you are reading.
 
 ## In lists
 
