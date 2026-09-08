@@ -78,6 +78,16 @@ final class ServerPasswordStore {
         }
     }
 
+    /// OSStatus codes meaning "the keychain won't let you REMOVE this item",
+    /// as opposed to a real failure. An item whose ACL was minted by an earlier
+    /// build — or by the app running from a different path — stays readable and
+    /// updatable, but `SecItemDelete` answers `errSecInvalidOwnerEdit`. Issue
+    /// #42: treating that as fatal made such a server impossible to edit, even
+    /// though overwriting its value in place works.
+    private static func isDeleteRefusal(_ status: OSStatus) -> Bool {
+        status == errSecInvalidOwnerEdit || isAuthBlocked(status)
+    }
+
     private let serviceName: String
     private let defaults: UserDefaults
     private var cache: [UUID: Credentials] = [:]
@@ -239,18 +249,30 @@ final class ServerPasswordStore {
         var credentials = input
         credentials.schemaVersion = Self.currentSchemaVersion
 
-        // Tolerate auth/ACL failures on delete: if the existing item is locked
-        // behind a stale ACL we still want a shot at overwriting it via the
-        // SecItemAdd → SecItemUpdate fallback below. Real failures resurface
-        // through the add/update path.
+        // Tolerate a refused delete: if the existing item is locked behind a
+        // stale ACL we still want a shot at overwriting it via the SecItemAdd →
+        // SecItemUpdate fallback below. Real failures resurface through the
+        // add/update path.
         let deleteStatus = SecItemDelete(baseQuery(for: id) as CFDictionary)
-        if deleteStatus != errSecSuccess,
-           deleteStatus != errSecItemNotFound,
-           !Self.isAuthBlocked(deleteStatus) {
+        let itemSurvivedDelete = deleteStatus != errSecSuccess && deleteStatus != errSecItemNotFound
+        if itemSurvivedDelete, !Self.isDeleteRefusal(deleteStatus) {
             throw PasswordStoreError.unexpectedStatus(deleteStatus)
+        }
+        if itemSurvivedDelete {
+            AudioLogger.log(
+                "Keychain: delete refused for %@ (status %d) — overwriting the item in place",
+                id.uuidString, Int(deleteStatus)
+            )
         }
 
         guard !credentials.isEmpty else {
+            // Nothing left worth storing. A successful delete already took the
+            // item away; a refused one left the old secrets behind, so overwrite
+            // them with an empty blob rather than claiming a clean erase.
+            if itemSurvivedDelete {
+                let emptyBlob = try JSONEncoder().encode(credentials)
+                try updateItemValue(emptyBlob, for: id)
+            }
             cacheCredentials(credentials, for: id)
             return
         }
@@ -269,24 +291,29 @@ final class ServerPasswordStore {
             cacheCredentials(credentials, for: id)
         case errSecDuplicateItem:
             // Delete was rejected by the ACL — the old item is still there.
-            // Try to update its value in place, which works when the item's
-            // ACL grants the current binary update access.
-            let updateStatus = SecItemUpdate(
-                baseQuery(for: id) as CFDictionary,
-                [kSecValueData: data] as CFDictionary
-            )
-            guard updateStatus == errSecSuccess else {
-                if Self.isAuthBlocked(updateStatus) {
-                    throw PasswordStoreError.accessBlocked(updateStatus)
-                }
-                throw PasswordStoreError.unexpectedStatus(updateStatus)
-            }
+            // Update its value in place, which works when the item's ACL grants
+            // the current binary update access.
+            try updateItemValue(data, for: id)
             cacheCredentials(credentials, for: id)
         default:
             if Self.isAuthBlocked(addStatus) {
                 throw PasswordStoreError.accessBlocked(addStatus)
             }
             throw PasswordStoreError.unexpectedStatus(addStatus)
+        }
+    }
+
+    /// Overwrites the stored blob of an item that survived `SecItemDelete`.
+    private func updateItemValue(_ data: Data, for id: UUID) throws {
+        let status = SecItemUpdate(
+            baseQuery(for: id) as CFDictionary,
+            [kSecValueData: data] as CFDictionary
+        )
+        guard status == errSecSuccess else {
+            if Self.isAuthBlocked(status) {
+                throw PasswordStoreError.accessBlocked(status)
+            }
+            throw PasswordStoreError.unexpectedStatus(status)
         }
     }
 
