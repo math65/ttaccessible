@@ -20,6 +20,7 @@ struct SavedServerRecord: Codable, Identifiable, Equatable {
         case useWebLogin
         case initialChannelPath
         case initialChannelPassword
+        case encryption
     }
 
     let id: UUID
@@ -40,6 +41,11 @@ struct SavedServerRecord: Codable, Identifiable, Equatable {
     var initialChannelPath: String
     var initialChannelPassword: String
 
+    /// TLS peer-verification settings. Only meaningful when `encrypted` is true.
+    /// Absent from records written by builds before 1.13, hence the defaulted
+    /// decode below.
+    var encryption: ServerEncryptionSettings
+
     init(
         id: UUID,
         name: String,
@@ -51,7 +57,8 @@ struct SavedServerRecord: Codable, Identifiable, Equatable {
         username: String,
         useWebLogin: Bool = false,
         initialChannelPath: String = "",
-        initialChannelPassword: String = ""
+        initialChannelPassword: String = "",
+        encryption: ServerEncryptionSettings = ServerEncryptionSettings()
     ) {
         self.id = id
         self.name = name
@@ -64,6 +71,7 @@ struct SavedServerRecord: Codable, Identifiable, Equatable {
         self.useWebLogin = useWebLogin
         self.initialChannelPath = initialChannelPath
         self.initialChannelPassword = initialChannelPassword
+        self.encryption = encryption
     }
 
     func generateLink(password: String? = nil, channelPath: String? = nil, channelPassword: String? = nil) -> String {
@@ -96,5 +104,6 @@ struct SavedServerRecord: Codable, Identifiable, Equatable {
         useWebLogin = try container.decodeIfPresent(Bool.self, forKey: .useWebLogin) ?? false
         initialChannelPath = try container.decodeIfPresent(String.self, forKey: .initialChannelPath) ?? ""
         initialChannelPassword = try container.decodeIfPresent(String.self, forKey: .initialChannelPassword) ?? ""
+        encryption = try container.decodeIfPresent(ServerEncryptionSettings.self, forKey: .encryption) ?? ServerEncryptionSettings()
     }
 }

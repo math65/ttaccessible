@@ -674,6 +674,11 @@ extension TeamTalkConnectionController {
         // the reset, and a restarted server may hand the same IDs out again.
         subscriptionDefaultsAppliedUserIDs.removeAll()
         timedOutCommands.removeAll()
+
+        // Before TT_Connect, and on every attempt: the SSL context lives on the
+        // instance, and instances are recycled.
+        try applyEncryptionContextLocked(instance: instance, record: record, options: options)
+
         let didStartConnection = record.host.withCString { hostPointer in
             TT_Connect(
                 instance,
@@ -733,7 +738,20 @@ extension TeamTalkConnectionController {
                 }
 
             case CLIENTEVENT_CON_CRYPT_ERROR:
-                throw TeamTalkConnectionError.connectionFailed
+                // nSource is an OpenSSL error number and szErrorMsg its
+                // ERR_error_string_n() text — not a TeamTalk CMDERR, so the
+                // usual clientErrorMessage fallback would mistranslate it.
+                // Surfacing the raw string is what tells "certificate rejected"
+                // apart from "server unreachable"; before this, both read alike.
+                let detail = message.ttType == __CLIENTERRORMSG
+                    ? ttString(from: message.clienterrormsg.szErrorMsg)
+                    : ""
+                AudioLogger.log("connect: TLS handshake failed: %@", detail.isEmpty ? "(no detail)" : detail)
+                throw TeamTalkConnectionError.encryptionFailed(
+                    detail.isEmpty
+                        ? L10n.text("teamtalk.connection.error.encryptionFailed")
+                        : L10n.format("teamtalk.connection.error.encryptionFailedDetail", detail)
+                )
 
             case CLIENTEVENT_CON_FAILED:
                 throw TeamTalkConnectionError.connectionFailed

@@ -46,6 +46,21 @@ final class TeamTalkConfigImporter {
         let record: SavedServerRecord
         let password: String
         let channelPassword: String
+        /// Only a `.tt` file can carry one; the Qt INI/plist configs keep the
+        /// client key outside the server entry.
+        let clientPrivateKeyPEM: String
+
+        init(
+            record: SavedServerRecord,
+            password: String,
+            channelPassword: String,
+            clientPrivateKeyPEM: String = ""
+        ) {
+            self.record = record
+            self.password = password
+            self.channelPassword = channelPassword
+            self.clientPrivateKeyPEM = clientPrivateKeyPEM
+        }
     }
 
     private struct CandidateSource {
@@ -118,6 +133,7 @@ final class TeamTalkConfigImporter {
                 existingRecords[existingIndex] = importedServer.record.withID(existingID)
                 try passwordStore.setPassword(importedServer.password, for: existingID)
                 try passwordStore.setChannelPassword(importedServer.channelPassword, for: existingID)
+                try passwordStore.setClientPrivateKey(importedServer.clientPrivateKeyPEM, for: existingID)
                 importedCount += 1
                 importedServerNames.append(importedServer.record.name)
                 continue
@@ -133,6 +149,7 @@ final class TeamTalkConfigImporter {
                 existingRecords[existingIndex] = importedServer.record.withID(existingID)
                 try passwordStore.setPassword(importedServer.password, for: existingID)
                 try passwordStore.setChannelPassword(importedServer.channelPassword, for: existingID)
+                try passwordStore.setClientPrivateKey(importedServer.clientPrivateKeyPEM, for: existingID)
                 importedCount += 1
                 importedServerNames.append(importedServer.record.name)
                 continue
@@ -142,6 +159,7 @@ final class TeamTalkConfigImporter {
             existingRecords.append(newRecord)
             try passwordStore.setPassword(importedServer.password, for: newRecord.id)
             try passwordStore.setChannelPassword(importedServer.channelPassword, for: newRecord.id)
+            try passwordStore.setClientPrivateKey(importedServer.clientPrivateKeyPEM, for: newRecord.id)
             importedCount += 1
             importedServerNames.append(newRecord.name)
         }
@@ -235,12 +253,14 @@ final class TeamTalkConfigImporter {
             username: payload.auth.username,
             useWebLogin: BearWareWebLogin.isWebLogin(payload.auth.username),
             initialChannelPath: payload.join?.channelPath ?? "",
-            initialChannelPassword: payload.join?.password ?? ""
+            initialChannelPassword: payload.join?.password ?? "",
+            encryption: payload.encryption
         )
         return ImportedServer(
             record: record,
             password: payload.auth.password,
-            channelPassword: payload.join?.password ?? ""
+            channelPassword: payload.join?.password ?? "",
+            clientPrivateKeyPEM: payload.clientPrivateKeyPEM
         )
     }
 
