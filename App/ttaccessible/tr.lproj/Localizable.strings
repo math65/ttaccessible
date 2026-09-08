@@ -1282,3 +1282,44 @@
 
 // A chat line: who said it, then what they said
 "chat.line.senderMessage" = "%1$@: %2$@";
+
+/* Server certificate verification (saved server editor) */
+"savedServers.secure.verified" = "Evet, doğrulanmış";
+"savedServer.form.encryption.title" = "Sunucu kimliği";
+"savedServer.form.encryption.verify" = "Sunucu sertifikasını doğrula";
+"savedServer.form.encryption.verify.hint" = "Sunucu, aşağıdaki yetkilinin verdiği bir sertifika sunmadıkça bağlantıyı reddeder.";
+"savedServer.form.encryption.verify.needsCA" = "Önce bir sertifika yetkilisi içe aktarın. Yetkili olmadan doğrulama yapılamaz.";
+"savedServer.form.encryption.status.verified" = "Sunucunun kimliği aşağıdaki yetkiliye göre denetlenecek. Başka bir sertifika sunan sunucu reddedilir.";
+"savedServer.form.encryption.status.available" = "Bir yetkili yüklendi. Sunucunun kimliğinin denetlenmesi için doğrulamayı açın.";
+"savedServer.form.encryption.status.unverified" = "Bağlantı şifreli, ancak sunucunun kimliği denetlenmiyor: her sertifika kabul edilir. Bunu değiştirmek için sunucunun sertifikasını veren yetkiliyi içe aktarın.";
+"savedServer.form.encryption.ca" = "Sertifika yetkilisi";
+"savedServer.form.encryption.ca.none" = "İçe aktarılmadı";
+"savedServer.form.encryption.ca.import" = "İçe Aktar…";
+"savedServer.form.encryption.ca.remove" = "Kaldır";
+"savedServer.form.encryption.ca.panelMessage" = "Sunucunun sertifikasını veren yetkilinin PEM sertifikasını seçin. Kendinden imzalı bir sunucuda bu, sunucunun kendi sertifikasıdır.";
+"savedServer.form.encryption.certificate.loaded" = "Sertifika içe aktarıldı";
+"savedServer.form.encryption.client.title" = "İstemci sertifikası (isteğe bağlı)";
+"savedServer.form.encryption.client.help" = "Yalnızca sunucu da kendi istemcilerini doğruluyorsa gereklidir. Özel anahtar Anahtar Zincirinizde saklanır.";
+"savedServer.form.encryption.client.certificate" = "Sertifika";
+"savedServer.form.encryption.client.certificate.none" = "İçe aktarılmadı";
+"savedServer.form.encryption.client.certificate.import" = "İçe Aktar…";
+"savedServer.form.encryption.client.certificate.remove" = "Kaldır";
+"savedServer.form.encryption.client.certificate.panelMessage" = "İstemci sertifikanızı PEM biçiminde seçin.";
+"savedServer.form.encryption.client.key" = "Özel anahtar";
+"savedServer.form.encryption.client.key.none" = "İçe aktarılmadı";
+"savedServer.form.encryption.client.key.loaded" = "Anahtar içe aktarıldı";
+"savedServer.form.encryption.client.key.import" = "İçe Aktar…";
+"savedServer.form.encryption.client.key.remove" = "Kaldır";
+"savedServer.form.encryption.client.key.panelMessage" = "İstemci sertifikanızın özel anahtarını PEM biçiminde seçin.";
+"savedServer.form.encryption.panelTitle" = "Sertifika İçe Aktar";
+"savedServer.form.encryption.panelPrompt" = "İçe Aktar";
+"savedServer.form.encryption.a11y.itemStatus" = "%1$@, %2$@";
+"savedServer.form.encryption.a11y.verificationTurnedOff" = "Doğrulama artık kapalı.";
+"savedServer.form.encryption.error.title" = "Bu dosya kullanılamıyor";
+"savedServer.form.encryption.error.unreadable" = "Dosya okunamadı. Sertifika, tire satırıyla başlayan bir metin dosyası olan PEM biçiminde olmalıdır.";
+"savedServer.form.encryption.error.notACertificate" = "Bu dosya sertifika içermiyor. İlk satırında tireler arasında BEGIN CERTIFICATE yazan bir PEM dosyası bekleniyor.";
+"savedServer.form.encryption.error.notAPrivateKey" = "Bu dosya özel anahtar içermiyor. İlk satırında tireler arasında BEGIN PRIVATE KEY yazan bir PEM dosyası bekleniyor.";
+"teamtalk.connection.error.encryptionFailed" = "Güvenli bağlantı reddedildi. Sertifika doğrulamasını açtıysanız, sunucu içe aktardığınız yetkilinin vermediği bir sertifika sunuyor olabilir.";
+"teamtalk.connection.error.encryptionFailedDetail" = "Güvenli bağlantı reddedildi: %@. Sertifika doğrulamasını açtıysanız, sunucu içe aktardığınız yetkilinin vermediği bir sertifika sunuyor olabilir.";
+"teamtalk.connection.error.encryptionMaterializeFailed" = "Bu sunucunun sertifikaları hazırlanamadı. Bağlantı, doğrulama olmadan sürdürülmek yerine durduruldu.";
+"teamtalk.connection.error.encryptionContextRejected" = "Bu sunucunun sertifikaları reddedildi. İçe aktarılan dosyaların gerçekten PEM sertifikası olduğunu denetleyin.";

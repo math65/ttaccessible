@@ -406,7 +406,8 @@ final class SavedServersViewController: NSViewController {
         let draft = SavedServerDraft(
             record: record,
             password: currentPassword,
-            initialChannelPassword: currentChannelPassword
+            initialChannelPassword: currentChannelPassword,
+            clientPrivateKeyPEM: (try? passwordStore.clientPrivateKey(for: record.id)) ?? ""
         )
         let controller = SavedServerEditorWindowController(mode: .edit, draft: draft, parentWindow: view.window)
 
@@ -418,6 +419,7 @@ final class SavedServersViewController: NSViewController {
         do {
             try passwordStore.setPassword(result.password, for: record.id)
             try passwordStore.setChannelPassword(result.initialChannelPassword, for: record.id)
+            try passwordStore.setClientPrivateKey(result.clientPrivateKeyPEM, for: record.id)
             // Per-channel passwords belong to a HOST, and an edit keeps the same
             // record ID (which keys the keychain item). Repointing the entry at
             // a different server would otherwise auto-submit the old host's
@@ -582,6 +584,7 @@ final class SavedServersViewController: NSViewController {
         do {
             try passwordStore.setPassword(result.password, for: record.id)
             try passwordStore.setChannelPassword(result.initialChannelPassword, for: record.id)
+            try passwordStore.setClientPrivateKey(result.clientPrivateKeyPEM, for: record.id)
             store.add(record)
             store.setSelectedServer(id: record.id)
             reloadRecords(selecting: record.id)
@@ -604,7 +607,12 @@ final class SavedServersViewController: NSViewController {
         let initialChannelPassword = (try? passwordStore.channelPassword(for: record.id))
             ?? record.initialChannelPassword
 
-        let draft = SavedServerDraft(record: record, password: password, initialChannelPassword: initialChannelPassword)
+        let draft = SavedServerDraft(
+            record: record,
+            password: password,
+            initialChannelPassword: initialChannelPassword,
+            clientPrivateKeyPEM: (try? passwordStore.clientPrivateKey(for: record.id)) ?? ""
+        )
         let controller = SavedServerEditorWindowController(mode: .edit, draft: draft, parentWindow: view.window)
 
         guard let result = controller.runModal(),
@@ -615,6 +623,7 @@ final class SavedServersViewController: NSViewController {
         do {
             try passwordStore.setPassword(result.password, for: record.id)
             try passwordStore.setChannelPassword(result.initialChannelPassword, for: record.id)
+            try passwordStore.setClientPrivateKey(result.clientPrivateKeyPEM, for: record.id)
             // Per-channel passwords belong to a HOST, and an edit keeps the same
             // record ID (which keys the keychain item). Repointing the entry at
             // a different server would otherwise auto-submit the old host's
@@ -681,6 +690,7 @@ final class SavedServersViewController: NSViewController {
         guard let data = ttFileService.generateFileContents(
             record: record,
             password: password,
+            clientPrivateKeyPEM: (try? passwordStore.clientPrivateKey(for: record.id)) ?? "",
             defaultJoinChannelPath: record.initialChannelPath.isEmpty ? nil : record.initialChannelPath,
             defaultJoinPassword: channelPassword,
             defaultStatusMessage: preferencesStore.preferences.defaultStatusMessage,
@@ -714,12 +724,13 @@ final class SavedServersViewController: NSViewController {
             return
         }
 
-        let entries: [(record: SavedServerRecord, password: String, channelPassword: String)]
+        let entries: [(record: SavedServerRecord, password: String, channelPassword: String, clientPrivateKeyPEM: String)]
         do {
             entries = try records.map { record in
                 let password = try passwordStore.password(for: record.id) ?? ""
                 let channelPassword = try passwordStore.channelPassword(for: record.id) ?? record.initialChannelPassword
-                return (record, password, channelPassword)
+                let clientKey = try passwordStore.clientPrivateKey(for: record.id) ?? ""
+                return (record, password, channelPassword, clientKey)
             }
         } catch {
             presentErrorAlert(message: error.localizedDescription)
@@ -788,6 +799,7 @@ final class SavedServersViewController: NSViewController {
             guard let data = ttFileService.generateFileContents(
                 record: record,
                 password: password,
+                clientPrivateKeyPEM: (try? passwordStore.clientPrivateKey(for: record.id)) ?? "",
                 defaultJoinChannelPath: record.initialChannelPath.isEmpty ? nil : record.initialChannelPath,
                 defaultJoinPassword: channelPassword,
                 defaultStatusMessage: preferencesStore.preferences.defaultStatusMessage,
@@ -962,7 +974,13 @@ extension SavedServersViewController: NSTableViewDelegate {
         case Column.udp:
             value = String(record.udpPort)
         case Column.secure:
-            value = record.encrypted ? L10n.text("savedServers.secure.yes") : L10n.text("savedServers.secure.no")
+            if record.encrypted {
+                value = record.encryption.isActive
+                    ? L10n.text("savedServers.secure.verified")
+                    : L10n.text("savedServers.secure.yes")
+            } else {
+                value = L10n.text("savedServers.secure.no")
+            }
         default:
             value = ""
         }

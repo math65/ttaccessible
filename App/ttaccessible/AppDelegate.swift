@@ -2656,7 +2656,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             username: payload.auth.username,
             useWebLogin: BearWareWebLogin.isWebLogin(payload.auth.username),
             initialChannelPath: payload.join?.channelPath ?? "",
-            initialChannelPassword: payload.join?.password ?? ""
+            initialChannelPassword: payload.join?.password ?? "",
+            encryption: payload.encryption
         )
 
         if let clientSetup = payload.clientSetup, clientSetup.hasAnySettings {
@@ -2669,7 +2670,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             genderOverride: payload.clientSetup?.gender,
             initialChannelPath: payload.join?.channelPath,
             initialChannelPassword: payload.join?.password ?? "",
-            preferJoinLastChannelFromServer: payload.join?.joinLastChannel ?? false
+            preferJoinLastChannelFromServer: payload.join?.joinLastChannel ?? false,
+            // This record is never saved, so its key has no keychain entry to
+            // come from — it has to ride along with the connection.
+            clientPrivateKeyOverride: payload.clientPrivateKeyPEM.isEmpty ? nil : payload.clientPrivateKeyPEM
         )
 
         connectionController.connect(to: record, password: payload.auth.password, options: options) { [weak self] result in

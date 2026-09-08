@@ -1,7 +1,7 @@
 ---
 title: Ajouter un serveur et s'y connecter
 description: Ajouter, modifier et trier vos serveurs TeamTalk, les importer et les exporter, et se connecter avec un compte BearWare.
-keywords: serveur, serveurs enregistrés, import, export, fichier tt, lien tt, BearWare, connexion web
+keywords: serveur, serveurs enregistrés, import, export, fichier tt, lien tt, BearWare, connexion web, certificat, chiffrement, vérification, sécurité
 anchor: servers
 ---
 
@@ -35,6 +35,39 @@ identifiants** dans l'alerte pour les corriger et réessayer.
 
 Pour modifier un serveur, sélectionnez-le et appuyez sur Commande + E. Pour le retirer, appuyez sur
 Supprimer, puis confirmez.
+
+## Vérifier l'identité d'un serveur
+
+Une connexion chiffrée brouille ce qui circule entre vous et le serveur, mais elle ne prouve pas à
+elle seule *quel* serveur vous a répondu. Quelqu'un capable d'intercepter la connexion pourrait
+présenter son propre certificat, et la connexion resterait chiffrée — avec lui.
+
+La vérification du certificat comble ce manque. Vous indiquez à tt-Accessible l'autorité de
+certification qui a délivré le certificat du serveur, et tout serveur incapable de prouver qu'il vient
+de cette autorité est refusé.
+
+Demandez à l'administrateur du serveur le certificat de l'autorité, au format PEM. Pour un serveur
+qui utilise un certificat auto-signé, il s'agit du fichier de certificat du serveur lui-même.
+
+1. Sélectionnez le serveur dans la liste et appuyez sur Commande + E.
+2. Vérifiez que **Connexion chiffrée** est sélectionné. La section **Identité du serveur** apparaît
+   juste en dessous.
+3. Cliquez sur **Importer…** en face de **Autorité de certification**, puis choisissez le fichier
+   PEM. Le nom du certificat s'affiche à côté du bouton, ce qui vous permet de vérifier que vous avez
+   pris le bon.
+4. Sélectionnez **Vérifier le certificat du serveur**.
+5. Cliquez sur Enregistrer.
+
+Tant que vous n'avez pas importé d'autorité, **Vérifier le certificat du serveur** reste estompé :
+sans elle, il n'y a rien sur quoi contrôler le serveur. La colonne **Sécurisé** de la liste des
+serveurs indique **Oui, vérifié** une fois la vérification active.
+
+Si le serveur présente plus tard un certificat que cette autorité n'a pas délivré, la connexion est
+refusée et tt-Accessible vous en explique la raison, au lieu de se connecter quand même.
+
+Certains serveurs vérifient à leur tour leurs clients. Si c'est le cas du vôtre, ouvrez **Certificat
+client** dans la même section et importez le certificat et la clé privée que l'administrateur vous a
+remis. La clé privée est conservée dans votre trousseau, à côté de votre mot de passe.
 
 ## Trier la liste des serveurs
 

@@ -21,7 +21,7 @@ final class ServerPasswordStore {
     /// (the per-channel map, today). The loss is self-healing — the next
     /// successful join re-persists — but it should be visible in the log rather
     /// than a mystery.
-    private static let currentSchemaVersion = 2
+    private static let currentSchemaVersion = 3
 
     private struct Credentials: Codable {
         var server: String?
@@ -31,12 +31,17 @@ final class ServerPasswordStore {
         /// prompt again after quitting or leaving/rejoining the server.
         /// Optional + decodeIfPresent keeps old keychain items readable.
         var channels: [String: String]?
+        /// PEM private key matching the server record's client certificate, for
+        /// servers that verify the client in turn. A secret, so it lives here
+        /// rather than in the record itself.
+        var clientPrivateKey: String?
         var schemaVersion: Int?
 
         var isEmpty: Bool {
             (server?.isEmpty ?? true)
                 && (channel?.isEmpty ?? true)
                 && (channels?.isEmpty ?? true)
+                && (clientPrivateKey?.isEmpty ?? true)
         }
     }
 
@@ -149,6 +154,19 @@ final class ServerPasswordStore {
         // Also drop every per-channel password so removing a server leaves no
         // orphaned channel secrets in the keychain.
         credentials.channels = nil
+        credentials.clientPrivateKey = nil
+        try writeCredentials(credentials, for: id)
+    }
+
+    /// The private key of the TLS client certificate, when the server verifies
+    /// its clients. Read on the connect path and written by the server editor.
+    func clientPrivateKey(for id: UUID) throws -> String? {
+        nonEmpty(try loadCredentials(for: id).clientPrivateKey)
+    }
+
+    func setClientPrivateKey(_ key: String?, for id: UUID) throws {
+        var credentials = loadCredentialsForUpdate(for: id)
+        credentials.clientPrivateKey = nonEmpty(key)
         try writeCredentials(credentials, for: id)
     }
 

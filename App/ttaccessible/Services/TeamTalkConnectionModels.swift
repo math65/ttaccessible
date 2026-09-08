@@ -145,6 +145,9 @@ enum TeamTalkConnectionError: LocalizedError {
     case internalError(String)
     case webLoginNotConfigured
     case webLoginFailed(String)
+    /// TLS handshake refused — most often the server certificate failing to
+    /// chain up to the CA pinned on the record. Carries OpenSSL's own text.
+    case encryptionFailed(String)
 
     var errorDescription: String? {
         switch self {
@@ -160,7 +163,7 @@ enum TeamTalkConnectionError: LocalizedError {
             return L10n.text("teamtalk.connection.error.timeout")
         case .webLoginNotConfigured:
             return L10n.text("teamtalk.connection.error.webLoginNotConfigured")
-        case .loginFailed(let message), .incorrectChannelPassword(let message), .internalError(let message), .webLoginFailed(let message):
+        case .loginFailed(let message), .incorrectChannelPassword(let message), .internalError(let message), .webLoginFailed(let message), .encryptionFailed(let message):
             return message
         }
     }
@@ -186,6 +189,10 @@ struct TeamTalkConnectOptions {
     var initialChannelPath: String?
     var initialChannelPassword: String
     var preferJoinLastChannelFromServer: Bool
+    /// TLS client private key for a connection whose record was never saved —
+    /// a `.tt` file opened straight from the Finder. Saved servers keep theirs
+    /// in the keychain instead, keyed by record ID.
+    var clientPrivateKeyOverride: String?
 
     init(
         nicknameOverride: String? = nil,
@@ -193,7 +200,8 @@ struct TeamTalkConnectOptions {
         genderOverride: TeamTalkGender? = nil,
         initialChannelPath: String? = nil,
         initialChannelPassword: String = "",
-        preferJoinLastChannelFromServer: Bool = false
+        preferJoinLastChannelFromServer: Bool = false,
+        clientPrivateKeyOverride: String? = nil
     ) {
         self.nicknameOverride = nicknameOverride
         self.statusMessage = statusMessage
@@ -201,6 +209,7 @@ struct TeamTalkConnectOptions {
         self.initialChannelPath = initialChannelPath
         self.initialChannelPassword = initialChannelPassword
         self.preferJoinLastChannelFromServer = preferJoinLastChannelFromServer
+        self.clientPrivateKeyOverride = clientPrivateKeyOverride
     }
 }
 

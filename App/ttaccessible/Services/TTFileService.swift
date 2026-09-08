@@ -43,6 +43,11 @@ struct TTFilePayload {
     var tcpPort: Int
     var udpPort: Int
     var encrypted: Bool
+    var encryption: ServerEncryptionSettings
+    /// PEM private key of the client certificate, when the file carries one.
+    /// Kept apart from `encryption` because it is a secret: it goes to the
+    /// keychain on import, never to the server record.
+    var clientPrivateKeyPEM: String
     var auth: Auth
     var join: Join?
     var clientSetup: ClientSetup?
@@ -120,6 +125,7 @@ final class TTFileService {
         }
 
         let encrypted = Self.parseBool(value(in: hostElement, named: "encrypted"))
+        let (encryption, clientPrivateKeyPEM) = parseTrustedCertificate(from: hostElement)
         let auth = parseAuth(from: hostElement)
         let join = parseJoin(from: hostElement)
         let clientSetup = parseClientSetup(from: hostElement)
@@ -132,15 +138,36 @@ final class TTFileService {
             tcpPort: tcpPort,
             udpPort: udpPort,
             encrypted: encrypted,
+            encryption: encryption,
+            clientPrivateKeyPEM: clientPrivateKeyPEM,
             auth: auth,
             join: join,
             clientSetup: clientSetup
         )
     }
 
+    /// Reads the `<trusted-certificate>` block the Qt client writes for an
+    /// encrypted server. Ignored by every build before 1.13, which is why a
+    /// secure profile exported from the Qt client used to arrive here stripped
+    /// of its verification settings.
+    private func parseTrustedCertificate(
+        from hostElement: XMLElement
+    ) -> (ServerEncryptionSettings, String) {
+        guard let trusted = hostElement.elements(forName: "trusted-certificate").first else {
+            return (ServerEncryptionSettings(), "")
+        }
+        let settings = ServerEncryptionSettings(
+            verifyServerCertificate: Self.parseBool(value(in: trusted, named: "verify-peer")),
+            caCertificatePEM: value(in: trusted, named: "certificate-authority-pem"),
+            clientCertificatePEM: value(in: trusted, named: "client-certificate-pem")
+        )
+        return (settings, value(in: trusted, named: "client-private-key-pem"))
+    }
+
     func generateFileContents(
         record: SavedServerRecord,
         password: String,
+        clientPrivateKeyPEM: String = "",
         defaultJoinChannelPath: String? = nil,
         defaultJoinPassword: String = "",
         defaultStatusMessage: String = "",
@@ -149,6 +176,7 @@ final class TTFileService {
         let host = makeHostElement(
             record: record,
             password: password,
+            clientPrivateKeyPEM: clientPrivateKeyPEM,
             defaultJoinChannelPath: defaultJoinChannelPath,
             defaultJoinPassword: defaultJoinPassword,
             defaultStatusMessage: defaultStatusMessage,
@@ -160,7 +188,7 @@ final class TTFileService {
     /// Generate a single .tt file holding every server (one `<host>` per server,
     /// the format the Qt client uses and that `loadAll` reads back).
     func generateAllServersFileContents(
-        records: [(record: SavedServerRecord, password: String, channelPassword: String)],
+        records: [(record: SavedServerRecord, password: String, channelPassword: String, clientPrivateKeyPEM: String)],
         defaultStatusMessage: String = "",
         defaultGender: TeamTalkGender? = nil
     ) -> Data? {
@@ -168,6 +196,7 @@ final class TTFileService {
             makeHostElement(
                 record: entry.record,
                 password: entry.password,
+                clientPrivateKeyPEM: entry.clientPrivateKeyPEM,
                 defaultJoinChannelPath: entry.record.initialChannelPath.isEmpty ? nil : entry.record.initialChannelPath,
                 defaultJoinPassword: entry.channelPassword,
                 defaultStatusMessage: defaultStatusMessage,
@@ -180,6 +209,7 @@ final class TTFileService {
     private func makeHostElement(
         record: SavedServerRecord,
         password: String,
+        clientPrivateKeyPEM: String,
         defaultJoinChannelPath: String?,
         defaultJoinPassword: String,
         defaultStatusMessage: String,
@@ -191,6 +221,18 @@ final class TTFileService {
         appendChild(named: "tcpport", value: String(record.tcpPort), to: host)
         appendChild(named: "udpport", value: String(record.udpPort), to: host)
         appendChild(named: "encrypted", value: record.encrypted ? "true" : "false", to: host)
+
+        // Same element names and nesting as the Qt client, so a profile exported
+        // here imports there and back. The private key travels with it, as the
+        // account password already does — a .tt file is a credential file.
+        if record.encrypted, record.encryption.isConfigured || clientPrivateKeyPEM.isEmpty == false {
+            let trusted = XMLElement(name: "trusted-certificate")
+            appendChild(named: "certificate-authority-pem", value: record.encryption.caCertificatePEM, to: trusted)
+            appendChild(named: "client-certificate-pem", value: record.encryption.clientCertificatePEM, to: trusted)
+            appendChild(named: "client-private-key-pem", value: clientPrivateKeyPEM, to: trusted)
+            appendChild(named: "verify-peer", value: record.encryption.verifyServerCertificate ? "true" : "false", to: trusted)
+            host.addChild(trusted)
+        }
 
         if record.username.isEmpty == false || password.isEmpty == false || record.nickname.isEmpty == false || defaultStatusMessage.isEmpty == false {
             let auth = XMLElement(name: "auth")

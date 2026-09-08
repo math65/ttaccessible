@@ -1282,3 +1282,44 @@
 
 // A chat line: who said it, then what they said
 "chat.line.senderMessage" = "%1$@: %2$@";
+
+/* Server certificate verification (saved server editor) */
+"savedServers.secure.verified" = "Yes, verified";
+"savedServer.form.encryption.title" = "Server identity";
+"savedServer.form.encryption.verify" = "Verify the server certificate";
+"savedServer.form.encryption.verify.hint" = "Refuses the connection unless the server presents a certificate issued by the authority below.";
+"savedServer.form.encryption.verify.needsCA" = "Import a certificate authority first. Verification is impossible without one.";
+"savedServer.form.encryption.status.verified" = "The server's identity will be checked against the authority below. A server presenting any other certificate is refused.";
+"savedServer.form.encryption.status.available" = "An authority is loaded. Turn verification on to have the server's identity checked.";
+"savedServer.form.encryption.status.unverified" = "The connection is encrypted, but the server's identity is not checked: any certificate is accepted. Import the authority that issued the server's certificate to change that.";
+"savedServer.form.encryption.ca" = "Certificate authority";
+"savedServer.form.encryption.ca.none" = "None imported";
+"savedServer.form.encryption.ca.import" = "Import…";
+"savedServer.form.encryption.ca.remove" = "Remove";
+"savedServer.form.encryption.ca.panelMessage" = "Choose the PEM certificate of the authority that issued the server's certificate. For a self-signed server, this is the server's own certificate.";
+"savedServer.form.encryption.certificate.loaded" = "Certificate imported";
+"savedServer.form.encryption.client.title" = "Client certificate (optional)";
+"savedServer.form.encryption.client.help" = "Only needed when the server verifies its clients in turn. The private key is stored in your keychain.";
+"savedServer.form.encryption.client.certificate" = "Certificate";
+"savedServer.form.encryption.client.certificate.none" = "None imported";
+"savedServer.form.encryption.client.certificate.import" = "Import…";
+"savedServer.form.encryption.client.certificate.remove" = "Remove";
+"savedServer.form.encryption.client.certificate.panelMessage" = "Choose your client certificate, in PEM format.";
+"savedServer.form.encryption.client.key" = "Private key";
+"savedServer.form.encryption.client.key.none" = "None imported";
+"savedServer.form.encryption.client.key.loaded" = "Key imported";
+"savedServer.form.encryption.client.key.import" = "Import…";
+"savedServer.form.encryption.client.key.remove" = "Remove";
+"savedServer.form.encryption.client.key.panelMessage" = "Choose the private key of your client certificate, in PEM format.";
+"savedServer.form.encryption.panelTitle" = "Import a certificate";
+"savedServer.form.encryption.panelPrompt" = "Import";
+"savedServer.form.encryption.a11y.itemStatus" = "%1$@, %2$@";
+"savedServer.form.encryption.a11y.verificationTurnedOff" = "Verification is now off.";
+"savedServer.form.encryption.error.title" = "This file cannot be used";
+"savedServer.form.encryption.error.unreadable" = "The file could not be read. A certificate must be in PEM format, a text file starting with a line of dashes.";
+"savedServer.form.encryption.error.notACertificate" = "This file contains no certificate. Expected a PEM file, whose first line reads BEGIN CERTIFICATE between dashes.";
+"savedServer.form.encryption.error.notAPrivateKey" = "This file contains no private key. Expected a PEM file, whose first line reads BEGIN PRIVATE KEY between dashes.";
+"teamtalk.connection.error.encryptionFailed" = "The secure connection was refused. If you enabled certificate verification, the server may be presenting a certificate that was not issued by the authority you imported.";
+"teamtalk.connection.error.encryptionFailedDetail" = "The secure connection was refused: %@. If you enabled certificate verification, the server may be presenting a certificate that was not issued by the authority you imported.";
+"teamtalk.connection.error.encryptionMaterializeFailed" = "The certificates for this server could not be prepared. The connection was stopped rather than continuing without verification.";
+"teamtalk.connection.error.encryptionContextRejected" = "The certificates for this server were refused. Check that the imported files really are PEM certificates.";

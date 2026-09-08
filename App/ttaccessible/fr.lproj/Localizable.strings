@@ -1280,3 +1280,44 @@
 
 // A chat line: who said it, then what they said
 "chat.line.senderMessage" = "%1$@ : %2$@";
+
+/* Vérification du certificat du serveur (éditeur de serveur enregistré) */
+"savedServers.secure.verified" = "Oui, vérifié";
+"savedServer.form.encryption.title" = "Identité du serveur";
+"savedServer.form.encryption.verify" = "Vérifier le certificat du serveur";
+"savedServer.form.encryption.verify.hint" = "Refuse la connexion si le serveur ne présente pas un certificat délivré par l'autorité ci-dessous.";
+"savedServer.form.encryption.verify.needsCA" = "Importez d'abord une autorité de certification. Sans elle, aucune vérification n'est possible.";
+"savedServer.form.encryption.status.verified" = "L'identité du serveur sera contrôlée à partir de l'autorité ci-dessous. Un serveur qui présente un autre certificat est refusé.";
+"savedServer.form.encryption.status.available" = "Une autorité est chargée. Activez la vérification pour que l'identité du serveur soit contrôlée.";
+"savedServer.form.encryption.status.unverified" = "La connexion est chiffrée, mais l'identité du serveur n'est pas contrôlée : n'importe quel certificat est accepté. Importez l'autorité qui a délivré le certificat du serveur pour y remédier.";
+"savedServer.form.encryption.ca" = "Autorité de certification";
+"savedServer.form.encryption.ca.none" = "Aucune importée";
+"savedServer.form.encryption.ca.import" = "Importer…";
+"savedServer.form.encryption.ca.remove" = "Retirer";
+"savedServer.form.encryption.ca.panelMessage" = "Choisissez le certificat PEM de l'autorité qui a délivré le certificat du serveur. Pour un serveur auto-signé, il s'agit du certificat du serveur lui-même.";
+"savedServer.form.encryption.certificate.loaded" = "Certificat importé";
+"savedServer.form.encryption.client.title" = "Certificat client (facultatif)";
+"savedServer.form.encryption.client.help" = "Utile uniquement si le serveur vérifie à son tour ses clients. La clé privée est conservée dans votre trousseau.";
+"savedServer.form.encryption.client.certificate" = "Certificat";
+"savedServer.form.encryption.client.certificate.none" = "Aucun importé";
+"savedServer.form.encryption.client.certificate.import" = "Importer…";
+"savedServer.form.encryption.client.certificate.remove" = "Retirer";
+"savedServer.form.encryption.client.certificate.panelMessage" = "Choisissez votre certificat client, au format PEM.";
+"savedServer.form.encryption.client.key" = "Clé privée";
+"savedServer.form.encryption.client.key.none" = "Aucune importée";
+"savedServer.form.encryption.client.key.loaded" = "Clé importée";
+"savedServer.form.encryption.client.key.import" = "Importer…";
+"savedServer.form.encryption.client.key.remove" = "Retirer";
+"savedServer.form.encryption.client.key.panelMessage" = "Choisissez la clé privée de votre certificat client, au format PEM.";
+"savedServer.form.encryption.panelTitle" = "Importer un certificat";
+"savedServer.form.encryption.panelPrompt" = "Importer";
+"savedServer.form.encryption.a11y.itemStatus" = "%1$@, %2$@";
+"savedServer.form.encryption.a11y.verificationTurnedOff" = "La vérification est désactivée.";
+"savedServer.form.encryption.error.title" = "Ce fichier ne peut pas être utilisé";
+"savedServer.form.encryption.error.unreadable" = "Le fichier n'a pas pu être lu. Un certificat doit être au format PEM, un fichier texte qui commence par une ligne de tirets.";
+"savedServer.form.encryption.error.notACertificate" = "Ce fichier ne contient aucun certificat. Il faut un fichier PEM, dont la première ligne indique BEGIN CERTIFICATE entre des tirets.";
+"savedServer.form.encryption.error.notAPrivateKey" = "Ce fichier ne contient aucune clé privée. Il faut un fichier PEM, dont la première ligne indique BEGIN PRIVATE KEY entre des tirets.";
+"teamtalk.connection.error.encryptionFailed" = "La connexion sécurisée a été refusée. Si vous avez activé la vérification du certificat, le serveur présente peut-être un certificat qui n'a pas été délivré par l'autorité que vous avez importée.";
+"teamtalk.connection.error.encryptionFailedDetail" = "La connexion sécurisée a été refusée : %@. Si vous avez activé la vérification du certificat, le serveur présente peut-être un certificat qui n'a pas été délivré par l'autorité que vous avez importée.";
+"teamtalk.connection.error.encryptionMaterializeFailed" = "Les certificats de ce serveur n'ont pas pu être préparés. La connexion a été interrompue plutôt que de se poursuivre sans vérification.";
+"teamtalk.connection.error.encryptionContextRejected" = "Les certificats de ce serveur ont été refusés. Vérifiez que les fichiers importés sont bien des certificats au format PEM.";

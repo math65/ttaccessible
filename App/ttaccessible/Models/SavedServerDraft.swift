@@ -19,6 +19,10 @@ struct SavedServerDraft: Equatable {
     var useWebLogin: Bool
     var initialChannelPath: String
     var initialChannelPassword: String
+    var encryption: ServerEncryptionSettings
+    /// Kept out of `encryption` because it is a secret: it round-trips through
+    /// the keychain alongside the server password, not through UserDefaults.
+    var clientPrivateKeyPEM: String
 
     init(
         name: String = "",
@@ -31,7 +35,9 @@ struct SavedServerDraft: Equatable {
         password: String = "",
         useWebLogin: Bool = false,
         initialChannelPath: String = "",
-        initialChannelPassword: String = ""
+        initialChannelPassword: String = "",
+        encryption: ServerEncryptionSettings = ServerEncryptionSettings(),
+        clientPrivateKeyPEM: String = ""
     ) {
         self.name = name
         self.host = host
@@ -44,9 +50,16 @@ struct SavedServerDraft: Equatable {
         self.useWebLogin = useWebLogin
         self.initialChannelPath = initialChannelPath
         self.initialChannelPassword = initialChannelPassword
+        self.encryption = encryption
+        self.clientPrivateKeyPEM = clientPrivateKeyPEM
     }
 
-    init(record: SavedServerRecord, password: String, initialChannelPassword: String? = nil) {
+    init(
+        record: SavedServerRecord,
+        password: String,
+        initialChannelPassword: String? = nil,
+        clientPrivateKeyPEM: String = ""
+    ) {
         self.init(
             name: record.name,
             host: record.host,
@@ -58,7 +71,9 @@ struct SavedServerDraft: Equatable {
             password: password,
             useWebLogin: record.useWebLogin,
             initialChannelPath: record.initialChannelPath,
-            initialChannelPassword: initialChannelPassword ?? record.initialChannelPassword
+            initialChannelPassword: initialChannelPassword ?? record.initialChannelPassword,
+            encryption: record.encryption,
+            clientPrivateKeyPEM: clientPrivateKeyPEM
         )
     }
 
@@ -113,8 +128,22 @@ struct SavedServerDraft: Equatable {
             username: useWebLogin ? BearWareWebLogin.username : sanitizedUsername,
             useWebLogin: useWebLogin,
             initialChannelPath: sanitizedInitialChannelPath,
-            initialChannelPassword: initialChannelPassword
+            initialChannelPassword: initialChannelPassword,
+            encryption: sanitizedEncryption
         )
+    }
+
+    /// Verification is meaningless on a plaintext connection, and the SDK cannot
+    /// verify anything without a CA anyway. Normalising here keeps a stale
+    /// "verify" flag from surviving an edit that turned encryption back off, and
+    /// keeps the saved-server list's "secure" column honest.
+    var sanitizedEncryption: ServerEncryptionSettings {
+        guard encrypted else { return ServerEncryptionSettings() }
+        var result = encryption
+        if result.canVerify == false {
+            result.verifyServerCertificate = false
+        }
+        return result
     }
 
     private static func parsePort(_ value: String) -> Int? {
