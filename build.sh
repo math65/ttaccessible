@@ -80,7 +80,10 @@ if [[ $NOTARIZE -eq 1 ]]; then
         done
     fi
 
-    find "$APP_PATH/Contents" \( -name "*.dylib" -o -name "*.framework" \) -print0 | \
+    # -depth : le contenu avant son dossier, pour que la framework soit signée après ce
+    # qu'elle contient. *.so : les modules d'extension de Python.framework (Stream URL /
+    # yt-dlp), livrés signés ad hoc — la notarisation exige Developer ID partout.
+    find "$APP_PATH/Contents" -depth \( -name "*.dylib" -o -name "*.so" -o -name "*.framework" \) -print0 | \
         while IFS= read -r -d '' nested; do
             codesign --force --options runtime --timestamp \
                 --sign "$SIGN_IDENTITY" "$nested"
