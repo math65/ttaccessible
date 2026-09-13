@@ -55,6 +55,14 @@ The TeamTalk SDK binary is not included in the repository. Download it before bu
 
 This downloads `libTeamTalk5.dylib` and `TeamTalk.h` from the [official TeamTalk SDK](https://www.bearware.dk/?page_id=419) and places them in `Vendor/TeamTalk/`.
 
+Stream URL plays web pages (YouTube and the other sites [yt-dlp](https://github.com/yt-dlp/yt-dlp) supports) through a Python runtime embedded in the app. Download it too:
+
+```bash
+./scripts/download-python.sh
+```
+
+This places BeeWare's [Python for macOS](https://github.com/beeware/Python-Apple-support), a pinned yt-dlp release and certifi's CA bundle in `Vendor/Python/`, each checked against its published SHA-256.
+
 ### Build
 
 For development:
