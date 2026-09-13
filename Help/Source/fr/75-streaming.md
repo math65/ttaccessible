@@ -1,7 +1,7 @@
 ---
 title: Diffuser du son dans un canal
 description: Envoyer un fichier, une radio internet, un périphérique, une autre app ou VoiceOver dans le canal, en même temps que votre voix.
-keywords: diffusion, fichier média, URL, radio, périphérique, application, VoiceOver, lecteur média
+keywords: diffusion, fichier média, URL, radio, périphérique, application, VoiceOver, lecteur média, YouTube, page web
 anchor: streaming
 ---
 
@@ -23,6 +23,14 @@ principale l'affiche.
 1. Choisissez Raccourcis > Diffuser une URL, ou appuyez sur Option + Commande + U.
 2. Saisissez l'adresse du flux, puis cliquez sur Diffuser. Les schémas `http`, `https`, `rtmp`,
    `rtmps`, `rtsp` et `mms` sont acceptés.
+
+Vous pouvez aussi saisir l'adresse d'une page web qui diffuse du son ou de la vidéo : YouTube, et les
+nombreux autres sites pris en charge par [yt-dlp](https://github.com/yt-dlp/yt-dlp), que tt-Accessible
+embarque. tt-Accessible annonce *Recherche sur* suivi du nom du site, trouve le média derrière la page
+et le diffuse sous le titre de la page. Une adresse qui est déjà un flux, comme le lien `.mp3` ou
+`.m3u8` d'une radio, démarre aussitôt, comme avant, et une page que yt-dlp ne sait pas lire est
+diffusée telle quelle. La liste ci-dessous garde l'adresse de la page, pas le lien vers le média, qui
+cesse de fonctionner au bout de quelques heures.
 
 La dernière adresse diffusée vous est proposée d'emblée : appuyez sur Retour pour la relancer
 telle quelle. Les adresses précédentes restent accessibles avec la flèche vers le bas, et vous

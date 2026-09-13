@@ -1,7 +1,7 @@
 ---
 title: Stream audio into a channel
 description: Send a file, an internet radio, an audio device, another app or VoiceOver into the channel alongside your voice.
-keywords: streaming, media file, URL, radio, device, application, VoiceOver, media player, broadcast volume
+keywords: streaming, media file, URL, radio, device, application, VoiceOver, media player, broadcast volume, YouTube, web page
 anchor: streaming
 ---
 
@@ -22,6 +22,13 @@ a file carries video, the Video panel of the main window shows it.
 1. Choose Shortcuts > Stream URL, or press Option-Command-U.
 2. Enter the address of the stream, then click Stream. You can use the `http`, `https`, `rtmp`,
    `rtmps`, `rtsp` and `mms` schemes.
+
+You can also enter the address of a web page that plays audio or video: YouTube, and the many other
+sites supported by [yt-dlp](https://github.com/yt-dlp/yt-dlp), which tt-Accessible carries inside it.
+tt-Accessible says *Looking up* followed by the site's name, finds the media behind the page and
+streams it under the page's title. An address that is already a stream, such as a radio's `.mp3` or
+`.m3u8` link, starts straight away as before, and a page yt-dlp can't read is streamed as typed. The
+list below keeps the page's address, not the media link behind it, which stops working within hours.
 
 The last address you streamed is offered straight away: press Return to start it again as it is.
 Earlier addresses are on the Down arrow, and typing the first few characters of one completes it.

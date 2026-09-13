@@ -2020,23 +2020,66 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 errorAlert.runModal()
                 return
             }
-            self.connectionController.startStreamingMediaURL(url) { [weak self] result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success:
-                        // Only once it has actually started: an address that the
-                        // SDK refuses is not one to offer back next time. Stored
-                        // as typed, not as URL.absoluteString, which would show
-                        // back a percent-encoded version of what was entered.
-                        self?.preferencesStore.rememberMediaStreamURL(raw)
-                    case .failure(let error):
-                        self?.announceWithVoiceOver(L10n.text("mediaStream.announced.error"))
-                        let alert = NSAlert(error: error)
-                        alert.runModal()
+            // A web page (YouTube, or any site yt-dlp knows) becomes its media first; a direct
+            // stream address goes through untouched, as it always did.
+            self.resolveStreamAddress(url) { [weak self] streamURL, title in
+                self?.connectionController.startStreamingMediaURL(streamURL, displayName: title) { [weak self] result in
+                    DispatchQueue.main.async {
+                        switch result {
+                        case .success:
+                            // Only once it has actually started: an address that the
+                            // SDK refuses is not one to offer back next time. Stored
+                            // as typed, not as URL.absoluteString, which would show
+                            // back a percent-encoded version of what was entered —
+                            // and for a web page, the page, not the media link behind
+                            // it, which expires within hours.
+                            self?.preferencesStore.rememberMediaStreamURL(raw)
+                        case .failure(let error):
+                            self?.announceWithVoiceOver(L10n.text("mediaStream.announced.error"))
+                            let alert = NSAlert(error: error)
+                            alert.runModal()
+                        }
                     }
                 }
             }
         }
+    }
+
+    /// Turns what was typed into what the media streamer opens. A web page — YouTube, or any
+    /// of the sites yt-dlp knows — is looked up through the embedded Python (EmbeddedPython)
+    /// and streams under the page's title. A direct stream address, or a page yt-dlp can't
+    /// read, goes through as typed, exactly as before.
+    private func resolveStreamAddress(_ url: URL, completion: @escaping @MainActor (URL, String?) -> Void) {
+        guard Self.looksLikeWebPage(url) else {
+            completion(url, nil)
+            return
+        }
+        announceWithVoiceOver(L10n.format("mediaStream.url.resolving", url.host ?? url.absoluteString))
+        Task {
+            do {
+                let media = try await EmbeddedPython.shared.resolve(url)
+                if let streamURL = URL(string: media.url) {
+                    AudioLogger.log("stream url: %@ resolved by yt-dlp (%@): %@",
+                                    url.host ?? "?", media.extractor, media.title)
+                    completion(streamURL, media.title.isEmpty ? nil : media.title)
+                    return
+                }
+            } catch {
+                AudioLogger.log("stream url: %@ not resolved (%@) — streaming it as typed",
+                                url.absoluteString, String(describing: error))
+            }
+            completion(url, nil)
+        }
+    }
+
+    /// Whether an address might be a page to look up. One that is already a stream — by its
+    /// scheme (rtmp, rtsp, mms) or by an audio, video or playlist file extension — never is,
+    /// so a web radio starts exactly as fast as it always did.
+    static func looksLikeWebPage(_ url: URL) -> Bool {
+        guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else { return false }
+        let streamExtensions: Set<String> = ["mp3", "aac", "m4a", "ogg", "oga", "opus", "flac", "wav",
+                                             "m3u", "m3u8", "pls", "mp4", "webm", "mka", "mkv"]
+        return streamExtensions.contains(url.pathExtension.lowercased()) == false
     }
 
     private func promptMediaStreamDevice() {
