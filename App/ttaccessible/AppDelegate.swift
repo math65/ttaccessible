@@ -161,6 +161,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         handleLaunchTTFilesIfNeeded()
         processPendingTTFileURLsIfPossible()
         syncNicknamePreference()
+        // yt-dlp (Stream URL's web pages) keeps itself current, apart from app updates.
+        YtDlpUpdater.shared.scheduleLaunchCheck()
         configurePushToTalkObservers()
         installRecordingStopKeyMonitor()
         installMicrophoneMenuKeyMonitor()
@@ -2057,7 +2059,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         announceWithVoiceOver(L10n.format("mediaStream.url.resolving", url.host ?? url.absoluteString))
         Task {
             do {
-                let media = try await EmbeddedPython.shared.resolve(url)
+                let media = try await EmbeddedPython.shared.resolveUpdatingIfNeeded(url)
                 if let streamURL = URL(string: media.url) {
                     AudioLogger.log("stream url: %@ resolved by yt-dlp (%@): %@",
                                     url.host ?? "?", media.extractor, media.title)
