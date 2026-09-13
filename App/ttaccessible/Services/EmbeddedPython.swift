@@ -99,25 +99,78 @@ nonisolated final class EmbeddedPython: @unchecked Sendable {
         }
     }
 
-    /// Runs on `queue`.
+    enum SwitchResult: Equatable, Sendable {
+        /// Python isn't running yet; the next start loads the newest copy by itself.
+        case notRunning
+        case switched(String)
+        /// The new copy didn't import; the previous one is loaded again.
+        case failed(String)
+    }
+
+    /// Switches the running Python to another yt-dlp (a verified update), without a restart.
+    func switchYtDlp(to zip: URL) async -> SwitchResult {
+        await withCheckedContinuation { (continuation: CheckedContinuation<SwitchResult, Never>) in
+            queue.async {
+                guard self.started else {
+                    continuation.resume(returning: .notRunning)
+                    return
+                }
+                var error: UnsafeMutablePointer<CChar>?
+                if let version = Self.take(ttac_py_switch_ytdlp(zip.path, &error)) {
+                    continuation.resume(returning: .switched(version))
+                } else {
+                    continuation.resume(returning: .failed(Self.take(error) ?? "yt-dlp didn't load"))
+                }
+            }
+        }
+    }
+
+    /// resolve(_:), except that a page yt-dlp can't read first makes sure yt-dlp is current —
+    /// sites change and yt-dlp catches up within days — and is tried once more only if a newer
+    /// yt-dlp actually arrived.
+    func resolveUpdatingIfNeeded(_ page: URL) async throws -> ResolvedMedia {
+        do {
+            return try await resolve(page)
+        } catch Failure.unresolved(let message) {
+            guard await YtDlpUpdater.shared.checkNow(reason: "a page failed to resolve") != nil else {
+                throw Failure.unresolved(message)
+            }
+            return try await resolve(page)
+        }
+    }
+
+    /// Runs on `queue`. The newest yt-dlp first — an update downloaded since this build — and,
+    /// if that one won't import, the one the app shipped with.
     private func startIfNeeded() throws {
         guard started == false else { return }
         guard let home = Self.pythonHome,
               let support = Self.supportDirectory,
-              let ytdlp = Self.bundledYtDlp,
+              let bundled = Self.bundledYtDlp,
               FileManager.default.fileExists(atPath: home.path),
-              FileManager.default.fileExists(atPath: ytdlp.path) else {
+              FileManager.default.fileExists(atPath: bundled.path) else {
             throw Failure.unavailable("the Python runtime is not part of this build")
         }
         let caFile = support.appendingPathComponent("cacert.pem")
-        var error: UnsafeMutablePointer<CChar>?
-        guard ttac_py_start(home.path, caFile.path, ytdlp.path, &error) == 0 else {
-            let message = Self.take(error) ?? "Python failed to start"
-            AudioLogger.log("embedded python: failed to start — %@", message)
-            throw Failure.unavailable(message)
+        var candidates = [bundled]
+        if let updated = YtDlpUpdater.preferredZip()?.url {
+            candidates.insert(updated, at: 0)
         }
-        started = true
-        AudioLogger.log("embedded python: started, yt-dlp %@", Self.take(ttac_py_ytdlp_version()) ?? "?")
+        var lastError = "Python failed to start"
+        for zip in candidates {
+            var error: UnsafeMutablePointer<CChar>?
+            if ttac_py_start(home.path, caFile.path, zip.path, &error) == 0 {
+                started = true
+                AudioLogger.log("embedded python: started, yt-dlp %@", Self.take(ttac_py_ytdlp_version()) ?? "?")
+                return
+            }
+            lastError = Self.take(error) ?? lastError
+            AudioLogger.log("embedded python: yt-dlp from %@ didn't load — %@",
+                            zip.deletingLastPathComponent().lastPathComponent, lastError)
+            if zip != bundled {
+                YtDlpUpdater.forgetActiveVersion()
+            }
+        }
+        throw Failure.unavailable(lastError)
     }
 
     /// A C string from the shim as a Swift String, freeing it.
