@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Configurer vos périphériques audio</title>
 <meta name="description" content="Choisir vos périphériques d'entrée et de sortie, supprimer l'écho et le bruit de fond, et tester votre micro.">
-<meta name="keywords" content="périphérique audio, entrée, sortie, annulation d'écho, AEC, réduction de bruit, aperçu, canaux, casque">
+<meta name="keywords" content="périphérique audio, entrée, sortie, annulation d'écho, AEC, réduction de bruit, aperçu, canaux, canaux de sortie, interface, casque">
 <meta name="robots" content="index, anchors">
 <link rel="stylesheet" href="../css/help.css">
 </head>
@@ -23,6 +23,19 @@
 <p>Si vous branchez ou débranchez un appareil et qu'il n'apparaît pas, cliquez sur <strong>Actualiser les périphériques</strong>. tt-Accessible détecte de toute façon ces changements tout seul et redémarre son moteur audio : un casque connecté en cours de session est pris en compte sans que vous ayez à intervenir.</p>
 <p>Si vous débranchez un périphérique que vous avez choisi, il reste sélectionné dans son menu, avec la mention <em>non connecté</em>. En attendant son retour, le son passe par la sortie par défaut du système et le micro est coupé. Dès que vous le rebranchez, tt-Accessible s'en sert de nouveau.</p>
 <p>Si votre micro était activé, il se réactive lui aussi, avec le son habituel, à trois conditions : vous êtes toujours connecté au même serveur, vous ne l'avez ni activé ni coupé entre-temps, et vous n'avez pas choisi un autre micro.</p>
+<h2 id="choisir-les-sorties-utilisées">Choisir les sorties utilisées</h2>
+<p>Sur une interface audio ou une console possédant plus d'une paire de sorties, tt-Accessible n'est pas obligé de jouer sur les sorties 1 et 2.</p>
+<ol type="1">
+<li>Ouvrez les Préférences, puis cliquez sur Audio.</li>
+<li>Cliquez sur le menu local <strong>Canaux de sortie</strong>, puis choisissez l'une des options suivantes :
+<ul>
+<li><strong>Auto (sorties 1 et 2)</strong> — la première paire du périphérique, ce que tt-Accessible utilisait avant l'existence de ce réglage.</li>
+<li><strong>Sorties 3 et 4</strong>, <strong>Sorties 5 et 6</strong>, et ainsi de suite — jouer en stéréo sur cette paire.</li>
+<li><strong>Sortie 7 mono</strong>, et ainsi de suite — additionner les canaux en mono et les jouer sur cette seule sortie.</li>
+</ul></li>
+</ol>
+<p>Le menu présente d'abord les paires stéréo, puis les sorties seules : sur une grande interface, la paire que vous voulez reste donc à quelques éléments du début.</p>
+<p>Le menu n'apparaît que pour les périphériques offrant plus d'une paire de sorties — il n'y a rien à choisir sur un casque ou sur les haut-parleurs intégrés. Votre choix est retenu par périphérique : chaque interface revient donc sur les sorties que vous lui aviez données, et un changement de routage s'entend immédiatement, sans interrompre l'audio. Si vous utilisez ensuite le périphérique dans un mode plus réduit, ou si vous le remplacez par un périphérique stéréo, le réglage réaffiche Auto ; rebranchez le périphérique et votre choix revient.</p>
 <h2 id="supprimer-lécho-et-le-bruit-de-fond">Supprimer l'écho et le bruit de fond</h2>
 <ol type="1">
 <li>Ouvrez les Préférences, puis cliquez sur Audio.</li>
@@ -35,7 +48,7 @@
 </ol>
 <p>C'est l'annulation d'écho qui permet de travailler sans casque : sans elle, tout le monde s'entend revenir par votre micro. À partir de macOS 14.2, tt-Accessible utilise comme référence le son réellement produit par votre Mac : VoiceOver et les sons du système sont donc annulés au même titre que les voix du canal. Sur les versions antérieures, seul l'audio de TeamTalk peut l'être.</p>
 <h2 id="choisir-les-entrées-utilisées">Choisir les entrées utilisées</h2>
-<p>Cliquez sur le menu local <strong>Canaux d'entrée</strong>, puis choisissez <strong>Auto</strong>, une entrée mono, une paire stéréo, ou une somme mono de deux entrées. Ce réglage compte avec une interface audio, où le micro est rarement sur l'entrée 1.</p>
+<p>Cliquez sur le menu local <strong>Canaux d'entrée</strong>, juste sous le menu Périphérique d'entrée, puis choisissez <strong>Auto</strong>, une entrée mono, une paire stéréo, ou une somme mono de deux entrées. Ce réglage compte avec une interface audio, où le micro est rarement sur l'entrée 1.</p>
 <p>Si vous changez de périphérique et que la configuration ne convient plus, tt-Accessible revient sur Auto et vous le signale.</p>
 <h2 id="tester-votre-micro">Tester votre micro</h2>
 <ol type="1">
