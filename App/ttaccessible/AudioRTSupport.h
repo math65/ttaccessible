@@ -97,15 +97,90 @@ static inline void ttac_mix_clamp(int16_t *out, const int32_t *acc, int count) {
     }
 }
 
-/// Render the interleaved stereo Int16 pull buffer into the device's
-/// non-interleaved Float planes with per-frame gain smoothing.
+/// Clamp a plane pair to what the device actually has. A bad mapping must never
+/// render into foreign memory, so this is applied on the render thread even
+/// though Swift has already clamped the selection.
+static inline void ttac_clamp_plane_pair(int devCh, int *leftPlane, int *rightPlane) {
+    if (*leftPlane < 0 || *leftPlane >= devCh) *leftPlane = 0;
+    if (*rightPlane >= devCh) *rightPlane = (devCh >= 2) ? 1 : -1;
+    if (*rightPlane == *leftPlane) *rightPlane = -1;
+    if (devCh < 2) *rightPlane = -1;
+}
+
+/// Silence every plane. Separate from the mix below so a crossfade can mix two
+/// different plane pairs into the same cleared buffers.
+static inline void ttac_clear_planes(float *const *planes, int devCh, int frameCount) {
+    for (int ch = 0; ch < devCh; ch++) {
+        memset(planes[ch], 0, (size_t)frameCount * sizeof(float));
+    }
+}
+
+/// Mix the interleaved stereo Int16 pull buffer into one plane pair, with the
+/// per-frame master-gain smoothing and a linear envelope running from
+/// `envStart` to `envEnd` across `frameCount`.
+///
+/// ACCUMULATES into the planes (the caller clears them first with
+/// ttac_clear_planes), so a remap can be crossfaded by calling this twice: once
+/// for the outgoing pair with the envelope falling 1 -> 0, once for the incoming
+/// pair with it rising 0 -> 1. Both calls start from the same `gain` and run the
+/// same recurrence, so they return the same value and either may be kept.
+///
 /// - planes: `devCh` non-null plane pointers (caller has already null-checked).
-/// - framesAvailable: frames actually pulled from the ring; the remainder up
-///   to `frameCount` is filled with silence (gain smoothing still advances).
+/// - framesAvailable: frames actually pulled from the ring; the rest of the
+///   buffer is left as cleared, and the gain smoothing still advances across it
+///   so its state stays exact.
+/// - rightPlane < 0 downmixes L/R by average onto `leftPlane` alone.
+/// Returns the smoothed gain after `frameCount` frames.
+static inline float ttac_mix_into_planes(float *const *planes,
+                                         int devCh,
+                                         const int16_t *pull,
+                                         int framesAvailable,
+                                         int frameCount,
+                                         float gain,
+                                         float gainTarget,
+                                         float smoothCoeff,
+                                         int leftPlane,
+                                         int rightPlane,
+                                         float envStart,
+                                         float envEnd) {
+    const float invScale = 1.0f / 32768.0f;
+    ttac_clamp_plane_pair(devCh, &leftPlane, &rightPlane);
+
+    const float envStep = (frameCount > 0) ? (envEnd - envStart) / (float)frameCount : 0.0f;
+    float env = envStart;
+
+    if (rightPlane < 0) {
+        float *mono = planes[leftPlane];
+        for (int f = 0; f < framesAvailable; f++) {
+            gain += (gainTarget - gain) * smoothCoeff;
+            const int32_t sum = ((int32_t)pull[f * 2] + (int32_t)pull[f * 2 + 1]) / 2;
+            mono[f] += (float)sum * invScale * gain * env;
+            env += envStep;
+        }
+    } else {
+        float *left = planes[leftPlane];
+        float *right = planes[rightPlane];
+        for (int f = 0; f < framesAvailable; f++) {
+            gain += (gainTarget - gain) * smoothCoeff;
+            const float g = invScale * gain * env;
+            left[f] += (float)pull[f * 2] * g;
+            right[f] += (float)pull[f * 2 + 1] * g;
+            env += envStep;
+        }
+    }
+
+    // Keep the smoothing state exact across the silent tail.
+    for (int f = framesAvailable; f < frameCount; f++) {
+        gain += (gainTarget - gain) * smoothCoeff;
+    }
+    return gain;
+}
+
+/// Render the pull buffer into the device's planes at a fixed mapping: clear
+/// everything, then mix the one pair at full envelope. The steady-state path,
+/// used on every callback that is not mid-remap.
 /// - leftPlane / rightPlane: which physical channels the mix lands on (see
-///   OutputChannelSelection). `rightPlane < 0` downmixes L/R by average onto
-///   `leftPlane` alone. Every other plane is silenced. Out-of-range indices
-///   fall back to 0/1 — a bad mapping must never render into foreign memory.
+///   OutputChannelSelection). Out-of-range indices fall back to 0/1.
 /// Returns the smoothed gain after `frameCount` frames.
 static inline float ttac_render_planes(float *const *planes,
                                        int devCh,
@@ -117,47 +192,10 @@ static inline float ttac_render_planes(float *const *planes,
                                        float smoothCoeff,
                                        int leftPlane,
                                        int rightPlane) {
-    const float invScale = 1.0f / 32768.0f;
-    if (leftPlane < 0 || leftPlane >= devCh) leftPlane = 0;
-    if (rightPlane >= devCh) rightPlane = (devCh >= 2) ? 1 : -1;
-    if (rightPlane == leftPlane) rightPlane = -1;
-    if (devCh < 2) rightPlane = -1;
-
-    for (int ch = 0; ch < devCh; ch++) {
-        if (ch == leftPlane || ch == rightPlane) continue;
-        memset(planes[ch], 0, (size_t)frameCount * sizeof(float));
-    }
-    if (rightPlane < 0) {
-        float *mono = planes[leftPlane];
-        for (int f = 0; f < framesAvailable; f++) {
-            gain += (gainTarget - gain) * smoothCoeff;
-            const int32_t sum = ((int32_t)pull[f * 2] + (int32_t)pull[f * 2 + 1]) / 2;
-            mono[f] = (float)sum * invScale * gain;
-        }
-        if (framesAvailable < frameCount) {
-            memset(mono + framesAvailable, 0,
-                   (size_t)(frameCount - framesAvailable) * sizeof(float));
-        }
-    } else {
-        float *left = planes[leftPlane];
-        float *right = planes[rightPlane];
-        for (int f = 0; f < framesAvailable; f++) {
-            gain += (gainTarget - gain) * smoothCoeff;
-            const float g = invScale * gain;
-            left[f] = (float)pull[f * 2] * g;
-            right[f] = (float)pull[f * 2 + 1] * g;
-        }
-        if (framesAvailable < frameCount) {
-            const size_t tail = (size_t)(frameCount - framesAvailable) * sizeof(float);
-            memset(left + framesAvailable, 0, tail);
-            memset(right + framesAvailable, 0, tail);
-        }
-    }
-    // Keep the smoothing state exact across the silent tail.
-    for (int f = framesAvailable; f < frameCount; f++) {
-        gain += (gainTarget - gain) * smoothCoeff;
-    }
-    return gain;
+    ttac_clear_planes(planes, devCh, frameCount);
+    return ttac_mix_into_planes(planes, devCh, pull, framesAvailable, frameCount,
+                                gain, gainTarget, smoothCoeff,
+                                leftPlane, rightPlane, 1.0f, 1.0f);
 }
 
 #endif /* AUDIO_RT_SUPPORT_H */
