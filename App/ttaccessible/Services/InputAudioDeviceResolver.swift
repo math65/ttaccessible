@@ -69,23 +69,28 @@ enum InputAudioDeviceResolver {
         return options
     }
 
-    /// Output-channel options for a device, mirroring `availablePresetOptions`:
-    /// Auto, one entry per single (mono) channel, then the odd/even stereo pairs
-    /// interfaces actually pair their outputs into (1-2, 3-4, …).
+    /// Output-channel options for a device: Auto, then the odd/even stereo pairs
+    /// interfaces actually pair their outputs into (1-2, 3-4, …), then one entry
+    /// per single (mono) channel.
+    ///
+    /// Pairs come before the monos deliberately, unlike `availablePresetOptions`
+    /// on the input side. A stereo pair is what almost everyone wants, and on a
+    /// 24-output interface putting the 24 monos first buries the 12 pairs behind
+    /// two dozen arrow presses.
     nonisolated static func availableOutputChannelOptions(channelCount: Int) -> [OutputChannelSelectionOption] {
         var options = [OutputChannelSelectionOption(selection: .auto, title: outputChannelTitle(for: .auto))]
         guard channelCount > 0 else { return options }
-
-        for channel in 1...channelCount {
-            let selection = OutputChannelSelection.mono(channel: channel)
-            options.append(OutputChannelSelectionOption(selection: selection, title: outputChannelTitle(for: selection)))
-        }
 
         var firstChannel = 1
         while firstChannel + 1 <= channelCount {
             let selection = OutputChannelSelection.stereoPair(first: firstChannel, second: firstChannel + 1)
             options.append(OutputChannelSelectionOption(selection: selection, title: outputChannelTitle(for: selection)))
             firstChannel += 2
+        }
+
+        for channel in 1...channelCount {
+            let selection = OutputChannelSelection.mono(channel: channel)
+            options.append(OutputChannelSelectionOption(selection: selection, title: outputChannelTitle(for: selection)))
         }
 
         return options
@@ -100,6 +105,43 @@ enum InputAudioDeviceResolver {
         case .stereoPair(let first, let second):
             return L10n.format("preferences.audio.outputChannels.stereoPair", first, second)
         }
+    }
+
+    /// What the output-routing picker should show for an output device that has
+    /// already been resolved — the options to offer, and which one is chosen.
+    ///
+    /// This is the half of `AudioSettingsStore.refreshOutputChannelState` that
+    /// the picker-visibility bug actually lived in, kept pure so it is testable
+    /// with no CoreAudio device present: feed it the wrong device's UID or
+    /// channel count and it answers for the wrong device, which is exactly what
+    /// the stale `@Published` value used to cause. Resolving the device from a
+    /// preference is the only part that needs CoreAudio, and the bug was never
+    /// in that part.
+    ///
+    /// A stored routing that no longer fits the device as it is RIGHT NOW
+    /// (interface in a smaller mode, or gone) reports as `.auto`, matching what
+    /// the render engine falls back to. The caller deliberately does not write
+    /// that back: the stored intent for that UID survives, so the routing
+    /// returns when the device does.
+    nonisolated static func outputChannelPickerState(
+        storedSelections: [String: OutputChannelSelection],
+        deviceUID: String?,
+        channelCount: Int
+    ) -> OutputChannelPickerState {
+        // Two channels or fewer is a single pair: nothing to choose between.
+        let options = channelCount > 2
+            ? availableOutputChannelOptions(channelCount: channelCount)
+            : []
+
+        guard let deviceUID, deviceUID.isEmpty == false else {
+            return OutputChannelPickerState(options: options, selection: .auto)
+        }
+
+        let stored = storedSelections[deviceUID] ?? .auto
+        return OutputChannelPickerState(
+            options: options,
+            selection: contains(stored, channelCount: channelCount) ? stored : .auto
+        )
     }
 
     nonisolated static func contains(_ selection: OutputChannelSelection, channelCount: Int) -> Bool {
