@@ -1,7 +1,7 @@
 ---
 title: Set up your audio devices
 description: Choose your input and output devices, remove echo and background noise, and test your microphone.
-keywords: audio device, input, output, echo cancellation, AEC, noise reduction, preview, channels, headphones
+keywords: audio device, input, output, echo cancellation, AEC, noise reduction, preview, channels, output channels, interface, headphones
 anchor: audio-setup
 ---
 
@@ -25,6 +25,27 @@ go back to your device as soon as it is plugged in again. A microphone that was 
 with its sound, as long as the session is still open and you haven't meanwhile turned it on or off
 yourself or chosen another microphone.
 
+## Choose which outputs of your device are used
+
+On an audio interface or a mixing desk with more than one pair of outputs, tt-Accessible does not
+have to play on outputs 1 and 2.
+
+1. Open Preferences, then click Audio.
+2. Click the **Output channels** pop-up menu, then choose one of the following:
+   - **Auto (outputs 1 and 2)** — the device's first pair, which is what tt-Accessible used before
+     this setting existed.
+   - **Outputs 3 and 4**, **Outputs 5 and 6**, and so on — play in stereo on that pair.
+   - **Output 7 mono**, and so on — sum the channel to mono and play it on that single output.
+
+The menu lists the stereo pairs first, then the single outputs, so on a large interface the pair you
+usually want is a short trip from the top.
+
+The menu appears only for devices with more than one pair of outputs — there is nothing to choose on
+a headset or the built-in speakers. Your choice is remembered per device, so each interface comes
+back on the outputs you left it on, and a routing change is heard immediately without interrupting
+the audio. If you later use the device in a smaller mode, or replace it with a stereo one, the
+setting shows Auto again; plug the larger device back in and your choice returns.
+
 ## Remove echo and background noise
 
 1. Open Preferences, then click Audio.
@@ -41,9 +62,9 @@ voices of the channel. On earlier versions, only TeamTalk audio can be cancelled
 
 ## Choose which inputs of your device are used
 
-Click the **Input channels** pop-up menu, then choose **Auto**, a single mono input, a stereo pair,
-or a mono mix of two inputs. This matters with audio interfaces, where the microphone is rarely on
-input 1.
+Click the **Input channels** pop-up menu, just below the Input device menu, then choose **Auto**, a
+single mono input, a stereo pair, or a mono mix of two inputs. This matters with audio interfaces,
+where the microphone is rarely on input 1.
 
 If you change device and the preset no longer fits, tt-Accessible falls back to Auto and tells you.
 
