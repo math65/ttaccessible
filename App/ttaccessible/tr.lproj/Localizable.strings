@@ -447,6 +447,10 @@
 "preferences.audio.systemDefault" = "Sistem varsayılanı";
 "preferences.audio.noOutput" = "Çıkış aygıtı yok";
 "preferences.audio.device.notConnected" = "%@ (bağlı değil)";
+"preferences.audio.outputChannels" = "Çıkış kanalları";
+"preferences.audio.outputChannels.auto" = "Otomatik (çıkış 1 ve 2)";
+"preferences.audio.outputChannels.mono" = "Çıkış %d mono";
+"preferences.audio.outputChannels.stereoPair" = "Çıkış %1$d ve %2$d";
 "preferences.audio.advanced.title" = "Mikrofon";
 "preferences.audio.advanced.summary.active" = "%@, %@.";
 "preferences.audio.advanced.summary.processingNone" = "işleme yok";

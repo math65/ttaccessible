@@ -63,13 +63,26 @@ final class OutputChannelOptionListTests: XCTestCase {
 
     func testOptionsForEightChannelDevice() {
         let options = InputAudioDeviceResolver.availableOutputChannelOptions(channelCount: 8)
-        // Auto + 8 mono + 4 odd/even pairs.
+        // Auto + 4 odd/even pairs + 8 mono.
         XCTAssertEqual(options.count, 13)
         XCTAssertEqual(options.first?.selection, .auto)
         XCTAssertTrue(options.contains { $0.selection == .mono(channel: 8) })
         XCTAssertTrue(options.contains { $0.selection == .stereoPair(first: 5, second: 6) })
         // Odd-start pairs only — 2/3 is not how interfaces pair their outputs.
         XCTAssertFalse(options.contains { $0.selection == .stereoPair(first: 2, second: 3) })
+    }
+
+    /// Pairs before the monos: the pair is the common case, and on a 24-output
+    /// interface the monos ahead of them are two dozen arrow presses of nothing.
+    func testStereoPairsComeBeforeSingleChannels() {
+        let options = InputAudioDeviceResolver.availableOutputChannelOptions(channelCount: 24)
+        let firstMono = try? XCTUnwrap(options.firstIndex { if case .mono = $0.selection { return true } else { return false } })
+        let lastPair = options.lastIndex { if case .stereoPair = $0.selection { return true } else { return false } }
+        XCTAssertNotNil(firstMono)
+        XCTAssertNotNil(lastPair)
+        if let firstMono, let lastPair {
+            XCTAssertLessThan(lastPair, firstMono)
+        }
     }
 
     func testOptionIdentifiersAreUnique() {
@@ -101,14 +114,23 @@ final class OutputChannelOptionListTests: XCTestCase {
 @MainActor
 final class OutputChannelPickerVisibilityTests: XCTestCase {
 
+    private static let suiteName = "ttaccessible.tests.outputChannels"
+
+    /// A failing assert must not leave the suite's plist behind for the next run
+    /// to inherit — same reason 2e82d45 added this elsewhere.
+    override func tearDown() {
+        UserDefaults().removePersistentDomain(forName: Self.suiteName)
+        super.tearDown()
+    }
+
     func testPickerAppearsWhenSwitchingToMultiChannelDevice() throws {
         let outputs = InputAudioDeviceResolver.availableOutputDevices()
         guard let multiChannel = outputs.first(where: { $0.outputChannels > 2 }) else {
             throw XCTSkip("No output device with more than 2 channels on this machine")
         }
 
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: "ttaccessible.tests.outputChannels"))
-        defaults.removePersistentDomain(forName: "ttaccessible.tests.outputChannels")
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: Self.suiteName))
+        defaults.removePersistentDomain(forName: Self.suiteName)
         let root = AppPreferencesStore(userDefaults: defaults)
 
         if let stereo = outputs.first(where: { $0.outputChannels <= 2 }) {
@@ -141,8 +163,82 @@ final class OutputChannelPickerVisibilityTests: XCTestCase {
                       "picker stayed hidden for a \(multiChannel.outputChannels)-channel device")
         XCTAssertFalse(audio.outputChannelOptions.isEmpty)
         XCTAssertEqual(audio.outputDeviceInfo?.uid, multiChannel.uid)
+    }
+}
 
-        defaults.removePersistentDomain(forName: "ttaccessible.tests.outputChannels")
+/// The half of `refreshOutputChannelState` that the picker bug actually lived
+/// in, tested with no CoreAudio and no AppKit: the store resolves a device, and
+/// everything after that is this pure mapping from (stored routing, device UID,
+/// channel count) to what the picker shows.
+///
+/// The hardware test above still earns its place — it proves the sink feeds the
+/// right preferences in the real app — but it skips on a machine with nothing
+/// bigger than a stereo output, and these do not.
+final class OutputChannelPickerStateTests: XCTestCase {
+
+    private let desk = "uid-desk"
+
+    func testMultiChannelDeviceOffersOptionsAndDefaultsToAuto() {
+        let state = InputAudioDeviceResolver.outputChannelPickerState(
+            storedSelections: [:], deviceUID: desk, channelCount: 24
+        )
+        XCTAssertFalse(state.options.isEmpty)
+        XCTAssertEqual(state.selection, .auto)
+    }
+
+    func testStoredRoutingForTheDeviceIsSelected() {
+        let state = InputAudioDeviceResolver.outputChannelPickerState(
+            storedSelections: [desk: .stereoPair(first: 5, second: 6)],
+            deviceUID: desk,
+            channelCount: 24
+        )
+        XCTAssertEqual(state.selection, .stereoPair(first: 5, second: 6))
+    }
+
+    /// The core of the willSet bug, as pure logic: answer for the device the
+    /// user switched AWAY from and you get that device's routing, not this
+    /// one's. In the app the wrong UID arrived from a stale `@Published` value.
+    func testRoutingStoredForAnotherDeviceIsNotApplied() {
+        let stored: [String: OutputChannelSelection] = [desk: .stereoPair(first: 5, second: 6)]
+        let other = InputAudioDeviceResolver.outputChannelPickerState(
+            storedSelections: stored, deviceUID: "uid-built-in", channelCount: 24
+        )
+        XCTAssertEqual(other.selection, .auto)
+
+        let correct = InputAudioDeviceResolver.outputChannelPickerState(
+            storedSelections: stored, deviceUID: desk, channelCount: 24
+        )
+        XCTAssertEqual(correct.selection, .stereoPair(first: 5, second: 6))
+    }
+
+    /// The interface was swapped for a stereo one, or put in a smaller mode.
+    func testRoutingThatOutgrewTheDeviceShowsAsAuto() {
+        let state = InputAudioDeviceResolver.outputChannelPickerState(
+            storedSelections: [desk: .stereoPair(first: 5, second: 6)],
+            deviceUID: desk,
+            channelCount: 2
+        )
+        XCTAssertEqual(state.selection, .auto)
+        XCTAssertTrue(state.options.isEmpty, "a single pair has nothing to choose between")
+    }
+
+    func testStereoAndSmallerDevicesOfferNothing() {
+        for channelCount in 0...2 {
+            let state = InputAudioDeviceResolver.outputChannelPickerState(
+                storedSelections: [:], deviceUID: desk, channelCount: channelCount
+            )
+            XCTAssertTrue(state.options.isEmpty, "offered a picker for \(channelCount) channels")
+            XCTAssertEqual(state.selection, .auto)
+        }
+    }
+
+    /// "No output device" selected, or nothing resolved at all.
+    func testNoDeviceIsAuto() {
+        let state = InputAudioDeviceResolver.outputChannelPickerState(
+            storedSelections: [desk: .mono(channel: 11)], deviceUID: nil, channelCount: 0
+        )
+        XCTAssertEqual(state.selection, .auto)
+        XCTAssertTrue(state.options.isEmpty)
     }
 }
 

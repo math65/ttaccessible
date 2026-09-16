@@ -781,9 +781,31 @@ final class AudioPreferencesStore: ObservableObject {
         connectionController.applyAudioPreferences(rootStore.preferences) { _ in }
     }
 
+    /// The CoreAudio half: which output device the render engine will actually
+    /// bind to for a given preference. Cheap enumeration, same as the input side
+    /// does in AdvancedMicrophoneSettingsStore.refreshState.
+    private func resolveOutputDevice(
+        for preference: AudioDevicePreference
+    ) -> InputAudioDeviceResolver.OutputAudioDeviceInfo? {
+        if preference.usesNoOutput {
+            return nil
+        }
+        if preference.usesSystemDefault {
+            let devices = InputAudioDeviceResolver.availableOutputDevices()
+            let defaultUID = InputAudioDeviceResolver.defaultOutputDeviceUID()
+            return devices.first(where: { $0.uid == defaultUID }) ?? devices.first
+        }
+        return InputAudioDeviceResolver.resolveOutputDevice(
+            persistentID: preference.persistentID,
+            displayName: preference.displayName
+        )
+    }
+
     /// Re-resolve the bound output device (its UID keys the stored routing, its
-    /// channel count sizes the option list). Cheap CoreAudio enumeration, same
-    /// as the input side does in AdvancedMicrophoneSettingsStore.refreshState.
+    /// channel count sizes the option list), then ask
+    /// `InputAudioDeviceResolver.outputChannelPickerState` what the picker should
+    /// show for it. That second half is pure and unit-tested; this one is just
+    /// the CoreAudio lookup and the assignment.
     ///
     /// ⚠️ `preferences` must be passed explicitly when called from the
     /// `rootStore.$preferences` sink. That publisher fires on *willSet*, so
@@ -794,41 +816,16 @@ final class AudioPreferencesStore: ObservableObject {
     /// pokes AdvancedMicrophoneSettingsStore directly, after the write lands.)
     private func refreshOutputChannelState(preferences: AppPreferences? = nil) {
         let preferences = preferences ?? rootStore.preferences
-        let preference = preferences.preferredOutputDevice
-        let resolved: InputAudioDeviceResolver.OutputAudioDeviceInfo?
-        if preference.usesNoOutput {
-            resolved = nil
-        } else if preference.usesSystemDefault {
-            let devices = InputAudioDeviceResolver.availableOutputDevices()
-            let defaultUID = InputAudioDeviceResolver.defaultOutputDeviceUID()
-            resolved = devices.first(where: { $0.uid == defaultUID }) ?? devices.first
-        } else {
-            resolved = InputAudioDeviceResolver.resolveOutputDevice(
-                persistentID: preference.persistentID,
-                displayName: preference.displayName
-            )
-        }
+        let resolved = resolveOutputDevice(for: preferences.preferredOutputDevice)
 
         outputDeviceInfo = resolved
-        let channelCount = resolved?.outputChannels ?? 0
-        outputChannelOptions = channelCount > 2
-            ? InputAudioDeviceResolver.availableOutputChannelOptions(channelCount: channelCount)
-            : []
-
-        // A stored routing that no longer fits the device as it is RIGHT NOW
-        // (interface in a smaller mode, or gone) displays as Auto, matching what
-        // the engine falls back to. Deliberately NOT written back: the stored
-        // intent for that UID survives, so the routing returns when the device
-        // does. (Writing here would also be a reentrant mutation of the very
-        // preference object mid-publish when called from the sink.)
-        guard let uid = resolved?.uid else {
-            outputChannelSelection = .auto
-            return
-        }
-        let stored = preferences.outputChannelSelections[uid] ?? .auto
-        outputChannelSelection = InputAudioDeviceResolver.contains(stored, channelCount: channelCount)
-            ? stored
-            : .auto
+        let state = InputAudioDeviceResolver.outputChannelPickerState(
+            storedSelections: preferences.outputChannelSelections,
+            deviceUID: resolved?.uid,
+            channelCount: resolved?.outputChannels ?? 0
+        )
+        outputChannelOptions = state.options
+        outputChannelSelection = state.selection
     }
 
     init(

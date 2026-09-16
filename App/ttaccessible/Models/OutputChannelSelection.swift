@@ -112,3 +112,11 @@ struct OutputChannelSelectionOption: Identifiable, Equatable {
         selection.identifier
     }
 }
+
+/// What the output-routing picker shows for one resolved output device.
+/// Empty options mean the device has nothing to choose between (a single pair,
+/// or no output device at all) and the picker is hidden.
+struct OutputChannelPickerState: Equatable {
+    let options: [OutputChannelSelectionOption]
+    let selection: OutputChannelSelection
+}

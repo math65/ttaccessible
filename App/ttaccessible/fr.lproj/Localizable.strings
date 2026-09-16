@@ -445,9 +445,9 @@
 "preferences.audio.outputDevice" = "Périphérique de sortie";
 "preferences.audio.inputDevice" = "Périphérique d'entrée";
 "preferences.audio.outputChannels" = "Canaux de sortie";
-"preferences.audio.outputChannels.auto" = "Auto";
+"preferences.audio.outputChannels.auto" = "Auto (sorties 1 et 2)";
 "preferences.audio.outputChannels.mono" = "Sortie %d mono";
-"preferences.audio.outputChannels.stereoPair" = "Sorties %d/%d stéréo";
+"preferences.audio.outputChannels.stereoPair" = "Sorties %1$d et %2$d";
 "preferences.audio.systemDefault" = "Par défaut du système";
 "preferences.audio.noOutput" = "Aucune sortie audio";
 "preferences.audio.device.notConnected" = "%@ (non connecté)";
