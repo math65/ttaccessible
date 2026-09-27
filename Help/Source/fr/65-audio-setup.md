@@ -63,15 +63,15 @@ En session, appuyez plutôt sur Maj + Commande + H pour vous entendre à travers
 
 ## Conserver les niveaux réglés pour les autres
 
-Cliquez sur les boutons **Mémorisation des volumes par utilisateur**, puis choisissez l'une des
+Dans le volet Audio, sous **Mémorisation des volumes par utilisateur**, sélectionnez l'une des
 options suivantes :
 
 - **Désactivé** — tous les niveaux reviennent à 50 % à la reconnexion.
 - **Session en cours seulement** — les niveaux sont oubliés à la fermeture.
 - **Toujours** — les niveaux sont mémorisés d'un lancement à l'autre.
 
-Les niveaux sont propres à chaque serveur : un réglage fait sur l'un ne se reporte jamais sur
-l'autre.
+Les niveaux sont propres à chaque serveur : un réglage fait sur l'un ne se reporte jamais sur les
+autres.
 
 **Voir aussi :** [Parler dans un canal](talking.html) ·
 [Si quelque chose ne fonctionne pas](troubleshooting.html)

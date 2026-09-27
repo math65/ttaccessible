@@ -31,11 +31,11 @@ avant d'activer le micro.*
 Tant qu'aucune touche n'est enregistrée, le push-to-talk reste inactif et le micro transmet comme en
 mode « toujours actif ». tt-Accessible vous en avertit dans le même volet.
 
-Deux options complètent le tableau, juste en dessous :
+Deux autres options se trouvent juste en dessous, toutes deux activées par défaut :
 
-- **Jouer un son au début et à la fin de la transmission**, qui est activée.
-- **Le push-to-talk fonctionne même quand une autre app est au premier plan**, activée elle aussi.
-  Un réglage équivalent existe pour l'activation du micro, désactivé.
+- **Jouer un son au début et à la fin de la transmission**.
+- **Le push-to-talk fonctionne même quand une autre app est au premier plan**. Le raccourci
+  d'activation du micro a la même option, désactivée par défaut.
 
 ## Utiliser votre micro depuis une autre app
 

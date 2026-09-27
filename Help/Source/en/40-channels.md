@@ -37,7 +37,7 @@ A saved server can also carry a channel of its own — see [Add a server](server
 6. To set the audio quality of the channel, use the Audio Codec section: choose **Mono** or
    **Stereo**, a sample rate, a bitrate in kbps, and **VoIP** or **Music** depending on what people
    will send.
-7. Select **Join channel after creation** if you want to go there straight away, then click Create.
+7. Select **Join channel after creation** if you want to go there straight away, then click OK.
 
 To change a channel, select it and press Shift-F7. Settings that the form doesn't show are kept as
 they were.

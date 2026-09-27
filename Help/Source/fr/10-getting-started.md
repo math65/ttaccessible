@@ -19,15 +19,15 @@ serveur TeamTalk 5 — ou un fichier `.tt` ou un lien `tt://` que quelqu'un vous
 
 ## Choisir la langue de l'app
 
-À la première ouverture, tt-Accessible vous demande **Choisissez votre langue**. Sélectionnez
-l'anglais ou le français.
+À la première ouverture, tt-Accessible affiche **Choisissez votre langue**. Choisissez **Langue du
+système**, **Anglais**, **Français** ou **Turc** dans le menu local, puis cliquez sur OK.
 
 Pour revenir sur ce choix :
 
 1. Dans tt-Accessible, choisissez tt-Accessible > Préférences (ou appuyez sur Commande + Virgule).
 2. Cliquez sur Général dans la barre latérale.
-3. Cliquez sur le menu local **Langue**, puis choisissez **Langue du système**, **Anglais** ou
-   **Français**.
+3. Cliquez sur le menu local **Langue**, puis choisissez **Langue du système**, **Anglais**,
+   **Français** ou **Turc**.
 4. Quittez tt-Accessible puis rouvrez-le, pour que le changement s'applique partout.
 
 ## Autoriser tt-Accessible à utiliser votre micro

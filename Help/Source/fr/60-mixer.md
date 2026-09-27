@@ -5,7 +5,7 @@ keywords: mixeur, tranche, volume, panoramique, sourdine, solo, clavier, VoiceOv
 anchor: mixer
 ---
 
-Le mixeur du canal transforme les personnes présentes en une petite console, avec une tranche par
+Le mixeur présente les personnes du canal comme une petite console de mixage, avec une tranche par
 personne. Vous pouvez placer quelqu'un à gauche et quelqu'un d'autre à droite, ou remonter une
 personne trop faible, sans toucher aux autres.
 
@@ -57,7 +57,7 @@ pendant que vous écrivez dans un champ de texte : le chat n'est jamais perturb�
 | Page précédente ou Page suivante | Modifier le volume de la voix de 10 % |
 | Début ou Fin | Mettre le volume de la voix à 100 % ou à 0 % |
 | Flèche gauche ou Flèche droite | Modifier le panoramique de la voix |
-| Commande + Flèche haut ou Flèche bas | Modifier le volume du média, ou le volume principal hors d'une tranche |
+| Commande + Flèche haut ou Flèche bas | Modifier le volume du média, ou le volume de sortie hors d'une tranche |
 | Commande + Flèche gauche ou Flèche droite | Modifier le panoramique du média |
 | V | Annoncer le volume ; deux appuis le remettent à 50 % |
 | P | Annoncer le panoramique ; deux appuis le recentrent |

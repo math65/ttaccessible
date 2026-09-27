@@ -13,7 +13,7 @@ one file per person, or do both at once.
 - To record a single mixed file, press Command-R.
 - To record using the mode set in Preferences, press Shift-Command-R.
 
-Press the same shortcut again to stop. tt-Accessible announces *Recording started* and *Recording
+To stop, press Command-R, whichever shortcut started the recording. tt-Accessible announces *Recording started* and *Recording
 stopped*, and F9 tells you whether a recording is running. The toolbar has a matching button.
 
 The first time, if you haven't chosen a folder, tt-Accessible asks where to save the files.

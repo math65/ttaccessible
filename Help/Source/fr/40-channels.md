@@ -40,7 +40,7 @@ son propre canal — consultez [Ajouter un serveur](servers.html).
    **Stéréo**, une fréquence d'échantillonnage, un débit en kbps, et **VoIP** ou **Musique** selon
    ce qui va y circuler.
 7. Sélectionnez **Rejoindre le canal après sa création** si vous voulez y aller aussitôt, puis
-   cliquez sur Créer.
+   cliquez sur OK.
 
 Pour modifier un canal, sélectionnez-le et appuyez sur Maj + F7. Les réglages que le formulaire
 n'affiche pas sont conservés tels quels.

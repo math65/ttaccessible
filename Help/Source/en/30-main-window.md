@@ -55,7 +55,7 @@ To save the conversation, press Shift-Command-S.
 
 ## Use the audio controls
 
-The microphone button sits in the sidebar, under the channel tree.
+The microphone button sits in the sidebar, just above the channel tree.
 
 The volumes themselves — **Output volume**, **Input volume**, **Sound effects volume** and **Media
 volume** — are sliders in the window, just above the channel mixer, so you can land on each one

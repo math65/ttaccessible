@@ -56,7 +56,7 @@ l'expulsion**. « Expulser et bannir » demande toujours confirmation.
    disponibles : connexions multiples, visibilité de tous les utilisateurs, création et modification
    de canaux, diffusion de messages, expulsion, bannissement, déplacement, qualité d'opérateur,
    envoi et téléchargement de fichiers, modification des propriétés du serveur, transmission de la
-   voix, de la vidéo, du bureau et des fichiers média, verrouillage du pseudo ou du statut,
+   voix, de la vidéo, du bureau et des fichiers média, contrôle du bureau à distance, verrouillage du pseudo ou du statut,
    enregistrement de la voix, visibilité des canaux masqués, et envoi de messages privés ou de
    canal. **Tout activer**, **Tout désactiver** et **Droits par défaut** les règlent d'un clic.
 5. Dans l'onglet Avancé, définissez la limite de bande passante audio, où 0 signifie illimité, et

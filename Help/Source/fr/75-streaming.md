@@ -95,7 +95,7 @@ Ces touches agissent dès que le focus se trouve dans ce bloc :
 |---|---|---|
 | Espace | Pause ou reprise | Couper ou rétablir le son |
 | Échap | Arrêt | Arrêt |
-| Flèche gauche ou Flèche droite | Reculer ou avancer de 5 secondes | Sans effet |
+| Flèche gauche ou Flèche droite | Reculer ou avancer de 5 secondes | Annonce qu'il n'y a pas de position |
 | Flèche haut ou Flèche bas | Modifier le volume diffusé | Modifier le volume diffusé |
 
 Option + Commande + M fait la même chose depuis n'importe où dans l'app.

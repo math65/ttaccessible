@@ -58,7 +58,7 @@ During a session, press Shift-Command-H to hear yourself through the channel ins
 
 ## Keep the levels you set for other people
 
-Click the **Per-user volume memory** buttons, then choose one of the following:
+In the Audio pane, under **Per-user volume memory**, select one of the following:
 
 - **Off** — every level returns to 50% when you reconnect.
 - **This session only** — levels are forgotten when you quit.

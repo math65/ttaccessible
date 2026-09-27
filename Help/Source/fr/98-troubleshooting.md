@@ -98,8 +98,8 @@ dernier canal sont déjà activés dans le même volet.
 2. Cliquez sur le menu local **Type**, puis choisissez **Signaler un problème**, **Suggestion**,
    **Question** ou **Autre**.
 3. Saisissez votre adresse e-mail et votre message.
-4. Pour qu'un problème de son soit diagnosticable, sélectionnez **Joindre le journal de diagnostic
-   audio**. Reproduisez d'abord le problème, puis envoyez le message : le journal est effacé à
+4. Pour un problème de son, sélectionnez **Joindre le journal de diagnostic audio** : c'est ce qui
+   permet de le diagnostiquer. Reproduisez d'abord le problème, puis envoyez le message : le journal est effacé à
    chaque ouverture de l'app.
 5. Cliquez sur Envoyer.
 

@@ -70,7 +70,7 @@ s'appliquent à celle qui est sélectionnée dans l'arbre des canaux.
 | Maj + Commande + H | S'entendre soi-même |
 | F9 | Annoncer l'état audio |
 | Commande + R | Démarrer ou arrêter l'enregistrement d'un fichier mixé |
-| Maj + Commande + R | Démarrer ou arrêter l'enregistrement selon le mode choisi |
+| Maj + Commande + R | Démarrer l'enregistrement selon le mode choisi (Commande + R l'arrête) |
 
 ## Les personnes
 
@@ -112,7 +112,7 @@ s'appliquent à celle qui est sélectionnée dans l'arbre des canaux.
 |---|---|---|
 | Espace | Pause ou reprise | Couper ou rétablir le son |
 | Échap | Arrêt | Arrêt |
-| Flèche gauche ou Flèche droite | Reculer ou avancer de 5 secondes | Sans effet |
+| Flèche gauche ou Flèche droite | Reculer ou avancer de 5 secondes | Annonce qu'il n'y a pas de position |
 | Flèche haut ou Flèche bas | Modifier le volume diffusé | Modifier le volume diffusé |
 
 ## Dans le mixeur du canal
@@ -123,11 +123,11 @@ s'appliquent à celle qui est sélectionnée dans l'arbre des canaux.
 | Page précédente ou Page suivante | Volume de la voix, de 10 % |
 | Début ou Fin | Volume de la voix à 100 % ou à 0 % |
 | Flèche gauche ou Flèche droite | Panoramique de la voix |
-| Commande + Flèche haut ou Flèche bas | Volume du média, ou volume principal hors d'une tranche |
+| Commande + Flèche haut ou Flèche bas | Volume du média, ou volume de sortie hors d'une tranche |
 | Commande + Flèche gauche ou Flèche droite | Panoramique du média |
 | V, P, M, S | Annoncer le volume, le panoramique, la sourdine ou le solo ; deux appuis réinitialisent ou changent le réglage |
 | Commande + P | Annoncer le panoramique du média ; deux appuis le recentrent |
-| Commande + Majuscule + Flèche haut ou Flèche bas | Le volume des médias, depuis n'importe où dans la fenêtre |
+| Commande + Majuscule + Flèche haut ou Flèche bas | Volume des médias, de n'importe où sauf d'un champ de texte |
 
 Page précédente, Page suivante, Début et Fin acceptent les mêmes modificateurs que les flèches
 tant que vous êtes sur une tranche. Hors d'une tranche, elles restent à la liste que vous

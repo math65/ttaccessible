@@ -54,7 +54,7 @@ text field, so the chat is never affected.
 | Page Up or Page Down | Change the voice volume by 10% |
 | Home or End | Set the voice volume to 100% or 0% |
 | Left Arrow or Right Arrow | Change the voice pan |
-| Command-Up Arrow or Command-Down Arrow | Change the media volume, or the master volume outside a strip |
+| Command-Up Arrow or Command-Down Arrow | Change the media volume, or the output volume outside a strip |
 | Command-Left Arrow or Command-Right Arrow | Change the media pan |
 | V | Speak the volume; press twice to reset it to 50% |
 | P | Speak the pan; press twice to centre it |

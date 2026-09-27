@@ -22,7 +22,7 @@ la fenêtre.
 | **Message d'absence** | vide |
 | **Utiliser des horodatages relatifs**, du type « il y a 2 min » | désactivé |
 | **Utiliser la détection automatique du fichier TeamTalk lors de l'import** | activé |
-| **Langue** — Langue du système, Anglais ou Français | Langue du système |
+| **Langue** — Langue du système, Anglais, Français ou Turc | Langue du système |
 
 L'absence automatique vous passe en Absent dès que vous cessez d'utiliser le clavier ou la souris
 pendant le nombre de minutes choisi, et la lève dès que vous vous en servez réellement de nouveau.
@@ -105,7 +105,7 @@ les messages de canal, les messages généraux et l'historique TeamTalk. Les tro
 AppleScript**.
 
 **Annonces d'événements** concerne ce que dit VoiceOver pendant que l'app est au premier plan :
-messages de canal, privés et généraux, tous activés, plus **Annoncer l'historique système** — vingt
+messages de canal, privés et généraux, tous activés, plus **Annoncer l'historique système** — vingt et un
 événements à activer ou désactiver un par un.
 
 <a id="prefs-recording"></a>

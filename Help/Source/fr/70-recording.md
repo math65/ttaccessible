@@ -13,8 +13,8 @@ seul fichier, écrire un fichier par personne, ou faire les deux à la fois.
 - Pour enregistrer un seul fichier mixé, appuyez sur Commande + R.
 - Pour enregistrer selon le mode défini dans les Préférences, appuyez sur Maj + Commande + R.
 
-Appuyez de nouveau sur le même raccourci pour arrêter. tt-Accessible annonce *Enregistrement
-démarré* puis *Enregistrement arrêté*, et F9 vous indique si un enregistrement est en cours. Un
+Pour arrêter, appuyez sur Commande + R, quel que soit le raccourci qui a lancé l'enregistrement.
+tt-Accessible annonce *Enregistrement démarré* puis *Enregistrement arrêté*, et F9 vous indique si un enregistrement est en cours. Un
 bouton de la barre d'outils fait la même chose.
 
 La première fois, si vous n'avez pas choisi de dossier, tt-Accessible vous demande où enregistrer.

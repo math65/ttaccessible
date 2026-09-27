@@ -84,7 +84,7 @@ These keys work as soon as the focus is inside that block:
 |---|---|---|
 | Space | Pause or resume | Mute or unmute |
 | Escape | Stop | Stop |
-| Left Arrow or Right Arrow | Skip 5 seconds back or forward | No effect |
+| Left Arrow or Right Arrow | Skip 5 seconds back or forward | Says there is no position |
 | Up Arrow or Down Arrow | Change the broadcast volume | Change the broadcast volume |
 
 Option-Command-M does the same thing from anywhere in the app.

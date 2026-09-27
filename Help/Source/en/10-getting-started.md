@@ -17,13 +17,15 @@ people you also need a microphone and the details of a TeamTalk 5 server — or 
 
 ## Choose the language of the app
 
-The first time you open tt-Accessible, it asks **Choose Your Language**. Select English or French.
+The first time you open tt-Accessible, it asks **Choose Your Language**. Choose **System Default**,
+**English**, **French** or **Turkish** from the pop-up menu, then click OK.
 
 To change your choice later:
 
 1. In tt-Accessible, choose tt-Accessible > Preferences (or press Command-comma).
 2. Click General in the sidebar.
-3. Click the **Language** pop-up menu, then choose **System Default**, **English** or **French**.
+3. Click the **Language** pop-up menu, then choose **System Default**, **English**, **French**
+   or **Turkish**.
 4. Quit tt-Accessible and open it again, so the change applies everywhere.
 
 ## Allow tt-Accessible to use your microphone

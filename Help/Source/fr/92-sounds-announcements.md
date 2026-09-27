@@ -45,7 +45,7 @@ un, sélectionnez-le puis cliquez sur Supprimer — un pack personnalisé est au
 1. Ouvrez les Préférences, puis cliquez sur Annonces dans la barre latérale.
 2. Sous Annonces d'événements, sélectionnez ou désélectionnez **Annoncer les messages de canal**,
    **Annoncer les messages privés** et **Annoncer les messages généraux**.
-3. Cliquez sur **Annoncer l'historique système** pour déplier vingt événements supplémentaires,
+3. Cliquez sur **Annoncer l'historique système** pour déplier vingt et un événements supplémentaires,
    regroupés en Connexion, Canal actuel, Présence des utilisateurs, Modération, Statut, Abonnements,
    Fichiers et Diffusion média. Utilisez **Tout activer** ou **Tout désactiver** pour les régler
    ensemble.

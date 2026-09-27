@@ -70,7 +70,7 @@ the one selected in the channel tree.
 | Shift-Command-H | Hear yourself |
 | F9 | Announce the audio status |
 | Command-R | Start or stop recording a single mixed file |
-| Shift-Command-R | Start or stop recording in the preferred mode |
+| Shift-Command-R | Start recording in the preferred mode (Command-R stops it) |
 
 ## People
 
@@ -112,7 +112,7 @@ the one selected in the channel tree.
 |---|---|---|
 | Space | Pause or resume | Mute or unmute |
 | Escape | Stop | Stop |
-| Left Arrow or Right Arrow | Skip 5 seconds | No effect |
+| Left Arrow or Right Arrow | Skip 5 seconds | Says there is no position |
 | Up Arrow or Down Arrow | Change the broadcast volume | Change the broadcast volume |
 
 ## In the channel mixer
@@ -123,11 +123,11 @@ the one selected in the channel tree.
 | Page Up or Page Down | Voice volume, by 10% |
 | Home or End | Voice volume to 100% or 0% |
 | Left Arrow or Right Arrow | Voice pan |
-| Command-Up Arrow or Command-Down Arrow | Media volume, or the master volume outside a strip |
+| Command-Up Arrow or Command-Down Arrow | Media volume, or the output volume outside a strip |
 | Command-Left Arrow or Command-Right Arrow | Media pan |
 | V, P, M, S | Speak the volume, pan, mute or solo; press twice to reset or change it |
 | Command-P | Speak the media pan; press twice to centre it |
-| Command-Shift-Up Arrow or Command-Shift-Down Arrow | The media level, from anywhere in the window |
+| Command-Shift-Up Arrow or Command-Shift-Down Arrow | The media level, from anywhere in the window but a text field |
 
 Page Up, Page Down, Home and End take the same modifiers as the arrows while you are on a strip.
 Outside one they are left to the list you are reading.

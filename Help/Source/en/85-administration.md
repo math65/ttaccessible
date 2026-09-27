@@ -52,7 +52,7 @@ confirms.
    logging in several times at once, seeing every user, creating and modifying channels,
    broadcasting, kicking, banning, moving people, becoming a channel operator, uploading and
    downloading files, changing server properties, transmitting voice, video, desktop and media
-   files, locking the nickname or status, recording voice, seeing hidden channels, and sending
+   files, remote desktop control, locking the nickname or status, recording voice, seeing hidden channels, and sending
    private or channel messages. **Enable all**, **Disable all** and **Default rights** set them in
    one click.
 5. In the Advanced tab, set the audio bandwidth limit, where 0 means unlimited, and the command

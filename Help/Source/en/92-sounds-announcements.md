@@ -42,7 +42,7 @@ click Delete — a custom pack is also deleted from your Mac.
 1. Open Preferences, then click Announcements in the sidebar.
 2. Under Event announcements, select or deselect **Announce channel messages**, **Announce private
    messages** and **Announce broadcast messages**.
-3. Click **Announce system history** to unfold twenty more events, grouped as Connection, Own
+3. Click **Announce system history** to unfold twenty-one more events, grouped as Connection, Own
    channel, User presence, Moderation, Status, Subscriptions, Files and Media streaming. Use
    **Enable all** or **Disable all** to set them together.
 

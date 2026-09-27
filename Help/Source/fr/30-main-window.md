@@ -5,10 +5,10 @@ keywords: fenêtre principale, zones, focus, arbre des canaux, historique de ses
 anchor: main-window
 ---
 
-Une fois connecté, la fenêtre s'intitule Serveur connecté, suivi du nom du serveur. Elle se partage
-en deux volets. Une barre latérale réunit le nom du serveur, ses lignes d'état, le bouton du micro
-et l'arbre des canaux ; le volet voisin contient le mixeur, le chat, la saisie du message et
-l'historique de session. Tout s'y trouve : vous n'avez jamais besoin d'en sortir.
+Une fois que vous êtes connecté, la fenêtre s'intitule Serveur connecté, suivi du nom du serveur.
+Elle se partage en deux volets. La barre latérale réunit le nom du serveur, ses lignes d'état, le
+bouton du micro et l'arbre des canaux ; l'autre volet contient les curseurs de volume, le mixeur, le
+chat, la saisie du message et l'historique de session. Tout s'y trouve : vous n'avez jamais besoin d'en sortir.
 
 La séparation entre les deux volets se déplace, et tt-Accessible retient où vous l'avez laissée.
 
@@ -57,7 +57,7 @@ Pour conserver la conversation, appuyez sur Maj + Commande + S.
 
 ## Utiliser les commandes audio
 
-Le bouton du micro se trouve dans la barre latérale, sous l'arbre des canaux.
+Le bouton du micro se trouve dans la barre latérale, juste au-dessus de l'arbre des canaux.
 
 Juste au-dessus du mixeur du canal, quatre curseurs règlent les volumes : **Volume de sortie**,
 **Volume d'entrée**, **Volume des effets sonores** et **Volume des médias**. Chacun est un élément à
