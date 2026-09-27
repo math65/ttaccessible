@@ -664,6 +664,6 @@ private class VolumeSliderHandler: NSObject {
     }
 
     static func formatPercent(_ value: Double) -> String {
-        String(format: "%.0f%%", min(max(value.rounded(), 0), 100))
+        AudioGainControlView.format(percent: value)
     }
 }

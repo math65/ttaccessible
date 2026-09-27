@@ -82,6 +82,13 @@ final class SoundPlayer {
     // current system default output (re-resolved each time the engine starts).
     private var outputDeviceID: AudioDeviceID?
     private var appliedDeviceID: AudioDeviceID?
+    // The chosen output device as the preference names it, kept so the ID above can
+    // be re-resolved when devices come and go: a replug or coreaudiod restart hands
+    // out a new ID, and a device missing when it was chosen may appear later. Sound
+    // effects stayed on the default output after a replug because the dead ID stuck.
+    private var requestedPersistentID: String?
+    private var requestedDisplayName: String?
+    private var deviceChangeObserver: NSObjectProtocol?
     private var idleStop: DispatchWorkItem?
     private let queue = DispatchQueue(label: "com.math65.ttaccessible.soundplayer")
     // Maximum amplification above a sound's authored level: +12 dB ≈ 3.98×.
@@ -98,6 +105,41 @@ final class SoundPlayer {
 
     private init() {
         // Don't load sounds here — AppPreferencesStore will call loadPack() with the user's preferred pack.
+        deviceChangeObserver = NotificationCenter.default.addObserver(
+            forName: AudioDeviceChangeMonitor.audioDevicesDidChange,
+            object: nil,
+            queue: nil
+        ) { [weak self] _ in
+            self?.reresolveOutputDevice()
+        }
+    }
+
+    /// Follow the chosen device to its current ID, or to the default output while it
+    /// is missing or none was chosen. Does nothing when the answer hasn't changed.
+    private func reresolveOutputDevice() {
+        queue.async { [weak self] in
+            guard let self else { return }
+            let deviceID = Self.resolveDeviceID(
+                persistentID: self.requestedPersistentID,
+                displayName: self.requestedDisplayName
+            )
+            // Following the default, the chosen ID stays nil while the default moves: a
+            // running engine is pinned to the old default (applyDeviceLocked), so compare
+            // what it plays on with where the default is now.
+            let followedDefaultMoved = deviceID == nil && self.engine.isRunning
+                && self.appliedDeviceID != InputAudioDeviceResolver.defaultOutputDeviceUID()
+                    .flatMap { InputAudioDeviceResolver.audioDeviceID(forUID: $0) }
+            guard deviceID != self.outputDeviceID || followedDefaultMoved else { return }
+            self.pinOutputDeviceLocked(deviceID)
+        }
+    }
+
+    private static func resolveDeviceID(persistentID: String?, displayName: String?) -> AudioDeviceID? {
+        guard let persistentID, persistentID.isEmpty == false else { return nil }
+        return InputAudioDeviceResolver.resolveOutputDevice(
+            persistentID: persistentID,
+            displayName: displayName
+        )?.deviceID
     }
 
     /// Set the dedicated sound-effects base level (dB).
@@ -166,24 +208,24 @@ final class SoundPlayer {
     func updateOutputDevice(persistentID: String?, displayName: String?) {
         queue.async { [weak self] in
             guard let self else { return }
-            var deviceID: AudioDeviceID?
-            if let persistentID, persistentID.isEmpty == false,
-               let info = InputAudioDeviceResolver.resolveOutputDevice(
-                   persistentID: persistentID,
-                   displayName: displayName
-               ) {
-                deviceID = info.deviceID
-            }
-            self.outputDeviceID = deviceID
-            // Re-pin the device. The CurrentDevice property can only be changed
-            // while the engine is stopped, so if it's running, bounce it.
-            if self.engine.isRunning {
-                self.engine.stop()
-                self.appliedDeviceID = nil
-                self.startEngineLocked()
-            } else {
-                self.appliedDeviceID = nil
-            }
+            self.requestedPersistentID = persistentID
+            self.requestedDisplayName = displayName
+            self.pinOutputDeviceLocked(
+                Self.resolveDeviceID(persistentID: persistentID, displayName: displayName)
+            )
+        }
+    }
+
+    private func pinOutputDeviceLocked(_ deviceID: AudioDeviceID?) {
+        outputDeviceID = deviceID
+        // Re-pin the device. The CurrentDevice property can only be changed
+        // while the engine is stopped, so if it's running, bounce it.
+        if engine.isRunning {
+            engine.stop()
+            appliedDeviceID = nil
+            startEngineLocked()
+        } else {
+            appliedDeviceID = nil
         }
     }
 

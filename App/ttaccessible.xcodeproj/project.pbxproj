@@ -57,6 +57,7 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXFileReference section */
+		94SIGN003B941A8E00C0SIGN /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
 		941A588C2FE8718F00C08287 /* ttaccessibleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ttaccessibleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		943281C62F68C35A00682D6B /* ttaccessible.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ttaccessible.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		94A4A5F63B941A8E00C01234 /* libTeamTalk5.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libTeamTalk5.dylib; path = ../Vendor/TeamTalk/libTeamTalk5.dylib; sourceTree = SOURCE_ROOT; };
@@ -101,6 +102,7 @@
 		943281BD2F68C35A00682D6B = {
 			isa = PBXGroup;
 			children = (
+				94SIGN003B941A8E00C0SIGN /* Signing.xcconfig */,
 				943281C82F68C35A00682D6B /* ttaccessible */,
 				941A588D2FE8718F00C08287 /* ttaccessibleTests */,
 				943281C72F68C35A00682D6B /* Products */,
@@ -271,7 +273,6 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 633EG76YX5;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MARKETING_VERSION = 1.0;
@@ -292,7 +293,6 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 633EG76YX5;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MARKETING_VERSION = 1.0;
@@ -309,6 +309,7 @@
 		};
 		943281CF2F68C35A00682D6B /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 94SIGN003B941A8E00C0SIGN /* Signing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -372,6 +373,7 @@
 		};
 		943281D02F68C35A00682D6B /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 94SIGN003B941A8E00C0SIGN /* Signing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -435,7 +437,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 56;
-				DEVELOPMENT_TEAM = 633EG76YX5;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -483,7 +484,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 56;
-				DEVELOPMENT_TEAM = 633EG76YX5;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;

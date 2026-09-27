@@ -14,7 +14,7 @@ final class SavedServersWindowController: NSWindowController {
     private var currentToolbarMode: SavedServersMenuState.Mode = .savedServers
 
     init(contentViewController: NSViewController) {
-        let window = NSWindow(
+        let window = ReadingOrderWindow(
             contentRect: NSRect(x: 0, y: 0, width: 760, height: 480),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
@@ -215,7 +215,7 @@ final class SavedServersWindowController: NSWindowController {
     }
 
     @objc fileprivate func toolbarMicrophoneAction(_ sender: Any?) {
-        appDelegate?.toggleMicrophone(fromControl: true)
+        appDelegate?.toggleMicrophone()
     }
 
     @objc fileprivate func toolbarMasterMuteAction(_ sender: Any?) {

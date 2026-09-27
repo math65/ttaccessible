@@ -18,6 +18,13 @@ import SwiftUI
 /// Settings window is focused (no Input Monitoring permission required).
 final class KeyCaptureSession: ObservableObject {
     @Published private(set) var isRecording = false
+
+    /// Sessions recording right now, app-wide. The Toggle microphone key monitor
+    /// (AppDelegate.installMicrophoneMenuKeyMonitor) stands down while any is, so the
+    /// chord being recorded reaches the recorder instead of toggling the microphone.
+    /// Main thread only, like the monitors.
+    private(set) static var recordingCount = 0
+    static var anyRecording: Bool { recordingCount > 0 }
     /// Set when the last press was refused. Shown on the button so the refusal
     /// isn't silent for a sighted user; VoiceOver gets the full explanation as
     /// an announcement.
@@ -40,6 +47,7 @@ final class KeyCaptureSession: ObservableObject {
 
     deinit {
         if let monitor { NSEvent.removeMonitor(monitor) }
+        if isRecording { Self.recordingCount -= 1 }
     }
 
     func begin(onCommit: @escaping (HotkeyBinding?) -> Void) {
@@ -47,6 +55,7 @@ final class KeyCaptureSession: ObservableObject {
         self.onCommit = onCommit
         peakModifiers = []
         isRecording = true
+        Self.recordingCount += 1
         monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { [weak self] event in
             guard let self else { return event }
             return self.handle(event) ? nil : event
@@ -162,6 +171,7 @@ final class KeyCaptureSession: ObservableObject {
         monitor = nil
         peakModifiers = []
         onCommit = nil
+        if isRecording { Self.recordingCount -= 1 }
         isRecording = false
         rejectionTitleKey = nil
     }

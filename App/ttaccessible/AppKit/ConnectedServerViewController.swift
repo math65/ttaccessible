@@ -22,10 +22,72 @@ final class ServerTreeRowView: NSTableRowView {
 final class PressActionTextField: NSTextField {
     var onPress: (() -> Void)?
 
+    /// Whether VoiceOver hears the tooltip as help. Off where the tooltip only repeats
+    /// the accessibility label: the channel tree sets both to the row's full text, so a
+    /// truncated row can still be read with the mouse, and every row — a long topic
+    /// most of all — was spoken twice, once as its label and again as help.
+    var speaksToolTipAsHelp = true
+
+    override func accessibilityHelp() -> String? {
+        speaksToolTipAsHelp ? super.accessibilityHelp() : nil
+    }
+
+    /// Whether VoiceOver hears the label as the value too, instead of the text on screen.
+    /// On where the label already says everything the field shows: a channel with a topic
+    /// displays it on a second line, so the value (name, line break, topic) differed from
+    /// the label (name, "Topic:", topic) and VoiceOver read both — the name and topic, then
+    /// the whole row again. When the two match, as on every user row, it reads the row once.
+    /// The text VoiceOver fetches by character range must match too: fixing the value alone
+    /// left the range text (name, line break, topic) and topic rows still read twice.
+    /// VoiceOver asks the cell for that text, so the cell below serves the label there.
+    var readsLabelAsValue = false
+
+    override class var cellClass: AnyClass? {
+        get { PressActionTextFieldCell.self }
+        set {}
+    }
+
+    override func accessibilityValue() -> String? {
+        readsLabelAsValue ? accessibilityLabel() : super.accessibilityValue()
+    }
+
     override func accessibilityPerformPress() -> Bool {
         guard let onPress else { return super.accessibilityPerformPress() }
         onPress()
         return true
+    }
+}
+
+/// The accessibility element behind a `PressActionTextField` is its cell, and the cell is
+/// what VoiceOver asks for the text by character range. When the field reads its label as
+/// its value, the cell gives that same label here instead of the text on screen.
+final class PressActionTextFieldCell: NSTextFieldCell {
+    private var rowLabel: String? {
+        guard let field = controlView as? PressActionTextField, field.readsLabelAsValue else { return nil }
+        return field.accessibilityLabel() ?? ""
+    }
+
+    // NSTextFieldCell answers VoiceOver through the attribute API, not the NSAccessibility
+    // methods (overriding those changed nothing, measured), so the text is served here.
+    override func accessibilityAttributeValue(_ attribute: NSAccessibility.Attribute) -> Any? {
+        guard let label = rowLabel as NSString? else { return super.accessibilityAttributeValue(attribute) }
+        switch attribute {
+        case .numberOfCharacters:
+            return label.length
+        case .visibleCharacterRange:
+            return NSValue(range: NSRange(location: 0, length: label.length))
+        default:
+            return super.accessibilityAttributeValue(attribute)
+        }
+    }
+
+    override func accessibilityAttributeValue(_ attribute: NSAccessibility.ParameterizedAttribute, forParameter parameter: Any?) -> Any? {
+        guard let label = rowLabel as NSString?,
+              attribute == .stringForRange || attribute == .attributedStringForRange,
+              let range = (parameter as? NSValue)?.rangeValue
+        else { return super.accessibilityAttributeValue(attribute, forParameter: parameter) }
+        let text = label.substring(with: NSIntersectionRange(range, NSRange(location: 0, length: label.length)))
+        return attribute == .stringForRange ? text : NSAttributedString(string: text)
     }
 }
 
@@ -59,29 +121,45 @@ final class ConnectedServerViewController: NSViewController {
     let messageField = NSTextField(frame: .zero)
     let sendButton = NSButton(title: "", target: nil, action: nil)
     let microphoneButton = NSButton(title: "", target: nil, action: nil)
-    private var lastAnnouncedMicrophoneStatus: String?
     let collapsibleVideoPanel = CollapsibleVideoPanelView()
     lazy var channelMixerCoordinator = ChannelMixerCoordinator(controller: connectionController)
     lazy var channelMixerSectionView: NSView = buildChannelMixerSection()
     lazy var channelMixerKeyboardController = ChannelMixerKeyboardController(
         coordinator: channelMixerCoordinator,
-        // The mixer's own moves: 1 % per arrow (the step these shortcuts have always
-        // used), 10 % per page key, Home/End to the ends.
-        masterVolumeAdjust: { [weak self] move in
-            self?.channelMixerCoordinator.nudgeGlobalGain(GlobalGainSlot.output.rawValue, move: move)
-        },
-        mediaVolumeAdjust: { [weak self] move in
-            self?.channelMixerCoordinator.nudgeGlobalGain(GlobalGainSlot.media.rawValue, move: move)
-        },
-        masterMuteState: { [weak self] in
-            guard let self else { return nil }
-            return L10n.text(menuState.isMasterMuted ? "shortcuts.masterMute.announced.muted"
-                                                     : "shortcuts.masterMute.announced.unmuted")
-        },
-        masterMuteToggle: { [weak self] in self?.appDelegate.toggleMasterMute() }
+        // The window-wide level shortcuts drive the window's own sliders, which own the
+        // value and its persistence. 1 % per arrow, 10 % per page key, Home/End to the
+        // ends — MixerLevelMove is the one place that says so.
+        masterVolumeAdjust: { [weak self] move in self?.outputGainControl.adjustAndDescribe(move: move) },
+        mediaVolumeAdjust: { [weak self] move in self?.mediaGainControl.adjustAndDescribe(move: move) }
     )
     let embeddedMediaStreamingControls = MediaStreamingPlayerViewController()
     var lastVideoDisplayState = VideoDisplayState.empty
+    lazy var inputGainControl = AudioGainControlView(
+        title: L10n.text("connectedServer.audio.inputGain.label"),
+        accessibilityLabel: L10n.text("connectedServer.audio.inputGain.accessibilityLabel")
+    ) { [weak self] value in
+        self?.applyInputGain(value)
+    }
+    lazy var outputGainControl = AudioGainControlView(
+        title: L10n.text("connectedServer.audio.outputGain.label"),
+        accessibilityLabel: L10n.text("connectedServer.audio.outputGain.accessibilityLabel")
+    ) { [weak self] value in
+        self?.applyOutputGain(value)
+    }
+    lazy var soundEffectsGainControl = AudioGainControlView(
+        title: L10n.text("connectedServer.audio.soundEffectsGain.label"),
+        accessibilityLabel: L10n.text("connectedServer.audio.soundEffectsGain.accessibilityLabel")
+    ) { [weak self] value in
+        self?.applySoundEffectsGain(value)
+    }
+    /// The media bus (02c234f) — every media stream at once. It had no control of its own
+    /// while the levels lived in the mixer; this is its home.
+    lazy var mediaGainControl = AudioGainControlView(
+        title: L10n.text("connectedServer.audio.mediaGain.label"),
+        accessibilityLabel: L10n.text("connectedServer.audio.mediaGain.accessibilityLabel")
+    ) { [weak self] value in
+        self?.applyMediaGain(value)
+    }
     lazy var contextMenu: NSMenu = makeContextMenu()
     /// The window's two panes; kept so the first launch can position the divider.
     private weak var connectedSplitView: ConnectedServerSplitView?
@@ -479,10 +557,16 @@ final class ConnectedServerViewController: NSViewController {
         chatScrollView.translatesAutoresizingMaskIntoConstraints = false
         historyScrollView.translatesAutoresizingMaskIntoConstraints = false
 
-        // Output / media / microphone / sound-effects levels used to sit here as four
-        // sliders. They live in the mixer's "General" strip now — one place, one rendering
-        // per audience — so this stack only carries the media-streaming controls.
+        // The global levels are sliders in the window, where you can land on them
+        // directly, rather than a strip inside the mixer behind another layer of
+        // navigation. Output, input and sound effects keep the order they have always
+        // had; media, which 02c234f put in the window before af9aa8e moved every level
+        // into the mixer, comes back last, next to the streaming controls it governs.
         let audioControlsStack = NSStackView(views: [
+            outputGainControl,
+            inputGainControl,
+            soundEffectsGainControl,
+            mediaGainControl,
             embeddedMediaStreamingControls.view
         ])
         audioControlsStack.orientation = .vertical
@@ -581,6 +665,10 @@ final class ConnectedServerViewController: NSViewController {
             mixerMinimumHeight,
             mixerMaximumHeight,
             audioControlsStack.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
+            outputGainControl.widthAnchor.constraint(equalTo: audioControlsStack.widthAnchor),
+            inputGainControl.widthAnchor.constraint(equalTo: audioControlsStack.widthAnchor),
+            soundEffectsGainControl.widthAnchor.constraint(equalTo: audioControlsStack.widthAnchor),
+            mediaGainControl.widthAnchor.constraint(equalTo: audioControlsStack.widthAnchor),
             embeddedMediaStreamingControls.view.widthAnchor.constraint(equalTo: audioControlsStack.widthAnchor),
             chatScrollView.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
             chatScrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 180),
@@ -631,7 +719,15 @@ final class ConnectedServerViewController: NSViewController {
 
         // Only reload the outline when the channel tree or user list changed.
         let treeChanged = previousSession.rootChannels != session.rootChannels
-        if treeChanged || !preserveSelection {
+        if preserveSelection, treeChanged,
+           let changedUserIDs = audioOnlyChangedUserIDs(from: previousSession.rootChannels,
+                                                        to: session.rootChannels) {
+            // Only someone's talking/muted flags moved — your own, above all, when you toggle
+            // the microphone. Redraw those rows in place, as the audio runtime path does: a
+            // full reload collapses, re-expands and re-selects the tree, and VoiceOver then
+            // re-reads whatever row it is on before the "Microphone enabled" announcement.
+            reloadVisibleUserRows(for: changedUserIDs)
+        } else if treeChanged || !preserveSelection {
             let existingSelection = preserveSelection ? currentSelectionKey() ?? selectedKey : nil
             outlineView.reloadData()
             expandCurrentChannelPath()
@@ -785,16 +881,18 @@ final class ConnectedServerViewController: NSViewController {
             ? L10n.text("connectedServer.audio.microphone.disable")
             : L10n.text("connectedServer.audio.microphone.enable")
         microphoneButton.isEnabled = session.currentChannelID > 0 || session.voiceTransmissionEnabled
-        microphoneButton.setAccessibilityLabel(L10n.text("connectedServer.audio.microphone.accessibilityLabel"))
-        microphoneButton.setAccessibilityValue(session.audioStatusText)
-        // Announce the new transmission status only when it actually changes, so VoiceOver
-        // doesn't re-read the value on every (frequent) updateAudioControls() call.
-        if lastAnnouncedMicrophoneStatus != session.audioStatusText {
-            lastAnnouncedMicrophoneStatus = session.audioStatusText
-            NSAccessibility.post(element: microphoneButton, notification: .valueChanged)
-        }
-        // The four global levels are read live by the mixer's General strip; refreshing
-        // its published snapshot is what keeps the visible faders in step.
+        // The button says what pressing it does — its own title — and nothing else. It used
+        // to carry a fixed "Microphone control" label with the audio status as its value, so
+        // VoiceOver read the server audio status line a second time, on the button, and never
+        // read the title at all. The status stays where it belongs, in that line and on F9;
+        // every route, the button included, announces "Microphone enabled/muted" itself
+        // (toggleMicrophone(_:)).
+        inputGainControl.setValue(session.inputGainDB)
+        outputGainControl.setValue(session.outputGainDB)
+        soundEffectsGainControl.setValue(preferencesStore.preferences.soundEffectsGainDB)
+        mediaGainControl.setValue(preferencesStore.preferences.mediaGainDB)
+        // The mixer's strips are drawn from a published snapshot of the channel's users
+        // (levels, pan, mute, solo); rebuilding it here keeps them in step with the session.
         channelMixerCoordinator.refreshDisplay()
     }
 
@@ -896,6 +994,31 @@ final class ConnectedServerViewController: NSViewController {
             return
         }
         outlineView.reloadData(forRowIndexes: rows, columnIndexes: IndexSet(integer: 0))
+    }
+
+    /// The users whose rows need redrawing when a new tree differs from the old one only in
+    /// the flags the audio runtime path already updates in place (talking, muted, media
+    /// muted, video) — found by applying the new tree's flags to the old tree with that same
+    /// path and checking nothing else is left over. Nil when anything else changed (a
+    /// channel, a name, someone arriving or leaving), which needs the full reload.
+    func audioOnlyChangedUserIDs(from old: [ConnectedServerChannel],
+                                 to new: [ConnectedServerChannel]) -> Set<Int32>? {
+        let states = flatChannels(from: new).flatMap(\.users).map { user in
+            (user.id, ConnectedUserAudioState(
+                userID: user.id,
+                isTalking: user.isTalking,
+                isMuted: user.isMuted,
+                isMediaFileMuted: user.isMediaFileMuted,
+                isStreamingMediaFileVideo: user.isStreamingMediaFileVideo
+            ))
+        }
+        var changedUserIDs = Set<Int32>()
+        let patched = updateAudioState(
+            in: old,
+            updates: Dictionary(states, uniquingKeysWith: { first, _ in first }),
+            changedUserIDs: &changedUserIDs
+        )
+        return patched == new ? changedUserIDs : nil
     }
 
     func applyInputGain(_ value: Double) {
@@ -1513,11 +1636,12 @@ final class ConnectedServerViewController: NSViewController {
         }
     }
 
-    // Pressing the in-window mic button directly makes VoiceOver re-read the button's
-    // changed title/state, so skip the redundant spoken status announcement in that case.
     @objc
     func toggleMicrophone(_ sender: Any? = nil) {
-        toggleMicrophone(announceStatus: (sender as AnyObject?) !== microphoneButton)
+        // The button announces like every other route: it no longer carries the audio status
+        // as its value (432eeed), and that value changing was the only thing VoiceOver said
+        // after a press.
+        toggleMicrophone(announceStatus: true)
     }
 
     func toggleMicrophone(announceStatus: Bool) {
@@ -1550,7 +1674,7 @@ final class ConnectedServerViewController: NSViewController {
                     switch result {
                     case .success(let gateNowOpen):
                         if announceStatus {
-                            self.announce(gateNowOpen
+                            self.announceNow(gateNowOpen
                                 ? L10n.text("connectedServer.audio.voiceEnabled")
                                 : L10n.text("connectedServer.audio.voiceDisabled"))
                         }
@@ -1571,7 +1695,7 @@ final class ConnectedServerViewController: NSViewController {
                 switch result {
                 case .success:
                     if announceStatus {
-                        self.announce(L10n.text("connectedServer.audio.voiceDisabled"))
+                        self.announceNow(L10n.text("connectedServer.audio.voiceDisabled"))
                     }
                 case .failure(let error):
                     self.presentActionError(error)
@@ -1597,7 +1721,7 @@ final class ConnectedServerViewController: NSViewController {
                 switch result {
                 case .success:
                     if announceStatus {
-                        self.announce(L10n.text("connectedServer.audio.voiceEnabled"))
+                        self.announceNow(L10n.text("connectedServer.audio.voiceEnabled"))
                     }
                 case .failure(let error):
                     self.presentActionError(error)

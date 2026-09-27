@@ -59,11 +59,13 @@ Also worth knowing:
 
 ## Adjust the volumes
 
-The main window has three sliders, each with a *Reset to 50%* VoiceOver action:
+The main window has four sliders, each with a *Reset to 50%* VoiceOver action:
 
-- **Input volume** — how loud your microphone is sent.
 - **Output volume** — how loud you hear everyone.
+- **Input volume** — how loud your microphone is sent.
 - **Sound effects volume** — how loud the notification sounds are.
+- **Media volume** — how loud every media stream in the channel is, yours included, without
+  touching anyone's voice.
 
 To mute or unmute everything at once, press Command-M.
 

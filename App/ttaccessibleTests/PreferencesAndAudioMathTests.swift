@@ -49,10 +49,12 @@ final class GainCurveTests: XCTestCase {
     }
 
     func testFormatPercentClampsAndFormats() {
-        XCTAssertEqual(AudioGainControlView.format(percent: 50), "50%")
-        XCTAssertEqual(AudioGainControlView.format(percent: -5), "0%")
-        XCTAssertEqual(AudioGainControlView.format(percent: 150), "100%")
-        XCTAssertEqual(AudioGainControlView.format(percent: 49.6), "50%") // rounds up
+        // The mixer's localized readout ("50%", "50 %" in French, "%50" in Turkish).
+        func percent(_ value: Int) -> String { L10n.format("mixer.value.percent", value) }
+        XCTAssertEqual(AudioGainControlView.format(percent: 50), percent(50))
+        XCTAssertEqual(AudioGainControlView.format(percent: -5), percent(0))
+        XCTAssertEqual(AudioGainControlView.format(percent: 150), percent(100))
+        XCTAssertEqual(AudioGainControlView.format(percent: 49.6), percent(50)) // rounds up
     }
 }
 

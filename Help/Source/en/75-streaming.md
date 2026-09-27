@@ -30,29 +30,43 @@ The last ten addresses are kept.
 ## Stream a device, apps or VoiceOver
 
 1. Choose Shortcuts > Stream Audio from This Mac, or press Option-Command-A.
-2. In the **Audio source** list, tick what you want to send. Use the arrow keys to move through the
-   list and the Space bar to tick or untick.
+2. Check what you want to send in the list of sources. It opens on what you streamed last time,
+   and a group that holds something checked starts open, so nothing you've checked is out of
+   reach. The first time, nothing is checked: nothing streams until you choose it.
+   **All audio from this Mac** is at the top, then three groups you open and close with the Right
+   and Left Arrow keys: **Recently used**, which starts open, **Devices**, and **Applications**,
+   which starts with **VoiceOver**. Press Space to check or uncheck the line you're on; with
+   VoiceOver, VO-Space does the same. To find a source quickly, type part of its name in the
+   **Search sources** field to the left of the list: the list keeps only the matches, opens every
+   group that has one and says how many there are. Press Down Arrow to go from the search field to
+   the first match.
 3. Select **Play the streamed audio back to me** if you want to hear what you're sending. It's off,
    so you aren't forced to listen to it.
 4. Select **Mute this source on this Mac while streaming** to silence the source for yourself while
    the channel keeps hearing it. It only applies to applications, on recent versions of macOS.
 5. Click Stream.
 
-### What you can tick
+### What you can check
 
-- **Several applications at once.** Your music player and VoiceOver, say, so the channel hears both
-  what you're listening to and what your screen reader is saying.
-- **All audio from this Mac**, when naming the apps one by one isn't worth it. tt-Accessible's own
+- **Any combination of devices and applications.** A microphone and your music player, two audio
+  interfaces, VoiceOver and an app: everything you check is mixed into one stream. Each device runs
+  on its own clock; tt-Accessible keeps them in step, so a long stream doesn't drift apart. When
+  loud sources add up to more than the stream can carry, the peaks are eased down instead of
+  distorting.
+- **All audio from this Mac**, when naming the apps one by one isn't worth it. It goes with devices,
+  but not with applications, which it already contains: checking it unchecks the applications, and
+  checking an application unchecks it. tt-Accessible announces whatever was just unchecked. Its own
   output is left out of the capture, otherwise the channel would hear itself come back. Be aware
   that notifications and system sounds go out too.
-- **An input device**, which streams on its own: ticking a device unticks the applications, and the
-  other way round. tt-Accessible announces whatever was just unticked.
 
-To pick an app that isn't running, click **Select Application** — this requires macOS 14.2 or later.
+To pick an app that isn't running, click **Select Application…**, next to the list — this requires
+macOS 14.2 or later. The app is added to the Applications group, checked.
 Streaming the audio of an app, of VoiceOver or of the whole Mac requires macOS 13 or later.
 
 The stream keeps going even while the source is silent, so a pause in the music doesn't end it. Your
-last choice is ticked again next time, even when it covered several applications.
+last choice is checked again next time, even when it covered several applications. **Recently used**
+keeps the last five sources you streamed, newest first; a source that isn't available any more, such
+as an unplugged device, is left out.
 
 If the app you picked isn't producing any sound, tt-Accessible answers *The selected source has no
 audio to capture right now.*
@@ -83,7 +97,9 @@ listen at. At 0%, nothing goes out.
 
 ## Stop streaming
 
-Choose Shortcuts > Stop Streaming, or press Option-Command-Period. tt-Accessible announces
+Press Option-Command-A again, or choose Shortcuts > Stop Streaming: while a stream is running,
+Stream Audio from This Mac becomes Stop Streaming, and it stops a file or an address just the same.
+tt-Accessible announces
 *Streaming finished*, and both the start and the end appear in the session history.
 
 Everyone subscribed to your media file stream hears it. Each person can silence it without silencing

@@ -27,13 +27,6 @@ struct ChannelMixerView: View {
             // The window titles its other sections (chat, history); this one had none.
             Text(L10n.text("mixer.area.label"))
                 .font(.headline)
-            // The General strip comes first, like a console's master section, and stays
-            // even in an empty channel: these four levels belong to nobody in particular
-            // and exist nowhere else on screen.
-            if !coordinator.displayGlobalGains.isEmpty {
-                MixerGeneralRow(coordinator: coordinator)
-                Divider()
-            }
             if coordinator.displayStrips.isEmpty {
                 Text(L10n.text("mixer.empty"))
                     .foregroundStyle(.secondary)
@@ -50,23 +43,7 @@ struct ChannelMixerView: View {
     }
 }
 
-/// The visible General strip: output, media bus, microphone, sound effects.
-private struct MixerGeneralRow: View {
-    @ObservedObject var coordinator: ChannelMixerCoordinator
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(L10n.text("mixer.general.label")).font(.headline)
-            ForEach(coordinator.displayGlobalGains) { gain in
-                MixerFader(title: gain.label, value: gain.percent, range: 0...100,
-                           set: { coordinator.setGlobalGain(gain.id, percent: $0) },
-                           display: MixerStripRow.percent)
-            }
-        }
-    }
-}
-
-/// One labelled fader + read-out, shared by the user strips and the General strip.
+/// One labelled fader + read-out, used by the user strips.
 private struct MixerFader: View {
     let title: String
     let value: Double

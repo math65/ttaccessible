@@ -33,6 +33,10 @@ final class AudioGainControlView: NSView {
         slider.target = self
         slider.action = #selector(handleSliderChanged(_:))
         slider.setAccessibilityElement(false)
+        // This view is the one Tab stop and the one element VoiceOver reads. Hidden from
+        // VoiceOver, the slider could still take the focus: Tab stopped on it first, and
+        // VoiceOver read "50%, slider" with no name. The mouse still drags it.
+        slider.refusesFirstResponder = true
 
         let stack = NSStackView(views: [titleLabel, slider, valueLabel])
         stack.orientation = .horizontal
@@ -84,31 +88,32 @@ final class AudioGainControlView: NSView {
     }
 
     override func keyDown(with event: NSEvent) {
-        switch event.specialKey {
-        case .leftArrow, .downArrow:
-            adjust(by: -1)
-        case .rightArrow, .upArrow:
-            adjust(by: 1)
-        case .pageUp:
-            adjust(by: 10)
-        case .pageDown:
-            adjust(by: -10)
-        case .home:
-            setAndNotify(-24)
-        case .end:
-            setAndNotify(24)
-        default:
+        guard let move = Self.levelMove(for: event) else {
             super.keyDown(with: event)
+            return
+        }
+        apply(move)
+    }
+
+    /// The mixer's own key table (MixerKey.levelMove), so a level moves by the same amount
+    /// whichever route reaches it — Home was jumping to 0 % here and to 100 % in the mixer.
+    /// Left and Right, which pan a strip, step a slider, as they do any slider.
+    static func levelMove(for event: NSEvent) -> MixerLevelMove? {
+        switch MixerKey(event: event) {
+        case .left: return .step(up: false)
+        case .right: return .step(up: true)
+        case let key?: return key.levelMove
+        case nil: return nil
         }
     }
 
     override func accessibilityPerformIncrement() -> Bool {
-        adjust(by: 1)
+        apply(.step(up: true))
         return true
     }
 
     override func accessibilityPerformDecrement() -> Bool {
-        adjust(by: -1)
+        apply(.step(up: false))
         return true
     }
 
@@ -140,16 +145,15 @@ final class AudioGainControlView: NSView {
         onChange?(valueDB)
     }
 
-    func adjust(by delta: Double) {
-        let updated = min(max((slider.doubleValue + delta).rounded(), 0), 100)
-        setAndNotify(Self.gainDB(forPercent: updated))
-    }
-
-    /// Nudge one step and return the spoken value (used by the mixer's Cmd+Up/Down).
-    func adjustAndDescribe(up: Bool) -> String {
-        adjust(by: up ? 1 : -1)
+    /// Move this level and return the value to speak.
+    @discardableResult
+    func apply(_ move: MixerLevelMove) -> String {
+        setAndNotify(Self.gainDB(forPercent: move.apply(to: slider.doubleValue)))
         return Self.format(percent: slider.doubleValue)
     }
+
+    /// Move and describe, for the window-wide Cmd+arrow / Cmd+Shift+arrow shortcuts.
+    func adjustAndDescribe(move: MixerLevelMove) -> String { apply(move) }
 
     func setAndNotify(_ value: Double) {
         guard value != valueDB else {
@@ -168,7 +172,8 @@ final class AudioGainControlView: NSView {
         return AppPreferences.clampGainDB((clamped / 100 * 48) - 24)
     }
 
+    /// Localized like the mixer's own readout: "50%", "50 %" in French, "%50" in Turkish.
     static func format(percent value: Double) -> String {
-        String(format: "%.0f%%", min(max(value.rounded(), 0), 100))
+        L10n.format("mixer.value.percent", Int(min(max(value.rounded(), 0), 100)))
     }
 }

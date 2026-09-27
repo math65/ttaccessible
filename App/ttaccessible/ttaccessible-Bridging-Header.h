@@ -3,3 +3,4 @@
 #include "AudioRTSupport.h"
 #include "Services/OpusShim.h"
 #include "Services/AtomicU64.h"
+#include "AppKit/NavigationOrderWindow.h"

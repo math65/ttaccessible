@@ -196,6 +196,7 @@ struct AppPreferences: Codable, Equatable {
         case userVolumeMemoryMode
         case deviceStreamLastDeviceUID
         case deviceStreamLastSource
+        case deviceStreamRecentSources
         case mediaStreamRecentURLs
         case deviceStreamVoiceSyncTrimMSec
         case languagePreference
@@ -303,6 +304,18 @@ struct AppPreferences: Codable, Equatable {
     /// "voiceover") — supersedes deviceStreamLastDeviceUID for preselection, which
     /// is still written for devices so older builds keep their memory.
     var deviceStreamLastSource: String?
+    /// Sources streamed from this Mac lately, newest first, as persistence tokens (one per
+    /// source, a cumulated stream split into its parts) — the stream dialog's Recently used.
+    var deviceStreamRecentSources: [String]
+
+    /// The recently used sources, seeded from the last source for anyone who streamed
+    /// before the list existed, so it isn't empty the first time.
+    var recentDeviceStreamSources: [String] {
+        guard deviceStreamRecentSources.isEmpty, let deviceStreamLastSource else {
+            return deviceStreamRecentSources
+        }
+        return DeviceStreamCaptureSpec.componentTokens(of: deviceStreamLastSource)
+    }
     /// Stream URLs already used, most recent first. Retyping a web-radio
     /// address is expensive with VoiceOver, so the prompt offers them back
     /// instead of starting empty every time. Capped by `maxRecentMediaStreamURLs`.
@@ -382,6 +395,7 @@ struct AppPreferences: Codable, Equatable {
         userVolumeMemoryMode: UserVolumeMemoryMode = .persistent,
         deviceStreamLastDeviceUID: String? = nil,
         deviceStreamLastSource: String? = nil,
+        deviceStreamRecentSources: [String] = [],
         mediaStreamRecentURLs: [String] = [],
         deviceStreamVoiceSyncTrimMSec: Int = 0,
         languagePreference: AppLanguagePreference = .system,
@@ -455,6 +469,7 @@ struct AppPreferences: Codable, Equatable {
         self.userVolumeMemoryMode = userVolumeMemoryMode
         self.deviceStreamLastDeviceUID = deviceStreamLastDeviceUID
         self.deviceStreamLastSource = deviceStreamLastSource
+        self.deviceStreamRecentSources = deviceStreamRecentSources
         self.mediaStreamRecentURLs = Self.clampRecentMediaStreamURLs(mediaStreamRecentURLs)
         self.deviceStreamVoiceSyncTrimMSec = deviceStreamVoiceSyncTrimMSec
         self.languagePreference = languagePreference
@@ -618,6 +633,7 @@ struct AppPreferences: Codable, Equatable {
         userVolumeMemoryMode = try container.decodeIfPresent(UserVolumeMemoryMode.self, forKey: .userVolumeMemoryMode) ?? .persistent
         deviceStreamLastDeviceUID = try container.decodeIfPresent(String.self, forKey: .deviceStreamLastDeviceUID)
         deviceStreamLastSource = try container.decodeIfPresent(String.self, forKey: .deviceStreamLastSource)
+        deviceStreamRecentSources = try container.decodeIfPresent([String].self, forKey: .deviceStreamRecentSources) ?? []
         mediaStreamRecentURLs = Self.clampRecentMediaStreamURLs(
             try container.decodeIfPresent([String].self, forKey: .mediaStreamRecentURLs) ?? []
         )
@@ -696,6 +712,7 @@ struct AppPreferences: Codable, Equatable {
         try container.encode(userVolumeMemoryMode, forKey: .userVolumeMemoryMode)
         try container.encodeIfPresent(deviceStreamLastDeviceUID, forKey: .deviceStreamLastDeviceUID)
         try container.encodeIfPresent(deviceStreamLastSource, forKey: .deviceStreamLastSource)
+        try container.encode(deviceStreamRecentSources, forKey: .deviceStreamRecentSources)
         try container.encode(mediaStreamRecentURLs, forKey: .mediaStreamRecentURLs)
         try container.encode(deviceStreamVoiceSyncTrimMSec, forKey: .deviceStreamVoiceSyncTrimMSec)
         try container.encode(languagePreference, forKey: .languagePreference)

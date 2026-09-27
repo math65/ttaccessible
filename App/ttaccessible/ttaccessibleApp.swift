@@ -471,11 +471,22 @@ struct ttaccessibleApp: App {
                 .keyboardShortcut("u", modifiers: [.command, .option])
                 .disabled(menuState.mode != .connectedServer || menuState.isMediaStreamingActive || menuState.isInChannel == false)
 
-                Button(L10n.text("shortcuts.mediaStream.startDevice")) {
-                    appDelegate.startStreamingMediaFromDevice()
+                // One item, one key: ⌥⌘A opens the stream dialog, and while any stream runs
+                // the same item and key stop it — Rocco's call, replacing the separate
+                // Stop Streaming item on ⌥⌘. A shortcut that fires a menu item makes
+                // VoiceOver speak the item's title, so the title follows what the key does.
+                Button(menuState.isMediaStreamingActive
+                       ? L10n.text("shortcuts.mediaStream.stop")
+                       : L10n.text("shortcuts.mediaStream.startDevice")) {
+                    if menuState.isMediaStreamingActive {
+                        appDelegate.stopMediaStreaming()
+                    } else {
+                        appDelegate.startStreamingMediaFromDevice()
+                    }
                 }
                 .keyboardShortcut("a", modifiers: [.command, .option])
-                .disabled(menuState.mode != .connectedServer || menuState.isMediaStreamingActive || menuState.isInChannel == false)
+                .disabled(menuState.mode != .connectedServer
+                          || (menuState.isMediaStreamingActive == false && menuState.isInChannel == false))
 
                 // A live capture can't be paused — the broadcast stays up and
                 // goes silent — so it gets mute wording, not pause wording.
@@ -483,12 +494,6 @@ struct ttaccessibleApp: App {
                     appDelegate.toggleMediaStreamingPause()
                 }
                 .keyboardShortcut("m", modifiers: [.command, .option])
-                .disabled(menuState.mode != .connectedServer || !menuState.isMediaStreamingActive)
-
-                Button(L10n.text("shortcuts.mediaStream.stop")) {
-                    appDelegate.stopMediaStreaming()
-                }
-                .keyboardShortcut(".", modifiers: [.command, .option])
                 .disabled(menuState.mode != .connectedServer || !menuState.isMediaStreamingActive)
 
                 Button(L10n.text("shortcuts.hearMyself")) {

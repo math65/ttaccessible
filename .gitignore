@@ -9,6 +9,9 @@ DerivedData/
 *.perspectivev3
 xcuserdata/
 
+# Your own signing team (see App/Signing.xcconfig)
+App/Signing.local.xcconfig
+
 # Build artifacts
 BuildArtifacts/
 build_verify/

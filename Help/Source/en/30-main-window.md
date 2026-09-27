@@ -57,9 +57,9 @@ To save the conversation, press Shift-Command-S.
 
 The microphone button sits in the sidebar, under the channel tree.
 
-The volumes themselves — **Output volume**, **Media volume**, **Microphone volume** and **Sound
-effects volume** — are gathered at the head of the channel mixer, on a strip called General. Press
-Command-5 to land on it; see [Balance a channel with the mixer](mixer.html).
+The volumes themselves — **Output volume**, **Input volume**, **Sound effects volume** and **Media
+volume** — are sliders in the window, just above the channel mixer, so you can land on each one
+directly. See [Balance a channel with the mixer](mixer.html) for the mixer itself.
 
 To hear the current audio status at any time — whether output is active, whether the microphone is
 transmitting, and whether a recording is running — press F9.

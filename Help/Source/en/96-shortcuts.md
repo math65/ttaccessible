@@ -103,9 +103,8 @@ the one selected in the channel tree.
 |---|---|
 | Option-Command-S | Stream Media File |
 | Option-Command-U | Stream URL |
-| Option-Command-A | Stream Audio from This Mac |
+| Option-Command-A | Stream Audio from This Mac; Stop Streaming while a stream is running |
 | Option-Command-M | Pause a file, or mute a live source |
-| Option-Command-Period | Stop Streaming |
 
 ## In the broadcast controls
 

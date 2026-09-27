@@ -449,10 +449,14 @@ final class AppPreferencesStore: ObservableObject {
         mutate { $0.deviceStreamLastDeviceUID = uid }
     }
 
-    /// Remember the last streamed capture source; devices also keep the legacy
-    /// UID key in sync so older builds retain their preselection.
+    /// Remember the last streamed capture source and put it at the top of the recently used
+    /// ones; devices also keep the legacy UID key in sync so older builds retain their
+    /// preselection.
     func mutateDeviceStreamLastSource(_ spec: DeviceStreamCaptureSpec) {
         mutate { preferences in
+            // Read before the last source is overwritten: it seeds the list the first time.
+            preferences.deviceStreamRecentSources = StreamSourceCatalog.recentTokens(
+                preferences.recentDeviceStreamSources, afterStreaming: spec.persistenceToken)
             preferences.deviceStreamLastSource = spec.persistenceToken
             if case .inputDevice(let device) = spec {
                 preferences.deviceStreamLastDeviceUID = device.uid
@@ -940,8 +944,12 @@ final class AudioPreferencesStore: ObservableObject {
     }
 
     func updateSelectedDevices(inputID: String, outputID: String) {
-        let inputPreference = preference(for: inputID, devices: state.catalog.inputDevices)
-        let outputPreference = preference(for: outputID, devices: state.catalog.outputDevices)
+        let inputPreference = Self.preference(
+            forPickerID: inputID, saved: state.preferredInputDevice, devices: state.catalog.inputDevices
+        )
+        let outputPreference = Self.preference(
+            forPickerID: outputID, saved: state.preferredOutputDevice, devices: state.catalog.outputDevices
+        )
 
         guard inputPreference != state.preferredInputDevice || outputPreference != state.preferredOutputDevice else {
             return
@@ -956,15 +964,56 @@ final class AudioPreferencesStore: ObservableObject {
         )
     }
 
+    /// What a device picker's value means for the saved preference. A picker showing
+    /// exactly what the saved preference maps to today changes nothing, which keeps a
+    /// change on one picker from rewriting the other.
+    static func preference(
+        forPickerID pickerID: String,
+        saved: AudioDevicePreference,
+        devices: [AudioDeviceOption]
+    ) -> AudioDevicePreference {
+        if pickerID == selectionID(for: saved, devices: devices) {
+            return saved
+        }
+        return preference(for: pickerID, devices: devices)
+    }
+
     func selectionID(for preference: AudioDevicePreference, devices: [AudioDeviceOption]) -> String {
+        Self.selectionID(for: preference, devices: devices)
+    }
+
+    /// The picker value for a saved preference. A chosen device that is unplugged keeps its
+    /// own value, shown on a row of its own (missingDevice): mapping it to System Default,
+    /// as before, saved System Default over the choice when the pane was open (unplugging
+    /// the Audient left the app on the Mac's speakers after it came back), and made System
+    /// Default impossible to pick on purpose, since the picker already showed it.
+    static func selectionID(for preference: AudioDevicePreference, devices: [AudioDeviceOption]) -> String {
         if preference.usesNoOutput {
             return Self.noOutputDeviceTag
         }
-        guard let persistentID = preference.persistentID,
-              devices.contains(where: { $0.persistentID == persistentID }) else {
+        guard let persistentID = preference.persistentID, persistentID.isEmpty == false else {
             return Self.defaultDeviceTag
         }
         return persistentID
+    }
+
+    /// The saved device when it isn't plugged in: its picker value and the name its row
+    /// shows. Nil for System Default, No output, or a device that is there.
+    static func missingDevice(for preference: AudioDevicePreference,
+                              devices: [AudioDeviceOption]) -> (id: String, name: String)? {
+        guard preference.usesNoOutput == false,
+              let persistentID = preference.persistentID, persistentID.isEmpty == false,
+              devices.contains(where: { $0.persistentID == persistentID }) == false else { return nil }
+        let name = preference.displayName.flatMap { $0.isEmpty ? nil : $0 } ?? persistentID
+        return (persistentID, L10n.format("preferences.audio.device.notConnected", name))
+    }
+
+    var missingOutputDevice: (id: String, name: String)? {
+        Self.missingDevice(for: state.preferredOutputDevice, devices: state.catalog.outputDevices)
+    }
+
+    var missingInputDevice: (id: String, name: String)? {
+        Self.missingDevice(for: state.preferredInputDevice, devices: state.catalog.inputDevices)
     }
 
     private var hasLoadedFreshCatalog = false
@@ -1031,7 +1080,7 @@ final class AudioPreferencesStore: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: workItem)
     }
 
-    private func preference(for selectionID: String, devices: [AudioDeviceOption]) -> AudioDevicePreference {
+    private static func preference(for selectionID: String, devices: [AudioDeviceOption]) -> AudioDevicePreference {
         if selectionID == Self.noOutputDeviceTag {
             return .noOutput
         }

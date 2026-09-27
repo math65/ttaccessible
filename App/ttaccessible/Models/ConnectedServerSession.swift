@@ -120,6 +120,18 @@ extension ConnectedServerSession {
         findChannel(id: id, in: rootChannels)
     }
 
+    func findUserByID(_ id: Int32) -> ConnectedServerUser? {
+        findUser(id: id, in: rootChannels)
+    }
+
+    private func findUser(id: Int32, in channels: [ConnectedServerChannel]) -> ConnectedServerUser? {
+        for ch in channels {
+            if let user = ch.users.first(where: { $0.id == id }) { return user }
+            if let user = findUser(id: id, in: ch.children) { return user }
+        }
+        return nil
+    }
+
     private func findChannel(id: Int32, in channels: [ConnectedServerChannel]) -> ConnectedServerChannel? {
         for ch in channels {
             if ch.id == id { return ch }

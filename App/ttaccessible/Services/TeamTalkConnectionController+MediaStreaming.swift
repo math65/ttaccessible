@@ -190,17 +190,16 @@ extension TeamTalkConnectionController {
                 )
                 return
             } catch AudioDeviceStreamSourceError.deviceUnavailable {
-                // For process sources "unavailable" means no capturable
-                // process matched (app quit, VoiceOver off) — say that, not
-                // "device unplugged".
-                let messageKey: String
-                if case .processes = spec {
-                    messageKey = "mediaStream.device.error.processSourceUnavailable"
-                } else {
-                    messageKey = "mediaStream.device.error.deviceUnavailable"
-                }
                 self.finishOnMain(
-                    .failure(TeamTalkConnectionError.internalError(L10n.text(messageKey))),
+                    .failure(TeamTalkConnectionError.internalError(L10n.text("mediaStream.device.error.deviceUnavailable"))),
+                    completion: completion
+                )
+                return
+            } catch AudioDeviceStreamSourceError.processSourceUnavailable {
+                // No capturable process matched (app quit, VoiceOver off) — say that, not
+                // "device unplugged", even when a device is part of the combination.
+                self.finishOnMain(
+                    .failure(TeamTalkConnectionError.internalError(L10n.text("mediaStream.device.error.processSourceUnavailable"))),
                     completion: completion
                 )
                 return

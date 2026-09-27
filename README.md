@@ -59,7 +59,13 @@ This downloads `libTeamTalk5.dylib` and `TeamTalk.h` from the [official TeamTalk
 
 For development:
 
-The Xcode project uses automatic code signing with an **Apple Development** certificate tied to the maintainer's team. If you do not have that certificate, disable code signing when building locally:
+The Xcode project uses automatic code signing, with the maintainer's team set in `App/Signing.xcconfig`. To sign with your own **Apple Development** certificate, create `App/Signing.local.xcconfig` (git ignores it) containing your team ID:
+
+```
+DEVELOPMENT_TEAM = YOURTEAMID
+```
+
+Xcode picks it up on its own, so you never have to edit the project file. If you have no certificate at all, disable code signing when building locally:
 
 ```bash
 # Debug build
