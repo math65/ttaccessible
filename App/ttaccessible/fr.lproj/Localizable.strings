@@ -635,7 +635,7 @@
 "mediaStream.error.reason.sdkUnsupported" = "TeamTalk ne peut pas ouvrir ce format de fichier.";
 "mediaStream.error.reason.tenBitVideo" = "La vidéo 10 bits n'est pas prise en charge.";
 "mediaStream.device.prompt.title" = "Diffuser du son de ce Mac";
-"mediaStream.device.prompt.message" = "Choisissez ce que vous voulez diffuser dans le canal. Cochez les périphériques et les applications à diffuser ensemble. Tout le son de ce Mac contient déjà chaque application : il ne se combine qu'avec des périphériques. La diffusion continue même lorsque la source est silencieuse.";
+"mediaStream.device.prompt.message" = "Choisissez ce que vous voulez diffuser dans le canal. Vous pouvez cocher ensemble des périphériques et des applications. « Tout le son de ce Mac » comprend déjà toutes les applications : il ne se combine qu'avec des périphériques. La diffusion continue même quand la source est silencieuse.";
 "mediaStream.device.cleared.applications" = "Applications décochées.";
 "mediaStream.device.cleared.systemAudio" = "Tout le son de ce Mac décoché.";
 "mediaStream.device.source.checked" = "%@, coché.";

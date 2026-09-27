@@ -68,8 +68,8 @@ La fenêtre principale comporte quatre curseurs, chacun avec l'action VoiceOver 
 - **Volume de sortie** — le niveau auquel vous entendez tout le monde.
 - **Volume d'entrée** — le niveau auquel votre micro est envoyé.
 - **Volume des effets sonores** — le niveau des sons de notification.
-- **Volume des médias** — le niveau de toutes les diffusions du canal, la vôtre comprise, sans
-  toucher à la voix de personne.
+- **Volume des médias** — le niveau de toutes les diffusions du canal, y compris la vôtre. Les
+  voix ne changent pas.
 
 Pour tout couper ou tout rétablir d'un coup, appuyez sur Commande + M.
 

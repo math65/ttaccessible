@@ -14,23 +14,23 @@ personne trop faible, sans toucher aux autres.
 Appuyez sur Commande + 5. Quand vous êtes seul dans le canal, le mixeur indique *Aucun autre
 utilisateur dans ce canal.*
 
-## Régler les niveaux qui valent pour tout
+## Régler les niveaux généraux
 
-Les quatre niveaux qui n'appartiennent à personne en particulier — **Volume de sortie**, **Volume
-d'entrée**, **Volume des effets sonores** et **Volume des médias** — sont des curseurs dans la
-fenêtre elle-même, juste au-dessus du mixeur : vous vous posez directement sur chacun d'eux, sans
-passer par le mixeur.
+Quatre niveaux ne concernent aucune personne en particulier : **Volume de sortie**, **Volume
+d'entrée**, **Volume des effets sonores** et **Volume des médias**. Ce sont des curseurs de la
+fenêtre, placés juste au-dessus du mixeur, et vous les atteignez sans passer par lui.
 
-Sur l'un quelconque d'entre eux, les flèches règlent le niveau de 1 %, Page précédente et Page
-suivante de 10 %, et Début et Fin le portent d'un coup à 100 % ou à 0 %. Commande + Flèche haut ou
-Flèche bas règle le volume de sortie depuis n'importe où dans la fenêtre, sauf sur une tranche du
-mixeur, où il règle le volume du média de cette personne, et dans un champ de texte, qui garde ces
-touches.
+Sur chacun d'eux, les flèches changent le niveau de 1 %, Page précédente et Page suivante de 10 %.
+Début le porte à 100 %, Fin à 0 %.
 
-Le **volume des médias** baisse d'un coup toutes les diffusions du canal, la vôtre comprise, sans
-toucher à la voix de personne. Commande + Majuscule + Flèche haut ou Flèche bas l'atteint depuis
-n'importe où dans la fenêtre, sauf dans un champ de texte : vous pouvez baisser la musique sans
-quitter l'arbre des canaux.
+Commande + Flèche haut ou Flèche bas règle le volume de sortie depuis presque partout dans la
+fenêtre. Deux exceptions : sur une tranche du mixeur, ces touches règlent le volume du média de la
+personne ; dans un champ de texte, elles gardent leur rôle habituel.
+
+Le **volume des médias** baisse d'un coup toutes les diffusions du canal, y compris la vôtre, sans
+changer les voix. Commande + Majuscule + Flèche haut ou Flèche bas le règle depuis n'importe où dans
+la fenêtre, sauf dans un champ de texte : vous baissez la musique sans quitter l'arbre des
+canaux.
 
 ## Régler une personne
 
@@ -64,7 +64,7 @@ pendant que vous écrivez dans un champ de texte : le chat n'est jamais perturb�
 | M | Annoncer l'état de la sourdine ; deux appuis le changent |
 | S | Annoncer l'état du solo ; deux appuis le changent |
 | Commande + P | Annoncer le panoramique du média ; deux appuis le recentrent |
-| Commande + Majuscule + Flèche haut ou Flèche bas | Le volume des médias, depuis n'importe où dans la fenêtre sauf un champ de texte |
+| Commande + Majuscule + Flèche haut ou Flèche bas | Régler le volume des médias, de n'importe où sauf d'un champ de texte |
 
 Page précédente, Page suivante, Début et Fin acceptent les mêmes modificateurs que les flèches
 tant que vous êtes sur une tranche : avec Commande, elles agissent sur le volume du média ; avec

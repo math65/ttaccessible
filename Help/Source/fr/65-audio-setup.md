@@ -21,11 +21,13 @@ périphériques**. tt-Accessible détecte de toute façon ces changements tout s
 moteur audio : un casque connecté en cours de session est pris en compte sans que vous ayez à
 intervenir.
 
-Un périphérique que vous avez choisi et qui est débranché reste dans son menu, marqué *non
-connecté*, et reste votre choix. En attendant, le son passe par la sortie par défaut du système et
-le micro est coupé ; tous deux reviennent à votre périphérique dès qu'il est rebranché. Un micro qui
-était activé se réactive, avec son signal sonore, tant que la session est restée ouverte et que vous
-ne l'avez pas entre-temps activé ou coupé vous-même, ni remplacé par un autre micro.
+Si vous débranchez un périphérique que vous avez choisi, il reste sélectionné dans son menu, avec
+la mention *non connecté*. En attendant son retour, le son passe par la sortie par défaut du système
+et le micro est coupé. Dès que vous le rebranchez, tt-Accessible s'en sert de nouveau.
+
+Si votre micro était activé, il se réactive lui aussi, avec le son habituel, à trois conditions :
+vous êtes toujours connecté au même serveur, vous ne l'avez ni activé ni coupé entre-temps, et vous
+n'avez pas choisi un autre micro.
 
 ## Supprimer l'écho et le bruit de fond
 

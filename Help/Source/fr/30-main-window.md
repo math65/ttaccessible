@@ -59,9 +59,9 @@ Pour conserver la conversation, appuyez sur Maj + Commande + S.
 
 Le bouton du micro se trouve dans la barre latérale, sous l'arbre des canaux.
 
-Les volumes, eux — **Volume de sortie**, **Volume d'entrée**, **Volume des effets sonores** et
-**Volume des médias** —, sont des curseurs dans la fenêtre, juste au-dessus du mixeur du canal :
-vous vous posez directement sur chacun d'eux. Pour le mixeur lui-même, consultez
+Juste au-dessus du mixeur du canal, quatre curseurs règlent les volumes : **Volume de sortie**,
+**Volume d'entrée**, **Volume des effets sonores** et **Volume des médias**. Chacun est un élément à
+part entière, que vous atteignez directement. Pour le mixeur lui-même, consultez
 [Équilibrer un canal avec le mixeur](mixer.html).
 
 Pour connaître l'état audio à tout moment — sortie active ou non, micro en train de transmettre ou
