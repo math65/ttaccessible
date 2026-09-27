@@ -33,6 +33,10 @@ final class AudioGainControlView: NSView {
         slider.target = self
         slider.action = #selector(handleSliderChanged(_:))
         slider.setAccessibilityElement(false)
+        // This view is the one Tab stop and the one element VoiceOver reads. Hidden from
+        // VoiceOver, the slider could still take the focus: Tab stopped on it first, and
+        // VoiceOver read "50%, slider" with no name. The mouse still drags it.
+        slider.refusesFirstResponder = true
 
         let stack = NSStackView(views: [titleLabel, slider, valueLabel])
         stack.orientation = .horizontal
