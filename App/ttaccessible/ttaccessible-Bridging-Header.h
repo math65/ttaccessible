@@ -4,3 +4,4 @@
 #include "Services/OpusShim.h"
 #include "Services/AtomicU64.h"
 #include "Services/PythonShim.h"
+#include "AppKit/NavigationOrderWindow.h"
