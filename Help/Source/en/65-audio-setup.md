@@ -21,7 +21,9 @@ a session are picked up without action from you.
 
 A device you chose that is unplugged stays in its menu, marked *not connected*, and stays your
 choice. Meanwhile, sound plays through the system default output and the microphone is off; both
-go back to your device as soon as it is plugged in again, the microphone on or off as it was.
+go back to your device as soon as it is plugged in again. A microphone that was on comes back on,
+with its sound, as long as the session is still open and you haven't meanwhile turned it on or off
+yourself or chosen another microphone.
 
 ## Remove echo and background noise
 
