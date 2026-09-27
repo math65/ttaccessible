@@ -1,3 +1,55 @@
+## v1.13.0-beta.1 (build 57) — 2026-09-27
+
+The volume sliders are back in the window, you can stream several sources from your Mac at once, and the connected window is easier to move through with VoiceOver. Most of this beta is the work of Rocco Fiorentino.
+
+### Volumes
+- **The volume sliders are back in the window**, just above the mixer: output, input, sound effects and media. Several people asked for them. The General strip in the mixer is gone.
+- **Tab stops once on each slider**, and VoiceOver reads its name. Each slider has a "Reset to 50%" action.
+
+### Streaming from your Mac
+- **Stream several sources at once.** Tick any mix of devices and apps: a microphone and your music player, two audio interfaces, VoiceOver and an app. They go out as one stream.
+- **A new list to pick sources from**, with a search field and three groups: Recently used, Devices and Applications. Your last five sources are in Recently used.
+- **Nothing is ticked the first time you open it**, so nothing goes out until you choose.
+- **Option+Command+A now starts and stops streaming.** While anything is streaming, the same key stops it, whether it is sound from your Mac, a file or an address. Option+Command+Period no longer does anything.
+- **Loud sources no longer distort when they add up.** The peaks are brought down smoothly.
+- **An app no longer cuts out for half a second** when it starts playing a new sound, such as a Quick Look preview.
+
+### VoiceOver
+- **The connected window is no longer a group you have to step into.** VoiceOver goes straight from the sidebar to the sliders, the mixer, the chat and the history, with no divider in the way.
+- **The microphone button says its name**, Enable microphone or Mute microphone. It used to repeat the audio status instead.
+- **Command+Shift+A answers straight away**, together with its sound, and no longer says "Toggle microphone" first.
+- **A channel with a topic is read once.** It was read twice.
+- **In the mixer, pressing a key twice only says the new value.** It used to say the old one first.
+- **Command+5 in an empty channel tells you nobody else is there.**
+- Sheet titles can be reached as headings.
+
+### Audio devices
+- **Unplugging your chosen device no longer loses it.** It stays in the menu, marked "not connected", and the app goes back to it as soon as you plug it in again. You can still choose System Default if you want to.
+- **Sound comes back after you replug a device**, or after macOS restarts its audio. Before, you could be left with no sound at all.
+- **Notification sounds follow your output device** when it comes back, and when the system default changes.
+- **If your microphone was on, it turns back on with its device**, with the usual sound. That only happens if you are still on the same server, and have not turned the mic on or off or picked another one in the meantime.
+- **The microphone preview in Preferences now plays while you are muted.**
+
+### Fixes
+- **Editing an old saved server could fail** with the message "Invalid attempt to change the owner of this item". The change now saves. Reported by Vlad.
+- **Recording a key in Preferences works with Command+Shift+A.** Pressing it used to turn your microphone on or off instead.
+- The help has been checked page by page against the app, in English and in French.
+
+### Known
+- The microphone turning back on after a replug has not been tried with a real device yet.
+- Server error messages are still in English, whatever language you use the app in.
+
+### Install
+
+If you turned on "Include beta versions" in Preferences > General, tt-Accessible will offer you this update. To install it by hand:
+
+1. Download `ttaccessible-1.13.0-beta.1-57.zip` below.
+2. Unzip it and drag `ttaccessible.app` into your `/Applications` folder, replacing the previous version.
+3. Open it. The app is notarized, so macOS won't warn you.
+
+### Download
+[ttaccessible-1.13.0-beta.1-57.zip](https://github.com/math65/ttaccessible/releases/download/v1.13.0-beta.1/ttaccessible-1.13.0-beta.1-57.zip)
+
 ## v1.12.0 (build 56) — 2026-09-04
 
 The connected window has been rebuilt into two panes, every volume in the app now lives inside the channel mixer, and the app speaks Turkish. If you have been on the stable channel since 1.11.1, this release also brings you everything the 1.12 betas have been testing all summer.

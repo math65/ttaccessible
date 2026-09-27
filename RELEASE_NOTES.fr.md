@@ -1,3 +1,55 @@
+## v1.13.0-beta.1 (build 57) — 27/09/2026
+
+Les curseurs de volume reviennent dans la fenêtre, vous pouvez diffuser plusieurs sources de votre Mac en même temps, et la fenêtre de connexion se parcourt plus simplement avec VoiceOver. L'essentiel de cette bêta est l'œuvre de Rocco Fiorentino.
+
+### Volumes
+- **Les curseurs de volume sont de retour dans la fenêtre**, juste au-dessus du mixeur : sortie, entrée, effets sonores et médias. Plusieurs d'entre vous les avaient redemandés. La bande Général du mixeur disparaît.
+- **Tab s'arrête une seule fois sur chaque curseur**, et VoiceOver lit son nom. Chaque curseur propose l'action « Réinitialiser à 50 % ».
+
+### Diffuser le son de votre Mac
+- **Vous pouvez diffuser plusieurs sources à la fois.** Cochez les périphériques et les apps que vous voulez : un micro et votre lecteur de musique, deux interfaces audio, VoiceOver et une app. Le canal reçoit le tout en une seule diffusion.
+- **Une nouvelle liste pour choisir vos sources**, avec un champ de recherche et trois groupes : Utilisées récemment, Périphériques et Applications. Vos cinq dernières sources se trouvent dans Utilisées récemment.
+- **À la première ouverture, rien n'est coché.** Rien ne part tant que vous n'avez pas choisi.
+- **Option + Commande + A lance et arrête la diffusion.** Pendant une diffusion, la même touche l'arrête, qu'il s'agisse du son de votre Mac, d'un fichier ou d'une adresse. Option + Commande + Point ne sert plus.
+- **Les sources fortes ne saturent plus quand elles s'additionnent.** Les crêtes sont adoucies.
+- **Une app ne se coupe plus une demi-seconde** quand elle joue un nouveau son, par exemple un aperçu Coup d'œil.
+
+### VoiceOver
+- **La fenêtre de connexion n'est plus un groupe dans lequel il faut entrer.** VoiceOver passe directement de la barre latérale aux curseurs, au mixeur, au chat et à l'historique, sans séparation au milieu.
+- **Le bouton du micro dit enfin ce qu'il fait** : « Activer le micro » ou « Couper le micro ». Avant, il répétait l'état audio.
+- **Maj + Commande + A répond tout de suite**, en même temps que son signal sonore, sans dire d'abord « Activer ou couper le micro ».
+- **Un canal qui a un sujet n'est plus lu deux fois.**
+- **Dans le mixeur, un double appui n'annonce que la nouvelle valeur**, sans lire l'ancienne avant.
+- **Commande + 5 dans un canal vide vous dit que personne d'autre n'est là.**
+- Les titres des feuilles sont désormais des titres de section pour VoiceOver.
+
+### Périphériques audio
+- **Débrancher le périphérique que vous avez choisi ne le fait plus oublier.** Il reste dans le menu avec la mention « non connecté », et l'app s'en sert de nouveau dès que vous le rebranchez. Vous pouvez toujours choisir Par défaut du système si vous le souhaitez.
+- **Le son revient quand vous rebranchez un périphérique**, ou quand macOS redémarre son audio. Jusqu'ici, vous pouviez vous retrouver sans aucun son.
+- **Les sons de notification suivent votre sortie audio** quand elle revient, et quand la sortie par défaut du système change.
+- **Si votre micro était activé, il se réactive avec son périphérique**, avec le signal sonore habituel. À condition que vous soyez toujours sur le même serveur, que vous n'ayez ni activé ni coupé le micro entre-temps, et que vous n'ayez pas choisi un autre micro.
+- **L'aperçu du micro dans les Préférences fonctionne même micro coupé.**
+
+### Corrections
+- **Modifier un ancien serveur enregistré pouvait échouer** avec le message « Invalid attempt to change the owner of this item ». La modification est maintenant enregistrée. Signalé par Vlad.
+- **Enregistrer Maj + Commande + A comme raccourci dans les Préférences fonctionne.** Cette touche activait ou coupait votre micro au lieu d'être enregistrée.
+- L'aide a été vérifiée page par page, en français comme en anglais.
+
+### À savoir
+- La réactivation du micro au rebranchement n'a pas encore été essayée avec un vrai périphérique.
+- Les messages d'erreur du serveur restent en anglais, quelle que soit la langue de l'app.
+
+### Installation
+
+Si vous avez coché « Inclure les versions bêta » dans Préférences > Général, tt-Accessible vous proposera cette mise à jour. Pour l'installer à la main :
+
+1. Téléchargez `ttaccessible-1.13.0-beta.1-57.zip` ci-dessous.
+2. Décompressez-le et glissez `ttaccessible.app` dans votre dossier `/Applications`, à la place de l'ancienne version.
+3. Ouvrez l'app. Elle est notarisée : macOS ne vous affichera pas d'avertissement.
+
+### Téléchargement
+[ttaccessible-1.13.0-beta.1-57.zip](https://github.com/math65/ttaccessible/releases/download/v1.13.0-beta.1/ttaccessible-1.13.0-beta.1-57.zip)
+
 ## v1.12.0 (build 56) — 4 septembre 2026
 
 La fenêtre de connexion s'organise maintenant en deux volets, tous les volumes de l'application se règlent depuis le mixeur, et l'application parle turc. Si vous êtes resté sur le canal stable depuis la 1.11.1, cette version vous apporte aussi tout ce que les bêtas de l'été ont mis au point.

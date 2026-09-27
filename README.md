@@ -14,7 +14,7 @@ The official TeamTalk Qt client on Mac has significant accessibility issues — 
 - **File sharing** — upload/download with progress, speed, ETA
 - **Push-to-talk** — any key, including a single key or a modifier-only chord; optionally active while another app is in front, plus a "Both" mode that combines muting with push-to-talk
 - **Per-user Channel Mixer** — voice volume, media volume, stereo placement, mute and solo for every person in the channel, entirely keyboard- and VoiceOver-driven (Cmd+5)
-- **Live audio-device streaming** — broadcast any input device (interface, virtual device, loopback) into the channel alongside your voice (Cmd+Option+A)
+- **Live audio streaming** — broadcast any mix of input devices (interface, virtual device, loopback) and apps, VoiceOver included, into the channel alongside your voice (Cmd+Option+A)
 - **Multiple profiles** — independent server lists and settings, with several instances side by side
 - **BearWare web login** — connect with a bearware.dk account on servers that support it
 - **Advanced audio engine** — custom dual-path capture (AVAudioEngine + standalone AUHAL), input gain, channel selection, echo cancellation
@@ -181,8 +181,7 @@ The push-to-talk key is not fixed — set it yourself in **Preferences > Audio**
 |----------|--------|
 | Cmd+Option+S | Stream media from file |
 | Cmd+Option+U | Stream media from URL |
-| Cmd+Option+A | Stream a live audio device |
-| Cmd+Option+. | Stop media streaming |
+| Cmd+Option+A | Stream audio from this Mac; stops any stream while one is running |
 
 ## Architecture
 
