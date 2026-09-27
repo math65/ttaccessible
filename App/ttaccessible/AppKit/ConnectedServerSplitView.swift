@@ -63,7 +63,9 @@ final class ConnectedServerSplitView: NSSplitView, NSSplitViewDelegate {
     // synthesises the divider as one of its accessibility children, so it would simply
     // rise a level and still be met. Returning the arranged subviews — and only those —
     // leaves the two panes' own contents to rise to the window, in the same order they
-    // had before the split existed.
+    // had before the split existed. That is their AXChildren order; VoiceOver walks the
+    // window's navigation order, which AppKit sorts by position and which would interleave
+    // the panes — ReadingOrderWindow puts it back.
     override func isAccessibilityElement() -> Bool { false }
 
     // Through the unignored walk, not raw: handing back the two container views
