@@ -67,4 +67,25 @@ final class AudioGainControlViewTests: XCTestCase {
         control.apply(.toMin)
         XCTAssertEqual(seen, [24, -24])           // the ends of the -24…+24 dB scale
     }
+
+    /// Tab stops once on a level, on the view VoiceOver reads by name — not first on the
+    /// slider inside it, which VoiceOver read as "50%, slider" with no name.
+    func testTabStopsOnceOnEachLevel() {
+        let first = makeControl()
+        let second = makeControl()
+        let stack = NSStackView(views: [first, second])
+        stack.orientation = .vertical
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 200),
+                              styleMask: [.titled], backing: .buffered, defer: false)
+        window.contentView = stack
+        window.recalculateKeyViewLoop()
+
+        XCTAssertFalse(first.slider.acceptsFirstResponder)
+        XCTAssertTrue(first.acceptsFirstResponder)
+
+        window.makeFirstResponder(first)
+        window.selectNextKeyView(nil)
+        XCTAssertTrue(window.firstResponder === second,
+                      "Tab from one level went to \(String(describing: window.firstResponder)), not the next level")
+    }
 }
