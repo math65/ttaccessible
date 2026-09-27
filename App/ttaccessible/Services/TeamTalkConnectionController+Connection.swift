@@ -1199,6 +1199,9 @@ extension TeamTalkConnectionController {
         pushToTalkPressed = false
         reopenVoiceWhenChannelAllowsIt = false
         voiceCaptureRecoveryAttempts = 0
+        // A microphone waiting for its device belongs to this session, not the next
+        // one, which may be on another server.
+        microphoneAwaitingInputDevice = nil
         masterMuted = false
         hearMyselfEnabled = false
         previewMonitorEnabled = false

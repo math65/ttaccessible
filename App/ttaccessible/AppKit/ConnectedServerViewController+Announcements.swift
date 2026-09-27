@@ -121,13 +121,23 @@ extension ConnectedServerViewController {
         guard pendingAnnouncements.isEmpty == false else { return }
         let combined = pendingAnnouncements.joined(separator: ". ")
         pendingAnnouncements.removeAll()
+        postAnnouncement(combined)
+    }
 
+    /// Speaks at once, skipping the 0.3 s batching `announce` waits out. For the direct
+    /// answer to a key the user just pressed — the microphone toggle — where that wait put
+    /// the speech after the toggle's own sound instead of with it.
+    func announceNow(_ message: String) {
+        postAnnouncement(message)
+    }
+
+    private func postAnnouncement(_ message: String) {
         let accessibilityElement = NSApp.accessibilityWindow() ?? view.window ?? view
         NSAccessibility.post(
             element: accessibilityElement,
             notification: .announcementRequested,
             userInfo: [
-                NSAccessibility.NotificationUserInfoKey.announcement: combined,
+                NSAccessibility.NotificationUserInfoKey.announcement: message,
                 NSAccessibility.NotificationUserInfoKey.priority: NSAccessibilityPriorityLevel.high.rawValue
             ]
         )

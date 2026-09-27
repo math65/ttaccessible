@@ -23,6 +23,11 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
     private let preferencesStore: AppPreferencesStore
     private let connectionController: TeamTalkConnectionController
     private let previewController = AdvancedMicrophonePreviewController()
+    /// Whether the running preview plays the live microphone engine (connected with
+    /// the mic on) rather than its own capture. It moves between the two as the live
+    /// mic starts and stops, so muting mid-preview doesn't silence it.
+    private var previewUsesLiveMicrophone = false
+    private var previewFallbackWorkItem: DispatchWorkItem?
     private var cancellables = Set<AnyCancellable>()
     private var isNormalizing = false
 
@@ -48,6 +53,12 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
             name: .stopAdvancedMicrophonePreview,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleLiveMicrophoneStopped),
+            name: .liveMicrophoneInputStopped,
+            object: nil
+        )
 
         // The app eagerly constructs this store at launch to warm the
         // Preferences window, but refreshState() does synchronous CoreAudio
@@ -64,9 +75,45 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
         NotificationCenter.default.removeObserver(self)
     }
 
+    /// The live mic is starting. Connected, the preview hands over to it instead of
+    /// stopping; otherwise (a capture about to need the device) it stops as before.
     @objc
     private func handleStopPreviewNotification() {
-        stopPreview()
+        previewFallbackWorkItem?.cancel()
+        guard isPreviewRunning, connectionController.isConnected else {
+            stopPreview()
+            return
+        }
+        guard previewUsesLiveMicrophone == false else { return }
+        previewController.stop()
+        previewUsesLiveMicrophone = true
+        connectionController.setPreviewMonitor(true)
+    }
+
+    /// The live mic stopped (muted, left the channel). Keep the preview going on its
+    /// own capture. Waits a moment first: a restart stops and reopens the live mic
+    /// within a few hundred milliseconds, and the preview should just stay on it.
+    @objc
+    private func handleLiveMicrophoneStopped() {
+        guard isPreviewRunning, previewUsesLiveMicrophone else { return }
+        previewFallbackWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self, self.isPreviewRunning, self.previewUsesLiveMicrophone else { return }
+            self.connectionController.startPreviewMonitorIfLiveMicrophone { [weak self] live in
+                guard let self, self.isPreviewRunning, live == false else { return }
+                self.connectionController.setPreviewMonitor(false)
+                self.previewUsesLiveMicrophone = false
+                do {
+                    try self.startPreview()
+                    self.lastErrorMessage = nil
+                } catch {
+                    self.stopPreview()
+                    self.lastErrorMessage = error.localizedDescription
+                }
+            }
+        }
+        previewFallbackWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: workItem)
     }
 
     var advancedPreferences: AdvancedInputAudioPreferences {
@@ -104,29 +151,30 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
             return
         }
 
-        // While connected, the live mic engine owns the input device, so a second
-        // capture can't open. Instead monitor the live mic through the output engine
-        // (it produces sound while the mic is actually capturing/transmitting).
-        if connectionController.isConnected {
-            connectionController.setPreviewMonitor(true)
-            lastErrorMessage = nil
-            isPreviewRunning = true
-            return
-        }
-
-        do {
-            try startPreview()
-            lastErrorMessage = nil
-            isPreviewRunning = true
-        } catch {
-            lastErrorMessage = error.localizedDescription
-            isPreviewRunning = false
+        // In a channel the live mic engine owns the input device — muted, it is started
+        // with its gate closed — so the preview monitors it through the output engine
+        // instead of opening a second capture. Disconnected or outside a channel, the
+        // preview opens its own capture. Either way you hear yourself, muted or not.
+        isPreviewRunning = true
+        lastErrorMessage = nil
+        connectionController.startPreviewMonitorIfLiveMicrophone { [weak self] live in
+            guard let self, self.isPreviewRunning else { return }
+            self.previewUsesLiveMicrophone = live
+            guard live == false else { return }
+            do {
+                try self.startPreview()
+            } catch {
+                self.lastErrorMessage = error.localizedDescription
+                self.isPreviewRunning = false
+            }
         }
     }
 
     func stopPreview() {
+        previewFallbackWorkItem?.cancel()
         connectionController.setPreviewMonitor(false)
         previewController.stop()
+        previewUsesLiveMicrophone = false
         isPreviewRunning = false
     }
 
@@ -134,10 +182,10 @@ final class AdvancedMicrophoneSettingsStore: ObservableObject {
         feedbackMessage = nil
         preferencesStore.updateAdvancedInputAudio(preferences, for: deviceInfo?.uid)
         refreshState(normalizeIfNeeded: true)
-        // Only the local (disconnected) preview needs restarting to pick up new
-        // settings; the connected monitor follows the live engine, which
-        // applyAudioPreferences below reconfigures.
-        if isPreviewRunning && connectionController.isConnected == false {
+        // Only the preview's own capture needs restarting to pick up new settings;
+        // the live-mic monitor follows the live engine, which applyAudioPreferences
+        // below reconfigures.
+        if isPreviewRunning && previewUsesLiveMicrophone == false {
             do {
                 try startPreview()
                 lastErrorMessage = nil

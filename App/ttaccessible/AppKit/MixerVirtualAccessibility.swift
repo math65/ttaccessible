@@ -110,8 +110,7 @@ final class VirtualControlView: NSView {
 
     let config: Config
     /// "channel-strip-<stripID>-control-<index>", set by the owning strip. The keyboard
-    /// controller reads it off VoiceOver's AX cursor to know WHICH control is focused —
-    /// the General strip's arrows act on the focused level, not on a fixed one.
+    /// controller reads the strip's ID off it when VoiceOver's cursor is on a control.
     var axIdentifier: String?
     private var announceToggle = false
     private var cachedPickerController: VirtualPickerController?
@@ -495,7 +494,14 @@ final class A11yVirtualGridOverlayView: NSView, MixerRegionAnnouncing {
     override func isAccessibilityElement() -> Bool { true }
     override func accessibilityRole() -> NSAccessibility.Role? { .group }
     override func accessibilityRoleDescription() -> String? { areaRoleDescription }
-    override func accessibilityLabel() -> String? { MainActor.assumeIsolated { regionPrefixed(areaLabel) } }
+    /// With no strips, the area says why it is empty: the visible "No other users in this
+    /// channel" sits in the hidden SwiftUI rendering, and Command-5 in an empty channel
+    /// read only "Channel Mixer, Mixer, area".
+    override func accessibilityLabel() -> String? {
+        MainActor.assumeIsolated {
+            regionPrefixed(virtualStrips.isEmpty ? "\(areaLabel), \(L10n.text("mixer.empty"))" : areaLabel)
+        }
+    }
     override func accessibilityChildren() -> [Any]? { virtualStrips.isEmpty ? nil : virtualStrips }
 
     func configure(areaLabel: String, areaRoleDescription: String,

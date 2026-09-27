@@ -99,7 +99,13 @@ extension ConnectedServerViewController: NSOutlineViewDelegate {
     }
 
     func outlineView(_ outlineView: NSOutlineView, viewFor tableColumn: NSTableColumn?, item: Any) -> NSView? {
-        guard let node = item as? ServerTreeNode else { return nil }
+        guard var node = item as? ServerTreeNode else { return nil }
+        // The outline hands back the value it cached at the last full reload. A row redrawn
+        // in place (reloadVisibleUserRows: talking, muted, video) must draw the user as the
+        // session has them now, or your own row keeps its old "talking" after a mic toggle.
+        if case .user(let cached) = node, let current = session.findUserByID(cached.id) {
+            node = .user(current)
+        }
 
         let identifier = NSUserInterfaceItemIdentifier("ConnectedServerCell")
         let textField: PressActionTextField
@@ -121,6 +127,8 @@ extension ConnectedServerViewController: NSOutlineViewDelegate {
 
         let accessLabel = accessibilityText(for: node)
         textField.toolTip = accessLabel
+        textField.speaksToolTipAsHelp = false
+        textField.readsLabelAsValue = true
         textField.setAccessibilityLabel(accessLabel)
 
         switch node {

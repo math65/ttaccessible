@@ -157,6 +157,9 @@ extension TeamTalkConnectionController {
                 return
             }
 
+            // The user has taken the microphone in hand: a device plugged back in later
+            // must not change it behind them.
+            self.microphoneAwaitingInputDevice = nil
             let opening = self.bothGateOpen == false
             if opening {
                 if self.voiceTransmissionEnabled == false {
@@ -432,8 +435,10 @@ extension TeamTalkConnectionController {
             self.extendDeviceChangeSuppressionLocked(duration: 5.0)
             AudioLogger.log("restartSoundSystem: begin")
 
-            let hadMic = self.isAnyMicrophoneEngineRunning || self.inputAudioReady
-            let hadVoice = self.voiceTransmissionEnabled
+            // A microphone waiting for its device to come back counts as one we had.
+            let awaited = self.microphoneAwaitingInputDevice
+            let hadMic = self.isAnyMicrophoneEngineRunning || self.inputAudioReady || awaited != nil
+            let hadVoice = self.voiceTransmissionEnabled || awaited == true
             if hadMic, let instance = self.instance {
                 self.stopAdvancedMicrophoneInputLocked(instance: instance, reason: "restartSoundSystem")
             }
@@ -487,8 +492,20 @@ extension TeamTalkConnectionController {
                 do {
                     try self.ensureAdvancedMicrophoneInputReadyLocked(instance: instance)
                     if hadVoice { self.voiceTransmissionEnabled = true }
+                    // Back after its device returned: it was off, so say it is on again,
+                    // as turning it on does.
+                    if awaited != nil {
+                        if self.microphoneGateOpenLocked {
+                            SoundPlayer.shared.play(.voxMeEnable)
+                        }
+                        if let connectedRecord = self.connectedRecord {
+                            self.publishSessionLocked(instance: instance, record: connectedRecord)
+                        }
+                    }
                 } catch {
                     AudioLogger.log("restartSoundSystem: mic restart failed — %@", error.localizedDescription)
+                    // Brought back when the chosen device is plugged in again.
+                    self.microphoneAwaitingInputDevice = hadVoice
                     self.voiceTransmissionEnabled = false
                     self.inputAudioReady = false
                     self.advancedMicrophoneTargetFormat = nil
@@ -542,6 +559,10 @@ extension TeamTalkConnectionController {
                 || preferences.preferredOutputDevice != self.appliedOutputPreference
             let inputChanged = self.appliedInputPreference == nil
                 || preferences.preferredInputDevice != self.appliedInputPreference
+            // Another microphone chosen: the one we were waiting for is no longer wanted.
+            if inputChanged {
+                self.microphoneAwaitingInputDevice = nil
+            }
             // Microphone processing (AEC / noise-suppression mode / channel preset)
             // changed without a device change — the capture engine must be rebuilt so
             // the WebRTC processor is recreated with the new flags, otherwise the change
@@ -657,7 +678,16 @@ extension TeamTalkConnectionController {
                 return
             }
 
+            // Turning the microphone on is the user's own answer to one that went away with
+            // its device: if it fails here, a replug later must not turn it on unasked.
+            self.microphoneAwaitingInputDevice = nil
             self.extendDeviceChangeSuppressionLocked(duration: 3.0)
+            // Kept running for the Audio-preferences preview while muted, the engine
+            // is already open on the current devices, so there is nothing new to
+            // snapshot. The snapshot scans every CoreAudio device twice (~22 ms each
+            // on a 24-device rig, measured) on this queue, which also feeds the
+            // preview: the preview lost 65-75 ms at every unmute.
+            let engineWasOpen = self.inputAudioReady
             do {
                 try self.ensureAdvancedMicrophoneInputReadyLocked(instance: instance)
                 self.voiceTransmissionEnabled = true
@@ -667,7 +697,9 @@ extension TeamTalkConnectionController {
                 DispatchQueue.main.async {
                     preferencesStore.updateLastVoiceTransmissionEnabled(true)
                 }
-                self.captureAudioRoutingSnapshotLocked()
+                if engineWasOpen == false {
+                    self.captureAudioRoutingSnapshotLocked()
+                }
                 self.finishOnMain(.success(()), completion: completion)
             } catch {
                 self.finishOnMain(.failure(error), completion: completion)
@@ -684,12 +716,27 @@ extension TeamTalkConnectionController {
                 return
             }
 
-            if self.isAnyMicrophoneEngineRunning || self.inputAudioReady {
-                self.stopAdvancedMicrophoneInputLocked(instance: instance, reason: "deactivateVoiceTransmission")
+            if self.previewMonitorEnabled, self.inputAudioReady {
+                // The Audio-preferences preview is playing this engine: keep it
+                // running and only close the gate, so muting doesn't cut the preview
+                // for the second it takes to reopen a capture. Nothing reaches the
+                // channel — every chunk is gated on voiceTransmissionEnabled — and
+                // the flush ends the SDK's input session as stopping would.
+                // Stopping the preview stops the engine (setPreviewMonitor).
+                AudioLogger.log("deactivateVoiceTransmission: gate closed, engine kept for the preview")
+                self.voiceSyncDelayLine.clear()
+                _ = TT_InsertAudioBlock(instance, nil)
+                self.voiceTransmissionEnabled = false
+            } else {
+                if self.isAnyMicrophoneEngineRunning || self.inputAudioReady {
+                    self.stopAdvancedMicrophoneInputLocked(instance: instance, reason: "deactivateVoiceTransmission")
+                }
+                // Muted on purpose: a device plugged back in later must not reopen it.
+                self.microphoneAwaitingInputDevice = nil
+                self.voiceTransmissionEnabled = false
+                self.inputAudioReady = false
+                self.advancedMicrophoneTargetFormat = nil
             }
-            self.voiceTransmissionEnabled = false
-            self.inputAudioReady = false
-            self.advancedMicrophoneTargetFormat = nil
             SoundPlayer.shared.play(.voxMeDisable)
             self.publishSessionLocked(instance: instance, record: record)
 
@@ -724,15 +771,29 @@ extension TeamTalkConnectionController {
         DispatchQueue.main.async {
             NotificationCenter.default.post(name: .stopAdvancedMicrophonePreview, object: nil)
         }
+        // The preview has just handed its capture over to this engine. If the engine then
+        // fails to start, hand it back, or the preview stays "running" and silent.
+        func handPreviewBack() {
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .liveMicrophoneInputStopped, object: nil)
+            }
+        }
 
         guard let deviceInfo = InputAudioDeviceResolver.resolveCurrentInputDevice(for: preferencesStore.preferences.preferredInputDevice) else {
+            handPreviewBack()
             throw TeamTalkConnectionError.internalError(L10n.text("preferences.audio.advanced.error.deviceUnavailable"))
         }
 
         AudioLogger.log("ensureAdvancedMicrophoneInputReady: device=%@ channels=%d rate=%.0f", deviceInfo.name, deviceInfo.inputChannels, deviceInfo.nominalSampleRate)
 
         let effectivePreferences = effectiveMicrophoneProcessingPreferencesLocked(for: deviceInfo)
-        let targetFormat = try currentAdvancedMicrophoneTargetFormatLocked(instance: instance)
+        let targetFormat: AdvancedMicrophoneAudioTargetFormat
+        do {
+            targetFormat = try currentAdvancedMicrophoneTargetFormatLocked(instance: instance)
+        } catch {
+            handPreviewBack()
+            throw error
+        }
 
         AudioLogger.log("ensureAdvancedMicrophoneInputReady: targetFormat rate=%.0f channels=%d txInterval=%d", targetFormat.sampleRate, targetFormat.channels, targetFormat.txIntervalMSec)
 
@@ -754,6 +815,7 @@ extension TeamTalkConnectionController {
             appliedInputPreference = preferencesStore.preferences.preferredInputDevice
             appliedAdvancedInputAudio = effectivePreferences
             lastAudioWarningMessage = nil
+            microphoneAwaitingInputDevice = nil
 
             // Monitor sample rate changes on the active input device.
             let activeDeviceUID = deviceInfo.uid
@@ -784,6 +846,7 @@ extension TeamTalkConnectionController {
             do {
                 try ensureDirectOutputAudioReadyLocked(instance: instance)
             } catch { }
+            handPreviewBack()
             throw error
         }
     }
@@ -927,20 +990,10 @@ extension TeamTalkConnectionController {
     /// honoring the user's explicit preference and falling back to the system
     /// default output.
     func resolveOutputEngineDeviceLocked() -> InputAudioDeviceResolver.OutputAudioDeviceInfo? {
-        let pref = preferencesStore.preferences.preferredOutputDevice
-        if pref.usesSystemDefault == false,
-           let info = InputAudioDeviceResolver.resolveOutputDevice(
-               persistentID: pref.persistentID,
-               displayName: pref.displayName
-           ) {
-            return info
-        }
-        let devices = InputAudioDeviceResolver.availableOutputDevices()
-        if let defaultUID = InputAudioDeviceResolver.defaultOutputDeviceUID(),
-           let match = devices.first(where: { $0.uid == defaultUID }) {
-            return match
-        }
-        return devices.first
+        InputAudioDeviceResolver.outputEngineDevice(
+            for: preferencesStore.preferences.preferredOutputDevice,
+            in: InputAudioDeviceResolver.availableOutputDevices()
+        )
     }
 
     /// Start the output render engine on the currently-selected output device.
@@ -1117,6 +1170,23 @@ extension TeamTalkConnectionController {
         inputAudioReady = false
         advancedMicrophoneTargetFormat = nil
         appliedAdvancedInputAudio = nil
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .liveMicrophoneInputStopped, object: nil)
+        }
+    }
+
+    /// Rebuilds the AEC speaker tap after the system default output changed without the
+    /// microphone restarting (an output-only switch): the tap was made on the old default.
+    func restartSpeakerTapForAECLocked(instance: UnsafeMutableRawPointer) {
+        guard #available(macOS 14.2, *), let tap = speakerTapCaptureStorage as? SpeakerTapCapture else { return }
+        tap.stop()
+        speakerTapCaptureStorage = nil
+        if startSpeakerTapForAEC() {
+            AudioLogger.log("AEC: speaker tap rebuilt on the new default output")
+        } else {
+            TT_EnableAudioBlockEvent(instance, TT_MUXED_USERID, UInt32(STREAMTYPE_VOICE.rawValue), 1)
+            AudioLogger.log("AEC: speaker tap rebuild failed — SDK muxed audio for reference signal (fallback)")
+        }
     }
 
     @available(macOS 14.2, *)
@@ -1191,22 +1261,17 @@ extension TeamTalkConnectionController {
             return
         }
         let inChannel = TT_GetMyChannelID(instance) > 0
-        guard isEffectivelyTransmittingLocked, inChannel else {
-            AudioCaptureDiagnostics.shared.recordInsertAttempt(
-                sampleRate: chunk.sampleRate,
-                accepted: false,
-                gated: true
-            )
-            return
-        }
+        let transmitting = isEffectivelyTransmittingLocked && inChannel
 
         // Local monitor at CAPTURE time — it must stay live even when the
-        // transmit below is voice-sync-delayed. Feed the same processed mic
-        // audio we're transmitting straight into the output mixer — local, no
-        // SDK round-trip. Drives both "hear myself" and the connected-mode
-        // Audio-preferences mic preview (one shared source key, so enabling
-        // both never doubles the audio).
-        if hearMyselfEnabled || previewMonitorEnabled {
+        // transmit below is voice-sync-delayed. Feed the processed mic audio
+        // straight into the output mixer — local, no SDK round-trip. Drives both
+        // "hear myself" and the connected-mode Audio-preferences mic preview (one
+        // shared source key, so enabling both never doubles the audio). Hear
+        // myself is what goes out to the channel, so it follows the transmit
+        // gate; the preview is for checking the mic, so it plays whether or not
+        // the gate is open (push-to-talk released, "both" mode closed).
+        if previewMonitorEnabled || (hearMyselfEnabled && transmitting) {
             outputRenderEngine.enqueueUser(
                 localMonitorEngineKey,
                 pcm: chunk.samples,
@@ -1215,6 +1280,15 @@ extension TeamTalkConnectionController {
                 sampleRate: Double(chunk.sampleRate),
                 profile: .lowLatency
             )
+        }
+
+        guard transmitting else {
+            AudioCaptureDiagnostics.shared.recordInsertAttempt(
+                sampleRate: chunk.sampleRate,
+                accepted: false,
+                gated: true
+            )
+            return
         }
 
         // Voice↔stream sync: while a live-capture media stream runs, outgoing
@@ -1626,16 +1700,60 @@ extension TeamTalkConnectionController {
         }
     }
 
-    /// Connected-mode mic preview: monitor the live mic through the output engine
-    /// (the input device is already owned by the live capture, so a second capture
-    /// can't open). Shares the local-monitor source with hearMyself. Produces audio
-    /// only while the mic is actually capturing/transmitting.
+    /// Connected-mode mic preview: monitor the live mic through the output engine (the
+    /// input device is owned by the live capture, so a second capture can't open). Shares
+    /// the local-monitor source with hearMyself, and is fed before the transmit gate, so it
+    /// plays while muted too.
+    ///
+    /// Turns the preview monitor on and reports whether it did: when the live engine is
+    /// running, or when muted in a channel, where it starts the engine with the gate
+    /// closed. Otherwise (disconnected, or outside a channel, where the engine has no
+    /// target format) it reports false and the caller opens its own capture.
+    func startPreviewMonitorIfLiveMicrophone(completion: @escaping @MainActor (Bool) -> Void) {
+        queue.async { [weak self] in
+            guard let self else { return }
+            var live = self.instance != nil && (self.isAnyMicrophoneEngineRunning || self.inputAudioReady)
+            // Muted in a channel: start the live engine with the gate closed and
+            // preview that, so unmuting and muting again only move the gate and the
+            // preview never drops out. Outside a channel there is no target format
+            // for the engine, and the preview opens its own capture instead.
+            if live == false,
+               let instance = self.instance,
+               TT_GetMyChannelID(instance) > 0,
+               AVCaptureDevice.authorizationStatus(for: .audio) == .authorized {
+                self.previewMonitorEnabled = true
+                do {
+                    try self.ensureAdvancedMicrophoneInputReadyLocked(instance: instance)
+                    AudioLogger.log("preview: live engine started muted for the preview")
+                    live = true
+                } catch {
+                    AudioLogger.log("preview: live engine start failed — %@", error.localizedDescription)
+                    self.previewMonitorEnabled = false
+                }
+            }
+            if live { self.previewMonitorEnabled = true }
+            DispatchQueue.main.async { completion(live) }
+        }
+    }
+
+    /// Turns the preview monitor on or off. Off, it also stops an engine that was running
+    /// only for the preview (muted: started by startPreviewMonitorIfLiveMicrophone).
     func setPreviewMonitor(_ enabled: Bool) {
         queue.async { [weak self] in
             guard let self else { return }
             self.previewMonitorEnabled = enabled
             if enabled == false && self.hearMyselfEnabled == false {
                 self.outputRenderEngine.removeUser(self.localMonitorEngineKey)
+            }
+            // An engine kept running only for the preview (muted, "both" mode not
+            // arming it) goes when the preview does.
+            if enabled == false,
+               self.voiceTransmissionEnabled == false,
+               let instance = self.instance,
+               self.isAnyMicrophoneEngineRunning || self.inputAudioReady {
+                self.stopAdvancedMicrophoneInputLocked(instance: instance, reason: "preview stopped while muted")
+                self.inputAudioReady = false
+                self.advancedMicrophoneTargetFormat = nil
             }
         }
     }
@@ -1867,36 +1985,77 @@ extension TeamTalkConnectionController {
 
     func processAudioHardwareChangeLocked(selector: UInt32) {
         if Date() < suppressDeviceChangeUntil {
-            AudioLogger.log("processAudioHardwareChange: suppressed")
+            // Look again once the suppression ends rather than dropping the change: a
+            // device replugged while the sound system restarts would otherwise stay
+            // unnoticed until something else changes. The check compares state, so it
+            // does nothing when the suppressed event was our own aggregate churn.
+            AudioLogger.log("processAudioHardwareChange: suppressed, rechecking when it ends")
+            audioHardwareChangeWorkItem?.cancel()
+            let workItem = DispatchWorkItem { [weak self] in
+                self?.processAudioHardwareChangeLocked(selector: selector)
+            }
+            audioHardwareChangeWorkItem = workItem
+            let delay = max(suppressDeviceChangeUntil.timeIntervalSinceNow, 0) + 0.5
+            queue.asyncAfter(deadline: .now() + delay, execute: workItem)
             return
         }
 
         let previous = lastAudioRoutingSnapshot
+        // The SDK's device list is stale after any change; the snapshot below doesn't read
+        // it (it asks CoreAudio), the device picker does.
         cachedAudioDeviceCatalog = nil
         let current = makeAudioRoutingSnapshotLocked()
 
-        let needsReinit = needsAudioReinitializationLocked(
+        let preferences = preferencesStore.preferences
+        let reaction = Self.audioRouteReaction(
             previous: previous,
             current: current,
-            selector: selector
+            inputPreference: preferences.preferredInputDevice,
+            outputPreference: preferences.preferredOutputDevice,
+            selector: selector,
+            outputOpen: outputAudioReady,
+            inputOpen: isAnyMicrophoneEngineRunning || inputAudioReady,
+            microphoneAwaitingInput: microphoneAwaitingInputDevice != nil
         )
 
         AudioLogger.log(
-            "processAudioHardwareChange: selector=0x%08X needsReinit=%d in=%@ out=%@",
+            "processAudioHardwareChange: selector=0x%08X reaction=%@ in=%@ out=%@ inID=%@ outEngine=%@ outID=%@",
             selector,
-            needsReinit ? 1 : 0,
+            String(describing: reaction),
             current.resolvedInputUID ?? "nil",
-            current.preferredOutputPersistentID ?? "default"
+            current.preferredOutputPersistentID ?? "default",
+            current.inputDeviceObjectID.map { String($0) } ?? "nil",
+            current.outputEngineDeviceUID ?? "nil",
+            current.outputEngineDeviceObjectID.map { String($0) } ?? "nil"
         )
 
         lastAudioRoutingSnapshot = current
 
-        guard needsReinit,
+        guard reaction != .none,
               let instance,
-              connectedRecord != nil,
-              outputAudioReady || inputAudioReady || isAnyMicrophoneEngineRunning else {
+              let record = connectedRecord,
+              outputAudioReady || inputAudioReady || isAnyMicrophoneEngineRunning
+                || microphoneAwaitingInputDevice != nil else {
             AudioLogger.log("processAudioHardwareChange: catalog refresh only")
             return
+        }
+
+        if reaction == .switchOutput {
+            // Only the output moved: rebind our render engine, as choosing another output
+            // in Preferences does. The microphone keeps running, uninterrupted.
+            do {
+                AudioLogger.log("processAudioHardwareChange: switching the output only")
+                try reinitializeAudioDevicesLocked(instance: instance, preferences: preferences,
+                                                   reinitInput: false, reinitOutput: true)
+                if previous?.defaultOutputUID != current.defaultOutputUID {
+                    restartSpeakerTapForAECLocked(instance: instance)
+                }
+                publishSessionLocked(instance: instance, record: record)
+                return
+            } catch {
+                AudioLogger.log("processAudioHardwareChange: output switch failed (%@) — restarting the sound system",
+                                error.localizedDescription)
+            }
         }
 
         AudioLogger.log("processAudioHardwareChange: restarting sound system for route change")
@@ -1920,82 +2079,97 @@ extension TeamTalkConnectionController {
             for: preferences.preferredInputDevice
         )
         let outputPreference = preferences.preferredOutputDevice
-        let outputPersistentID = outputPreference.persistentID
-        // Read ONLY the already-cached SDK device catalog — never trigger a load
-        // here. On a large rig the SDK's TT_GetSoundDevices probe takes ~12 s; doing
-        // it on the connect path (this snapshot runs during connect) is what made
-        // connecting slow. If the catalog hasn't been loaded yet, assume the chosen
-        // output is present — a later snapshot corrects it once the cache populates
-        // (the device picker, or processAudioHardwareChangeLocked on a real change).
-        let outputInCatalog: Bool
-        if let catalog = cachedAudioDeviceCatalog {
-            if let outputPersistentID, outputPersistentID.isEmpty == false {
-                outputInCatalog = catalog.outputDevices.contains { $0.persistentID == outputPersistentID }
-            } else {
-                outputInCatalog = catalog.outputDevices.isEmpty == false
-            }
+
+        // Whether the chosen output is there is asked of CoreAudio, in the same scan that
+        // finds the engine's device, every time. It used to be read from the SDK's device
+        // catalog when that happened to be cached and assumed true when it wasn't — and
+        // the catalog is emptied on every hardware change, so two snapshots of the same
+        // devices could disagree, and the sound system restarted over nothing (after an
+        // unmute with "No output" chosen, say).
+        let chosenOutputPresent: Bool
+        let outputEngineDevice: InputAudioDeviceResolver.OutputAudioDeviceInfo?
+        if outputPreference.usesNoOutput {
+            chosenOutputPresent = true
+            outputEngineDevice = nil
         } else {
-            outputInCatalog = true
+            let outputs = InputAudioDeviceResolver.availableOutputDevices()
+            chosenOutputPresent = outputPreference.usesSystemDefault
+                || InputAudioDeviceResolver.resolveOutputDevice(
+                    persistentID: outputPreference.persistentID,
+                    displayName: outputPreference.displayName,
+                    in: outputs
+                ) != nil
+            outputEngineDevice = InputAudioDeviceResolver.outputEngineDevice(for: outputPreference, in: outputs)
         }
 
         return AudioRoutingSnapshot(
             resolvedInputUID: resolvedInput?.uid,
             defaultInputUID: InputAudioDeviceResolver.defaultInputDeviceUID(),
             defaultOutputUID: InputAudioDeviceResolver.defaultOutputDeviceUID(),
-            preferredOutputPersistentID: outputPersistentID,
-            outputPersistentIDInCatalog: outputInCatalog,
-            activeInputSampleRate: resolvedInput?.nominalSampleRate ?? 0
+            preferredOutputPersistentID: outputPreference.persistentID,
+            chosenOutputPresent: chosenOutputPresent,
+            activeInputSampleRate: resolvedInput?.nominalSampleRate ?? 0,
+            inputDeviceObjectID: resolvedInput.flatMap { InputAudioDeviceResolver.audioDeviceID(forUID: $0.uid) },
+            outputEngineDeviceUID: outputEngineDevice?.uid,
+            outputEngineDeviceObjectID: outputEngineDevice?.deviceID
         )
     }
 
-    func needsAudioReinitializationLocked(
-        previous: AudioRoutingSnapshot?,
-        current: AudioRoutingSnapshot,
-        selector: UInt32
-    ) -> Bool {
-        guard let previous else {
-            return false
-        }
-
-        let inputPreference = preferencesStore.preferences.preferredInputDevice
-        let outputPreference = preferencesStore.preferences.preferredOutputDevice
-
-        if inputPreference.usesSystemDefault,
-           previous.defaultInputUID != current.defaultInputUID {
-            return true
-        }
-
-        if outputPreference.usesSystemDefault,
-           previous.defaultOutputUID != current.defaultOutputUID {
-            return true
-        }
-
-        // Explicit input preference: only react when the chosen device disappears,
-        // not when unrelated devices (e.g. Continuity) are added to the global list.
-        if inputPreference.usesSystemDefault == false,
-           let persistentID = inputPreference.persistentID,
-           persistentID.isEmpty == false {
-            let stillAvailable = InputAudioDeviceResolver.availableInputDevices()
-                .contains { $0.uid == persistentID }
-            if previous.resolvedInputUID != nil, stillAvailable == false {
-                return true
-            }
-        }
-
-        if outputPreference.usesSystemDefault == false,
-           let persistentID = outputPreference.persistentID,
-           persistentID.isEmpty == false,
-           previous.outputPersistentIDInCatalog != current.outputPersistentIDInCatalog {
-            return true
-        }
-
-        if selector == kAudioDevicePropertyNominalSampleRate,
-           previous.resolvedInputUID == current.resolvedInputUID,
-           previous.activeInputSampleRate != current.activeInputSampleRate {
-            return true
-        }
-
-        return false
+    /// What a hardware change calls for.
+    enum AudioRouteReaction: Equatable {
+        case none
+        /// Only the output moved: rebind the render engine; the microphone keeps running.
+        case switchOutput
+        /// The input moved, or an output that isn't open needs opening: the full restart.
+        case restartSoundSystem
     }
 
+    /// Compares the routing before and after a hardware change.
+    ///
+    /// The input moved when: the open microphone's device came back under a new object ID
+    /// (a replug or a coreaudiod restart hand out new IDs while every UID stays the same,
+    /// and the stream opened on the old one is dead); the system default input changed
+    /// while it is the one used; the chosen input went away; the chosen input came back
+    /// while the microphone waits for it; or its sample rate changed.
+    ///
+    /// The output moved when: the open output engine's device is another device, or the
+    /// same one under a new object ID; the system default output changed while it is the
+    /// one used; or the chosen output went away or came back.
+    nonisolated static func audioRouteReaction(
+        previous: AudioRoutingSnapshot?,
+        current: AudioRoutingSnapshot,
+        inputPreference: AudioDevicePreference,
+        outputPreference: AudioDevicePreference,
+        selector: UInt32,
+        outputOpen: Bool,
+        inputOpen: Bool,
+        microphoneAwaitingInput: Bool
+    ) -> AudioRouteReaction {
+        guard let previous else { return .none }
+
+        let explicitInput = inputPreference.usesSystemDefault == false
+        let inputMoved =
+            (inputOpen
+                && previous.resolvedInputUID == current.resolvedInputUID
+                && previous.inputDeviceObjectID != current.inputDeviceObjectID)
+            || (inputPreference.usesSystemDefault && previous.defaultInputUID != current.defaultInputUID)
+            || (explicitInput && previous.resolvedInputUID != nil && current.resolvedInputUID == nil)
+            || (explicitInput && microphoneAwaitingInput
+                && previous.resolvedInputUID == nil && current.resolvedInputUID != nil)
+            || (selector == kAudioDevicePropertyNominalSampleRate
+                && previous.resolvedInputUID == current.resolvedInputUID
+                && previous.activeInputSampleRate != current.activeInputSampleRate)
+        if inputMoved { return .restartSoundSystem }
+
+        let outputMoved =
+            (outputOpen
+                && (previous.outputEngineDeviceUID != current.outputEngineDeviceUID
+                    || previous.outputEngineDeviceObjectID != current.outputEngineDeviceObjectID))
+            || (outputPreference.usesSystemDefault && previous.defaultOutputUID != current.defaultOutputUID)
+            || (outputPreference.usesNoOutput == false
+                && previous.chosenOutputPresent != current.chosenOutputPresent)
+        guard outputMoved, outputPreference.usesNoOutput == false else { return .none }
+        // An output that isn't open has no engine to rebind: the restart opens it.
+        return outputOpen ? .switchOutput : .restartSoundSystem
+    }
 }

@@ -19,10 +19,13 @@ extension TeamTalkConnectionController {
         )
     }
 
-    func startStreamingMediaURL(_ url: URL, completion: @escaping (Result<Void, Error>) -> Void) {
+    /// `displayName`: what the stream is called — a web page's title, when Stream URL looked
+    /// the page up; the host otherwise.
+    func startStreamingMediaURL(_ url: URL, displayName: String? = nil,
+                                completion: @escaping (Result<Void, Error>) -> Void) {
         startStreamingMedia(
             path: url.absoluteString,
-            displayName: url.host ?? url.absoluteString,
+            displayName: displayName ?? url.host ?? url.absoluteString,
             sourceKind: .url,
             securityScopedURL: nil,
             sourceURL: nil,
@@ -190,17 +193,16 @@ extension TeamTalkConnectionController {
                 )
                 return
             } catch AudioDeviceStreamSourceError.deviceUnavailable {
-                // For process sources "unavailable" means no capturable
-                // process matched (app quit, VoiceOver off) — say that, not
-                // "device unplugged".
-                let messageKey: String
-                if case .processes = spec {
-                    messageKey = "mediaStream.device.error.processSourceUnavailable"
-                } else {
-                    messageKey = "mediaStream.device.error.deviceUnavailable"
-                }
                 self.finishOnMain(
-                    .failure(TeamTalkConnectionError.internalError(L10n.text(messageKey))),
+                    .failure(TeamTalkConnectionError.internalError(L10n.text("mediaStream.device.error.deviceUnavailable"))),
+                    completion: completion
+                )
+                return
+            } catch AudioDeviceStreamSourceError.processSourceUnavailable {
+                // No capturable process matched (app quit, VoiceOver off) — say that, not
+                // "device unplugged", even when a device is part of the combination.
+                self.finishOnMain(
+                    .failure(TeamTalkConnectionError.internalError(L10n.text("mediaStream.device.error.processSourceUnavailable"))),
                     completion: completion
                 )
                 return

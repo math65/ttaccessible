@@ -101,6 +101,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var recordingAccessedFolder: URL?
     private var activeRecordingMode: Int = 0
     private var recordingStopKeyMonitor: Any?
+    private var microphoneMenuKeyMonitor: Any?
     private var lastObservedChannelID: Int32 = 0
     private var pendingUnsavedServerConfiguration: PendingUnsavedServerConfiguration?
 
@@ -158,8 +159,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         syncSparkleAutoCheckPreference()
         syncNicknamePreference()
         scheduleLaunchUpdateCheck()
+        // yt-dlp (Stream URL's web pages) keeps itself current, apart from app updates.
+        YtDlpUpdater.shared.scheduleLaunchCheck()
         configurePushToTalkObservers()
         installRecordingStopKeyMonitor()
+        installMicrophoneMenuKeyMonitor()
         configureUserMenuVisibility()
         // Slight delay so the announcement alert never races the main window.
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
@@ -443,7 +447,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// ⌘⇧ + whatever key types "a" on the current layout, matching what the
     /// SwiftUI declaration means (key codes are positional; the character is not).
-    private static var defaultMuteMenuKeyEquivalent: (characters: String, modifiers: NSEvent.ModifierFlags) {
+    static var defaultMuteMenuKeyEquivalent: (characters: String, modifiers: NSEvent.ModifierFlags) {
         HotkeyBinding.defaultMuteHotkey().menuKeyEquivalent ?? ("a", [.command, .shift])
     }
 
@@ -1579,16 +1583,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    // `fromControl` is true when triggered by pressing the mic toolbar button itself:
-    // VoiceOver then re-reads the button's state-bearing label, so the spoken status
-    // announcement is suppressed to avoid saying "Microphone" twice. The keyboard
-    // shortcut / menu path (focus elsewhere) keeps the announcement.
-    func toggleMicrophone(fromControl: Bool = false) {
+    // Every route announces "Microphone enabled/muted", the toolbar button included. It used
+    // to stay quiet on the assumption that VoiceOver re-reads the item's state-bearing label;
+    // what actually spoke was the in-window button's audio-status value changing, and once
+    // 432eeed gave that button back its plain title, pressing either control said nothing.
+    func toggleMicrophone() {
         guard menuState.mode == .connectedServer else {
             return
         }
         restoreMainWindow()
-        connectedServerViewController?.performToggleMicrophoneShortcut(announceStatus: fromControl == false)
+        connectedServerViewController?.performToggleMicrophoneShortcut(announceStatus: true)
     }
 
     func changeNickname() {
@@ -1697,6 +1701,69 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.toggleRecording()
             return nil
         }
+    }
+
+    /// ⌘⇧A toggles the microphone here, before the menu sees it. A key equivalent that fires
+    /// a menu item makes AppKit post AXMenuItemSelected with the item's title, and VoiceOver
+    /// speaks it, so every press said "Toggle microphone" before "Microphone enabled/muted".
+    /// Measured with an AX observer: ⌥⌘A posted exactly that for "Stream Audio from This
+    /// Mac…", and a ⌘⇧A press posted it for Toggle microphone. A local monitor does run
+    /// before the menu (measured in the test host: monitor first, then the item). The item
+    /// keeps its shortcut and still works when chosen from the menu. The global mute hotkey
+    /// (Carbon) is untouched: registered on the same chord, it takes the key first.
+    private func installMicrophoneMenuKeyMonitor() {
+        microphoneMenuKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
+            // Same conditions as the menu item: connected, in a channel, no modal run — and
+            // never while a hotkey recorder in Preferences is capturing the next chord, which
+            // is the recorder's to take (before this monitor it was the only one).
+            guard let self,
+                  event.modifierFlags.contains(.command),
+                  KeyCaptureSession.anyRecording == false,
+                  NSApp.modalWindow == nil,
+                  self.menuState.mode == .connectedServer,
+                  self.menuState.isInChannel,
+                  Self.isMicrophoneToggleChord(
+                      event, menuItem: self.findMainMenuItem(titled: L10n.text("shortcuts.microphone"))
+                  ) else {
+                return event
+            }
+            AudioLogger.log("[Hotkey] menu chord toggled the microphone before the menu")
+            self.toggleMicrophone()
+            return nil
+        }
+    }
+
+    /// The chords that fire the Toggle microphone item: the one SwiftUI declares (⌘⇧A on a
+    /// US layout), and whatever the AppKit item carries at the moment. The two can differ —
+    /// applyMuteMenuShortcut re-binds the item to the global hotkey's chord, and in the test
+    /// host it carried ⌥⌘M while ⌘⇧A still fired the item in the live app — so matching only
+    /// the item's chord missed ⌘⇧A and the menu spoke its title after all.
+    static func isMicrophoneToggleChord(_ event: NSEvent, menuItem: NSMenuItem?) -> Bool {
+        let declared = defaultMuteMenuKeyEquivalent
+        if Self.event(event, matchesKeyEquivalent: declared.characters, modifiers: declared.modifiers) {
+            return true
+        }
+        guard let menuItem else { return false }
+        return Self.event(event, matchesKeyEquivalentOf: menuItem)
+    }
+
+    static func event(_ event: NSEvent, matchesKeyEquivalentOf item: NSMenuItem) -> Bool {
+        Self.event(event, matchesKeyEquivalent: item.keyEquivalent, modifiers: item.keyEquivalentModifierMask)
+    }
+
+    /// Whether a key event is a key-equivalent chord, compared the way AppKit does: the
+    /// character (Shift applied, other modifiers not) against the equivalent, an uppercase
+    /// equivalent implying Shift, and the modifiers exactly — Caps Lock, the numeric pad and
+    /// Fn aside.
+    static func event(_ event: NSEvent, matchesKeyEquivalent equivalent: String,
+                      modifiers: NSEvent.ModifierFlags) -> Bool {
+        guard equivalent.isEmpty == false,
+              let characters = event.charactersIgnoringModifiers else { return false }
+        var expected = modifiers.intersection(.deviceIndependentFlagsMask)
+        if equivalent != equivalent.lowercased() { expected.insert(.shift) }
+        let pressed = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            .subtracting([.capsLock, .numericPad, .function])
+        return characters.lowercased() == equivalent.lowercased() && pressed == expected
     }
 
     /// Toggle recording. When starting, `mode` selects the recording layout as a bitmask
@@ -1945,23 +2012,66 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 errorAlert.runModal()
                 return
             }
-            self.connectionController.startStreamingMediaURL(url) { [weak self] result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success:
-                        // Only once it has actually started: an address that the
-                        // SDK refuses is not one to offer back next time. Stored
-                        // as typed, not as URL.absoluteString, which would show
-                        // back a percent-encoded version of what was entered.
-                        self?.preferencesStore.rememberMediaStreamURL(raw)
-                    case .failure(let error):
-                        self?.announceWithVoiceOver(L10n.text("mediaStream.announced.error"))
-                        let alert = NSAlert(error: error)
-                        alert.runModal()
+            // A web page (YouTube, or any site yt-dlp knows) becomes its media first; a direct
+            // stream address goes through untouched, as it always did.
+            self.resolveStreamAddress(url) { [weak self] streamURL, title in
+                self?.connectionController.startStreamingMediaURL(streamURL, displayName: title) { [weak self] result in
+                    DispatchQueue.main.async {
+                        switch result {
+                        case .success:
+                            // Only once it has actually started: an address that the
+                            // SDK refuses is not one to offer back next time. Stored
+                            // as typed, not as URL.absoluteString, which would show
+                            // back a percent-encoded version of what was entered —
+                            // and for a web page, the page, not the media link behind
+                            // it, which expires within hours.
+                            self?.preferencesStore.rememberMediaStreamURL(raw)
+                        case .failure(let error):
+                            self?.announceWithVoiceOver(L10n.text("mediaStream.announced.error"))
+                            let alert = NSAlert(error: error)
+                            alert.runModal()
+                        }
                     }
                 }
             }
         }
+    }
+
+    /// Turns what was typed into what the media streamer opens. A web page — YouTube, or any
+    /// of the sites yt-dlp knows — is looked up through the embedded Python (EmbeddedPython)
+    /// and streams under the page's title. A direct stream address, or a page yt-dlp can't
+    /// read, goes through as typed, exactly as before.
+    private func resolveStreamAddress(_ url: URL, completion: @escaping @MainActor (URL, String?) -> Void) {
+        guard Self.looksLikeWebPage(url) else {
+            completion(url, nil)
+            return
+        }
+        announceWithVoiceOver(L10n.format("mediaStream.url.resolving", url.host ?? url.absoluteString))
+        Task {
+            do {
+                let media = try await EmbeddedPython.shared.resolveUpdatingIfNeeded(url)
+                if let streamURL = URL(string: media.url) {
+                    AudioLogger.log("stream url: %@ resolved by yt-dlp (%@): %@",
+                                    url.host ?? "?", media.extractor, media.title)
+                    completion(streamURL, media.title.isEmpty ? nil : media.title)
+                    return
+                }
+            } catch {
+                AudioLogger.log("stream url: %@ not resolved (%@) — streaming it as typed",
+                                url.absoluteString, String(describing: error))
+            }
+            completion(url, nil)
+        }
+    }
+
+    /// Whether an address might be a page to look up. One that is already a stream — by its
+    /// scheme (rtmp, rtsp, mms) or by an audio, video or playlist file extension — never is,
+    /// so a web radio starts exactly as fast as it always did.
+    static func looksLikeWebPage(_ url: URL) -> Bool {
+        guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else { return false }
+        let streamExtensions: Set<String> = ["mp3", "aac", "m4a", "ogg", "oga", "opus", "flac", "wav",
+                                             "m3u", "m3u8", "pls", "mp4", "webm", "mka", "mkv"]
+        return streamExtensions.contains(url.pathExtension.lowercased()) == false
     }
 
     private func promptMediaStreamDevice() {
@@ -2032,13 +2142,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             voiceOverAvailable: voiceOverAvailable,
             allowsApplicationBrowsing: allowsApplicationBrowsing,
             allowsSystemAudio: allowsSystemAudio,
+            recentTokens: preferencesStore.preferences.recentDeviceStreamSources,
             preselectedToken: preferencesStore.preferences.deviceStreamLastSource
-                ?? preferencesStore.preferences.deviceStreamLastDeviceUID.map { "device:\($0)" },
-            fallbackDeviceUID: InputAudioDeviceResolver.defaultInputDeviceUID()
+                ?? preferencesStore.preferences.deviceStreamLastDeviceUID.map { "device:\($0)" }
         )
         controller.onStream = { [weak self] spec, monitorEnabled, muteSourceOutput in
             guard let self else { return }
-            self.preferencesStore.mutateDeviceStreamLastSource(spec)
             self.connectionController.startStreamingCaptureSource(
                 spec: spec,
                 monitorEnabled: monitorEnabled,
@@ -2047,7 +2156,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 DispatchQueue.main.async {
                     switch result {
                     case .success:
-                        break
+                        // Remembered once it streams, like a stream URL: a source that failed
+                        // to start never joins Recently used.
+                        self?.preferencesStore.mutateDeviceStreamLastSource(spec)
                     case .failure(let error):
                         self?.announceWithVoiceOver(L10n.text("mediaStream.announced.error"))
                         NSAlert(error: error).runModal()

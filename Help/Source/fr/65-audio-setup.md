@@ -21,6 +21,12 @@ périphériques**. tt-Accessible détecte de toute façon ces changements tout s
 moteur audio : un casque connecté en cours de session est pris en compte sans que vous ayez à
 intervenir.
 
+Un périphérique que vous avez choisi et qui est débranché reste dans son menu, marqué *non
+connecté*, et reste votre choix. En attendant, le son passe par la sortie par défaut du système et
+le micro est coupé ; tous deux reviennent à votre périphérique dès qu'il est rebranché. Un micro qui
+était activé se réactive, avec son signal sonore, tant que la session est restée ouverte et que vous
+ne l'avez pas entre-temps activé ou coupé vous-même, ni remplacé par un autre micro.
+
 ## Supprimer l'écho et le bruit de fond
 
 1. Ouvrez les Préférences, puis cliquez sur Audio.

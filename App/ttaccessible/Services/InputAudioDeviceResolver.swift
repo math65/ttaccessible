@@ -170,7 +170,11 @@ enum InputAudioDeviceResolver {
     /// kAudioHardwarePropertyTranslateUIDToDevice, so we match the CoreAudio
     /// output device by UID first and fall back to the (shared) device name.
     nonisolated static func resolveOutputDevice(persistentID: String?, displayName: String?) -> OutputAudioDeviceInfo? {
-        let devices = availableOutputDevices()
+        resolveOutputDevice(persistentID: persistentID, displayName: displayName, in: availableOutputDevices())
+    }
+
+    nonisolated static func resolveOutputDevice(persistentID: String?, displayName: String?,
+                                                in devices: [OutputAudioDeviceInfo]) -> OutputAudioDeviceInfo? {
         if let persistentID, persistentID.isEmpty == false,
            let match = devices.first(where: { $0.uid == persistentID }) {
             return match
@@ -180,6 +184,22 @@ enum InputAudioDeviceResolver {
             return match
         }
         return nil
+    }
+
+    /// The device the output render engine binds to for `preference`: the chosen device, or
+    /// the system default when it is missing or none was chosen, or the first output.
+    nonisolated static func outputEngineDevice(for preference: AudioDevicePreference,
+                                               in devices: [OutputAudioDeviceInfo]) -> OutputAudioDeviceInfo? {
+        if preference.usesSystemDefault == false,
+           let chosen = resolveOutputDevice(persistentID: preference.persistentID,
+                                            displayName: preference.displayName, in: devices) {
+            return chosen
+        }
+        if let defaultUID = defaultOutputDeviceUID(),
+           let match = devices.first(where: { $0.uid == defaultUID }) {
+            return match
+        }
+        return devices.first
     }
 
     nonisolated static func availableOutputDevices() -> [OutputAudioDeviceInfo] {

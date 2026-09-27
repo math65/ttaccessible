@@ -50,5 +50,32 @@ final class ConnectedServerSplitView: NSSplitView, NSSplitViewDelegate {
     func splitView(_ splitView: NSSplitView, shouldAdjustSizeOfSubview view: NSView) -> Bool {
         view !== arrangedSubviews.first
     }
+
+    // MARK: - Invisible to VoiceOver
+
+    // The split is a VISUAL arrangement. It changed nothing about what the window holds
+    // or the order it holds it in — but AppKit exposes it anyway, as an AXSplitGroup
+    // wrapping the whole window plus an AXSplitter between the panes. So a window that
+    // used to be a flat walk became a group to step into and a divider to step past,
+    // for a change that was only ever about where things sit on screen.
+    //
+    // Take the split out of the tree. Ignoring the view alone is not enough: AppKit
+    // synthesises the divider as one of its accessibility children, so it would simply
+    // rise a level and still be met. Returning the arranged subviews — and only those —
+    // leaves the two panes' own contents to rise to the window, in the same order they
+    // had before the split existed. That is their AXChildren order; VoiceOver walks the
+    // window's navigation order, which AppKit sorts by position and which would interleave
+    // the panes — ReadingOrderWindow puts it back.
+    override func isAccessibilityElement() -> Bool { false }
+
+    // Through the unignored walk, not raw: handing back the two container views
+    // themselves put each pane in the tree as an AXUnknown group, which is one wrapper
+    // worse than the AXSplitGroup it replaced (measured). unignoredChildren flattens
+    // them, so what rises is their contents.
+    override func accessibilityChildren() -> [Any]? {
+        NSAccessibility.unignoredChildren(from: arrangedSubviews)
+    }
+
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
 }
 #endif

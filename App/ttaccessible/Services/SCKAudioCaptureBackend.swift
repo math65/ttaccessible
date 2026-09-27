@@ -96,7 +96,7 @@ final class SCKAudioCaptureBackend: NSObject, DeviceStreamCaptureBackend, SCStre
             }
             guard matchedApps.isEmpty == false else {
                 AudioLogger.log("sck stream: no capturable app matched %@", selection.bundleIDPrefixes.joined(separator: ","))
-                throw AudioDeviceStreamSourceError.deviceUnavailable
+                throw AudioDeviceStreamSourceError.processSourceUnavailable
             }
             AudioLogger.log("sck stream: capturing %d app(s) for %@", matchedApps.count, selection.displayName)
             filter = SCContentFilter(display: display, including: matchedApps, exceptingWindows: [])

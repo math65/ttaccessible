@@ -65,8 +65,11 @@ final class MoveUsersViewController: NSViewController {
         header.translatesAutoresizingMaskIntoConstraints = false
         // AXHeading by raw value: the typed NSAccessibilityHeadingRole constant
         // is macOS 26+, and this app targets 12. Without it the sheet has
-        // nothing for the VoiceOver heading rotor to land on.
+        // nothing for the VoiceOver heading rotor to land on. With it the
+        // field's text is only its AXValue, which leaves the heading empty to
+        // VoiceOver, so the title is the label too.
         header.setAccessibilityRole(NSAccessibility.Role(rawValue: "AXHeading"))
+        header.setAccessibilityLabel(headerText)
 
         // Select all / deselect all
         let selectAllButton = NSButton(title: L10n.text("moveUsers.selectAll"),

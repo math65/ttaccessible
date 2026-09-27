@@ -1,0 +1,18 @@
+//
+//  Signing.xcconfig
+//  ttaccessible
+//
+//  The team Xcode signs with. This one is the maintainer's. To build with your own Apple
+//  Development certificate, create Signing.local.xcconfig next to this file (git ignores it)
+//  containing one line:
+//
+//      DEVELOPMENT_TEAM = YOURTEAMID
+//
+//  It overrides the line below, so nobody has to edit project.pbxproj, or keep that edit out of
+//  every commit, just to build. The project's Debug and Release configurations use this file as
+//  their base; the targets set no team of their own, since a target setting would win over it.
+//
+
+DEVELOPMENT_TEAM = 633EG76YX5
+
+#include? "Signing.local.xcconfig"

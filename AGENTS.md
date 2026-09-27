@@ -30,16 +30,33 @@ open ~/Library/Developer/Xcode/DerivedData/ttaccessible-*/Build/Products/Debug/t
 # Regenerate the Apple Help Book after editing Help/Source/**.md
 ./scripts/build-help-book.sh <marketing-version> <build-number>
 ./scripts/build-help-book.sh --dev     # timestamp version, defeats the helpd cache
+
+# Fetch the embedded Python, yt-dlp and CA bundle into Vendor/Python/ (git-ignored; the app links it)
+./scripts/download-python.sh
 ```
 
 `build.sh` re-signs the Xcode-built .app with the `Developer ID Application` cert (the project itself still builds with Apple Development for convenience). Requires the notarytool keychain profile `ttaccessible-notary` to be stored (see notarization setup memory).
 
-An XCTest unit-test target (`ttaccessibleTests`, file-system synchronized group) covers
-pure/deterministic logic only: the gain dB↔% and user-volume↔% curves, `clampGainDB`, and
-Codable migrations of preference structs. Run via the `xcodebuild test` command above.
+The development team comes from `App/Signing.xcconfig`, the base configuration of the project's Debug and Release. To sign with your own Apple Development certificate, put `DEVELOPMENT_TEAM = YOURTEAMID` in `App/Signing.local.xcconfig` (git-ignored, included by `Signing.xcconfig`), never in `project.pbxproj`. No target sets a team: a target-level setting would win over the xcconfig.
 
-The tests deliberately do NOT touch AppKit UI, CoreAudio, or the TeamTalk SDK runtime —
-verify those by building and running the app manually.
+An XCTest unit-test target (`ttaccessibleTests`, file-system synchronized group) covers
+mostly pure/deterministic logic, for example the gain dB↔% and user-volume↔% curves,
+`clampGainDB`, Codable migrations of preference structs, the stream-source selection
+(`DeviceStreamCaptureSpec`, `StreamSourceCatalog`) and `StreamMixer`. Run via the
+`xcodebuild test` command above.
+
+The tests do not drive the running UI: AppKit is touched only to build one control and read
+what it reports (`PressActionTextFieldTests`, `AudioGainControlViewTests`,
+`MicrophoneMenuKeyTests`, `MixerOverlayAccessibilityTests`). `HotkeyMenuOwnershipTests` and
+`MicrophoneMenuKeyTests` read the Mac's current keyboard layout (`KeyCodeResolver`) and build
+their chords from it, so they hold on any layout. `DeviceStreamSourceTests` is a live check: it
+opens a real input device and runs the SDK's media probe on the loopback stream, and skips when no
+input opens. `ProcessTapUpdateTests` creates a real private process tap in the test host (macOS
+14.2+) and skips when it can't.
+`EmbeddedPythonTests` and `YtDlpUpdaterTests` are live too: they start the embedded Python inside
+the test host and need the network (a YouTube page; yt-dlp's latest release, downloaded into a
+temporary folder).
+Verify the UI, the audio path and the SDK in a real session by building and running the app.
 
 ## Language
 
@@ -47,7 +64,7 @@ The user speaks French. Respond in French when communicating. Code, comments, an
 
 ## Architecture
 
-**macOS AppKit app** with SwiftUI preference panes. Built for accessibility (VoiceOver). Localized in English and French.
+**macOS AppKit app** with SwiftUI preference panes. Built for accessibility (VoiceOver). Localized in English, French and Turkish.
 
 ### TeamTalk SDK
 
@@ -65,7 +82,7 @@ The app wraps the TeamTalk 5 C library (`Vendor/TeamTalk/libTeamTalk5.dylib`) vi
 
 - **`TeamTalkConnectionController`** — Central orchestrator split across 11 extension files (`+Connection`, `+Audio`, `+Messaging`, `+ChannelManagement`, `+Administration`, `+SessionSnapshot`, `+SessionHistory`, `+SessionGuard`, `+Identity`, `+MediaStreaming`, `+Video`). Manages SDK lifecycle, event polling, session state, media file streaming, and stale-session healing during auto-reconnect. `+SessionGuard` surfaces a clean disconnect when the UI still shows a connected server but the SDK instance is gone (e.g. mid auto-reconnect). `+MediaStreaming` / `+Video` wrap `TT_StartStreamingMediaFileToChannel` and media-file probing for audio/video playback into channels.
 - **`AppDelegate`** — Implements `TeamTalkConnectionControllerDelegate`. Owns the connection controller and window lifecycle. Handles global audio device change events.
-- **`ConnectedServerViewController`** — Main UI (AppKit) with channel tree, chat, history. Split across 6 extension files (`+ChannelActions`, `+UserActions`, `+Announcements`, `+OutlineDataSource`, `+OutlineDelegate`, `+TableViewDataDelegate`).
+- **`ConnectedServerViewController`** — Main UI (AppKit): the channel tree in a sidebar, and the output / input / sound effects / media level sliders (`AudioGainControlView`), the mixer, chat and history in the content pane (`ConnectedServerSplitView`, which VoiceOver does not see: the window still reads as one flat list, as it did before the split). Split across 7 extension files (`+ChannelActions`, `+UserActions`, `+Announcements`, `+Mixer`, `+OutlineDataSource`, `+OutlineDelegate`, `+TableViewDataDelegate`).
 - **`AppPreferencesStore`** — `ObservableObject` wrapping `AppPreferences` (Codable struct in UserDefaults with 150ms debounced persistence). Mutate via `mutate { $0.property = value }`.
 - **`AdvancedMicrophoneAudioEngine`** — Dual-path audio capture engine. Uses AVAudioEngine for the system default input device, and a standalone AUHAL AudioUnit for non-default devices (virtual devices, loopback, etc.). Delivers `AdvancedMicrophoneAudioChunk` via callback.
 
@@ -105,12 +122,28 @@ Microphone → [AVAudioEngine OR standalone AUHAL] → Float32 PCM → interleav
 
 **No custom DSP, no Audio Unit plugins** — gate/expander/limiter and AU chain were removed intentionally. The user preferred a clean passthrough (AEC excepted).
 
-**No app audio capture** — the ScreenCaptureKit/CATapDescription app audio capture feature was removed entirely.
+**App audio capture** — an application's audio, VoiceOver's, or the whole Mac's can be streamed into the channel: CoreAudio process taps (`ProcessTapCaptureBackend`, macOS 14.2+) or ScreenCaptureKit audio (`SCKAudioCaptureBackend`, macOS 13.0–14.1), feeding the ring in `AudioDeviceStreamSource`. Any mix of input devices plus the chosen applications (or the whole Mac) streams together as `DeviceStreamCaptureSpec.combined`: `MixingCaptureBackend` runs each part's backend into a ring of its own and mixes them on a 10 ms wall-clock beat, and `StreamMixer` follows each source's clock by nudging its rate (at most 0.5 %) rather than dropping or padding audio. A look-ahead `PeakLimiter` (2 ms, −0.1 dBFS) keeps the sum under full scale instead of hard-clipping it; below the ceiling it is only a delay. Sources are picked in `MediaStreamSourceViewController`, a searchable checkbox outline (Recently used, Devices, Applications; list logic in `StreamSourceCatalog`). macOS 12 can stream input devices only.
+
+### Audio Playback
+
+Remote audio does not use the SDK's pre-mixed stream. `AudioBlockPump` drains each user's decoded blocks and `OutputAudioRenderEngine` mixes them itself on a CoreAudio render callback — which is what makes per-user volume, stereo placement, mute and solo possible (the Channel Mixer, Cmd+5). Each source gets a jitter buffer picked by `OutputSourceBufferProfile`:
+
+| Profile | Used for | Prime | Catch-up ceiling |
+|---|---|---|---|
+| `lowLatency` | hear myself | 10 ms | 80 ms |
+| `network` | remote voice | 25 ms | 120 ms |
+| `localMedia` | our own media stream | 250 ms | 700 ms |
+
+The `localMedia` numbers and why 90 ms was not enough are explained where they are set. Voice and media sources sit on separate buses; the media bus has its own gain (`mediaGainDB`), so every media stream can be turned down at once without touching a voice.
 
 ### Audio Device Hot-Plug
 
 - `AudioDeviceChangeMonitor` listens to CoreAudio property changes (`kAudioHardwarePropertyDevices`, `kAudioHardwarePropertyDefaultInputDevice`, `kAudioHardwarePropertyDefaultOutputDevice`) and posts `audioDevicesDidChange` on the main thread.
-- **AppDelegate** observes this notification (with 500ms debounce) and calls `restartSoundSystem()` which: stops the mic engine, closes the virtual input, calls `TT_RestartSoundSystem()` (forces PortAudio to re-enumerate), re-opens the output device, and restarts the mic engine if it was active. Without `TT_RestartSoundSystem()`, `TT_GetSoundDevices()` returns stale entries.
+- **AppDelegate** observes this notification and hands it to `TeamTalkConnectionController.handleDebouncedAudioHardwareChange` (500 ms debounce). `processAudioHardwareChangeLocked` compares an `AudioRoutingSnapshot` taken before and after (UIDs and CoreAudio object IDs of the devices in use, and whether the chosen output is plugged in, all read from CoreAudio) and `audioRouteReaction` decides:
+  - **the input moved** (the open mic's device under a new object ID, a new system default input while it is used, the chosen input gone, or back while `microphoneAwaitingInputDevice` waits for it, or a sample-rate change) → `restartSoundSystem()`: stops the mic engine, closes the virtual input, calls `TT_RestartSoundSystem()` (forces PortAudio to re-enumerate; without it `TT_GetSoundDevices()` returns stale entries), re-opens the output, and restarts the mic as it was;
+  - **only the output moved** → `reinitializeAudioDevicesLocked(reinitInput: false)` rebinds the render engine, as choosing an output in Preferences does, and the mic keeps running (the AEC speaker tap is rebuilt when the system default output changed); an output that isn't open gets the full restart instead;
+  - **nothing that matters** (Continuity devices appearing, our own aggregates) → nothing.
+- Changes arriving during a suppression window (after a restart, or our own tap aggregates) are re-checked when it ends rather than dropped; the comparison is of state, so our own churn compares equal.
 - **AudioPreferencesStore** also observes the notification (with 500ms debounce) to refresh the UI device list.
 - `restartSoundSystem()` has an `isRestartingSoundSystem` guard to prevent re-entrant calls from both handlers.
 
@@ -147,13 +180,13 @@ User volume uses a **geometric (perceptually-uniform / dB-linear) curve** anchor
 
 The audio pipeline in Release mode uses **< 0.2% CPU**. Debug builds are ~75x slower due to Swift runtime overhead (bounds checks, generic metadata resolution) — always profile with Release builds.
 
-**Auto-away check** (`currentIdleSecondsLocked()`) queries IOKit via `IORegistryEntryCreateCFProperties` which involves expensive mach_msg round-trips. It is throttled to once every 5 seconds (not on every 100ms polling tick).
+**Auto-away check** (`currentIdleSecondsLocked()`) reads `CGEventSource.secondsSinceLastEventType` for key and mouse-button presses (see Auto-Away and VoiceOver). The message loop asks every 5 seconds, and every 0.5 seconds while auto-away is active, so coming back is noticed at once — not on every polling tick.
 
 **Profiling**: Use `sample <PID> <seconds> -file /tmp/output.txt` to capture CPU profiles.
 
 ### Auto-Away and VoiceOver
 
-Auto-away activates when `HIDIdleTime >= threshold` (configurable, default 3 minutes). Deactivation only triggers when `HIDIdleTime < 10 seconds`, meaning real physical input (keyboard/mouse/trackpad) just happened. This fixed threshold prevents false deactivation caused by VoiceOver announcements or braille display updates briefly resetting `HIDIdleTime` when auto-away activates.
+Auto-away activates when the HID idle time — `CGEventSource.secondsSinceLastEventType(.hidSystemState, eventType:)` — reaches the threshold (configurable, default 3 minutes). Deactivation only triggers when it drops below 10 seconds, meaning real physical input (keyboard/mouse/trackpad) just happened. This fixed threshold prevents false deactivation caused by VoiceOver announcements or braille display updates briefly resetting the idle time when auto-away activates.
 
 ### Threading Model
 
@@ -166,7 +199,7 @@ Auto-away activates when `HIDIdleTime >= threshold` (configurable, default 3 min
 
 ### AudioLogger
 
-`AudioLogger` writes diagnostic logs to `~/Library/Logs/TTAccessible/audio.log` (sandboxed path). Thread-safe: captures `Date()` on calling thread, formats timestamp and writes to file on a serial dispatch queue. No `DateFormatter` used (not thread-safe) — uses `Calendar.dateComponents` instead. Log file is cleared on each app launch. Useful for debugging audio device issues, hot-plug, and engine start/stop.
+`AudioLogger` writes diagnostic logs to `Library/Logs/TTAccessible/audio.log` inside the sandbox container — on disk, `~/Library/Containers/com.math65.ttaccessible/Data/Library/Logs/TTAccessible/audio.log`. The same path under `~/Library/Logs` is only ever written by an unsandboxed build, so a file there is stale. Non-default profiles write `audio-<slug>.log` alongside it. Thread-safe: captures `Date()` on calling thread, formats timestamp and writes to file on a serial dispatch queue. No `DateFormatter` used (not thread-safe) — uses `Calendar.dateComponents` instead. Log file is cleared on each app launch. Useful for debugging audio device issues, hot-plug, and engine start/stop.
 
 ### Extension File Convention
 
@@ -179,7 +212,7 @@ L10n.text("key")              // NSLocalizedString wrapper
 L10n.format("key", arg1, ...) // String(format:) wrapper
 ```
 
-String files: `App/ttaccessible/en.lproj/Localizable.strings`, `App/ttaccessible/fr.lproj/Localizable.strings`.
+String files: `App/ttaccessible/en.lproj/Localizable.strings`, `App/ttaccessible/fr.lproj/Localizable.strings`, `App/ttaccessible/tr.lproj/Localizable.strings` — all three carry the same keys.
 
 ### Help Book (user guide)
 
@@ -188,7 +221,7 @@ macOS 26, bundle id `com.apple.helpviewer`; never hard-code a path to the old `H
 
 - **Sources**: Markdown in `Help/Source/{en,fr}/`, one file per topic, with a YAML front matter
   (`title`, `description`, `keywords`, `anchor`). Both languages must expose the **same file names**
-  — the script fails otherwise, because the cross-language links and `HelpAnchor` depend on it.
+  — the script fails otherwise, because the cross-language links depend on it.
   French is written natively in **vouvoiement**, never translated from the English page.
 - **Generated bundle**: `Help/ttaccessible.help` is **committed**, so building the app never requires
   pandoc. Regenerate with `./scripts/build-help-book.sh <version> <build>` after editing the sources.
@@ -253,6 +286,17 @@ The app talks to Mathieu's shared Go backend (`https://mathieumartin.ovh`, repo 
 
 **Note**: The TeamTalk SDK also bundles WebRTC audio processing internally, but it only works with `TT_InitSoundDuplexDevices()` (real sound devices in duplex mode). It does NOT work with `TT_InsertAudioBlock` / virtual device. That's why we run our own AEC3 instance.
 
+### Embedded Python and yt-dlp (Vendor)
+
+Stream URL looks web pages up (YouTube and the other sites yt-dlp supports) through yt-dlp, running in a CPython embedded in the app, in-process: no helper executable for the sandbox to launch, nothing for the user to install.
+- **Download**: `./scripts/download-python.sh` puts BeeWare's Python-Apple-support build of CPython 3.14 (`Python.xcframework`), a pinned yt-dlp zipapp and certifi's CA bundle in `Vendor/Python/` (git-ignored, like the TeamTalk SDK), each checked against its published SHA-256, and strips the standard library's test suite, IDLE, turtle demos and ensurepip. Change a version and its checksum together.
+- **Xcode**: `Python.xcframework` is linked and copied by an **`Embed Python`** phase (CodeSignOnCopy); `Vendor/Python/PythonSupport` (`yt-dlp.zip`, `yt-dlp.version`, `cacert.pem`) is a folder reference in *Recovered References*, copied by `Resources` like the Help Book. No run-script phase.
+- **`PythonShim.c` / `PythonShim.h`** (`Services/`) — five plain C calls (`ttac_py_start`, `ttac_py_resolve`, `ttac_py_switch_ytdlp`, `ttac_py_ytdlp_version`, `ttac_py_free`), so Swift never includes `Python.h`: only `PythonShim.h` is in the bridging header. The interpreter is isolated (no environment, no user site-packages, no bytecode written into the signed bundle), and the yt-dlp logic is a short Python bootstrap inside the shim. Each call takes the GIL itself.
+- **`EmbeddedPython`** (`Services/`) — starts Python on first use, on its own queue, never the main thread; loads the newest downloaded yt-dlp first and the bundled one if that won't import.
+- **`YtDlpUpdater`** (`Services/`, an actor) — a minute after launch, at most once a day, and whenever a page fails to resolve, asks GitHub for yt-dlp's latest release. A newer `yt-dlp` asset is checked against the release's `SHA2-256SUMS`, kept in `Application Support/ttaccessible/yt-dlp/<version>/` (one copy for every profile) and switched into the running interpreter; one that won't import is forgotten and the previous copy reloaded. Independent of the app-update (Sparkle) preference.
+- **Stream URL**: `AppDelegate.looksLikeWebPage` decides what is looked up — an http(s) address without an audio, video or playlist extension. Anything else goes straight to the SDK as before, and a page yt-dlp can't read is streamed as typed. The recent-URL list keeps the page as typed, never the media link behind it, which expires. yt-dlp's `http_headers` are not passed on (the TeamTalk streamer takes only a URL), so a site whose media needs them may still fail.
+- **Release signing**: `build.sh --notarize` also signs the framework's `*.so` extension modules (shipped ad-hoc signed) and walks with `find -depth`, so a framework is signed after its contents. Not yet proven against a real Developer ID notarization.
+
 ### Original TeamTalk Reference
 
 The original Qt/C++ TeamTalk client is at `../ttoriginal/Client/qtTeamTalk/`. Key reference files: `mainwindow.cpp` (features), `utilsound.cpp` (audio init, volume curve). The original uses `TT_InitSoundInputDevice` + `TT_EnableVoiceTransmission` (direct SDK path) — we cannot use this due to audio saturation.
@@ -265,7 +309,6 @@ The following features were explicitly removed by the user and should NOT be re-
 - **Separate Advanced Microphone Settings window** — `AdvancedMicrophoneSettingsView` and `AdvancedMicrophoneSettingsWindowController` were deleted. All microphone controls (AEC toggle, channel preset picker, audio preview) are now inline in `PreferencesAudioView`.
 - **"Advanced processing enabled" toggle** (`isEnabled`) — removed from the model and all UI. Microphone processing (channel preset, AEC) is always active.
 - **Audio Unit plugin chain** — was briefly implemented then removed. No AU instantiation, no effect chain.
-- **App audio capture** — ScreenCaptureKit / CATapDescription capture, ring buffer mixer, and all related UI were removed entirely (7 files deleted).
 - **Apple Voice Processing (VPIO)** — removed, didn't work well. Replaced by WebRTC AEC3.
 - **Custom NLMS echo canceller** — homemade NLMS adaptive filter was replaced by WebRTC AEC3 (much better quality, no CPU issues in Debug builds).
 - **Audio diagnostics logging** — `AudioDiagnosticsLogger` and all `logAudio`/`logDiagnostics` calls removed. Was causing unnecessary CPU usage (per-chunk stats computation). Replaced by `AudioLogger` for file-based diagnostics (lightweight, no per-chunk computation).
@@ -300,10 +343,15 @@ The main window has a context-aware `NSToolbar` on `SavedServersWindowController
 - **`NSApp.delegate as? AppDelegate` returns nil in SwiftUI apps.** `@NSApplicationDelegateAdaptor` wraps the delegate behind the `NSApplicationDelegate` protocol; the concrete-class cast fails. AppKit code that needs the AppDelegate should fall back to scanning `NSApp.windows` for a `window.delegate` of the expected type (see `SavedServersWindowController.appDelegate`).
 - **`NSLog` arguments are redacted to `<private>` in unified logging.** When debugging, either run the binary directly to read stderr (`~/Library/Developer/Xcode/DerivedData/.../ttaccessible.app/Contents/MacOS/ttaccessible 2>&1 | grep TAG`) or pass `--info` to `log show`.
 - **Dynamic toolbar contents**: keep all possible item identifiers in `toolbarAllowedItemIdentifiers`, return a mode-specific subset from `toolbarDefaultItemIdentifiers`, and call `toolbar.removeItem` + `toolbar.insertItem(withItemIdentifier:at:)` from the mode-change subscriber to rebuild on the fly. Disable `allowsUserCustomization` and `autosavesConfiguration` when the contents are derived from app state — saved configurations would conflict with the runtime rebuild.
+- **A key equivalent that fires a menu item makes VoiceOver speak the item's title** (AppKit posts `AXMenuItemSelected`), before anything the action announces. Either let the title say what the key is about to do — the Cmd+Option+A item reads Stream Audio from This Mac, or Stop Streaming while any stream runs, and does that — or take the chord in a local `NSEvent` key monitor before the menu sees it, as `AppDelegate.installMicrophoneMenuKeyMonitor()` does for Cmd+Shift+A (Toggle microphone). That monitor matches the chord SwiftUI declares as well as whatever the item carries, because `applyMuteMenuShortcut` re-binds the item to the global hotkey's chord.
+- **Taking a container out of the accessibility tree takes overrides, not setters.** A stock `NSHostingView` ignores `setAccessibilityElement(false)` and stays in the tree as an empty `AXHostingView` group, so the mixer's SwiftUI rendering sits in `MixerHostingView`, which overrides `isAccessibilityElement()` and returns no children (VoiceOver uses the overlay laid over it). An ignored `NSSplitView` still leaves its divider, which AppKit synthesises as an accessibility child; `ConnectedServerSplitView` returns `NSAccessibility.unignoredChildren(from: arrangedSubviews)` so the panes' contents rise to the window.
+- **VoiceOver walks a window by `AXChildrenInNavigationOrder`, not `AXChildren`**, and AppKit fills it by sorting on screen position. Two panes side by side interleave (server name, output volume, "Connected as…", input volume…). The main window is a `ReadingOrderWindow`, which keeps AppKit's order for the title bar and toolbar and puts the content back in `AXChildren` order. The override sits in Objective-C (`NavigationOrderWindow.m`): the list holds cells and proxies that are not `NSAccessibilityElementProtocol`, and a Swift override of `accessibilityChildrenInNavigationOrder()` traps casting it.
+- **A view that is the keyboard stop must keep its inner controls out of the key-view loop.** `AudioGainControlView` is the slider VoiceOver reads; its `NSSlider` is hidden from VoiceOver but, until it set `refusesFirstResponder`, still took Tab first and read "50%, slider" with no name. `AccessibleSlider.acceptsFirstResponder` honours `refusesFirstResponder`.
+- **An `NSTextField` given the `AXHeading` role needs its text as its accessibility label too.** With the role alone its text is only its `AXValue`, and VoiceOver announces an empty heading (the stream-source and Move Users sheet titles set both).
 
 ### Sound Packs
 
-Three sound packs bundled: **Default** (root of `Sounds/`), **Majorly-G**, **Old** (in subfolders with prefixed filenames to avoid Xcode resource flattening conflicts). `SoundPlayer` loads from selected pack with fallback to Default for missing sounds. Per-event enable/disable via `disabledSoundEvents: Set<NotificationSound>` in preferences.
+Three sound packs bundled: **Default** (root of `Sounds/`), **Majorly-G**, **Old** (in subfolders with prefixed filenames to avoid Xcode resource flattening conflicts). `SoundPlayer` loads from selected pack with fallback to Default for missing sounds. Per-event enable/disable via `disabledSoundEvents: Set<NotificationSound>` in preferences. Custom packs load from each profile's `customSoundPacksDirectory`, and a built-in pack can be hidden (`deletedBuiltInPacks`).
 
 ### User Actions (Keyboard Shortcuts)
 
@@ -328,7 +376,7 @@ Three sound packs bundled: **Default** (root of `Sounds/`), **Majorly-G**, **Old
 
 ### Preferences Organization
 
-6 tabs: **General** (identity, auto-away, relative timestamps, import toggle), **Connection** (auto-join, reconnect, skip kick confirmation, subscriptions, intercepts), **Audio** (devices, AEC, preset, preview), **Sounds** (global toggle, pack selector, 26 per-event toggles), **Announcements** (background modes, TTS config, per-event announcement toggles, global mode override), **Recording** (folder, mode, format, auto-restart).
+7 panes: **General** (identity, auto-away, relative timestamps, import toggle, language), **Connection** (auto-join, reconnect, always connect with the microphone off, how people are named — nickname, username or both — skip kick confirmation, subscriptions, intercepts), **BearWare** (BearWare.dk sign-in), **Audio** (devices, microphone mode — always on, push-to-talk or both — with the push-to-talk key, the microphone toggle hotkey and whether each works while another app is in front, per-user volume memory, AEC, preset, preview), **Sounds** (global toggle, pack selector, 26 per-event toggles), **Announcements** (background modes, TTS config, per-event announcement toggles, global mode override), **Recording** (folder, mode, format, auto-restart).
 
 All section headings use `.accessibilityAddTraits(.isHeader)` for VoiceOver heading navigation.
 
@@ -352,8 +400,6 @@ Admin user accounts list shows a Password column. The SDK returns plaintext pass
 
 ### Missing Features (vs original Qt client)
 
-- **Push-to-Talk** — configurable hotkey for PTT mode (not just toggle)
 - **VOX level** — configurable voice activation threshold slider
 - **Mic gain hotkeys** — increase/decrease gain via keyboard shortcuts
 - **Webcam capture / desktop sharing** — not implemented (low priority for accessibility). Media file streaming IS supported via `+MediaStreaming` / `+Video` (`MediaStreamingPlayerViewController`, `VideoFrameView`, `CollapsibleVideoPanelView`).
-- **Custom sound packs** — loading user-provided sound packs from disk (only 3 built-in packs currently)

@@ -29,6 +29,9 @@ struct PreferencesAudioView: View {
                         ForEach(store.state.catalog.outputDevices) { device in
                             Text(device.displayName).tag(device.persistentID)
                         }
+                        if let missing = store.missingOutputDevice {
+                            Text(missing.name).tag(missing.id)
+                        }
                     }
                     .labelsHidden()
                     .accessibilityLabel(L10n.text("preferences.audio.outputDevice"))
@@ -44,6 +47,9 @@ struct PreferencesAudioView: View {
                         Text(L10n.text("preferences.audio.systemDefault")).tag(defaultDeviceTag)
                         ForEach(store.state.catalog.inputDevices) { device in
                             Text(device.displayName).tag(device.persistentID)
+                        }
+                        if let missing = store.missingInputDevice {
+                            Text(missing.name).tag(missing.id)
                         }
                     }
                     .labelsHidden()

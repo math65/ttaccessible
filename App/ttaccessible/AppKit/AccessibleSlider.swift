@@ -15,7 +15,9 @@ class AccessibleSlider: NSSlider {
     /// `(maxValue - minValue) / 10`, with a floor of 1.
     var pageStep: Double?
 
-    override var acceptsFirstResponder: Bool { isEnabled }
+    // refusesFirstResponder is honoured, as NSControl's own answer does: a slider drawn
+    // inside a view that is the keyboard stop (AudioGainControlView) must not be one too.
+    override var acceptsFirstResponder: Bool { isEnabled && !refusesFirstResponder }
 
     override func keyDown(with event: NSEvent) {
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)

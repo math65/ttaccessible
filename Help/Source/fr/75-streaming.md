@@ -1,7 +1,7 @@
 ---
 title: Diffuser du son dans un canal
 description: Envoyer un fichier, une radio internet, un périphérique, une autre app ou VoiceOver dans le canal, en même temps que votre voix.
-keywords: diffusion, fichier média, URL, radio, périphérique, application, VoiceOver, lecteur média
+keywords: diffusion, fichier média, URL, radio, périphérique, application, VoiceOver, lecteur média, YouTube, page web
 anchor: streaming
 ---
 
@@ -24,6 +24,14 @@ principale l'affiche.
 2. Saisissez l'adresse du flux, puis cliquez sur Diffuser. Les schémas `http`, `https`, `rtmp`,
    `rtmps`, `rtsp` et `mms` sont acceptés.
 
+Vous pouvez aussi saisir l'adresse d'une page web qui diffuse du son ou de la vidéo : YouTube, et les
+nombreux autres sites pris en charge par [yt-dlp](https://github.com/yt-dlp/yt-dlp), que tt-Accessible
+embarque. tt-Accessible annonce *Recherche sur* suivi du nom du site, trouve le média derrière la page
+et le diffuse sous le titre de la page. Une adresse qui est déjà un flux, comme le lien `.mp3` ou
+`.m3u8` d'une radio, démarre aussitôt, comme avant, et une page que yt-dlp ne sait pas lire est
+diffusée telle quelle. La liste ci-dessous garde l'adresse de la page, pas le lien vers le média, qui
+cesse de fonctionner au bout de quelques heures.
+
 La dernière adresse diffusée vous est proposée d'emblée : appuyez sur Retour pour la relancer
 telle quelle. Les adresses précédentes restent accessibles avec la flèche vers le bas, et vous
 pouvez aussi taper les premiers caractères de l'une d'elles pour la compléter. Les dix dernières
@@ -32,8 +40,17 @@ adresses sont retenues.
 ## Diffuser un périphérique, des apps ou VoiceOver
 
 1. Choisissez Raccourcis > Diffuser du son de ce Mac, ou appuyez sur Option + Commande + A.
-2. Dans la liste **Source audio**, cochez ce que vous voulez envoyer. Utilisez les flèches pour
-   parcourir la liste et la barre d'espace pour cocher ou décocher.
+2. Cochez ce que vous voulez envoyer dans la liste des sources. Elle s'ouvre sur ce que vous
+   avez diffusé la dernière fois, et un groupe qui contient une source cochée est déjà ouvert :
+   rien de ce que vous avez coché ne vous échappe. La première fois, rien n'est coché : rien n'est
+   diffusé tant que vous ne l'avez pas choisi. **Tout le son de ce Mac** figure en haut, puis trois groupes que vous ouvrez et fermez
+   avec les flèches droite et gauche : **Utilisées récemment**, ouvert d'emblée, **Périphériques**,
+   et **Applications**, qui commence par **VoiceOver**. Appuyez sur Espace pour cocher ou décocher
+   la ligne sur laquelle vous êtes ; avec VoiceOver, VO + Espace fait de même. Pour trouver une
+   source rapidement, tapez une partie de son nom dans le champ **Rechercher une source**, à gauche
+   de la liste : la liste ne garde que les correspondances, ouvre chaque groupe qui en contient et
+   en annonce le nombre. Appuyez sur la flèche bas pour passer du champ de recherche à la première
+   correspondance.
 3. Sélectionnez **Me faire entendre l'audio diffusé** si vous voulez entendre ce que vous envoyez.
    L'option est décochée, pour ne pas vous imposer cette écoute.
 4. Sélectionnez **Couper le son de cette source sur ce Mac pendant la diffusion** pour la faire
@@ -43,21 +60,27 @@ adresses sont retenues.
 
 ### Ce que vous pouvez cocher
 
-- **Plusieurs applications à la fois.** Votre lecteur de musique et VoiceOver, par exemple, pour
-  que le canal entende ce que vous écoutez et ce que dit votre lecteur d'écran.
-- **Tout le son de ce Mac**, quand désigner les apps une par une n'a pas d'intérêt. Le son de
-  tt-Accessible lui-même est retiré de la capture, sans quoi le canal s'entendrait revenir.
-  Attention : les notifications et les sons du système partent aussi dans le canal.
-- **Un périphérique d'entrée**, qui se diffuse seul : cocher un périphérique décoche les
-  applications, et inversement. tt-Accessible vous annonce ce qui vient d'être décoché.
+- **N'importe quelle combinaison de périphériques et d'applications.** Un micro et votre lecteur
+  de musique, deux interfaces audio, VoiceOver et une app : tout ce que vous cochez est mélangé en
+  une seule diffusion. Chaque périphérique a sa propre horloge ; tt-Accessible les garde en phase,
+  pour qu'une longue diffusion ne se décale pas. Quand des sources fortes s'additionnent au-delà de
+  ce que la diffusion peut porter, les crêtes sont adoucies au lieu de saturer.
+- **Tout le son de ce Mac**, quand désigner les apps une par une n'a pas d'intérêt. Il se combine
+  avec des périphériques, mais pas avec des applications, qu'il contient déjà : le cocher décoche
+  les applications, et cocher une application le décoche. tt-Accessible vous annonce ce qui vient
+  d'être décoché. Son propre son est retiré de la capture, sans quoi le canal s'entendrait
+  revenir. Attention : les notifications et les sons du système partent aussi dans le canal.
 
-Pour désigner une app qui n'est pas lancée, cliquez sur **Sélectionner une application** — cela
-nécessite macOS 14.2 ou une version ultérieure. La diffusion de l'audio d'une app, de VoiceOver ou
+Pour désigner une app qui n'est pas lancée, cliquez sur **Sélectionner une application…**, à côté
+de la liste — cela nécessite macOS 14.2 ou une version ultérieure. L'app est ajoutée au groupe
+Applications, cochée. La diffusion de l'audio d'une app, de VoiceOver ou
 de tout le Mac nécessite macOS 13 ou une version ultérieure.
 
 La diffusion continue même lorsque la source est silencieuse : une pause dans la musique ne
 l'interrompt pas. Votre dernier choix est recoché la fois suivante, même s'il portait sur
-plusieurs applications.
+plusieurs applications. **Utilisées récemment** garde les cinq dernières sources diffusées, la plus
+récente en premier ; une source qui n'est plus disponible, comme un périphérique débranché, n'y
+figure pas.
 
 Si l'app choisie ne produit aucun son, tt-Accessible répond *La source sélectionnée n'a aucun audio
 à capturer pour le moment.*
@@ -89,7 +112,9 @@ vous l'écoutez. À 0 %, plus rien ne part.
 
 ## Arrêter la diffusion
 
-Choisissez Raccourcis > Arrêter la diffusion, ou appuyez sur Option + Commande + Point.
+Appuyez de nouveau sur Option + Commande + A, ou choisissez Raccourcis > Arrêter la diffusion :
+pendant une diffusion, Diffuser du son de ce Mac devient Arrêter la diffusion, et arrête de même
+un fichier ou une adresse.
 tt-Accessible annonce *Diffusion terminée*, et le début comme la fin apparaissent dans l'historique
 de session.
 

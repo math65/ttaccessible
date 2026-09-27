@@ -103,9 +103,8 @@ s'appliquent à celle qui est sélectionnée dans l'arbre des canaux.
 |---|---|
 | Option + Commande + S | Diffuser un fichier média |
 | Option + Commande + U | Diffuser une URL |
-| Option + Commande + A | Diffuser du son de ce Mac |
+| Option + Commande + A | Diffuser du son de ce Mac ; Arrêter la diffusion pendant une diffusion |
 | Option + Commande + M | Suspendre un fichier, ou couper le son d'une source en direct |
-| Option + Commande + Point | Arrêter la diffusion |
 
 ## Dans les commandes de diffusion
 

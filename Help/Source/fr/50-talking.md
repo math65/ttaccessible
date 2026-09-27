@@ -62,12 +62,14 @@ Bon à savoir également :
 
 ## Régler les volumes
 
-La fenêtre principale comporte trois curseurs, chacun avec l'action VoiceOver *Réinitialiser à
+La fenêtre principale comporte quatre curseurs, chacun avec l'action VoiceOver *Réinitialiser à
 50 %* :
 
-- **Volume d'entrée** — le niveau auquel votre micro est envoyé.
 - **Volume de sortie** — le niveau auquel vous entendez tout le monde.
+- **Volume d'entrée** — le niveau auquel votre micro est envoyé.
 - **Volume des effets sonores** — le niveau des sons de notification.
+- **Volume des médias** — le niveau de toutes les diffusions du canal, la vôtre comprise, sans
+  toucher à la voix de personne.
 
 Pour tout couper ou tout rétablir d'un coup, appuyez sur Commande + M.
 
