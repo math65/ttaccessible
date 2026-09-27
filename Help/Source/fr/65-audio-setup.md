@@ -23,8 +23,9 @@ intervenir.
 
 Un périphérique que vous avez choisi et qui est débranché reste dans son menu, marqué *non
 connecté*, et reste votre choix. En attendant, le son passe par la sortie par défaut du système et
-le micro est coupé ; tous deux reviennent à votre périphérique dès qu'il est rebranché, le micro
-activé ou coupé comme il l'était.
+le micro est coupé ; tous deux reviennent à votre périphérique dès qu'il est rebranché. Un micro qui
+était activé se réactive, avec son signal sonore, tant que la session est restée ouverte et que vous
+ne l'avez pas entre-temps activé ou coupé vous-même, ni remplacé par un autre micro.
 
 ## Supprimer l'écho et le bruit de fond
 

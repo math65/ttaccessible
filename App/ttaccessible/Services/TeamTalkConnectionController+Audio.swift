@@ -157,6 +157,9 @@ extension TeamTalkConnectionController {
                 return
             }
 
+            // The user has taken the microphone in hand: a device plugged back in later
+            // must not change it behind them.
+            self.microphoneAwaitingInputDevice = nil
             let opening = self.bothGateOpen == false
             if opening {
                 if self.voiceTransmissionEnabled == false {
@@ -489,6 +492,16 @@ extension TeamTalkConnectionController {
                 do {
                     try self.ensureAdvancedMicrophoneInputReadyLocked(instance: instance)
                     if hadVoice { self.voiceTransmissionEnabled = true }
+                    // Back after its device returned: it was off, so say it is on again,
+                    // as turning it on does.
+                    if awaited != nil {
+                        if self.microphoneGateOpenLocked {
+                            SoundPlayer.shared.play(.voxMeEnable)
+                        }
+                        if let connectedRecord = self.connectedRecord {
+                            self.publishSessionLocked(instance: instance, record: connectedRecord)
+                        }
+                    }
                 } catch {
                     AudioLogger.log("restartSoundSystem: mic restart failed — %@", error.localizedDescription)
                     // Brought back when the chosen device is plugged in again.
@@ -546,6 +559,10 @@ extension TeamTalkConnectionController {
                 || preferences.preferredOutputDevice != self.appliedOutputPreference
             let inputChanged = self.appliedInputPreference == nil
                 || preferences.preferredInputDevice != self.appliedInputPreference
+            // Another microphone chosen: the one we were waiting for is no longer wanted.
+            if inputChanged {
+                self.microphoneAwaitingInputDevice = nil
+            }
             // Microphone processing (AEC / noise-suppression mode / channel preset)
             // changed without a device change — the capture engine must be rebuilt so
             // the WebRTC processor is recreated with the new flags, otherwise the change
@@ -661,6 +678,9 @@ extension TeamTalkConnectionController {
                 return
             }
 
+            // Turning the microphone on is the user's own answer to one that went away with
+            // its device: if it fails here, a replug later must not turn it on unasked.
+            self.microphoneAwaitingInputDevice = nil
             self.extendDeviceChangeSuppressionLocked(duration: 3.0)
             // Kept running for the Audio-preferences preview while muted, the engine
             // is already open on the current devices, so there is nothing new to

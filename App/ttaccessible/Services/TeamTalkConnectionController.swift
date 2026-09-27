@@ -271,8 +271,9 @@ final class TeamTalkConnectionController {
     var lastAudioRoutingSnapshot: AudioRoutingSnapshot?
     /// Set when the chosen microphone went away and the restart couldn't bring it back:
     /// whether voice was on. The microphone comes back, as it was, when that device is
-    /// plugged in again (audioRouteReaction). Cleared once a microphone starts, or when
-    /// the user mutes meanwhile.
+    /// plugged in again (audioRouteReaction), with the "mic on" sound. Cleared once a
+    /// microphone starts, when the user turns it on or off or picks another input
+    /// meanwhile, and when the session ends.
     var microphoneAwaitingInputDevice: Bool?
     var lastAutoAwayCheckTime: CFAbsoluteTime = 0
     var isAutoAwayActive = false
