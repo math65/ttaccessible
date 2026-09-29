@@ -1000,12 +1000,24 @@ extension TeamTalkConnectionController {
         }
     }
 
-    func applyDefaultSubscriptionPreferences() {
+    /// A default was changed in Preferences: apply THAT option to everyone
+    /// present, and leave the others alone, so a choice made by hand for one
+    /// person on another option survives.
+    func applyDefaultSubscriptionPreference(_ option: UserSubscriptionOption) {
         queue.async { [weak self] in
             guard let self, let instance = self.instance, let record = self.connectedRecord else {
                 return
             }
-            self.applyDefaultSubscriptionPreferencesLocked(instance: instance, preferences: self.preferencesStore.preferences)
+            let myUserID = TT_GetMyUserID(instance)
+            for user in self.fetchServerUsersLocked(instance: instance) where user.nUserID != myUserID {
+                self.applyDefaultSubscriptionPreferencesLocked(
+                    instance: instance,
+                    user: user,
+                    preferences: self.preferencesStore.preferences,
+                    options: [option],
+                    force: true
+                )
+            }
             self.publishSessionLocked(instance: instance, record: record)
         }
     }
@@ -1016,34 +1028,53 @@ extension TeamTalkConnectionController {
     ) {
         let myUserID = TT_GetMyUserID(instance)
         for user in fetchServerUsersLocked(instance: instance) where user.nUserID != myUserID {
-            applyDefaultSubscriptionPreferencesLocked(instance: instance, userID: user.nUserID, preferences: preferences)
+            applyDefaultSubscriptionPreferencesLocked(instance: instance, user: user, preferences: preferences)
         }
     }
 
+    /// Defaults are applied ONCE per user per session: at login the same
+    /// person is reached both by their USER_LOGGEDIN event and by the bulk pass
+    /// that follows, and the event's `User` predates our own command, so a
+    /// second pass would resend it. `force` is for a changed preference.
     func applyDefaultSubscriptionPreferencesLocked(
         instance: UnsafeMutableRawPointer,
-        userID: Int32,
-        preferences: AppPreferences
+        user: User,
+        preferences: AppPreferences,
+        options: [UserSubscriptionOption] = UserSubscriptionOption.allCases,
+        force: Bool = false
     ) {
-        // Combine all subscription flags into two bitmasks (subscribe/unsubscribe)
-        // to minimize server commands instead of sending one per option.
+        guard force || !subscriptionDefaultsAppliedUserIDs.contains(user.nUserID) else {
+            return
+        }
+        subscriptionDefaultsAppliedUserIDs.insert(user.nUserID)
+        // Send only the difference between what the server already applies
+        // (`uLocalSubscriptions`, from the user's `sublocal`) and what the
+        // preferences want. Sending the full state as an unsubscribe + a
+        // subscribe for every user cost two commands per user at login — 34
+        // for 17 people — where the Qt client, with default settings, sends
+        // none (issue #45).
+        // Intercepts are admin-only on the server, and a single intercept bit
+        // makes it refuse the WHOLE command (ServerNode::UserSubscribe), so
+        // for anyone else they would also sink the ordinary subscriptions.
+        let isAdmin = (TT_GetMyUserType(instance) & UInt32(USERTYPE_ADMIN.rawValue)) != 0
+        let current = user.uLocalSubscriptions
         var subscribeMask: UInt32 = 0
         var unsubscribeMask: UInt32 = 0
-        for option in UserSubscriptionOption.allCases {
+        for option in options where isAdmin || !option.isIntercept {
             let enabled = preferences.isSubscriptionEnabledByDefault(option)
-            if enabled {
+            let isActive = (current & option.subscriptionMask) != 0
+            if enabled && !isActive {
                 subscribeMask |= option.subscriptionMask
-            } else {
+            } else if !enabled && isActive {
                 unsubscribeMask |= option.subscriptionMask
             }
-            updateObservedSubscriptionStateLocked(option, enabled: enabled, userID: userID)
+            updateObservedSubscriptionStateLocked(option, enabled: enabled, userID: user.nUserID)
         }
-        unsubscribeMask |= UInt32(SUBSCRIBE_VIDEOCAPTURE.rawValue)
         if unsubscribeMask != 0 {
-            _ = TT_DoUnsubscribe(instance, userID, Subscriptions(unsubscribeMask))
+            _ = TT_DoUnsubscribe(instance, user.nUserID, Subscriptions(unsubscribeMask))
         }
         if subscribeMask != 0 {
-            _ = TT_DoSubscribe(instance, userID, Subscriptions(subscribeMask))
+            _ = TT_DoSubscribe(instance, user.nUserID, Subscriptions(subscribeMask))
         }
     }
 

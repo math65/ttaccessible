@@ -118,6 +118,10 @@ final class TeamTalkConnectionController {
     var pendingTextMessages: [UInt64: [TextMessage]] = [:]
     var pendingChannelMessageCommandIDs = Set<Int32>()
     var observedSubscriptionStates: [Int32: [UserSubscriptionOption: Bool]] = [:]
+    /// Users whose default subscriptions were already applied this session.
+    var subscriptionDefaultsAppliedUserIDs: Set<Int32> = []
+    /// Commands whose wait timed out, kept to log a late reply (issue #45).
+    var timedOutCommands: [Int32: (operation: String, startedAt: Date)] = [:]
     var suppressLoginHistoryDepth = 0
     var suppressJoinHistoryDepth = 0
     var suppressLoginHistoryUntil = Date.distantPast
@@ -276,6 +280,7 @@ final class TeamTalkConnectionController {
     /// meanwhile, and when the session ends.
     var microphoneAwaitingInputDevice: Bool?
     var lastAutoAwayCheckTime: CFAbsoluteTime = 0
+    var lastNetworkDiagnosticsTime: CFAbsoluteTime = 0
     var isAutoAwayActive = false
     var autoAwayActivationTime: Date?
     var autoAwayRestoreStatusMessage = ""

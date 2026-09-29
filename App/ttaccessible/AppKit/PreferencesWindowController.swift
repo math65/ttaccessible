@@ -148,8 +148,8 @@ private final class PreferencesContainerViewController: NSViewController {
         self.connectionController = connectionController
         self.advancedMicrophoneSettingsStore = advancedMicrophoneSettingsStore
         self.connectionPreferencesStore = preferencesStore.makeConnectionStore(
-            onSubscriptionPreferencesChanged: { [weak connectionController] in
-                connectionController?.applyDefaultSubscriptionPreferences()
+            onSubscriptionPreferencesChanged: { [weak connectionController] option in
+                connectionController?.applyDefaultSubscriptionPreference(option)
             }
         )
         self.audioPreferencesStore = preferencesStore.makeAudioStore(

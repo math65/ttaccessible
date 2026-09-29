@@ -497,7 +497,7 @@ final class AppPreferencesStore: ObservableObject {
         return url
     }
 
-    func makeConnectionStore(onSubscriptionPreferencesChanged: (() -> Void)? = nil) -> ConnectionPreferencesStore {
+    func makeConnectionStore(onSubscriptionPreferencesChanged: ((UserSubscriptionOption) -> Void)? = nil) -> ConnectionPreferencesStore {
         ConnectionPreferencesStore(rootStore: self, onSubscriptionPreferencesChanged: onSubscriptionPreferencesChanged)
     }
 
@@ -582,10 +582,10 @@ final class ConnectionPreferencesStore: ObservableObject {
     @Published private(set) var state: State
 
     private let rootStore: AppPreferencesStore
-    private let onSubscriptionPreferencesChanged: (() -> Void)?
+    private let onSubscriptionPreferencesChanged: ((UserSubscriptionOption) -> Void)?
     private var cancellables = Set<AnyCancellable>()
 
-    init(rootStore: AppPreferencesStore, onSubscriptionPreferencesChanged: (() -> Void)? = nil) {
+    init(rootStore: AppPreferencesStore, onSubscriptionPreferencesChanged: ((UserSubscriptionOption) -> Void)? = nil) {
         self.rootStore = rootStore
         self.onSubscriptionPreferencesChanged = onSubscriptionPreferencesChanged
         self.state = Self.makeState(from: rootStore.preferences)
@@ -661,7 +661,7 @@ final class ConnectionPreferencesStore: ObservableObject {
 
     func updateSubscriptionEnabledByDefault(_ enabled: Bool, for option: UserSubscriptionOption) {
         rootStore.updateSubscriptionEnabledByDefault(enabled, for: option)
-        onSubscriptionPreferencesChanged?()
+        onSubscriptionPreferencesChanged?(option)
     }
 
     private static func makeState(from preferences: AppPreferences) -> State {
