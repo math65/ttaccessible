@@ -213,8 +213,16 @@ extension TeamTalkConnectionController {
             if properties.isNoRecording { chanType |= UInt32(CHANNEL_NO_RECORDING.rawValue) }
             chan.uChannelType = chanType
 
-            if let opus = properties.opusCodec {
-                chan.audiocodec.nCodec = OPUS_CODEC
+            // Touch the codec only when the channel is already Opus AND the
+            // form really changed it. The form always hands back an Opus codec
+            // (defaults for a channel it can't describe), so writing it blindly
+            // turned a Speex or codec-less channel into Opus, and re-sent a
+            // bitrate rounded to the kbps the field shows. The server refuses
+            // any codec change while the channel has users (CHANNEL_HAS_USERS),
+            // which made even a topic edit fail in an occupied channel.
+            if let opus = properties.opusCodec,
+               chan.audiocodec.nCodec == OPUS_CODEC,
+               Self.opusCodecChanged(chan.audiocodec.opus, to: opus) {
                 chan.audiocodec.opus.nChannels = opus.channels
                 chan.audiocodec.opus.nSampleRate = opus.sampleRate
                 chan.audiocodec.opus.nBitRate = opus.bitrate
@@ -235,6 +243,16 @@ extension TeamTalkConnectionController {
                 DispatchQueue.main.async { completion(.failure(error)) }
             }
         }
+    }
+
+    /// Whether the form's codec differs from the channel's, compared the way
+    /// the form shows it: the bitrate field is in whole kbps, so a channel at
+    /// 32500 bps reads "32" and must not count as changed when left alone.
+    nonisolated static func opusCodecChanged(_ current: OpusCodec, to requested: OpusCodecSettings) -> Bool {
+        current.nChannels != requested.channels
+            || current.nSampleRate != requested.sampleRate
+            || current.nApplication != requested.application
+            || current.nBitRate / 1000 != requested.bitrate / 1000
     }
 
     func deleteChannel(

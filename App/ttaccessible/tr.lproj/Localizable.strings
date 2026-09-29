@@ -978,6 +978,7 @@
 "accounts.column.type" = "Tür";
 "accounts.column.note" = "Not";
 "accounts.column.lastLogin" = "Son giriş";
+"accounts.lastLogin.never" = "Hiçbir zaman";
 "accounts.type.default" = "Varsayılan";
 "accounts.type.admin" = "Sunucu yöneticisi";
 "accounts.type.disabled" = "Devre dışı";

@@ -921,6 +921,7 @@ extension TeamTalkConnectionController {
                 }
             case CLIENTEVENT_CMD_USERACCOUNT:
                 pendingUserAccounts.append(makeUserAccountProperties(from: message.useraccount))
+                rawUserAccountsByUsername[ttString(from: message.useraccount.szUsername)] = message.useraccount
             case CLIENTEVENT_CMD_BANNEDUSER:
                 pendingBannedUsers.append(makeBannedUserProperties(from: message.banneduser))
             case CLIENTEVENT_CMD_SUCCESS:
@@ -1183,6 +1184,7 @@ extension TeamTalkConnectionController {
         channelPasswords.removeAll()
         pendingUserAccounts.removeAll()
         cachedUserAccounts.removeAll()
+        rawUserAccountsByUsername.removeAll()
         listUserAccountsCmdID = -1
         privateConversations.removeAll()
         selectedPrivateConversationUserID = nil

@@ -52,7 +52,7 @@ final class UserAccountFormViewController: NSViewController {
 
     private let mode: UserAccountFormMode
     private weak var connectionController: TeamTalkConnectionController?
-    private let onSave: () -> Void
+    private let onSave: (Result<Void, Error>) -> Void
 
     // Essential fields
     private var usernameField: NSTextField!
@@ -70,7 +70,7 @@ final class UserAccountFormViewController: NSViewController {
     private var commandsLimitField: NSTextField!
     private var commandsIntervalField: NSTextField!
 
-    init(mode: UserAccountFormMode, connectionController: TeamTalkConnectionController?, onSave: @escaping () -> Void) {
+    init(mode: UserAccountFormMode, connectionController: TeamTalkConnectionController?, onSave: @escaping (Result<Void, Error>) -> Void) {
         self.mode = mode
         self.connectionController = connectionController
         self.onSave = onSave
@@ -380,12 +380,12 @@ final class UserAccountFormViewController: NSViewController {
 
         switch mode {
         case .create:
-            connectionController?.createUserAccount(account) { [weak self] _ in
-                self?.onSave()
+            connectionController?.createUserAccount(account) { [weak self] result in
+                self?.onSave(result)
             }
         case .edit(let original):
-            connectionController?.updateUserAccount(originalUsername: original.username, updated: account) { [weak self] _ in
-                self?.onSave()
+            connectionController?.updateUserAccount(originalUsername: original.username, updated: account) { [weak self] result in
+                self?.onSave(result)
             }
         }
     }
