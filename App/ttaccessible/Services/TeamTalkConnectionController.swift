@@ -288,6 +288,10 @@ final class TeamTalkConnectionController {
     var autoAwayPeakIdleSeconds: Double?
     var pendingUserAccounts: [UserAccountProperties] = []
     var cachedUserAccounts: [UserAccountProperties] = []
+    /// The accounts exactly as the server listed them, by username. Editing
+    /// starts from these, so fields the form doesn't show (auto-operator
+    /// channels among them) survive a save.
+    var rawUserAccountsByUsername: [String: UserAccount] = [:]
     var listUserAccountsCmdID: Int32 = -1
     /// Lowercased-username → nickname of currently-online users, built once per
     /// account listing so `makeUserAccountProperties` resolves each account's online

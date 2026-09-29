@@ -248,8 +248,11 @@ final class UserAccountsViewController: NSViewController {
     }
 
     @objc private func addAccount() {
-        let formVC = UserAccountFormViewController(mode: .create, connectionController: connectionController) { [weak self] in
+        let formVC = UserAccountFormViewController(mode: .create, connectionController: connectionController) { [weak self] result in
             self?.refresh()
+            if case .failure(let error) = result {
+                self?.presentError(error.localizedDescription)
+            }
         }
         presentAsSheet(formVC)
     }
@@ -257,9 +260,14 @@ final class UserAccountsViewController: NSViewController {
     @objc private func editSelected() {
         guard tableView.selectedRow >= 0, tableView.selectedRow < accounts.count else { return }
         let account = accounts[tableView.selectedRow]
-        let formVC = UserAccountFormViewController(mode: .edit(account), connectionController: connectionController) { [weak self] in
+        let formVC = UserAccountFormViewController(mode: .edit(account), connectionController: connectionController) { [weak self] result in
             self?.refresh()
-            self?.announce(L10n.format("accounts.announced.updated", account.username))
+            switch result {
+            case .success:
+                self?.announce(L10n.format("accounts.announced.updated", account.username))
+            case .failure(let error):
+                self?.presentError(error.localizedDescription)
+            }
         }
         presentAsSheet(formVC)
     }
@@ -414,9 +422,12 @@ final class UserAccountsViewController: NSViewController {
         alert.beginSheetModal(for: window) { [weak self] response in
             guard response == .alertFirstButtonReturn else { return }
             self?.connectionController?.deleteUserAccount(username: account.username) { [weak self] result in
-                if case .success = result {
+                switch result {
+                case .success:
                     self?.refresh()
                     self?.announce(L10n.format("accounts.announced.deleted", account.username))
+                case .failure(let error):
+                    self?.presentError(error.localizedDescription)
                 }
             }
         }
@@ -595,7 +606,7 @@ extension UserAccountsViewController: NSTableViewDelegate {
         case "note":
             cell.textField?.stringValue = account.note
         case "lastLogin":
-            cell.textField?.stringValue = account.lastLoginTime
+            cell.textField?.stringValue = Self.lastLoginDisplay(account.lastLoginTime)
         default:
             break
         }
@@ -621,6 +632,18 @@ extension UserAccountsViewController: NSTableViewDelegate {
 
     func tableViewSelectionDidChange(_ notification: Notification) {
         updateButtonStates()
+    }
+
+    /// The server reports "never logged in" as the epoch in its own time zone
+    /// ("1970/01/01 07:00", or 1969/12/31 west of Greenwich), which VoiceOver
+    /// reads out as a date. Say "Never" instead.
+    static func lastLoginDisplay(_ raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty { return L10n.text("accounts.lastLogin.never") }
+        if let year = Int(trimmed.prefix(4)), year <= 1970 {
+            return L10n.text("accounts.lastLogin.never")
+        }
+        return trimmed
     }
 
     private func typeDisplayName(_ type: UserAccountType) -> String {

@@ -217,6 +217,7 @@ extension TeamTalkConnectionController {
             let cmdID = TT_DoListUserAccounts(instance, 0, 100000)
             if cmdID > 0 {
                 self.pendingUserAccounts = []
+                self.rawUserAccountsByUsername = [:]
                 self.listUserAccountsCmdID = cmdID
                 // Build the online-nickname map once for this listing (first login
                 // wins for multi-login accounts, matching the old per-account
@@ -246,6 +247,7 @@ extension TeamTalkConnectionController {
             if cmdID > 0 {
                 do {
                     try self.waitForCommandCompletionLocked(instance: instance, commandID: cmdID)
+                    self.rawUserAccountsByUsername[account.username] = sdkAccount
                     self.upsertCachedUserAccountLocked(account)
                     DispatchQueue.main.async { completion(.success(())) }
                 } catch {
@@ -264,21 +266,34 @@ extension TeamTalkConnectionController {
                 return
             }
             do {
-                // SDK has no update: delete then recreate
-                let deleteCmdID = originalUsername.withCString { TT_DoDeleteUserAccount(instance, $0) }
-                if deleteCmdID > 0 {
-                    try self.waitForCommandCompletionLocked(instance: instance, commandID: deleteCmdID)
-                }
-                var sdkAccount = self.makeSDKAccount(from: account)
+                // The SDK has no "update account": a new account under an
+                // existing name REPLACES it on the server (ServerGuard::
+                // AddRegUser removes the old entry first). So never delete
+                // first, which lost the account whenever the create then
+                // failed; create, and remove the old name only on a rename.
+                // Start from the account as listed, so what the form doesn't
+                // show (auto-operator channels) is kept rather than wiped.
+                var sdkAccount = self.makeSDKAccount(
+                    from: account,
+                    base: self.rawUserAccountsByUsername[originalUsername]
+                )
                 let createCmdID = TT_DoNewUserAccount(instance, &sdkAccount)
-                if createCmdID > 0 {
-                    try self.waitForCommandCompletionLocked(instance: instance, commandID: createCmdID)
-                    self.removeCachedUserAccountLocked(username: originalUsername, shouldPublish: false)
-                    self.upsertCachedUserAccountLocked(account)
-                    DispatchQueue.main.async { completion(.success(())) }
-                } else {
+                guard createCmdID > 0 else {
                     DispatchQueue.main.async { completion(.failure(TeamTalkConnectionError.internalError("updateUserAccount create failed"))) }
+                    return
                 }
+                try self.waitForCommandCompletionLocked(instance: instance, commandID: createCmdID)
+                self.rawUserAccountsByUsername[account.username] = sdkAccount
+                if originalUsername != account.username {
+                    let deleteCmdID = originalUsername.withCString { TT_DoDeleteUserAccount(instance, $0) }
+                    if deleteCmdID > 0 {
+                        try self.waitForCommandCompletionLocked(instance: instance, commandID: deleteCmdID)
+                    }
+                    self.rawUserAccountsByUsername[originalUsername] = nil
+                    self.removeCachedUserAccountLocked(username: originalUsername, shouldPublish: false)
+                }
+                self.upsertCachedUserAccountLocked(account)
+                DispatchQueue.main.async { completion(.success(())) }
             } catch {
                 DispatchQueue.main.async { completion(.failure(error)) }
             }
@@ -295,6 +310,7 @@ extension TeamTalkConnectionController {
             if cmdID > 0 {
                 do {
                     try self.waitForCommandCompletionLocked(instance: instance, commandID: cmdID)
+                    self.rawUserAccountsByUsername[username] = nil
                     self.removeCachedUserAccountLocked(username: username)
                     DispatchQueue.main.async { completion(.success(())) }
                 } catch {
@@ -306,8 +322,10 @@ extension TeamTalkConnectionController {
         }
     }
 
-    func makeSDKAccount(from properties: UserAccountProperties) -> UserAccount {
-        var account = UserAccount()
+    /// `base` is the account as the server listed it: the form's fields are
+    /// written over it, everything else it carries is kept.
+    func makeSDKAccount(from properties: UserAccountProperties, base: UserAccount? = nil) -> UserAccount {
+        var account = base ?? UserAccount()
         copyTTString(properties.username, into: &account.szUsername)
         copyTTString(properties.password, into: &account.szPassword)
         switch properties.userType {

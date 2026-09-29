@@ -977,6 +977,7 @@
 "accounts.column.type" = "Type";
 "accounts.column.note" = "Note";
 "accounts.column.lastLogin" = "Dernière connexion";
+"accounts.lastLogin.never" = "Jamais";
 "accounts.type.default" = "Défaut";
 "accounts.type.admin" = "Administrateur";
 "accounts.type.disabled" = "Désactivé";
