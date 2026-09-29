@@ -436,7 +436,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 57;
+				CURRENT_PROJECT_VERSION = 58;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -456,7 +456,7 @@
 					"$(SRCROOT)/../Vendor/TeamTalk",
 					"$(SRCROOT)/../Vendor/WebRTC",
 				);
-				MARKETING_VERSION = "1.13.0-beta.1";
+				MARKETING_VERSION = "1.13.0-beta.2";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-lc++",
@@ -483,7 +483,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 57;
+				CURRENT_PROJECT_VERSION = 58;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -503,7 +503,7 @@
 					"$(SRCROOT)/../Vendor/TeamTalk",
 					"$(SRCROOT)/../Vendor/WebRTC",
 				);
-				MARKETING_VERSION = "1.13.0-beta.1";
+				MARKETING_VERSION = "1.13.0-beta.2";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-lc++",
