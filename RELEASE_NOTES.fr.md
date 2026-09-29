@@ -16,4 +16,4 @@ Si cela vous arrive, **ne quittez pas l'app**. Allez dans Aide > Contacter le d�
 - Rien ne confirme encore que cette bêta règle le problème ci-dessus. C'est le journal qui nous le dira.
 
 ### Téléchargement
-[ttaccessible-1.13.0-beta.2.zip](https://github.com/math65/ttaccessible/releases/download/v1.13.0-beta.2/ttaccessible-1.13.0-beta.2.zip)
+[ttaccessible-1.13.0-beta.2-58.zip](https://github.com/math65/ttaccessible/releases/download/v1.13.0-beta.2/ttaccessible-1.13.0-beta.2-58.zip)

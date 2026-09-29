@@ -16,4 +16,4 @@ If it happens to you, **don't quit the app**. Go to Help > Contact the Developer
 - We haven't confirmed that this beta fixes the problem above. The log will tell us.
 
 ### Download
-[ttaccessible-1.13.0-beta.2.zip](https://github.com/math65/ttaccessible/releases/download/v1.13.0-beta.2/ttaccessible-1.13.0-beta.2.zip)
+[ttaccessible-1.13.0-beta.2-58.zip](https://github.com/math65/ttaccessible/releases/download/v1.13.0-beta.2/ttaccessible-1.13.0-beta.2-58.zip)
