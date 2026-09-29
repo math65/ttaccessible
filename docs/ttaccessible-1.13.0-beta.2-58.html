@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ttaccessible-1.13.0-beta.2-58</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --code-bg: #f5f5f7;
+  --link: #0066cc;
+  --link-hover: #0040a0;
+  --rule: #e5e5ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #ececec;
+    --muted: #a0a0a0;
+    --code-bg: #2d2d2d;
+    --link: #4eaaff;
+    --link-hover: #82c4ff;
+    --rule: #3a3a3a;
+  }
+}
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  padding: 1rem 1.25rem 1.5rem;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.15rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.2em; }
+h3 { font-size: 1.02rem; }
+h4 { font-size: 0.95rem; color: var(--muted); }
+p { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; margin: 0.6em 0; }
+li { margin: 0.25em 0; }
+li > p { margin: 0.3em 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover, a:focus { color: var(--link-hover); text-decoration: underline; }
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.75em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+pre code { background: transparent; padding: 0; border-radius: 0; }
+blockquote {
+  border-left: 3px solid var(--rule);
+  margin: 0.8em 0;
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--muted);
+}
+hr { border: 0; border-top: 1px solid var(--rule); margin: 1.5em 0; }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<h2 id="v1130-beta2-build-58--2026-09-29">v1.13.0-beta.2 (build 58) —
+2026-09-29</h2>
+<p>A small beta about connecting to servers. The app now sends far fewer
+commands to the server when you log in, and it keeps a record of what
+happens when a server stops answering.</p>
+<h3 id="connecting">Connecting</h3>
+<ul>
+<li><strong>Logging in sends far fewer commands.</strong> The app used
+to send two for every person on the server, whatever your settings: 34
+for a server with 17 people. It now only sends what differs from the
+server's own settings, which usually means none at all, the same as the
+official TeamTalk app.</li>
+<li><strong>Changing a default subscription in Preferences only changes
+that one.</strong> Say you turn off private messages by default: the
+people already on the server lose private messages and nothing else.
+Anything you set by hand for one person stays as it was.</li>
+<li><strong>Webcam video is no longer turned off for everyone at
+login.</strong> The app now leaves it as the server sets it, like the
+official app does. It still doesn't show webcams.</li>
+</ul>
+<h3 id="if-a-server-stops-answering">If a server stops answering</h3>
+<p>Some of you can log in to a server but never join a channel. After a
+few seconds you get "The server did not respond within the expected
+time", then you're disconnected a minute later. We don't know the cause
+yet. This beta writes what the connection is doing to the audio log, so
+we can see which side goes quiet.</p>
+<p>If it happens to you, <strong>don't quit the app</strong>. Go to Help
+&gt; Contact the Developer, choose "Report a problem", and tick "Attach
+the audio diagnostic log". The log is erased every time the app starts,
+so it has to be sent from the session where the problem happened.</p>
+<h3 id="known">Known</h3>
+<ul>
+<li>We haven't confirmed that this beta fixes the problem above. The log
+will tell us.</li>
+</ul>
+<h3 id="download">Download</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.13.0-beta.2/ttaccessible-1.13.0-beta.2.zip">ttaccessible-1.13.0-beta.2.zip</a></p>
+</body>
+</html>

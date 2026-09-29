@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ttaccessible-1.13.0-beta.2-58.fr</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --code-bg: #f5f5f7;
+  --link: #0066cc;
+  --link-hover: #0040a0;
+  --rule: #e5e5ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #ececec;
+    --muted: #a0a0a0;
+    --code-bg: #2d2d2d;
+    --link: #4eaaff;
+    --link-hover: #82c4ff;
+    --rule: #3a3a3a;
+  }
+}
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  padding: 1rem 1.25rem 1.5rem;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.15rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.2em; }
+h3 { font-size: 1.02rem; }
+h4 { font-size: 0.95rem; color: var(--muted); }
+p { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; margin: 0.6em 0; }
+li { margin: 0.25em 0; }
+li > p { margin: 0.3em 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover, a:focus { color: var(--link-hover); text-decoration: underline; }
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.75em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+pre code { background: transparent; padding: 0; border-radius: 0; }
+blockquote {
+  border-left: 3px solid var(--rule);
+  margin: 0.8em 0;
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--muted);
+}
+hr { border: 0; border-top: 1px solid var(--rule); margin: 1.5em 0; }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<h2 id="v1130-beta2-build-58--29092026">v1.13.0-beta.2 (build 58) —
+29/09/2026</h2>
+<p>Une petite bêta consacrée à la connexion aux serveurs. L'app envoie
+beaucoup moins de commandes quand vous vous connectez, et elle garde une
+trace de ce qui se passe quand un serveur ne répond plus.</p>
+<h3 id="connexion">Connexion</h3>
+<ul>
+<li><strong>La connexion envoie beaucoup moins de commandes au
+serveur.</strong> L'app en envoyait deux pour chaque personne présente,
+quels que soient vos réglages : 34 sur un serveur de 17 personnes. Elle
+n'envoie plus que ce qui diffère des réglages du serveur, c'est-à-dire
+le plus souvent rien du tout, comme l'app TeamTalk officielle.</li>
+<li><strong>Changer un abonnement par défaut dans les préférences ne
+change plus que celui-là.</strong> Si vous désactivez par exemple les
+messages privés par défaut, les personnes déjà présentes perdent les
+messages privés, et rien d'autre. Ce que vous avez réglé à la main pour
+quelqu'un reste tel quel.</li>
+<li><strong>La vidéo des webcams n'est plus coupée pour tout le monde à
+la connexion.</strong> L'app la laisse telle que le serveur la règle,
+comme le fait l'app officielle. Elle n'affiche toujours pas les
+webcams.</li>
+</ul>
+<h3 id="quand-un-serveur-ne-répond-plus">Quand un serveur ne répond
+plus</h3>
+<p>Certains d'entre vous arrivent à se connecter à un serveur, mais
+jamais à rejoindre un canal : au bout de quelques secondes s'affiche «
+Le serveur n'a pas répondu dans le délai attendu », puis la connexion
+tombe une minute plus tard. Nous n'en connaissons pas encore la cause.
+Cette bêta note dans le journal audio ce que fait la connexion, pour
+qu'on voie de quel côté la communication s'arrête.</p>
+<p>Si cela vous arrive, <strong>ne quittez pas l'app</strong>. Allez
+dans Aide &gt; Contacter le développeur, choisissez « Signaler un
+problème » et cochez « Joindre le journal de diagnostic audio ». Le
+journal est effacé à chaque lancement de l'app : il faut donc l'envoyer
+depuis la session où le problème s'est produit.</p>
+<h3 id="à-savoir">À savoir</h3>
+<ul>
+<li>Rien ne confirme encore que cette bêta règle le problème ci-dessus.
+C'est le journal qui nous le dira.</li>
+</ul>
+<h3 id="téléchargement">Téléchargement</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.13.0-beta.2/ttaccessible-1.13.0-beta.2.zip">ttaccessible-1.13.0-beta.2.zip</a></p>
+</body>
+</html>
