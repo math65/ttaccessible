@@ -537,6 +537,10 @@ extension TeamTalkConnectionController {
         password: String,
         options: TeamTalkConnectOptions
     ) throws {
+        // User and command IDs are per session: a reconnect doesn't go through
+        // the reset, and a restarted server may hand the same IDs out again.
+        subscriptionDefaultsAppliedUserIDs.removeAll()
+        timedOutCommands.removeAll()
         let didStartConnection = record.host.withCString { hostPointer in
             TT_Connect(
                 instance,
@@ -587,6 +591,7 @@ extension TeamTalkConnectionController {
                 return
 
             case CLIENTEVENT_CMD_ERROR:
+                logLateCommandReplyIfNeededLocked(message)
                 if loginCommandID == -1 || message.nSource == loginCommandID {
                     if message.clienterrormsg.nErrorNo == CMDERR_LOGINSERVICE_UNAVAILABLE.rawValue {
                         throw TeamTalkConnectionError.webLoginFailed(L10n.text("teamtalk.connection.error.webLoginServiceUnavailable"))
@@ -768,6 +773,9 @@ extension TeamTalkConnectionController {
                     publishInvalidation = .all
                 }
             }
+            if connectedRecord != nil {
+                logNetworkDiagnosticsIfDueLocked(instance: instance, now: now)
+            }
             // Coalesce the expensive full-session publish. The message poll is fast
             // (20 ms) so per-user audio blocks arrive smoothly, but rebuilding the
             // whole channel/user tree every tick during the connect flood made
@@ -916,6 +924,7 @@ extension TeamTalkConnectionController {
             case CLIENTEVENT_CMD_BANNEDUSER:
                 pendingBannedUsers.append(makeBannedUserProperties(from: message.banneduser))
             case CLIENTEVENT_CMD_SUCCESS:
+                logLateCommandReplyIfNeededLocked(message)
                 pendingChannelMessageCommandIDs.remove(message.nSource)
                 publishInvalidation.formUnion(handleFileTransferCommandSuccessLocked(commandID: message.nSource))
                 if message.nSource == listUserAccountsCmdID {
@@ -938,6 +947,7 @@ extension TeamTalkConnectionController {
                     }
                 }
             case CLIENTEVENT_CMD_ERROR:
+                logLateCommandReplyIfNeededLocked(message)
                 publishInvalidation.formUnion(handleFileTransferCommandErrorLocked(message))
                 if pendingChannelMessageCommandIDs.remove(message.nSource) != nil,
                    message.clienterrormsg.nErrorNo == CMDERR_NOT_AUTHORIZED.rawValue,
@@ -997,7 +1007,7 @@ extension TeamTalkConnectionController {
                         if message.user.nUserID != currentUserID {
                             applyDefaultSubscriptionPreferencesLocked(
                                 instance: instance,
-                                userID: message.user.nUserID,
+                                user: message.user,
                                 preferences: preferencesStore.preferences
                             )
                             if recordingSeparateActive, let folder = recordingFolder {
@@ -1166,6 +1176,8 @@ extension TeamTalkConnectionController {
         pendingTextMessages.removeAll()
         pendingChannelMessageCommandIDs.removeAll()
         observedSubscriptionStates.removeAll()
+        subscriptionDefaultsAppliedUserIDs.removeAll()
+        timedOutCommands.removeAll()
         suppressLoginHistoryUntil = .distantPast
         suppressJoinHistoryUntil = .distantPast
         channelPasswords.removeAll()
@@ -1240,13 +1252,82 @@ extension TeamTalkConnectionController {
         return sdkMessage.isEmpty ? nil : sdkMessage
     }
 
+    // MARK: - Network diagnostics
+
+    /// One `net diag:` line in audio.log with the SDK's own view of the link:
+    /// how long since the server was last heard on TCP and on UDP, ping times,
+    /// UDP byte counters and the client flags. Written when a command gets no
+    /// reply, and from the poll loop (see `logNetworkDiagnosticsIfDueLocked`),
+    /// so a "no reply, then dropped" session shows which side went quiet
+    /// (issue #45). Nothing private: no names, no message content.
+    func logNetworkDiagnosticsLocked(instance: UnsafeMutableRawPointer, context: String) {
+        var stats = ClientStatistics()
+        guard TT_GetClientStatistics(instance, &stats) != 0 else {
+            AudioLogger.log("net diag (%@): no statistics, flags=0x%x", context, TT_GetFlags(instance))
+            return
+        }
+        var keepAlive = ClientKeepAlive()
+        _ = TT_GetClientKeepAlive(instance, &keepAlive)
+        AudioLogger.log(
+            "net diag (%@): flags=0x%x tcpSilence=%ds udpSilence=%ds tcpPing=%dms udpPing=%dms udpSent=%lld udpRecv=%lld keepalive tcp=%dms udp=%dms lost=%dms",
+            context,
+            TT_GetFlags(instance),
+            stats.nTcpServerSilenceSec,
+            stats.nUdpServerSilenceSec,
+            stats.nTcpPingTimeMs,
+            stats.nUdpPingTimeMs,
+            stats.nUdpBytesSent,
+            stats.nUdpBytesRecv,
+            keepAlive.nTcpKeepAliveIntervalMSec,
+            keepAlive.nUdpKeepAliveIntervalMSec,
+            keepAlive.nConnectionLostMSec
+        )
+    }
+
+    /// From the poll loop: a routine line every 60 s, and one every 5 s while
+    /// the server has been silent longer than normal. "Normal" comes from the
+    /// SDK's own keepalive intervals: TCP silence climbs to the ping interval
+    /// (half the user timeout) before each reply, and UDP silence was measured
+    /// cycling up to ~10 s on a healthy link, so 10 s is the floor there.
+    func logNetworkDiagnosticsIfDueLocked(instance: UnsafeMutableRawPointer, now: CFAbsoluteTime) {
+        guard now - lastNetworkDiagnosticsTime >= 5 else { return }
+        var stats = ClientStatistics()
+        guard TT_GetClientStatistics(instance, &stats) != 0 else { return }
+        var keepAlive = ClientKeepAlive()
+        let hasKeepAlive = TT_GetClientKeepAlive(instance, &keepAlive) != 0
+        let tcpInterval = hasKeepAlive ? keepAlive.nTcpKeepAliveIntervalMSec / 1000 : 30
+        let udpInterval = hasKeepAlive ? keepAlive.nUdpKeepAliveIntervalMSec / 1000 : 10
+        let isQuiet = stats.nTcpServerSilenceSec > max(tcpInterval, 1) + 5
+            || stats.nUdpServerSilenceSec > max(udpInterval, 10) + 5
+        guard isQuiet || now - lastNetworkDiagnosticsTime >= 60 else { return }
+        lastNetworkDiagnosticsTime = now
+        logNetworkDiagnosticsLocked(instance: instance, context: isQuiet ? "server quiet" : "periodic")
+    }
+
+    /// A reply to a command we already gave up on: tells "the server never
+    /// answered" apart from "it answered late" in audio.log (issue #45).
+    func logLateCommandReplyIfNeededLocked(_ message: TTMessage) {
+        guard let entry = timedOutCommands.removeValue(forKey: message.nSource) else { return }
+        AudioLogger.log(
+            "Late reply: cmd=%d op=%@ %@ after %.1fs",
+            message.nSource,
+            entry.operation,
+            message.nClientEvent == CLIENTEVENT_CMD_SUCCESS ? "success" : "error",
+            Date().timeIntervalSince(entry.startedAt)
+        )
+    }
+
     // MARK: - Command completion
 
+    /// `operation` defaults to the calling function's name, which is enough to
+    /// tell a join from a subscribe in audio.log without touching every caller.
     func waitForCommandCompletionLocked(
         instance: UnsafeMutableRawPointer,
-        commandID: Int32
+        commandID: Int32,
+        operation: String = #function
     ) throws {
-        let deadline = Date().addingTimeInterval(10)
+        let startedAt = Date()
+        let deadline = startedAt.addingTimeInterval(10)
 
         while Date() < deadline {
             guard let message = nextMessageLocked(instance: instance, waitMSec: 250) else {
@@ -1255,6 +1336,7 @@ extension TeamTalkConnectionController {
 
             switch message.nClientEvent {
             case CLIENTEVENT_CMD_SUCCESS:
+                logLateCommandReplyIfNeededLocked(message)
                 pendingChannelMessageCommandIDs.remove(message.nSource)
                 let fileInvalidation = handleFileTransferCommandSuccessLocked(commandID: message.nSource)
                 if !fileInvalidation.isEmpty, let connectedRecord {
@@ -1264,6 +1346,7 @@ extension TeamTalkConnectionController {
                     return
                 }
             case CLIENTEVENT_CMD_ERROR:
+                logLateCommandReplyIfNeededLocked(message)
                 let fileInvalidation = handleFileTransferCommandErrorLocked(message)
                 if !fileInvalidation.isEmpty, let connectedRecord {
                     publishSessionLocked(instance: instance, record: connectedRecord, invalidation: fileInvalidation)
@@ -1341,7 +1424,7 @@ extension TeamTalkConnectionController {
                         if message.user.nUserID != currentUserID {
                             applyDefaultSubscriptionPreferencesLocked(
                                 instance: instance,
-                                userID: message.user.nUserID,
+                                user: message.user,
                                 preferences: preferencesStore.preferences
                             )
                             if recordingSeparateActive, let folder = recordingFolder {
@@ -1424,6 +1507,10 @@ extension TeamTalkConnectionController {
                     }
                 }
             case CLIENTEVENT_INTERNAL_ERROR:
+                AudioLogger.log(
+                    "INTERNAL_ERROR while waiting: cmd=%d op=%@ code=%d",
+                    commandID, operation, message.clienterrormsg.nErrorNo
+                )
                 throw TeamTalkConnectionError.internalError(
                     clientErrorMessage(from: message) ?? L10n.text("teamtalk.connection.error.internal")
                 )
@@ -1432,6 +1519,14 @@ extension TeamTalkConnectionController {
             }
         }
 
+        AudioLogger.log(
+            "Command timeout: cmd=%d op=%@ waited=%.1fs",
+            commandID,
+            operation,
+            Date().timeIntervalSince(startedAt)
+        )
+        logNetworkDiagnosticsLocked(instance: instance, context: "command timeout")
+        timedOutCommands[commandID] = (operation, startedAt)
         throw TeamTalkConnectionError.connectionTimeout
     }
 }
