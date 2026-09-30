@@ -641,7 +641,10 @@ final class AudioDeviceStreamSource {
             guard let encoder = OggOpusStreamEncoder(
                 sampleRate: AudioDeviceStreamSource.outputSampleRate,
                 channels: AudioDeviceStreamSource.outputChannels,
-                bitrate: 128_000,
+                // Opus's ceiling. The SDK decodes this and encodes it again with
+                // the channel's codec, so whatever is lost here is lost twice;
+                // it only crosses the loopback, and the probe is no slower for it.
+                bitrate: 510_000,
                 serial: UInt32.random(in: 1...UInt32.max)
             ) else {
                 AudioLogger.log("device stream: Opus encoder unavailable — closing connection")
