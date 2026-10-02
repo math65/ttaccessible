@@ -261,6 +261,13 @@
 "connectedServer.channel.form.soloTransmit" = "Solo iletim (aynı anda tek kişi konuşur)";
 "connectedServer.channel.form.noVoiceActivation" = "Sesle etkinleştirmeyi kapat (yalnızca bas konuş)";
 "connectedServer.channel.form.noRecording" = "Ses kaydına izin yok";
+"connectedServer.channel.form.classroom" = "Sınıf — yalnızca listedeki kullanıcılar konuşabilir; bu uygulama henüz söz veremez, listeyi başka bir istemciden yönetin";
+"connectedServer.channel.form.operatorRecvOnly" = "İletimleri yalnızca operatörler duyar";
+"connectedServer.channel.form.hidden" = "Gizli kanal";
+"connectedServer.channel.form.operatorPassword" = "Operatör parolası";
+"connectedServer.channel.form.transmitQueueDelay" = "Konuşma sırası: sonraki kişiye geçmeden önceki bekleme (ms)";
+"connectedServer.channel.form.voiceTimeOut" = "Saniye cinsinden ses süresi sınırı (sınırsız için 0)";
+"connectedServer.channel.form.mediaTimeOut" = "Saniye cinsinden medya süresi sınırı (sınırsız için 0)";
 "connectedServer.channel.form.codec.title" = "Ses Kodeği";
 "connectedServer.channel.form.codec.channels" = "Ses kanalları";
 "connectedServer.channel.form.codec.channels.mono" = "Mono";
@@ -1097,6 +1104,10 @@
 "user.menu.move" = "Kanala Taşı";
 
 "update.menu.checkForUpdates" = "Güncellemeleri Denetle…";
+"history.transmitQueue.yourTurn" = "Konuşma sırası sizde";
+"history.transmitQueue.turnEnded" = "Konuşma sıranız sona erdi";
+"history.transmitQueue.position" = "Konuşma sırasında %d. sıradasınız";
+"preferences.historyEvent.transmitQueueChanged" = "Konuşma sırasında sıranız";
 "app.menu.quit" = "%@'dan Çık";
 "app.menu.services" = "Hizmetler";
 "app.menu.hide" = "%@'ı Gizle";

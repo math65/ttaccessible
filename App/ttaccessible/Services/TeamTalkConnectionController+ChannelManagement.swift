@@ -58,6 +58,75 @@ extension TeamTalkConnectionController {
     }
 
 
+    // MARK: - Speaking queue (CHANNEL_SOLO_TRANSMIT)
+
+    /// Our position in the current channel's speaking queue, announced when it
+    /// changes. In a solo-transmit channel only one person is heard at a time:
+    /// everyone else waits in a server-held queue, and the server hands the
+    /// floor to whoever is at its head. The Qt client marks the two ends of a
+    /// turn with a sound; a client people navigate by ear can say where in the
+    /// line you actually stand, which is the part you cannot see.
+    ///
+    /// Returns whether anything was announced, so the caller can invalidate the
+    /// history it just added to.
+    @discardableResult
+    func updateTransmitQueueStateLocked(instance: UnsafeMutableRawPointer) -> Bool {
+        let myChannelID = TT_GetMyChannelID(instance)
+        var channel = Channel()
+        guard myChannelID > 0, TT_GetChannel(instance, myChannelID, &channel) != 0 else {
+            lastTransmitQueuePosition = nil
+            return false
+        }
+        // Every other channel type has no queue at all — forget any position
+        // silently rather than announcing a turn that just ended by leaving.
+        guard (channel.uChannelType & UInt32(CHANNEL_SOLO_TRANSMIT.rawValue)) != 0 else {
+            lastTransmitQueuePosition = nil
+            return false
+        }
+
+        let position = Self.transmitQueuePosition(in: &channel, userID: TT_GetMyUserID(instance))
+        let previous = lastTransmitQueuePosition
+        guard position != previous else { return false }
+        lastTransmitQueuePosition = position
+
+        if position == 0 {
+            SoundPlayer.shared.play(.txQueueStart)
+            appendHistoryLocked(kind: .transmitQueueChanged,
+                                message: L10n.text("history.transmitQueue.yourTurn"))
+            return true
+        }
+        if previous == 0 {
+            SoundPlayer.shared.play(.txQueueStop)
+            appendHistoryLocked(kind: .transmitQueueChanged,
+                                message: L10n.text("history.transmitQueue.turnEnded"))
+            return true
+        }
+        guard let position else {
+            // Left the queue without ever reaching its head: nothing happened
+            // that the user needs telling about.
+            return false
+        }
+        appendHistoryLocked(kind: .transmitQueueChanged,
+                            message: L10n.format("history.transmitQueue.position", position + 1))
+        return true
+    }
+
+    /// Index of `userID` in `channel.transmitUsersQueue`, or nil when absent.
+    /// The array is a C `INT32[16]` — a tuple once imported — in turn order and
+    /// terminated by a zero user ID, the way the Qt client reads its head.
+    static func transmitQueuePosition(in channel: inout Channel, userID: Int32) -> Int? {
+        guard userID > 0 else { return nil }
+        return withUnsafeBytes(of: &channel.transmitUsersQueue) { raw in
+            let entries = raw.bindMemory(to: Int32.self)
+            for index in entries.indices {
+                let queued = entries[index]
+                guard queued != 0 else { return nil }
+                if queued == userID { return index }
+            }
+            return nil
+        }
+    }
+
     func channelInfo(forChannelID channelID: Int32) -> ChannelInfo? {
         var channel = Channel()
         guard let instance, TT_GetChannel(instance, channelID, &channel) != 0 else {
@@ -87,6 +156,13 @@ extension TeamTalkConnectionController {
             isSoloTransmit: (chanType & UInt32(CHANNEL_SOLO_TRANSMIT.rawValue)) != 0,
             isNoVoiceActivation: (chanType & UInt32(CHANNEL_NO_VOICEACTIVATION.rawValue)) != 0,
             isNoRecording: (chanType & UInt32(CHANNEL_NO_RECORDING.rawValue)) != 0,
+            isClassroom: (chanType & UInt32(CHANNEL_CLASSROOM.rawValue)) != 0,
+            isOperatorRecvOnly: (chanType & UInt32(CHANNEL_OPERATOR_RECVONLY.rawValue)) != 0,
+            isHidden: (chanType & UInt32(CHANNEL_HIDDEN.rawValue)) != 0,
+            operatorPassword: ttString(from: channel.szOpPassword),
+            transmitQueueDelayMSec: channel.nTransmitUsersQueueDelayMSec,
+            voiceTimeOutMSec: channel.nTimeOutTimerVoiceMSec,
+            mediaFileTimeOutMSec: channel.nTimeOutTimerMediaFileMSec,
             opusCodec: codec,
             diskQuotaBytes: channel.nDiskQuota
         )
@@ -119,7 +195,14 @@ extension TeamTalkConnectionController {
             if properties.isSoloTransmit { chanType |= UInt32(CHANNEL_SOLO_TRANSMIT.rawValue) }
             if properties.isNoVoiceActivation { chanType |= UInt32(CHANNEL_NO_VOICEACTIVATION.rawValue) }
             if properties.isNoRecording { chanType |= UInt32(CHANNEL_NO_RECORDING.rawValue) }
+            if properties.isClassroom { chanType |= UInt32(CHANNEL_CLASSROOM.rawValue) }
+            if properties.isOperatorRecvOnly { chanType |= UInt32(CHANNEL_OPERATOR_RECVONLY.rawValue) }
+            if properties.isHidden { chanType |= UInt32(CHANNEL_HIDDEN.rawValue) }
             chan.uChannelType = chanType
+            self.copyTTString(properties.operatorPassword, into: &chan.szOpPassword)
+            chan.nTransmitUsersQueueDelayMSec = properties.transmitQueueDelayMSec
+            chan.nTimeOutTimerVoiceMSec = properties.voiceTimeOutMSec
+            chan.nTimeOutTimerMediaFileMSec = properties.mediaFileTimeOutMSec
 
             // Apply audio codec: use provided settings or copy from parent
             if let opus = properties.opusCodec {
@@ -206,12 +289,22 @@ extension TeamTalkConnectionController {
                 | UInt32(CHANNEL_SOLO_TRANSMIT.rawValue)
                 | UInt32(CHANNEL_NO_VOICEACTIVATION.rawValue)
                 | UInt32(CHANNEL_NO_RECORDING.rawValue)
+                | UInt32(CHANNEL_CLASSROOM.rawValue)
+                | UInt32(CHANNEL_OPERATOR_RECVONLY.rawValue)
+                | UInt32(CHANNEL_HIDDEN.rawValue)
             chanType &= ~managedFlags
             if properties.isPermanent { chanType |= UInt32(CHANNEL_PERMANENT.rawValue) }
             if properties.isSoloTransmit { chanType |= UInt32(CHANNEL_SOLO_TRANSMIT.rawValue) }
             if properties.isNoVoiceActivation { chanType |= UInt32(CHANNEL_NO_VOICEACTIVATION.rawValue) }
             if properties.isNoRecording { chanType |= UInt32(CHANNEL_NO_RECORDING.rawValue) }
+            if properties.isClassroom { chanType |= UInt32(CHANNEL_CLASSROOM.rawValue) }
+            if properties.isOperatorRecvOnly { chanType |= UInt32(CHANNEL_OPERATOR_RECVONLY.rawValue) }
+            if properties.isHidden { chanType |= UInt32(CHANNEL_HIDDEN.rawValue) }
             chan.uChannelType = chanType
+            self.copyTTString(properties.operatorPassword, into: &chan.szOpPassword)
+            chan.nTransmitUsersQueueDelayMSec = properties.transmitQueueDelayMSec
+            chan.nTimeOutTimerVoiceMSec = properties.voiceTimeOutMSec
+            chan.nTimeOutTimerMediaFileMSec = properties.mediaFileTimeOutMSec
 
             // Touch the codec only when the channel is already Opus AND the
             // form really changed it. The form always hands back an Opus codec

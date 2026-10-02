@@ -36,6 +36,7 @@ struct SessionHistoryEntry: Equatable, Identifiable {
         case mediaStreamingFinished
         case webcamStarted
         case webcamStopped
+        case transmitQueueChanged
 
         var localizationKey: String {
             "preferences.historyEvent.\(rawValue)"
@@ -62,7 +63,7 @@ struct SessionHistoryEntry: Equatable, Identifiable {
             Group(id: "connection", localizationKey: "preferences.historyEvents.group.connection",
                   kinds: [.connected, .disconnected, .connectionLost]),
             Group(id: "ownChannel", localizationKey: "preferences.historyEvents.group.ownChannel",
-                  kinds: [.joinedChannel, .leftChannel]),
+                  kinds: [.joinedChannel, .leftChannel, .transmitQueueChanged]),
             Group(id: "userPresence", localizationKey: "preferences.historyEvents.group.userPresence",
                   kinds: [.userLoggedIn, .userLoggedOut, .userJoinedChannel, .userLeftChannel]),
             Group(id: "moderation", localizationKey: "preferences.historyEvents.group.moderation",

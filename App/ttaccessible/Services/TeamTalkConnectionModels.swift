@@ -225,6 +225,21 @@ struct ChannelProperties {
     var isSoloTransmit: Bool
     var isNoVoiceActivation: Bool
     var isNoRecording: Bool
+    /// Only users an operator has listed may transmit here (`CHANNEL_CLASSROOM`).
+    var isClassroom: Bool
+    /// Ordinary users hear operators and admins only (`CHANNEL_OPERATOR_RECVONLY`).
+    var isOperatorRecvOnly: Bool
+    /// Invisible to anyone without `USERRIGHT_VIEW_HIDDEN_CHANNELS`.
+    var isHidden: Bool
+    /// Grants channel-operator status to whoever joins with it.
+    var operatorPassword: String
+    /// Milliseconds the server waits before handing the floor to the next person
+    /// in a solo-transmit channel's queue. Meaningless in any other channel.
+    var transmitQueueDelayMSec: Int32
+    /// Longest a single voice or media stream may run before the server cuts it,
+    /// in milliseconds. Zero means no limit.
+    var voiceTimeOutMSec: Int32
+    var mediaFileTimeOutMSec: Int32
     var opusCodec: OpusCodecSettings?
     /// Channel file-storage quota in bytes (SDK `nDiskQuota`); shown as KB in
     /// the dialog, matching the official client.
@@ -242,6 +257,13 @@ struct ChannelInfo {
     let isSoloTransmit: Bool
     let isNoVoiceActivation: Bool
     let isNoRecording: Bool
+    let isClassroom: Bool
+    let isOperatorRecvOnly: Bool
+    let isHidden: Bool
+    let operatorPassword: String
+    let transmitQueueDelayMSec: Int32
+    let voiceTimeOutMSec: Int32
+    let mediaFileTimeOutMSec: Int32
     let opusCodec: OpusCodecSettings?
     let diskQuotaBytes: Int64
 }
