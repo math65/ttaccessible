@@ -126,6 +126,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AudioLogger.clear()
         let sdkVersion = String(cString: TT_GetVersion())
         AudioLogger.log("App launched — TeamTalk SDK %@ — profile %@", sdkVersion, ProfileContext.current.slug)
+        // Start Sparkle before the rest of the launch work so the update check isn't
+        // held back by window setup, auto-connect or the SDK prewarm.
+        syncSparkleAutoCheckPreference()
+        checkForUpdatesAtLaunch()
         #if DEBUG
         _ = AudioPCMResamplerSelfTest.runAll()
         #endif
@@ -156,9 +160,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         connectionController.prewarmConnection()
         handleLaunchTTFilesIfNeeded()
         processPendingTTFileURLsIfPossible()
-        syncSparkleAutoCheckPreference()
         syncNicknamePreference()
-        scheduleLaunchUpdateCheck()
         configurePushToTalkObservers()
         installRecordingStopKeyMonitor()
         installMicrophoneMenuKeyMonitor()
@@ -616,11 +618,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
     }
 
-    private func scheduleLaunchUpdateCheck() {
+    /// Sparkle's own scheduler checks at most once every 24 h, which would leave a
+    /// beta tester behind when two builds ship the same day. Silent unless a new
+    /// version is in the feed.
+    private func checkForUpdatesAtLaunch() {
         guard preferencesStore.preferences.autoCheckForUpdates else { return }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
-            self?.updaterController.updater.checkForUpdatesInBackground()
-        }
+        updaterController.updater.checkForUpdatesInBackground()
     }
 
     private func requestNotificationPermission() {
