@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ttaccessible-1.13.0-beta.3-59.fr</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --code-bg: #f5f5f7;
+  --link: #0066cc;
+  --link-hover: #0040a0;
+  --rule: #e5e5ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #ececec;
+    --muted: #a0a0a0;
+    --code-bg: #2d2d2d;
+    --link: #4eaaff;
+    --link-hover: #82c4ff;
+    --rule: #3a3a3a;
+  }
+}
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  padding: 1rem 1.25rem 1.5rem;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.15rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.2em; }
+h3 { font-size: 1.02rem; }
+h4 { font-size: 0.95rem; color: var(--muted); }
+p { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; margin: 0.6em 0; }
+li { margin: 0.25em 0; }
+li > p { margin: 0.3em 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover, a:focus { color: var(--link-hover); text-decoration: underline; }
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.75em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+pre code { background: transparent; padding: 0; border-radius: 0; }
+blockquote {
+  border-left: 3px solid var(--rule);
+  margin: 0.8em 0;
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--muted);
+}
+hr { border: 0; border-top: 1px solid var(--rule); margin: 1.5em 0; }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<h2 id="v1130-beta3-build-59--02102026">v1.13.0-beta.3 (build 59) —
+02/10/2026</h2>
+<p>Cette bêta s'occupe des canaux où l'on parle chacun son tour, et de
+l'administration des serveurs. Dans ces canaux, vous ne pouviez parler
+qu'une fois : vous pouvez maintenant reprendre la parole à chaque tour,
+et l'app vous dit où vous en êtes dans la file d'attente.</p>
+<h3 id="parler-chacun-son-tour">Parler chacun son tour</h3>
+<p>Sur certains serveurs, des canaux ne laissent entendre qu'une
+personne à la fois. Vous ouvrez votre micro, le serveur vous place dans
+une file d'attente et vous donne la parole quand votre tour arrive.</p>
+<ul>
+<li><strong>Vous pouvez parler plus d'une fois dans ces canaux.</strong>
+Jusqu'ici, votre premier tour passait, puis tout ce que vous disiez
+ensuite se perdait, sans le moindre avertissement. C'était vrai dans
+tous les modes du micro, push-to-talk compris.</li>
+<li><strong>L'app vous prévient quand c'est votre tour.</strong> Quand
+la parole vous revient, un son retentit et vous entendez « C'est à vous
+de parler ». À la fin de votre tour, un autre son, puis « Votre tour de
+parole est terminé ». Pendant l'attente, l'app vous donne votre place :
+« Vous êtes en position 3 dans la file d'attente ». L'app TeamTalk
+officielle joue les sons, mais ne vous dit pas votre place.</li>
+<li>Vous pouvez désactiver ces annonces dans Préférences &gt; Annonces,
+avec « Tour de parole en file d'attente ».</li>
+</ul>
+<h3 id="créer-et-modifier-un-canal">Créer et modifier un canal</h3>
+<ul>
+<li><strong>La fenêtre du canal propose tout ce que propose l'app
+officielle.</strong> En plus de ce qui existait déjà, vous pouvez
+désormais régler :
+<ul>
+<li>un canal « salle de classe », où seules les personnes autorisées
+peuvent parler ;</li>
+<li>un canal où seuls les opérateurs entendent ce qui se dit ;</li>
+<li>un canal masqué ;</li>
+<li>un mot de passe opérateur, qui rend opérateur toute personne qui
+entre avec ;</li>
+<li>le délai avant que la personne suivante de la file obtienne la
+parole ;</li>
+<li>une durée maximale pour la voix et pour les médias.</li>
+</ul></li>
+<li><strong>Une chose que l'app ne sait pas encore faire</strong> :
+donner ou retirer la parole dans une salle de classe. La case à cocher
+le précise, et vous pouvez gérer cette liste depuis un autre
+client.</li>
+<li><strong>Modifier un canal ne change plus son codec.</strong> Un
+canal en Speex, ou sans codec du tout, passait en Opus dès que vous
+l'enregistriez. Changer le sujet d'un canal occupé échouait aussi, parce
+que le serveur refuse tout changement de codec tant qu'il y a du monde
+dedans.</li>
+</ul>
+<h3 id="administration-du-serveur">Administration du serveur</h3>
+<ul>
+<li><strong>Modifier un compte n'efface plus ce que le formulaire
+n'affiche pas.</strong> Enregistrer un compte effaçait ses autres
+réglages, dont les canaux où il devient opérateur automatiquement. Et si
+l'enregistrement échouait, le compte pouvait disparaître complètement,
+alors que l'app l'annonçait comme mis à jour.</li>
+<li><strong>Les erreurs s'affichent.</strong> Quand le serveur refuse de
+créer, de modifier ou de supprimer un compte, vous savez maintenant
+pourquoi. « Compte mis à jour » et « Compte supprimé » ne sont plus
+annoncés que si l'opération a vraiment réussi.</li>
+<li><strong>Un compte qui ne s'est jamais connecté affiche « Jamais
+».</strong> Il affichait une date de 1970, que VoiceOver lisait comme
+une vraie date.</li>
+</ul>
+<h3 id="diffusion">Diffusion</h3>
+<ul>
+<li><strong>Le son d'un périphérique ou d'une app que vous diffusez est
+encodé en meilleure qualité sur votre Mac avant de partir.</strong> Cela
+ne consomme pas plus de bande passante. Merci à Rocco Fiorentino.</li>
+</ul>
+<h3 id="à-savoir">À savoir</h3>
+<ul>
+<li>Nous n'avons pas encore essayé un tour qui se termine pendant que
+vous diffusez depuis un périphérique. Si quelque chose sonne mal à ce
+moment-là, dites-le-nous.</li>
+</ul>
+<h3 id="téléchargement">Téléchargement</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.13.0-beta.3/ttaccessible-1.13.0-beta.3-59.zip">ttaccessible-1.13.0-beta.3-59.zip</a></p>
+</body>
+</html>
