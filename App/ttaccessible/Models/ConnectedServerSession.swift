@@ -78,6 +78,13 @@ struct ConnectedServerChannel: Equatable, Identifiable {
     /// (`ConnectedServerUser.isChannelOperator` can't answer this: it is
     /// computed against the user's OWN channel.)
     let canMoveUsersOut: Bool
+    /// Who may send what in this channel (the "Transmit Control" menu).
+    let transmitUsers: TransmitUsersList
+    /// Whether the local user may edit `transmitUsers`: the account-wide
+    /// `USERRIGHT_MODIFY_CHANNELS`, or operator status on this very channel —
+    /// the server's rule in `UserUpdateChannel`. Snapshotted for the same reason
+    /// as `canMoveUsersOut`: menu validation must not ask the SDK.
+    let canControlTransmission: Bool
 
     var directUserCount: Int {
         users.count

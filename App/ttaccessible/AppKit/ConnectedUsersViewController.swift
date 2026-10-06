@@ -173,6 +173,9 @@ final class ConnectedUsersViewController: NSViewController {
     func pushMenuState() {
         guard view.window?.isKeyWindow == true else { return }
         let menuState = SavedServersMenuState.shared
+        // "Transmit Control" acts on the channel tree's selection only, as in the
+        // Qt client: off while this window is in front.
+        menuState.setTransmitControl(nil)
         guard let user = selectedUser() else {
             menuState.setSelectedUsersState(
                 hasSelectedUsers: false,
