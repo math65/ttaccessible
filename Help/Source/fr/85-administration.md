@@ -1,7 +1,7 @@
 ---
 title: Gérer les utilisateurs, les bannissements et les réglages du serveur
-description: Promouvoir des opérateurs, expulser ou bannir, déplacer des personnes, et modifier les comptes et les propriétés du serveur.
-keywords: opérateur, expulser, bannir, déplacer, comptes, droits, propriétés du serveur, statistiques
+description: Promouvoir des opérateurs, décider qui peut parler, expulser ou bannir, déplacer des personnes, et modifier les comptes et les propriétés du serveur.
+keywords: opérateur, contrôle de la transmission, salle de classe, donner la parole, bloquer la voix, expulser, bannir, déplacer, comptes, droits, propriétés du serveur, statistiques
 anchor: administration
 ---
 
@@ -13,6 +13,31 @@ modifier ses réglages. Les commandes que vous n'avez pas le droit d'utiliser re
 Sélectionnez la personne dans l'arbre des canaux, puis appuyez sur Contrôle + Commande + O. Appuyez
 de nouveau pour lui retirer ce statut. Si vous n'êtes pas vous-même opérateur et que le canal
 possède un mot de passe d'opérateur, tt-Accessible vous le demande.
+
+## Donner ou retirer la parole
+
+Si vous êtes opérateur d'un canal, vous décidez qui peut y parler, y écrire ou y diffuser.
+
+1. Sélectionnez la personne dans l'arbre des canaux.
+2. Choisissez Utilisateur > Contrôle de la transmission. Vous pouvez aussi cliquer sur la personne
+   en maintenant la touche Contrôle enfoncée, puis choisir Contrôle de la transmission.
+3. Choisissez ce que vous autorisez ou interdisez : **Autoriser les messages dans le canal**,
+   **Autoriser la voix**, **Autoriser la vidéo**, **Autoriser le partage d'écran** ou **Autoriser
+   la diffusion de fichiers média**. Une coche signifie que la personne en a le droit.
+
+tt-Accessible confirme le changement, par exemple *Camille peut maintenant parler*.
+
+L'effet d'une coche dépend du canal :
+
+- **Dans un canal ordinaire,** tout le monde a tous les droits tant que vous n'ôtez pas de coche ;
+  en ôter une bloque la personne.
+- **Dans une salle de classe,** personne ne peut parler tant que vous n'avez pas ajouté de coche,
+  pas même les opérateurs : vous non plus. Le sous-menu propose alors aussi les cinq mêmes choix
+  **pour tout le monde**. Sélectionnez le canal lui-même, plutôt qu'une personne, pour n'afficher
+  que ceux-là.
+
+Il faut être opérateur du canal, ou disposer d'un compte autorisé à modifier les canaux. Sinon, la
+commande reste grisée dans le menu Utilisateur et n'apparaît pas dans le menu contextuel.
 
 ## Retirer quelqu'un d'un canal ou du serveur
 
