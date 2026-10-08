@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ttaccessible-1.13.0-beta.4-60</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --code-bg: #f5f5f7;
+  --link: #0066cc;
+  --link-hover: #0040a0;
+  --rule: #e5e5ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #ececec;
+    --muted: #a0a0a0;
+    --code-bg: #2d2d2d;
+    --link: #4eaaff;
+    --link-hover: #82c4ff;
+    --rule: #3a3a3a;
+  }
+}
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  padding: 1rem 1.25rem 1.5rem;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.15rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.2em; }
+h3 { font-size: 1.02rem; }
+h4 { font-size: 0.95rem; color: var(--muted); }
+p { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; margin: 0.6em 0; }
+li { margin: 0.25em 0; }
+li > p { margin: 0.3em 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover, a:focus { color: var(--link-hover); text-decoration: underline; }
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.75em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+pre code { background: transparent; padding: 0; border-radius: 0; }
+blockquote {
+  border-left: 3px solid var(--rule);
+  margin: 0.8em 0;
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--muted);
+}
+hr { border: 0; border-top: 1px solid var(--rule); margin: 1.5em 0; }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<h2 id="v1130-beta4-build-60--2026-10-08">v1.13.0-beta.4 (build 60) —
+2026-10-08</h2>
+<p>This beta adds Transmit Control: if you run a channel, you can now
+decide who may speak, write or stream in it, as in the official TeamTalk
+app.</p>
+<h3 id="deciding-who-may-speak">Deciding who may speak</h3>
+<ul>
+<li><strong>Give or take the floor.</strong> Select someone in the
+channel tree, then choose User &gt; Transmit Control, or use the context
+menu on that person. You can allow or block channel messages, voice,
+video, desktop sharing and media file streaming, one by one. A checkmark
+means the person is allowed.</li>
+<li><strong>The app confirms each change</strong>, for example "Camille
+can now speak" or "Camille can no longer speak".</li>
+<li><strong>In an ordinary channel</strong>, everyone may do everything
+until you remove a checkmark. <strong>In a classroom channel</strong>
+it's the other way round: nobody may speak until you allow them,
+operators included. There, the submenu also offers the same five choices
+for everyone at once; select the channel itself to see only those.</li>
+<li>You need to be an operator of the channel, or have an account
+allowed to modify channels. Otherwise the command is dimmed in the User
+menu and absent from the context menu.</li>
+<li>The classroom checkbox in the channel dialog now points you to
+Transmit Control, instead of sending you to another app.</li>
+<li>The person isn't told when you change what they may do. The official
+app doesn't tell them either.</li>
+</ul>
+<p>Thanks to radio1975 for asking for it.</p>
+<h3 id="updates">Updates</h3>
+<ul>
+<li><strong>New versions show up as soon as the app opens.</strong> The
+check used to wait until the app had finished starting up, plus a few
+seconds. You'll notice the difference from the next update onward.</li>
+</ul>
+<h3 id="download">Download</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.13.0-beta.4/ttaccessible-1.13.0-beta.4-60.zip">ttaccessible-1.13.0-beta.4-60.zip</a></p>
+<h2 id="v1130-beta3-build-59--2026-10-02">v1.13.0-beta.3 (build 59) —
+2026-10-02</h2>
+<p>This beta is about channels where people speak one at a time, and
+about server administration. In those channels you could only speak
+once; you can now speak as many times as your turn comes, and the app
+tells you where you stand in the queue.</p>
+<h3 id="speaking-one-at-a-time">Speaking one at a time</h3>
+<p>Some servers have channels where only one person is heard at a time.
+You open your microphone, the server puts you in a queue, and it gives
+you the floor when your turn comes.</p>
+<ul>
+<li><strong>You can speak more than once in these channels.</strong>
+Before, your first turn worked, then everything you said afterwards went
+nowhere, without any warning. It happened in every microphone mode,
+push-to-talk included.</li>
+<li><strong>The app tells you when it's your turn.</strong> When the
+floor comes to you, you hear a sound and "It's your turn to speak". When
+your turn ends, another sound and "Your turn to speak has ended". While
+you wait, you hear your position: "You are number 3 in the speaking
+queue". The official TeamTalk app plays the sounds, but doesn't tell you
+your position.</li>
+<li>You can turn these announcements off in Preferences &gt;
+Announcements, under "Speaking turn in a queue".</li>
+</ul>
+<h3 id="creating-and-editing-channels">Creating and editing
+channels</h3>
+<ul>
+<li><strong>The channel dialog has everything the official app
+has.</strong> In addition to what was there before, you can now set:
+<ul>
+<li>a classroom channel, where only listed people may speak;</li>
+<li>a channel where only operators hear what is said;</li>
+<li>a hidden channel;</li>
+<li>an operator password, which makes anyone joining with it an
+operator;</li>
+<li>the delay before the next person in the queue gets the floor;</li>
+<li>time limits for voice and for media.</li>
+</ul></li>
+<li><strong>One thing this app can't do yet</strong>: give or take the
+floor in a classroom channel. The checkbox says so, and you can manage
+that list from another client.</li>
+<li><strong>Editing a channel no longer changes its codec.</strong> A
+channel using Speex, or with no codec at all, was converted to Opus as
+soon as you saved it. Changing the topic of a channel with people in it
+also failed, because the server refuses a codec change while the channel
+is occupied.</li>
+</ul>
+<h3 id="server-administration">Server administration</h3>
+<ul>
+<li><strong>Editing an account no longer wipes what the form doesn't
+show.</strong> Saving an account erased its other settings, including
+the channels where it is made operator automatically. And if saving
+failed, the account could disappear entirely while the app still
+announced it as updated.</li>
+<li><strong>Errors are shown.</strong> When the server refuses to
+create, edit or delete an account, you now hear why. "Account updated"
+and "Account deleted" are only announced when it really worked.</li>
+<li><strong>An account that has never logged in says "Never".</strong>
+It used to show a date in 1970, which VoiceOver read as a real
+date.</li>
+</ul>
+<h3 id="streaming">Streaming</h3>
+<ul>
+<li><strong>Streams from a device or an app are encoded at a higher
+quality on your Mac before they go out.</strong> It costs no extra
+bandwidth. Thanks to Rocco Fiorentino.</li>
+</ul>
+<h3 id="known">Known</h3>
+<ul>
+<li>We haven't yet tested a turn that ends while you're streaming from a
+device. If something sounds wrong at that moment, please tell us.</li>
+</ul>
+<h3 id="download-1">Download</h3>
+<p><a
+href="https://github.com/math65/ttaccessible/releases/download/v1.13.0-beta.3/ttaccessible-1.13.0-beta.3-59.zip">ttaccessible-1.13.0-beta.3-59.zip</a></p>
+</body>
+</html>
