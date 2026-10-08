@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gérer les utilisateurs, les bannissements et les réglages du serveur</title>
-<meta name="description" content="Promouvoir des opérateurs, expulser ou bannir, déplacer des personnes, et modifier les comptes et les propriétés du serveur.">
-<meta name="keywords" content="opérateur, expulser, bannir, déplacer, comptes, droits, propriétés du serveur, statistiques">
+<meta name="description" content="Promouvoir des opérateurs, décider qui peut parler, expulser ou bannir, déplacer des personnes, et modifier les comptes et les propriétés du serveur.">
+<meta name="keywords" content="opérateur, contrôle de la transmission, salle de classe, donner la parole, bloquer la voix, expulser, bannir, déplacer, comptes, droits, propriétés du serveur, statistiques">
 <meta name="robots" content="index, anchors">
 <link rel="stylesheet" href="../css/help.css">
 </head>
@@ -16,6 +16,20 @@
 <p>Si votre compte dispose des droits correspondants, vous pouvez modérer les canaux d'un serveur et modifier ses réglages. Les commandes que vous n'avez pas le droit d'utiliser restent grisées.</p>
 <h2 id="promouvoir-quelquun-opérateur-de-canal">Promouvoir quelqu'un opérateur de canal</h2>
 <p>Sélectionnez la personne dans l'arbre des canaux, puis appuyez sur Contrôle + Commande + O. Appuyez de nouveau pour lui retirer ce statut. Si vous n'êtes pas vous-même opérateur et que le canal possède un mot de passe d'opérateur, tt-Accessible vous le demande.</p>
+<h2 id="donner-ou-retirer-la-parole">Donner ou retirer la parole</h2>
+<p>Si vous êtes opérateur d'un canal, vous décidez qui peut y parler, y écrire ou y diffuser.</p>
+<ol type="1">
+<li>Sélectionnez la personne dans l'arbre des canaux.</li>
+<li>Choisissez Utilisateur &gt; Contrôle de la transmission. Vous pouvez aussi cliquer sur la personne en maintenant la touche Contrôle enfoncée, puis choisir Contrôle de la transmission.</li>
+<li>Choisissez ce que vous autorisez ou interdisez : <strong>Autoriser les messages dans le canal</strong>, <strong>Autoriser la voix</strong>, <strong>Autoriser la vidéo</strong>, <strong>Autoriser le partage d'écran</strong> ou <strong>Autoriser la diffusion de fichiers média</strong>. Une coche signifie que la personne en a le droit.</li>
+</ol>
+<p>tt-Accessible confirme le changement, par exemple <em>Camille peut maintenant parler</em>.</p>
+<p>L'effet d'une coche dépend du canal :</p>
+<ul>
+<li><strong>Dans un canal ordinaire,</strong> tout le monde a tous les droits tant que vous n'ôtez pas de coche ; en ôter une bloque la personne.</li>
+<li><strong>Dans une salle de classe,</strong> personne ne peut parler tant que vous n'avez pas ajouté de coche, pas même les opérateurs : vous non plus. Le sous-menu propose alors aussi les cinq mêmes choix <strong>pour tout le monde</strong>. Sélectionnez le canal lui-même, plutôt qu'une personne, pour n'afficher que ceux-là.</li>
+</ul>
+<p>Il faut être opérateur du canal, ou disposer d'un compte autorisé à modifier les canaux. Sinon, la commande reste grisée dans le menu Utilisateur et n'apparaît pas dans le menu contextuel.</p>
 <h2 id="retirer-quelquun-dun-canal-ou-du-serveur">Retirer quelqu'un d'un canal ou du serveur</h2>
 <p>Sélectionnez la personne, puis effectuez l'une des opérations suivantes :</p>
 <ul>

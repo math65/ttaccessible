@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Manage users, bans and server settings</title>
-<meta name="description" content="Promote channel operators, kick or ban people, move them between channels, and edit accounts and server properties.">
-<meta name="keywords" content="operator, kick, ban, move users, accounts, rights, server properties, statistics, admin">
+<meta name="description" content="Promote channel operators, decide who may speak, kick or ban people, move them between channels, and edit accounts and server properties.">
+<meta name="keywords" content="operator, transmit control, classroom, give the floor, block voice, kick, ban, move users, accounts, rights, server properties, statistics, admin">
 <meta name="robots" content="index, anchors">
 <link rel="stylesheet" href="../css/help.css">
 </head>
@@ -16,6 +16,20 @@
 <p>If your account has the matching rights, you can moderate the channels of a server and change its settings. Commands you aren't allowed to use stay dimmed.</p>
 <h2 id="make-someone-a-channel-operator">Make someone a channel operator</h2>
 <p>Select the person in the channel tree, then press Control-Command-O. Press it again to revoke the status. If you aren't an operator yourself and the channel has an operator password, tt-Accessible asks for it.</p>
+<h2 id="give-someone-the-floor-or-take-it-away">Give someone the floor, or take it away</h2>
+<p>As a channel operator, you decide who may speak, write or stream in the channel.</p>
+<ol type="1">
+<li>Select the person in the channel tree.</li>
+<li>Choose User &gt; Transmit Control. You can also Control-click the person, then choose Transmit Control.</li>
+<li>Choose what to allow or forbid: <strong>Allow Channel Text Messages</strong>, <strong>Allow Voice Transmission</strong>, <strong>Allow Video Transmission</strong>, <strong>Allow Desktop Transmission</strong> or <strong>Allow Media File Transmission</strong>. A checkmark means the person may send it.</li>
+</ol>
+<p>tt-Accessible confirms the change, for example <em>Alex can now speak</em>.</p>
+<p>What a checkmark does depends on the channel:</p>
+<ul>
+<li><strong>In an ordinary channel,</strong> everyone may send everything until you remove a checkmark, which blocks that person.</li>
+<li><strong>In a classroom channel,</strong> nobody may speak until you add a checkmark — operators included, so you too. The submenu then also offers the same five items <strong>for Everyone</strong>. Select the channel itself rather than a person to see only those.</li>
+</ul>
+<p>You need to be an operator of that channel, or have an account allowed to modify channels. Otherwise the command stays dimmed in the User menu and doesn't appear in the shortcut menu.</p>
 <h2 id="remove-someone-from-a-channel-or-the-server">Remove someone from a channel or the server</h2>
 <p>Select the person, then do one of the following:</p>
 <ul>

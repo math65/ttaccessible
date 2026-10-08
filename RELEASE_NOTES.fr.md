@@ -1,3 +1,23 @@
+## v1.13.0-beta.4 (build 60) — 08/10/2026
+
+Cette bêta apporte le contrôle de la transmission : si vous gérez un canal, vous choisissez désormais qui peut y parler, y écrire ou y diffuser, comme dans l'app TeamTalk officielle.
+
+### Choisir qui peut parler
+- **Donner ou retirer la parole.** Sélectionnez une personne dans l'arbre des canaux, puis choisissez Utilisateur > Contrôle de la transmission, ou passez par son menu contextuel. Vous autorisez ou bloquez séparément les messages dans le canal, la voix, la vidéo, le partage d'écran et la diffusion de fichiers média. Une coche signifie que la personne en a le droit.
+- **L'app confirme chaque changement**, par exemple « Camille peut maintenant parler » ou « Camille ne peut plus parler ».
+- **Dans un canal ordinaire**, tout le monde a tous les droits tant que vous n'ôtez pas de coche. **Dans une salle de classe**, c'est l'inverse : personne ne parle tant que vous ne l'avez pas autorisé, opérateurs compris. Le sous-menu y propose aussi les cinq mêmes choix pour tout le monde d'un coup ; sélectionnez le canal lui-même pour n'afficher que ceux-là.
+- Il faut être opérateur du canal, ou disposer d'un compte autorisé à modifier les canaux. Sinon, la commande reste grisée dans le menu Utilisateur et n'apparaît pas dans le menu contextuel.
+- Dans la fenêtre du canal, la case « Salle de classe » vous indique désormais le Contrôle de la transmission, au lieu de vous renvoyer vers une autre app.
+- La personne concernée n'est pas prévenue de ce que vous changez. L'app officielle ne la prévient pas non plus.
+
+Merci à radio1975, qui l'avait demandé.
+
+### Mises à jour
+- **Les nouvelles versions vous sont proposées dès l'ouverture de l'app.** Jusqu'ici, la vérification attendait la fin du démarrage, puis quelques secondes de plus. Vous verrez la différence à partir de la prochaine mise à jour.
+
+### Téléchargement
+[ttaccessible-1.13.0-beta.4-60.zip](https://github.com/math65/ttaccessible/releases/download/v1.13.0-beta.4/ttaccessible-1.13.0-beta.4-60.zip)
+
 ## v1.13.0-beta.3 (build 59) — 02/10/2026
 
 Cette bêta s'occupe des canaux où l'on parle chacun son tour, et de l'administration des serveurs. Dans ces canaux, vous ne pouviez parler qu'une fois : vous pouvez maintenant reprendre la parole à chaque tour, et l'app vous dit où vous en êtes dans la file d'attente.

@@ -1,3 +1,23 @@
+## v1.13.0-beta.4 (build 60) — 2026-10-08
+
+This beta adds Transmit Control: if you run a channel, you can now decide who may speak, write or stream in it, as in the official TeamTalk app.
+
+### Deciding who may speak
+- **Give or take the floor.** Select someone in the channel tree, then choose User > Transmit Control, or use the context menu on that person. You can allow or block channel messages, voice, video, desktop sharing and media file streaming, one by one. A checkmark means the person is allowed.
+- **The app confirms each change**, for example "Camille can now speak" or "Camille can no longer speak".
+- **In an ordinary channel**, everyone may do everything until you remove a checkmark. **In a classroom channel** it's the other way round: nobody may speak until you allow them, operators included. There, the submenu also offers the same five choices for everyone at once; select the channel itself to see only those.
+- You need to be an operator of the channel, or have an account allowed to modify channels. Otherwise the command is dimmed in the User menu and absent from the context menu.
+- The classroom checkbox in the channel dialog now points you to Transmit Control, instead of sending you to another app.
+- The person isn't told when you change what they may do. The official app doesn't tell them either.
+
+Thanks to radio1975 for asking for it.
+
+### Updates
+- **New versions show up as soon as the app opens.** The check used to wait until the app had finished starting up, plus a few seconds. You'll notice the difference from the next update onward.
+
+### Download
+[ttaccessible-1.13.0-beta.4-60.zip](https://github.com/math65/ttaccessible/releases/download/v1.13.0-beta.4/ttaccessible-1.13.0-beta.4-60.zip)
+
 ## v1.13.0-beta.3 (build 59) — 2026-10-02
 
 This beta is about channels where people speak one at a time, and about server administration. In those channels you could only speak once; you can now speak as many times as your turn comes, and the app tells you where you stand in the queue.
