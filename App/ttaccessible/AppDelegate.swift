@@ -1640,6 +1640,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
     }
 
+    /// "Transmit Control" in the User menu. Acts on the channel tree only — the
+    /// menu state disables it while the Connected Users window is in front.
+    func setSelectedUserTransmission(_ stream: TransmitStream, allowed: Bool, forEveryone: Bool) {
+        guard menuState.mode == .connectedServer else { return }
+        connectedServerViewController?.setSelectionTransmission(stream, allowed: allowed, forEveryone: forEveryone)
+    }
+
     func kickSelectedUser() {
         routeUserAction(
             connectedUsers: { $0.keyKickSelectedUser() },

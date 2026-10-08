@@ -241,6 +241,10 @@ extension TeamTalkConnectionController {
             // operator check below decides.
             let hasGlobalMoveRight =
                 (TT_GetMyUserRights(instance) & UInt32(USERRIGHT_MOVE_USERS.rawValue)) != 0
+            // Same shape for the transmit list: the account-wide right decides for
+            // every channel, operator status per channel otherwise.
+            let hasGlobalModifyChannelsRight =
+                (TT_GetMyUserRights(instance) & UInt32(USERRIGHT_MODIFY_CHANNELS.rawValue)) != 0
 
             func buildChannelTree(parentID: Int32, parentPathComponents: [String]) -> [ConnectedServerChannel] {
                 let childChannels = channelsByParent[parentID] ?? []
@@ -250,6 +254,9 @@ extension TeamTalkConnectionController {
                     let channelPathComponents = parentPathComponents + [channelName]
                     let channelUsers = sortUsersByDisplayName(usersByChannel[channel.nChannelID] ?? [])
                         .map { makeUser(from: $0, channelPathComponents: channelPathComponents) }
+
+                    var channelForTransmitUsers = channel
+                    let isOperatorHere = TT_IsChannelOperator(instance, currentUserID, channel.nChannelID) != 0
 
                     return ConnectedServerChannel(
                         id: channel.nChannelID,
@@ -262,8 +269,9 @@ extension TeamTalkConnectionController {
                         pathComponents: channelPathComponents,
                         children: buildChannelTree(parentID: channel.nChannelID, parentPathComponents: channelPathComponents),
                         users: channelUsers,
-                        canMoveUsersOut: hasGlobalMoveRight
-                            || TT_IsChannelOperator(instance, currentUserID, channel.nChannelID) != 0
+                        canMoveUsersOut: hasGlobalMoveRight || isOperatorHere,
+                        transmitUsers: TransmitUsersList(channel: &channelForTransmitUsers),
+                        canControlTransmission: hasGlobalModifyChannelsRight || isOperatorHere
                     )
                 }
 

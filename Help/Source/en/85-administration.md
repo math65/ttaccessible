@@ -1,7 +1,7 @@
 ---
 title: Manage users, bans and server settings
-description: Promote channel operators, kick or ban people, move them between channels, and edit accounts and server properties.
-keywords: operator, kick, ban, move users, accounts, rights, server properties, statistics, admin
+description: Promote channel operators, decide who may speak, kick or ban people, move them between channels, and edit accounts and server properties.
+keywords: operator, transmit control, classroom, give the floor, block voice, kick, ban, move users, accounts, rights, server properties, statistics, admin
 anchor: administration
 ---
 
@@ -13,6 +13,30 @@ settings. Commands you aren't allowed to use stay dimmed.
 Select the person in the channel tree, then press Control-Command-O. Press it again to revoke the
 status. If you aren't an operator yourself and the channel has an operator password, tt-Accessible
 asks for it.
+
+## Give someone the floor, or take it away
+
+As a channel operator, you decide who may speak, write or stream in the channel.
+
+1. Select the person in the channel tree.
+2. Choose User > Transmit Control. You can also Control-click the person, then choose Transmit
+   Control.
+3. Choose what to allow or forbid: **Allow Channel Text Messages**, **Allow Voice Transmission**,
+   **Allow Video Transmission**, **Allow Desktop Transmission** or **Allow Media File
+   Transmission**. A checkmark means the person may send it.
+
+tt-Accessible confirms the change, for example *Alex can now speak*.
+
+What a checkmark does depends on the channel:
+
+- **In an ordinary channel,** everyone may send everything until you remove a checkmark, which
+  blocks that person.
+- **In a classroom channel,** nobody may speak until you add a checkmark — operators included, so
+  you too. The submenu then also offers the same five items **for Everyone**. Select the channel
+  itself rather than a person to see only those.
+
+You need to be an operator of that channel, or have an account allowed to modify channels.
+Otherwise the command stays dimmed in the User menu and doesn't appear in the shortcut menu.
 
 ## Remove someone from a channel or the server
 

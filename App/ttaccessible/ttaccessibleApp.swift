@@ -312,6 +312,37 @@ struct ttaccessibleApp: App {
                     .keyboardShortcut("o", modifiers: [.control, .command])
                     .disabled(menuState.hasSingleSelectedOtherUser == false)
 
+                    Menu(L10n.text("transmitControl.menu.title")) {
+                        if let state = menuState.transmitControl {
+                            if let allowed = state.allowedForUser {
+                                ForEach(TransmitStream.allCases, id: \.self) { stream in
+                                    Toggle(
+                                        L10n.text(stream.userMenuTitleKey),
+                                        isOn: Binding(
+                                            get: { allowed.contains(stream) },
+                                            set: { appDelegate.setSelectedUserTransmission(stream, allowed: $0, forEveryone: false) }
+                                        )
+                                    )
+                                }
+                            }
+                            if let allowed = state.allowedForEveryone {
+                                if state.allowedForUser != nil {
+                                    Divider()
+                                }
+                                ForEach(TransmitStream.allCases, id: \.self) { stream in
+                                    Toggle(
+                                        L10n.text(stream.everyoneMenuTitleKey),
+                                        isOn: Binding(
+                                            get: { allowed.contains(stream) },
+                                            set: { appDelegate.setSelectedUserTransmission(stream, allowed: $0, forEveryone: true) }
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    .disabled(menuState.transmitControl == nil)
+
                     Divider()
 
                     Button(L10n.text("user.menu.kick")) {

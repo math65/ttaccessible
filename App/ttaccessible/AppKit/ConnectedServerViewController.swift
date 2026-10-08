@@ -862,6 +862,7 @@ final class ConnectedServerViewController: NSViewController {
                 }
             )
         )
+        menuState.setTransmitControl(transmitControlTarget()?.menuState)
         menuState.setMicrophoneMuted(session.voiceTransmissionEnabled == false)
         menuState.setRecordingActive(session.recordingActive)
         menuState.setMediaStreamingActive(session.mediaStreamingActive)
@@ -972,7 +973,9 @@ final class ConnectedServerViewController: NSViewController {
                 pathComponents: channel.pathComponents,
                 children: updatedChildren,
                 users: updatedUsers,
-                canMoveUsersOut: channel.canMoveUsersOut
+                canMoveUsersOut: channel.canMoveUsersOut,
+                transmitUsers: channel.transmitUsers,
+                canControlTransmission: channel.canControlTransmission
             )
         }
     }
@@ -1268,6 +1271,8 @@ final class ConnectedServerViewController: NSViewController {
         opItem.target = self
         menu.addItem(opItem)
 
+        menu.addItem(makeTransmitControlMenuItem())
+
         let kickItem = NSMenuItem(
             title: L10n.text("connectedServer.menu.kickUser"),
             action: #selector(kickUserAction),
@@ -1345,6 +1350,9 @@ final class ConnectedServerViewController: NSViewController {
         )
         forgetPasswordItem.target = self
         menu.addItem(forgetPasswordItem)
+
+        // Fills the "Transmit Control" submenu as the menu opens.
+        menu.delegate = self
 
         return menu
     }

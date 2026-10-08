@@ -42,6 +42,9 @@ final class SavedServersMenuState: ObservableObject {
     @Published private(set) var isMediaStreamingLive = false
     @Published private(set) var isMediaStreamingPaused = false
     @Published private(set) var selectedUserSubscriptionStates: [UserSubscriptionOption: Bool] = [:]
+    /// The "Transmit Control" submenu for the main window's selection; nil when
+    /// it does not apply (no rights there, or another window is in front).
+    @Published private(set) var transmitControl: TransmitControlMenuState?
 
     private init() {
     }
@@ -76,6 +79,11 @@ final class SavedServersMenuState: ObservableObject {
         setRecordingActive(false)
         setHearMyselfEnabled(false)
         setMediaStreamingActive(false)
+        setTransmitControl(nil)
+    }
+
+    func setTransmitControl(_ value: TransmitControlMenuState?) {
+        if transmitControl != value { transmitControl = value }
     }
 
     func setAdministrator(_ value: Bool) {
@@ -161,4 +169,12 @@ final class SavedServersMenuState: ObservableObject {
     func isSelectedUsersSubscriptionEnabled(_ option: UserSubscriptionOption) -> Bool {
         selectedUserSubscriptionStates[option] ?? false
     }
+}
+
+/// What the "Transmit Control" submenu shows: which streams the selected user may
+/// send (nil when a channel row is selected) and, in a classroom only, which
+/// streams are open to everyone.
+struct TransmitControlMenuState: Equatable {
+    var allowedForUser: Set<TransmitStream>?
+    var allowedForEveryone: Set<TransmitStream>?
 }
