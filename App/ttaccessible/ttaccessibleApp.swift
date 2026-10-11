@@ -25,6 +25,16 @@ struct ttaccessibleApp: App {
                 .keyboardShortcut(",", modifiers: [.command])
             }
 
+            // The last item of the macOS 12 hole (see Quit below): the stub app
+            // menu there has no About either. Declared here it is built with the
+            // menu, on every system, and opens the same standard panel AppKit's
+            // own item would.
+            CommandGroup(replacing: .appInfo) {
+                Button(L10n.format("app.menu.about", Self.appDisplayName)) {
+                    NSApp.orderFrontStandardAboutPanel(nil)
+                }
+            }
+
             CommandGroup(after: .appInfo) {
                 Button(L10n.text("update.menu.checkForUpdates")) {
                     appDelegate.checkForUpdates()

@@ -1131,6 +1131,7 @@
 "history.transmitQueue.position" = "You are number %d in the speaking queue";
 "preferences.historyEvent.transmitQueueChanged" = "Speaking turn in a queue";
 "app.menu.quit" = "Quit %@";
+"app.menu.about" = "About %@";
 "app.menu.services" = "Services";
 "app.menu.hide" = "Hide %@";
 "app.menu.hideOthers" = "Hide Others";

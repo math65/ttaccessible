@@ -1131,6 +1131,7 @@
 "history.transmitQueue.position" = "Konuşma sırasında %d. sıradasınız";
 "preferences.historyEvent.transmitQueueChanged" = "Konuşma sırasında sıranız";
 "app.menu.quit" = "%@'dan Çık";
+"app.menu.about" = "%@ Hakkında";
 "app.menu.services" = "Hizmetler";
 "app.menu.hide" = "%@'ı Gizle";
 "app.menu.hideOthers" = "Diğerlerini Gizle";

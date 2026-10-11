@@ -1129,6 +1129,7 @@
 "history.transmitQueue.position" = "Vous êtes en position %d dans la file d'attente";
 "preferences.historyEvent.transmitQueueChanged" = "Tour de parole en file d'attente";
 "app.menu.quit" = "Quitter %@";
+"app.menu.about" = "À propos de %@";
 "app.menu.services" = "Services";
 "app.menu.hide" = "Masquer %@";
 "app.menu.hideOthers" = "Masquer les autres";
