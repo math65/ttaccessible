@@ -106,10 +106,14 @@ extension ConnectedServerViewController {
             diskQuotaBytes: info.diskQuotaBytes
         )
 
+        // The server refuses any codec change while the channel has users
+        // (CHANNEL_HAS_USERS), the local user included — so say so up front,
+        // as the official client does, instead of after OK.
         presentChannelDialog(
             title: L10n.format("connectedServer.channel.edit.title", info.name),
             properties: props,
             isCreate: false,
+            codecLocked: channel.users.isEmpty == false,
             window: window
         ) { [weak self] result, _ in
             guard let self else { return }
@@ -152,6 +156,7 @@ extension ConnectedServerViewController {
         title: String,
         properties: ChannelProperties,
         isCreate: Bool,
+        codecLocked: Bool = false,
         window: NSWindow,
         completion: @escaping (ChannelProperties, Bool) -> Void
     ) {
@@ -308,6 +313,23 @@ extension ConnectedServerViewController {
             applicationPopUp.selectItem(withTag: Int(codec.application))
         }
 
+        // Shown under the codec heading, where VoiceOver reads it before the
+        // dimmed controls, and repeated as each control's help.
+        var codecLockedHint: NSTextField?
+        if codecLocked {
+            let reason = L10n.text("connectedServer.channel.form.codec.lockedHint")
+            let hint = NSTextField(wrappingLabelWithString: reason)
+            hint.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
+            hint.textColor = .secondaryLabelColor
+            codecLockedHint = hint
+            for control in [channelsPopUp, sampleRatePopUp, applicationPopUp] {
+                control.isEnabled = false
+                control.setAccessibilityHelp(reason)
+            }
+            bitrateField.isEnabled = false
+            bitrateField.setAccessibilityHelp(reason)
+        }
+
         var joinCheck: NSButton?
         if isCreate {
             let check = NSButton(checkboxWithTitle: L10n.text("connectedServer.channel.form.joinAfterCreate"), target: nil, action: nil)
@@ -377,6 +399,11 @@ extension ConnectedServerViewController {
         NSLayoutConstraint.activate([codecSeparator.widthAnchor.constraint(equalToConstant: 440)])
 
         stack.addArrangedSubview(codecLabel)
+        if let codecLockedHint {
+            codecLockedHint.translatesAutoresizingMaskIntoConstraints = false
+            stack.addArrangedSubview(codecLockedHint)
+            NSLayoutConstraint.activate([codecLockedHint.widthAnchor.constraint(equalToConstant: 440)])
+        }
         for (lbl, control) in [(channelsLabel, channelsPopUp), (sampleRateLabel, sampleRatePopUp), (applicationLabel, applicationPopUp)] as [(NSTextField, NSPopUpButton)] {
             let row = NSStackView(views: [lbl, control])
             row.orientation = .horizontal

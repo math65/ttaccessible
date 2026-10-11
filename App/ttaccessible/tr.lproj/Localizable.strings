@@ -292,6 +292,7 @@
 "connectedServer.channel.form.voiceTimeOut" = "Saniye cinsinden ses süresi sınırı (sınırsız için 0)";
 "connectedServer.channel.form.mediaTimeOut" = "Saniye cinsinden medya süresi sınırı (sınırsız için 0)";
 "connectedServer.channel.form.codec.title" = "Ses Kodeği";
+"connectedServer.channel.form.codec.lockedHint" = "Kanalda, siz dahil, biri varken kodek değiştirilemez.";
 "connectedServer.channel.form.codec.channels" = "Ses kanalları";
 "connectedServer.channel.form.codec.channels.mono" = "Mono";
 "connectedServer.channel.form.codec.channels.stereo" = "Stereo";

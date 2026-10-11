@@ -45,6 +45,9 @@ son propre canal — consultez [Ajouter un serveur](servers.html).
 Pour modifier un canal, sélectionnez-le et appuyez sur Maj + F7. Les réglages que le formulaire
 n'affiche pas sont conservés tels quels.
 
+Le codec audio ne se change que dans un canal vide. Tant que quelqu'un s'y trouve, vous compris,
+les réglages de la section Codec audio sont estompés : le serveur refuserait la modification.
+
 Pour supprimer un canal, sélectionnez-le, appuyez sur F8, puis confirmez. Le canal et tous ses
 sous-canaux sont supprimés, et cette action est irréversible.
 

@@ -292,6 +292,7 @@
 "connectedServer.channel.form.voiceTimeOut" = "Durée maximale de la voix en secondes (0 pour aucune)";
 "connectedServer.channel.form.mediaTimeOut" = "Durée maximale du média en secondes (0 pour aucune)";
 "connectedServer.channel.form.codec.title" = "Codec audio";
+"connectedServer.channel.form.codec.lockedHint" = "Le codec ne peut pas être modifié tant que quelqu'un se trouve dans le canal, vous compris.";
 "connectedServer.channel.form.codec.channels" = "Canaux audio";
 "connectedServer.channel.form.codec.channels.mono" = "Mono";
 "connectedServer.channel.form.codec.channels.stereo" = "Stéréo";

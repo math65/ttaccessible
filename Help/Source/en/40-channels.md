@@ -42,6 +42,9 @@ A saved server can also carry a channel of its own — see [Add a server](server
 To change a channel, select it and press Shift-F7. Settings that the form doesn't show are kept as
 they were.
 
+The audio codec can only be changed in an empty channel. While anyone is in it, you included, the
+Audio Codec settings are dimmed: the server would refuse the change.
+
 To delete a channel, select it and press F8, then confirm. The channel and all of its subchannels
 are deleted, and you can't undo this.
 
