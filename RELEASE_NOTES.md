@@ -1,3 +1,16 @@
+## v1.13.0-beta.5 (build 61) — 2026-10-11
+
+Two small fixes, both found by Ron.
+
+### Channels
+- **The audio codec settings are dimmed when someone is in the channel.** A server refuses to change a channel's codec while anyone is in it, you included, and the bitrate is part of the codec. Before, you only found out after clicking OK, with "Channel has active users". Now the Audio Codec settings are dimmed as soon as the dialog opens, and a line under the heading says why. The official TeamTalk app does the same. To change the codec, wait until the channel is empty.
+
+### macOS 12 Monterey
+- **About tt-Accessible should now appear at the top of the app menu.** It was the last item macOS 12 still left out. I could only check it on a newer macOS, so if you're on Monterey, please tell me whether it's there.
+
+### Download
+[ttaccessible-1.13.0-beta.5-61.zip](https://github.com/math65/ttaccessible/releases/download/v1.13.0-beta.5/ttaccessible-1.13.0-beta.5-61.zip)
+
 ## v1.13.0-beta.4 (build 60) — 2026-10-08
 
 This beta adds Transmit Control: if you run a channel, you can now decide who may speak, write or stream in it, as in the official TeamTalk app.

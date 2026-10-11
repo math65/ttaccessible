@@ -1,3 +1,16 @@
+## v1.13.0-beta.5 (build 61) — 11/10/2026
+
+Deux petites corrections, toutes deux signalées par Ron.
+
+### Canaux
+- **Les réglages du codec audio sont grisés quand quelqu'un se trouve dans le canal.** Un serveur refuse de changer le codec d'un canal tant que quelqu'un y est, vous compris, et le débit fait partie du codec. Jusqu'ici, vous ne l'appreniez qu'après avoir cliqué sur OK, par le message « Channel has active users ». Désormais, les réglages de la section Codec audio sont grisés dès l'ouverture de la fenêtre, et une ligne sous le titre en donne la raison, comme dans l'app TeamTalk officielle. Pour changer le codec, attendez que le canal soit vide.
+
+### macOS 12 Monterey
+- **« À propos de tt-Accessible » devrait maintenant apparaître en tête du menu de l'app.** C'était le dernier élément que macOS 12 oubliait encore. Je n'ai pu le vérifier que sur un macOS plus récent : si vous êtes sous Monterey, dites-moi s'il y est.
+
+### Téléchargement
+[ttaccessible-1.13.0-beta.5-61.zip](https://github.com/math65/ttaccessible/releases/download/v1.13.0-beta.5/ttaccessible-1.13.0-beta.5-61.zip)
+
 ## v1.13.0-beta.4 (build 60) — 08/10/2026
 
 Cette bêta apporte le contrôle de la transmission : si vous gérez un canal, vous choisissez désormais qui peut y parler, y écrire ou y diffuser, comme dans l'app TeamTalk officielle.
