@@ -581,7 +581,6 @@
 "preferences.sounds.chooseSound.panelPrompt" = "Choisir";
 "preferences.sounds.soundStatus.custom" = "Personnalisé";
 "preferences.sounds.soundStatus.default" = "Défaut";
-"preferences.general.title" = "Général";
 "preferences.sounds.title" = "Sons";
 "preferences.announcements.title" = "Annonces";
 "preferences.announcements.voiceover.title" = "Annonces d'événements";

@@ -581,7 +581,6 @@
 "preferences.sounds.chooseSound.panelPrompt" = "Seç";
 "preferences.sounds.soundStatus.custom" = "Özel";
 "preferences.sounds.soundStatus.default" = "Varsayılan";
-"preferences.general.title" = "Genel";
 "preferences.sounds.title" = "Bildirim Sesleri";
 "preferences.announcements.title" = "Duyurular";
 "preferences.announcements.voiceover.title" = "Olay duyuruları";
