@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]
-AUDIT = ROOT / ".agents/skills/accessibility/scripts/audit.py"
+AUDIT = Path(__file__).with_name("audit.py")
 WATCHED = (
     "App/ttaccessible/AppKit/",
     "App/ttaccessible/SwiftUI/",
@@ -53,13 +53,15 @@ def main() -> int:
     )
     findings = result.stdout.strip()
     # The script exits 1 when it has findings, 0 when clean. Anything else is the
-    # script itself failing, and a broken audit must not be read as a clean view.
-    if result.returncode == 0 or not findings:
-        return 0
-    if result.returncode != 1:
+    # script itself failing, and a broken audit must not be read as a clean view —
+    # so this is checked before anything else: a crash prints nothing to stdout,
+    # and an empty stdout must not pass for "no findings".
+    if result.returncode not in (0, 1):
         print(json.dumps({
             "systemMessage": f"L'audit d'accessibilité a échoué : {result.stderr.strip()[:200]}"
         }))
+        return 0
+    if result.returncode == 0 or not findings:
         return 0
 
     print(json.dumps({

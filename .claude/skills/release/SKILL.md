@@ -18,8 +18,13 @@ public release. **Never run Phase B without an explicit go-ahead from the user.*
 **The channel is decided by the version, not by the argument.** Read it first:
 
 ```bash
-grep -m1 MARKETING_VERSION App/ttaccessible.xcodeproj/project.pbxproj
+xcodebuild -project App/ttaccessible.xcodeproj -scheme ttaccessible -showBuildSettings 2>/dev/null \
+  | grep -E '^ *(MARKETING_VERSION|CURRENT_PROJECT_VERSION) = '
 ```
+
+Never `grep -m1 MARKETING_VERSION` on the pbxproj: its first occurrence belongs to
+another target and reads `1.0` — a bare version, so it would look **stable** and send
+a beta to every user. The build settings of the `ttaccessible` scheme are the app's.
 
 A version carrying a prerelease suffix (`1.12.0-beta.3`) is a **beta** and ships with
 `./build.sh --release --beta` — only users who enabled "Include beta versions" in
@@ -38,15 +43,19 @@ Do not rely on session memory for what shipped — always query git.
 
 ## Phase A — Draft the release notes
 
-### A1. Identify the prior tag
+### A1. Identify the prior tag — it depends on the channel
 
 ```bash
-git tag --sort=-v:refname | head -5
+git tag --sort=-v:refname | head -5                        # beta: the previous tag, beta or not
+git tag --sort=-v:refname | grep -v -- '-beta' | head -1   # stable: the previous STABLE tag
 ```
 
-Pick the most recent published tag (e.g. `v1.4.0`). The new release is the next semver.
+- **Beta**: compare with the most recent tag — a beta tester has the previous beta.
+- **Stable**: compare with the previous **stable** tag (e.g. `v1.11.1..HEAD` for
+  1.12.0), never with the last beta. Stable-channel users jump from stable to stable;
+  `v1.12.0-beta.8..HEAD` would show one day of work and drop everything they gain.
 
-### A2. Scan commits since the prior tag
+### A2. Scan commits since the prior tag (as chosen in A1)
 
 ```bash
 git log <prev-tag>..HEAD --oneline --no-merges
@@ -81,10 +90,13 @@ contributor may have a competing approach. Don't auto-claim it as your fix.
 - Smaller polish items.
 
 ### Download
-[ttaccessible-<X.Y.Z>.zip](https://github.com/math65/ttaccessible/releases/download/v<X.Y.Z>/ttaccessible-<X.Y.Z>.zip)
+[ttaccessible-<X.Y.Z>-<N>.zip](https://github.com/math65/ttaccessible/releases/download/v<X.Y.Z>/ttaccessible-<X.Y.Z>-<N>.zip)
 ```
 
-Always include the **direct asset URL**, not just the release page link.
+Always include the **direct asset URL**, not just the release page link. The asset
+carries the **build number**: `build.sh` publishes `ttaccessible-<X.Y.Z>-<N>.zip`, so a
+link without `-<N>` is dead (it shipped dead once, in 1.13.0-beta.2). After publishing,
+check it answers: `curl -sI -L <url> | grep -E '^HTTP'` must end in `200`.
 
 #### Tone & wording — write for the user, not the commit log
 
@@ -126,7 +138,7 @@ French notes; everyone else falls back to the English `.html`.
     tenant"; "interrupteurs par son" (per-sound switches) → "la liste des sons".
   - Lead with the user-visible effect, same tone rules as the English (A4).
 - Use **vouvoiement** ("vous", never "tu") — same rule as app-shipped French strings.
-- Keep the structure and the same `.zip` filename in the Download section.
+- Keep the structure and the same `.zip` filename (with the build number) in the Download section.
 - This file is **only** for the in-app Sparkle dialog. The GitHub release body and
   AppleVis post stay English — do not publish the French version there.
 - If you skip `RELEASE_NOTES.fr.md`, the build still works: Sparkle just shows
