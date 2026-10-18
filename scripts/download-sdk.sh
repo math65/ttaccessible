@@ -40,6 +40,7 @@ if [ -f "$VENDOR_DIR/libTeamTalk5.dylib" ]; then
         echo "Keeping existing dylib. Ensuring SDK patches are applied..."
         python3 "$(dirname "$0")/patch-sdk-portaudio.py" "$VENDOR_DIR/libTeamTalk5.dylib"
         python3 "$(dirname "$0")/patch-sdk-norecording.py" "$VENDOR_DIR/libTeamTalk5.dylib"
+        python3 "$(dirname "$0")/patch-sdk-filetransfer.py" "$VENDOR_DIR/libTeamTalk5.dylib"
         exit 0
     fi
 fi
@@ -67,6 +68,11 @@ python3 "$(dirname "$0")/patch-sdk-portaudio.py" "$VENDOR_DIR/libTeamTalk5.dylib
 # is silent there). See scripts/patch-sdk-norecording.py for the full rationale.
 echo "Patching out the NO_RECORDING audio-block gate..."
 python3 "$(dirname "$0")/patch-sdk-norecording.py" "$VENDOR_DIR/libTeamTalk5.dylib"
+
+# Stop pinning the file-transfer socket buffers to 64 KiB (uploads and downloads were
+# capped at 64 KiB per round trip). See scripts/patch-sdk-filetransfer.py.
+echo "Patching out the 64 KiB file-transfer socket buffers..."
+python3 "$(dirname "$0")/patch-sdk-filetransfer.py" "$VENDOR_DIR/libTeamTalk5.dylib"
 
 echo ""
 echo "Done. SDK ${SDK_VERSION} installed (PortAudio probe patched):"
