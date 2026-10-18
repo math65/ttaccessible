@@ -1,3 +1,13 @@
+## v1.13.0-beta.6 (build 62) — 18/10/2026
+
+Une seule correction, pour les transferts de fichiers.
+
+### Fichiers
+- **L'envoi et le téléchargement de fichiers vont beaucoup plus vite.** Les transferts plafonnaient vers 500 Ko/s quelle que soit votre connexion, et plus le serveur était loin, plus ce plafond était bas. Le serveur n'y était pour rien. Sur mon serveur, un fichier de 740 Mo part maintenant à 30 Mo/s et se télécharge à 20 Mo/s. Le gain chez vous dépend de votre connexion et de celle du serveur.
+
+### Téléchargement
+[ttaccessible-1.13.0-beta.6-62.zip](https://github.com/math65/ttaccessible/releases/download/v1.13.0-beta.6/ttaccessible-1.13.0-beta.6-62.zip)
+
 ## v1.13.0-beta.5 (build 61) — 11/10/2026
 
 Deux petites corrections, toutes deux signalées par Ron.

@@ -1,3 +1,13 @@
+## v1.13.0-beta.6 (build 62) — 2026-10-18
+
+One fix, for file transfers.
+
+### Files
+- **Uploading and downloading files is much faster.** Transfers were capped at around 500 kB/s whatever your connection, and the further away the server, the lower the cap. The server had nothing to do with it. On my server, a 740 MB file now goes up at 30 MB/s and comes down at 20 MB/s. How much faster it gets for you depends on your connection and on the server's.
+
+### Download
+[ttaccessible-1.13.0-beta.6-62.zip](https://github.com/math65/ttaccessible/releases/download/v1.13.0-beta.6/ttaccessible-1.13.0-beta.6-62.zip)
+
 ## v1.13.0-beta.5 (build 61) — 2026-10-11
 
 Two small fixes, both found by Ron.
