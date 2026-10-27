@@ -122,6 +122,8 @@ final class TeamTalkConnectionController {
     var subscriptionDefaultsAppliedUserIDs: Set<Int32> = []
     /// Commands whose wait timed out, kept to log a late reply (issue #45).
     var timedOutCommands: [Int32: (operation: String, startedAt: Date)] = [:]
+    /// Channel join waiting for the login reply to finish (see `scheduleLoginJoinLocked`).
+    var pendingLoginJoin: PendingLoginJoin?
     var suppressLoginHistoryDepth = 0
     var suppressJoinHistoryDepth = 0
     var suppressLoginHistoryUntil = Date.distantPast

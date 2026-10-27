@@ -204,6 +204,15 @@ struct TeamTalkConnectOptions {
     }
 }
 
+/// A channel join deferred until the login command has finished, so that the
+/// whole channel tree is known when its paths are resolved.
+struct PendingLoginJoin {
+    let instance: UnsafeMutableRawPointer
+    let commandID: INT32
+    let deadline: Date
+    let join: () -> Void
+}
+
 // MARK: - Channel properties (extracted from TeamTalkConnectionController nested types)
 
 struct OpusCodecSettings {

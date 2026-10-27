@@ -35,7 +35,7 @@ extension TeamTalkConnectionController {
                 self.justKickedAt = nil
                 self.resetLocked()
                 let instance = try self.createInstanceLocked()
-                try self.withSuppressedLoginHistoryLocked {
+                let loginCommandID = try self.withSuppressedLoginHistoryLocked {
                     try self.connectAndLoginLocked(
                         instance: instance,
                         record: record,
@@ -47,10 +47,13 @@ extension TeamTalkConnectionController {
                 self.connectedRecord = record
                 self.userVolumeStore.setServerScope(Self.serverVolumeScope(for: record))
                 self.userVolumeStore.setMemoryMode(self.preferencesStore.preferences.userVolumeMemoryMode)
-                // Must precede the auto-join: it resolves the stored channel
-                // paths into IDs, and the auto-join looks a password up by ID.
-                self.refreshSavedChannelPasswordIDsLocked(instance: instance)
-                self.autoJoinAfterLoginLocked(instance: instance, options: options)
+                self.scheduleLoginJoinLocked(instance: instance, loginCommandID: loginCommandID) { [weak self] in
+                    guard let self else { return }
+                    // Must precede the auto-join: it resolves the stored channel
+                    // paths into IDs, and the auto-join looks a password up by ID.
+                    self.refreshSavedChannelPasswordIDsLocked(instance: instance)
+                    self.autoJoinAfterLoginLocked(instance: instance, options: options)
+                }
                 try self.applyPostLoginOptionsLocked(instance: instance, options: options)
                 self.applyDefaultSubscriptionPreferencesLocked(instance: instance, preferences: self.preferencesStore.preferences)
                 try self.ensureOutputAudioReadyLocked(instance: instance)
@@ -312,7 +315,7 @@ extension TeamTalkConnectionController {
         do {
             let instance = try createInstanceLocked()
             newInstance = instance
-            try withSuppressedLoginHistoryLocked {
+            let loginCommandID = try withSuppressedLoginHistoryLocked {
                 try connectAndLoginLocked(
                     instance: instance,
                     record: record,
@@ -332,19 +335,27 @@ extension TeamTalkConnectionController {
             self.connectedRecord = record
             self.userVolumeStore.setServerScope(Self.serverVolumeScope(for: record))
             self.userVolumeStore.setMemoryMode(self.preferencesStore.preferences.userVolumeMemoryMode)
-            // Before the rejoin below: it resolves stored channel paths to IDs,
-            // and the rejoin looks a channel password up by ID.
-            refreshSavedChannelPasswordIDsLocked(instance: instance)
+            // Captured now: cancelReconnectLocked below clears them before the
+            // login reply completes and the join runs.
+            let rejoinPath = lastChannelPath
+            let rejoinPassword = lastChannelPassword
+            let rejoinChannelID = lastChannelID
+            scheduleLoginJoinLocked(instance: instance, loginCommandID: loginCommandID) { [weak self] in
+                guard let self else { return }
+                // Before the rejoin below: it resolves stored channel paths to IDs,
+                // and the rejoin looks a channel password up by ID.
+                self.refreshSavedChannelPasswordIDsLocked(instance: instance)
 
-            // Rejoin the channel we were in, by path (survives a restart that
-            // reassigns IDs); fall back to the server's normal auto-join.
-            if !(shouldRejoinLastChannel && rejoinLastChannelLocked(
-                instance: instance,
-                path: lastChannelPath,
-                password: lastChannelPassword,
-                channelID: lastChannelID
-            )) {
-                autoJoinAfterLoginLocked(instance: instance, options: options)
+                // Rejoin the channel we were in, by path (survives a restart that
+                // reassigns IDs); fall back to the server's normal auto-join.
+                if !(shouldRejoinLastChannel && self.rejoinLastChannelLocked(
+                    instance: instance,
+                    path: rejoinPath,
+                    password: rejoinPassword,
+                    channelID: rejoinChannelID
+                )) {
+                    self.autoJoinAfterLoginLocked(instance: instance, options: options)
+                }
             }
 
             cancelReconnectLocked()
@@ -446,12 +457,37 @@ extension TeamTalkConnectionController {
     }
 
     func autoJoinAfterLoginLocked(instance: UnsafeMutableRawPointer, options: TeamTalkConnectOptions) {
+        // Priority 1: the account's initial channel, set by the server admin.
+        // It wins over any channel the connection itself asks for (saved
+        // server, link, .tt file), as in the Qt client (cmdCompleteLoggedIn).
+        // The server lets the user into this one channel without its password.
+        var account = UserAccount()
+        if TT_GetMyUserAccount(instance, &account) != 0 {
+            let initChannel = ttString(from: account.szInitChannel)
+            if initChannel.isEmpty == false {
+                let channelID = initChannel.withCString { pathPointer in
+                    TT_GetChannelIDFromPath(instance, pathPointer)
+                }
+                if channelID > 0 {
+                    AudioLogger.log("Auto-join: account initial channel %@", initChannel)
+                    _ = TT_DoJoinChannelByID(instance, channelID, "")
+                    return
+                }
+                if joinChannelByNameLocked(instance: instance, path: initChannel, password: "") {
+                    AudioLogger.log("Auto-join: account initial channel %@, joined by name", initChannel)
+                    return
+                }
+                AudioLogger.log("Auto-join: account initial channel %@ not found on the server", initChannel)
+            }
+        }
+
         if let initialChannelPath = options.initialChannelPath?.trimmingCharacters(in: .whitespacesAndNewlines),
            initialChannelPath.isEmpty == false {
             let channelID = initialChannelPath.withCString { pathPointer in
                 TT_GetChannelIDFromPath(instance, pathPointer)
             }
             if channelID > 0 {
+                AudioLogger.log("Auto-join: requested channel %@", initialChannelPath)
                 // Explicit option wins; otherwise use whatever we already know
                 // for this channel (in-session or persisted).
                 let password = options.initialChannelPassword.isEmpty
@@ -461,6 +497,10 @@ extension TeamTalkConnectionController {
                 _ = password.withCString { pwdPointer in
                     TT_DoJoinChannelByID(instance, channelID, pwdPointer)
                 }
+                return
+            }
+            if joinChannelByNameLocked(instance: instance, path: initialChannelPath, password: options.initialChannelPassword) {
+                AudioLogger.log("Auto-join: requested channel %@, joined by name", initialChannelPath)
                 return
             }
         }
@@ -485,31 +525,18 @@ extension TeamTalkConnectionController {
                     }
                 }
             }
-            return
+            // Nothing remembered for this server: fall through to the normal
+            // order, as the Qt client does, rather than staying in no channel.
         }
 
-        // Priority 1: szInitChannel from the user account on the server
-        var account = UserAccount()
-        if TT_GetMyUserAccount(instance, &account) != 0 {
-            let initChannel = ttString(from: account.szInitChannel)
-            if initChannel.isEmpty == false {
-                let channelID = initChannel.withCString { pathPointer in
-                    TT_GetChannelIDFromPath(instance, pathPointer)
-                }
-                if channelID > 0 {
-                    _ = TT_DoJoinChannelByID(instance, channelID, "")
-                    return
-                }
-            }
-        }
-
-        // Priority 2: initial channel configured on the saved server
+        // Initial channel configured on the saved server
         let configuredChannelPath = connectedRecord?.initialChannelPath.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if configuredChannelPath.isEmpty == false {
             let channelID = configuredChannelPath.withCString { pathPointer in
                 TT_GetChannelIDFromPath(instance, pathPointer)
             }
             if channelID > 0 {
+                AudioLogger.log("Auto-join: saved server channel %@", configuredChannelPath)
                 let configured = connectedRecord?.initialChannelPassword ?? ""
                 let password = configured.isEmpty
                     ? knownChannelPasswordLocked(instance: instance, channelID: channelID)
@@ -520,23 +547,129 @@ extension TeamTalkConnectionController {
                 }
                 return
             }
+            if joinChannelByNameLocked(
+                instance: instance,
+                path: configuredChannelPath,
+                password: connectedRecord?.initialChannelPassword ?? ""
+            ) {
+                AudioLogger.log("Auto-join: saved server channel %@, joined by name", configuredChannelPath)
+                return
+            }
         }
 
-        // Priority 3: join root channel if the preference is enabled
-        guard preferencesStore.preferences.autoJoinRootChannel else { return }
+        // Last: the root channel, if the preference is enabled
+        guard preferencesStore.preferences.autoJoinRootChannel else {
+            AudioLogger.log("Auto-join: no channel to join")
+            return
+        }
         let rootChannelID = TT_GetRootChannelID(instance)
         guard rootChannelID > 0 else { return }
+        AudioLogger.log("Auto-join: root channel")
         _ = TT_DoJoinChannelByID(instance, rootChannelID, "")
+    }
+
+    /// Joins a channel the client can't resolve to an ID, by parent and name —
+    /// the Qt client's fallback (cmdCompleteLoggedIn). A hidden channel is
+    /// never sent to a user without USERRIGHT_VIEW_HIDDEN_CHANNELS, so its
+    /// path doesn't resolve, yet the server finds it by name under its parent
+    /// and lets the user in. If no such channel exists, the server creates a
+    /// temporary one when the user may, exactly as with Qt. Returns whether a
+    /// join was sent (false when the parent itself is unknown).
+    func joinChannelByNameLocked(
+        instance: UnsafeMutableRawPointer,
+        path: String,
+        password: String
+    ) -> Bool {
+        let components = path.split(separator: "/").map(String.init).filter { !$0.isEmpty }
+        guard let name = components.last else { return false }
+        let parentID: Int32
+        if components.count == 1 {
+            parentID = TT_GetRootChannelID(instance)
+        } else {
+            let parentPath = "/" + components.dropLast().joined(separator: "/") + "/"
+            parentID = parentPath.withCString { TT_GetChannelIDFromPath(instance, $0) }
+        }
+        guard parentID > 0 else { return false }
+
+        var chan = Channel()
+        chan.nParentID = parentID
+        copyTTString(name, into: &chan.szName)
+        copyTTString(password, into: &chan.szPassword)
+        var serverProperties = ServerProperties()
+        if TT_GetServerProperties(instance, &serverProperties) != 0 {
+            chan.nMaxUsers = serverProperties.nMaxUsers
+        }
+        // Only used if the server has to create the channel.
+        var parent = Channel()
+        if TT_GetChannel(instance, parentID, &parent) != 0 {
+            chan.audiocodec = parent.audiocodec
+        }
+        let commandID = withUnsafeMutablePointer(to: &chan) { TT_DoJoinChannel(instance, $0) }
+        return commandID > 0
+    }
+
+    // MARK: - Join after login
+
+    /// Runs `join` once the login reply is complete. The server sends
+    /// "accepted" (CLIENTEVENT_CMD_MYSELF_LOGGEDIN) BEFORE it forwards the
+    /// channel tree, so a channel path looked up at that point often doesn't
+    /// resolve yet and the auto-join silently found nothing — mostly a deep
+    /// channel such as an account's initial channel. The Qt client joins on
+    /// the login command's completion (CLIENTEVENT_CMD_PROCESSING, inactive);
+    /// so do we. A deadline covers a completion that never shows up.
+    func scheduleLoginJoinLocked(
+        instance: UnsafeMutableRawPointer,
+        loginCommandID: INT32,
+        join: @escaping () -> Void
+    ) {
+        pendingLoginJoin = PendingLoginJoin(
+            instance: instance,
+            commandID: loginCommandID,
+            deadline: Date().addingTimeInterval(5),
+            join: join
+        )
+    }
+
+    /// Called by every loop that reads the message queue, so the completion
+    /// isn't lost when a command wait (e.g. the post-login status change)
+    /// happens to consume it.
+    func runPendingLoginJoinIfCompletedLocked(
+        message: TTMessage,
+        instance: UnsafeMutableRawPointer
+    ) {
+        guard message.nClientEvent == CLIENTEVENT_CMD_PROCESSING,
+              message.bActive == 0,
+              let pending = pendingLoginJoin,
+              pending.instance == instance,
+              pending.commandID == message.nSource else {
+            return
+        }
+        pendingLoginJoin = nil
+        pending.join()
+    }
+
+    func runPendingLoginJoinIfOverdueLocked(instance: UnsafeMutableRawPointer) {
+        guard let pending = pendingLoginJoin,
+              pending.instance == instance,
+              Date() >= pending.deadline else {
+            return
+        }
+        AudioLogger.log("Login reply never completed; running the channel auto-join anyway")
+        pendingLoginJoin = nil
+        pending.join()
     }
 
     // MARK: - Connect and login
 
+    /// Returns once the server accepted the login, with the login command's ID.
+    /// The reply is still streaming in at that point: see `scheduleLoginJoinLocked`.
+    @discardableResult
     func connectAndLoginLocked(
         instance: UnsafeMutableRawPointer,
         record: SavedServerRecord,
         password: String,
         options: TeamTalkConnectOptions
-    ) throws {
+    ) throws -> INT32 {
         // User and command IDs are per session: a reconnect doesn't go through
         // the reset, and a restarted server may hand the same IDs out again.
         subscriptionDefaultsAppliedUserIDs.removeAll()
@@ -588,7 +721,7 @@ extension TeamTalkConnectionController {
                 }
 
             case CLIENTEVENT_CMD_MYSELF_LOGGEDIN:
-                return
+                return loginCommandID
 
             case CLIENTEVENT_CMD_ERROR:
                 logLateCommandReplyIfNeededLocked(message)
@@ -776,6 +909,7 @@ extension TeamTalkConnectionController {
             if connectedRecord != nil {
                 logNetworkDiagnosticsIfDueLocked(instance: instance, now: now)
             }
+            runPendingLoginJoinIfOverdueLocked(instance: instance)
             // Coalesce the expensive full-session publish. The message poll is fast
             // (20 ms) so per-user audio blocks arrive smoothly, but rebuilding the
             // whole channel/user tree every tick during the connect flood made
@@ -804,6 +938,8 @@ extension TeamTalkConnectionController {
             }
 
             switch message.nClientEvent {
+            case CLIENTEVENT_CMD_PROCESSING:
+                runPendingLoginJoinIfCompletedLocked(message: message, instance: instance)
             case CLIENTEVENT_CON_LOST:
                 handleServerDropLocked(instance: instance, reason: "CON_LOST")
                 return
@@ -1191,6 +1327,7 @@ extension TeamTalkConnectionController {
         observedSubscriptionStates.removeAll()
         subscriptionDefaultsAppliedUserIDs.removeAll()
         timedOutCommands.removeAll()
+        pendingLoginJoin = nil
         suppressLoginHistoryUntil = .distantPast
         suppressJoinHistoryUntil = .distantPast
         channelPasswords.removeAll()
@@ -1349,6 +1486,8 @@ extension TeamTalkConnectionController {
             }
 
             switch message.nClientEvent {
+            case CLIENTEVENT_CMD_PROCESSING:
+                runPendingLoginJoinIfCompletedLocked(message: message, instance: instance)
             case CLIENTEVENT_CMD_SUCCESS:
                 logLateCommandReplyIfNeededLocked(message)
                 pendingChannelMessageCommandIDs.remove(message.nSource)
