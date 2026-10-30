@@ -357,6 +357,8 @@ Three sound packs bundled: **Default** (root of `Sounds/`), **Majorly-G**, **Old
 
 **Mute state tracking**: The outline view's `item(atRow:)` returns stale `ServerTreeNode` values after `reloadData(forRowIndexes:)` (audio runtime updates don't replace items). User mute state is tracked via `localMuteState: [Int32: Bool]` dictionary on `ConnectedServerViewController`, cleared on new session. `TT_PumpMessage(CLIENTEVENT_USER_STATECHANGE)` must be called after `TT_SetUserMute` (same pattern as Qt client).
 
+**Channel gain**: a channel with `audiocfg.bEnableAGC` imposes the microphone gain. `channelInputGainDB(enabled:level:)` reads `nGainLevel` on the official clients' scale (0–32000, up to `WEBRTC_GAINCONTROLLER2_FIXEDGAIN_MAX` dB) and holds it to the slider's +24 dB, because our gain stage has no limiter. `publishSessionLocked` follows it, since every way a channel can change ends in a publish. The user's value stays in the preferences; `AudioGainControlView.lockedReason` keeps the slider a keyboard stop that can't move and says why. The channel dialog has no field for it yet.
+
 **Volume dialog**: Real-time via `VolumeSliderHandler` (NSObject target/action on slider). Uses the geometric volume curve (see User Volume Curve section). `setUserVoiceVolumeImmediate` applies to SDK without persisting to `UserVolumeStore`. Cancel reverts to original volume and stereo state.
 
 ### Preferences Organization
