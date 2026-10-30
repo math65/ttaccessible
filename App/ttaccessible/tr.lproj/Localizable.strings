@@ -672,6 +672,7 @@
 "mediaStream.device.prompt.message" = "Kanala neyin aktarılacağını seçin. Birlikte aktarmak istediğiniz aygıtları ve uygulamaları işaretleyin. Bu Mac'teki tüm ses her uygulamayı zaten içerdiğinden yalnızca aygıtlarla birleştirilebilir. Kaynak sessizken bile akış sürer.";
 "mediaStream.device.cleared.applications" = "Uygulamaların işareti kaldırıldı.";
 "mediaStream.device.cleared.systemAudio" = "Bu Mac'teki tüm sesin işareti kaldırıldı.";
+"mediaStream.device.cleared.channels" = "Kanallarının işareti kaldırıldı.";
 "mediaStream.device.source.checked" = "%@ işaretlendi.";
 "mediaStream.device.source.unchecked" = "%@ öğesinin işareti kaldırıldı.";
 "mediaStream.device.added.application" = "%@ eklendi ve seçildi.";

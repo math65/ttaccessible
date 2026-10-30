@@ -134,10 +134,25 @@ final class DeviceStreamCaptureSpecTests: XCTestCase {
             return preset
         }
         XCTAssertEqual(presets, [
-            .stereoPair(first: 3, second: 4), .stereoPair(first: 5, second: 6),
+            .stereoPair(first: 1, second: 2), .stereoPair(first: 3, second: 4), .stereoPair(first: 5, second: 6),
             .mono(channel: 1), .mono(channel: 2), .mono(channel: 3),
             .mono(channel: 4), .mono(channel: 5), .mono(channel: 6),
         ])
+    }
+
+    func testADeviceWithAChannelCheckedStreamsOnlyThatChannel() {
+        let channel = DeviceStreamCaptureSpec.deviceChannels(desk, .stereoPair(first: 5, second: 6))
+        XCTAssertEqual(DeviceStreamCaptureSpec.devicesToStream(devices: [desk], channels: [channel]), [channel])
+    }
+
+    func testADeviceWithNoChannelCheckedStreamsItsFirstTwo() {
+        XCTAssertEqual(DeviceStreamCaptureSpec.devicesToStream(devices: [desk], channels: []), [.inputDevice(desk)])
+    }
+
+    func testChannelsOnlyReplaceTheirOwnDevice() {
+        let channel = DeviceStreamCaptureSpec.deviceChannels(desk, .mono(channel: 5))
+        XCTAssertEqual(DeviceStreamCaptureSpec.devicesToStream(devices: [desk, stereo], channels: [channel]),
+                       [channel, .inputDevice(stereo)])
     }
 
     func testAStereoDeviceOffersNoChannelLines() {

@@ -672,6 +672,7 @@
 "mediaStream.device.prompt.message" = "Choose what to stream into the channel. Check any devices and applications to stream them together. All audio from this Mac already contains every application, so it goes with devices only. The stream keeps going even while the source is silent.";
 "mediaStream.device.cleared.applications" = "Applications unchecked.";
 "mediaStream.device.cleared.systemAudio" = "All audio from this Mac unchecked.";
+"mediaStream.device.cleared.channels" = "Its channels were unchecked.";
 "mediaStream.device.source.checked" = "%@, checked.";
 "mediaStream.device.source.unchecked" = "%@, unchecked.";
 "mediaStream.device.added.application" = "%@ added and selected.";

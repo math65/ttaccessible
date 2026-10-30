@@ -24,8 +24,8 @@ enum AudioDeviceStreamSourceError: Error {
 enum DeviceStreamCaptureSpec: Equatable {
     /// A CoreAudio input device (the original "Stream Audio Device" source).
     case inputDevice(InputAudioDeviceInfo)
-    /// Chosen channels of a device with more than two (`.stereoPair` or `.mono`), which
-    /// `.inputDevice` leaves at its first two. See `channelChoices(for:)`.
+    /// Chosen channels of a device with more than two (`.stereoPair` or `.mono`), streamed
+    /// in place of `.inputDevice`'s first two. See `channelChoices(for:)`, `devicesToStream`.
     case deviceChannels(InputAudioDeviceInfo, InputChannelPreset)
     /// The audio output of a set of processes (an application's audio, or
     /// VoiceOver's). Captured via CoreAudio process taps on macOS 14.2+ and
@@ -75,18 +75,33 @@ enum DeviceStreamCaptureSpec: Equatable {
         }
     }
 
-    /// The channel lines a device offers under its own: the odd-even pairs after the first,
-    /// which is what the device's own line streams, then each channel alone. None for a
-    /// device with nothing beyond that first pair.
+    /// The channel lines a device offers under its own: the odd-even pairs, then each channel
+    /// alone. None for a device with nothing beyond its first pair.
     static func channelChoices(for device: InputAudioDeviceInfo) -> [DeviceStreamCaptureSpec] {
         guard device.inputChannels > 2 else { return [] }
-        let pairs = stride(from: 3, to: device.inputChannels, by: 2).map {
+        let pairs = stride(from: 1, to: device.inputChannels, by: 2).map {
             DeviceStreamCaptureSpec.deviceChannels(device, .stereoPair(first: $0, second: $0 + 1))
         }
         let singles = (1...device.inputChannels).map {
             DeviceStreamCaptureSpec.deviceChannels(device, .mono(channel: $0))
         }
         return pairs + singles
+    }
+
+    /// What the checked lines stream: a device's checked channels, or its first two when
+    /// none are, since a device's own line says which device and its channels say what of it.
+    static func devicesToStream(devices: [InputAudioDeviceInfo],
+                                channels: [DeviceStreamCaptureSpec]) -> [DeviceStreamCaptureSpec] {
+        devices.flatMap { device -> [DeviceStreamCaptureSpec] in
+            let chosen = channels.filter { $0.channelDevice == device }
+            return chosen.isEmpty ? [.inputDevice(device)] : chosen
+        }
+    }
+
+    /// The device a `.deviceChannels` line belongs to.
+    var channelDevice: InputAudioDeviceInfo? {
+        guard case .deviceChannels(let device, _) = self else { return nil }
+        return device
     }
 
     private static func channelsTitle(_ preset: InputChannelPreset) -> String {
