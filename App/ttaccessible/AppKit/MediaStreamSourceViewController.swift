@@ -77,6 +77,7 @@ final class MediaStreamSourceViewController: NSViewController {
     /// Any input devices, plus any number of applications (VoiceOver counts as one) or all
     /// system audio — those two exclude each other, since it already contains them.
     private var selectedDevices: [InputAudioDeviceInfo] = []
+    private var selectedDeviceChannels: [DeviceStreamCaptureSpec] = []
     private var selectedApplications: [DeviceStreamCaptureSpec] = []
     private var systemAudioSelected = false
 
@@ -157,11 +158,12 @@ final class MediaStreamSourceViewController: NSViewController {
     private func makeCatalog() -> StreamSourceCatalog {
         let systemAudio: DeviceStreamCaptureSpec? = allowsSystemAudio ? .systemAudio() : nil
         let deviceSpecs = devices.map { DeviceStreamCaptureSpec.inputDevice($0) }
+        let channelSpecs = devices.flatMap { DeviceStreamCaptureSpec.channelChoices(for: $0) }
         let applicationSpecs = (voiceOverAvailable ? [DeviceStreamCaptureSpec.voiceOver()] : []) + applicationSources
         let browsing = allowsApplicationBrowsing
         let recent = StreamSourceCatalog.resolveRecent(
             tokens: recentTokens,
-            available: [systemAudio].compactMap { $0 } + deviceSpecs + applicationSpecs,
+            available: [systemAudio].compactMap { $0 } + deviceSpecs + channelSpecs + applicationSpecs,
             resolveMissing: { token in
                 // An application streamed before but not running now can still be offered
                 // where the tap backend waits for it to play (the same reach as
@@ -173,13 +175,15 @@ final class MediaStreamSourceViewController: NSViewController {
                 return .application(bundleID: bundleID, displayName: Self.applicationName(at: url))
             })
         return StreamSourceCatalog(systemAudio: systemAudio, recent: recent,
-                                   devices: deviceSpecs, applications: applicationSpecs)
+                                   devices: deviceSpecs, applications: applicationSpecs,
+                                   deviceChannels: channelSpecs)
     }
 
     /// Every selectable source, flat — used for preselection and for restoring a remembered
     /// choice.
     private var orderedSources: [DeviceStreamCaptureSpec] {
-        var specs = [catalog.systemAudio].compactMap { $0 } + catalog.devices + catalog.applications
+        var specs = [catalog.systemAudio].compactMap { $0 } + catalog.devices + catalog.deviceChannels
+            + catalog.applications
         specs.append(contentsOf: catalog.recent.filter { specs.contains($0) == false })
         return specs
     }
@@ -188,6 +192,8 @@ final class MediaStreamSourceViewController: NSViewController {
         switch spec {
         case .inputDevice(let device):
             return selectedDevices.contains(device)
+        case .deviceChannels:
+            return selectedDeviceChannels.contains(spec)
         case .processes(let selection):
             if selection.capturesEntireSystem { return systemAudioSelected }
             return selectedApplications.contains(spec)
@@ -377,7 +383,13 @@ final class MediaStreamSourceViewController: NSViewController {
         }
         for section in filtered.sections {
             let node = groupNode(section.group)
-            node.children = section.sources.map { SourceNode(.source($0)) }
+            node.children = section.sources.map { spec in
+                let line = SourceNode(.source(spec))
+                if section.group == .devices, case .inputDevice(let device) = spec {
+                    line.children = DeviceStreamCaptureSpec.channelChoices(for: device).map { SourceNode(.source($0)) }
+                }
+                return line
+            }
             top.append(node)
         }
         nodes = top
@@ -391,6 +403,13 @@ final class MediaStreamSourceViewController: NSViewController {
                 outlineView.expandItem(node)
             } else {
                 outlineView.collapseItem(node)
+            }
+            // A checked channel is never left inside a closed device, as with a group.
+            for line in node.children where line.children.contains(where: { line in
+                if case .source(let spec) = line.kind { return isSelected(spec) }
+                return false
+            }) {
+                outlineView.expandItem(line)
             }
         }
         isRebuilding = false
@@ -512,6 +531,13 @@ final class MediaStreamSourceViewController: NSViewController {
                 selectedDevices.removeAll { $0 == device }
             }
 
+        case .deviceChannels:
+            if selected {
+                if selectedDeviceChannels.contains(spec) == false { selectedDeviceChannels.append(spec) }
+            } else {
+                selectedDeviceChannels.removeAll { $0 == spec }
+            }
+
         case .processes(let selection) where selection.capturesEntireSystem:
             // All audio from this Mac already contains every application.
             if selected, selectedApplications.isEmpty == false {
@@ -572,7 +598,7 @@ final class MediaStreamSourceViewController: NSViewController {
     /// The single spec the capture backends consume, or nil when nothing is ticked.
     private var resolvedSpec: DeviceStreamCaptureSpec? {
         DeviceStreamCaptureSpec.combining(
-            selectedDevices.map { DeviceStreamCaptureSpec.inputDevice($0) }
+            selectedDevices.map { DeviceStreamCaptureSpec.inputDevice($0) } + selectedDeviceChannels
                 + (systemAudioSelected ? [.systemAudio()] : selectedApplications)
         )
     }
@@ -647,8 +673,9 @@ extension MediaStreamSourceViewController: NSOutlineViewDataSource, NSOutlineVie
     }
 
     func outlineView(_ outlineView: NSOutlineView, isItemExpandable item: Any) -> Bool {
-        guard let node = item as? SourceNode, case .group = node.kind else { return false }
-        return true
+        guard let node = item as? SourceNode else { return false }
+        if case .group = node.kind { return true }
+        return node.children.isEmpty == false
     }
 
     func outlineView(_ outlineView: NSOutlineView, viewFor tableColumn: NSTableColumn?, item: Any) -> NSView? {

@@ -113,4 +113,12 @@ final class StreamSourceCatalogTests: XCTestCase {
         let waited = DeviceStreamCaptureSpec.application(bundleID: "com.example.later", displayName: "Later")
         XCTAssertEqual(catalogWithDevices(recent: [waited]).groupsRevealing([waited], open: []), [.recent])
     }
+
+    func testACheckedChannelOpensTheDevicesGroup() {
+        let device = InputAudioDeviceInfo(uid: "Desk", name: "Desk", inputChannels: 6, nominalSampleRate: 48000)
+        let channel = DeviceStreamCaptureSpec.deviceChannels(device, .mono(channel: 5))
+        let catalog = StreamSourceCatalog(systemAudio: nil, recent: [], devices: [.inputDevice(device)],
+                                          applications: [], deviceChannels: [channel])
+        XCTAssertEqual(catalog.groupsRevealing([channel], open: []), [.devices])
+    }
 }

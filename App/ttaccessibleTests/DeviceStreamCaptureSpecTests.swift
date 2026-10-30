@@ -122,4 +122,48 @@ final class DeviceStreamCaptureSpecTests: XCTestCase {
         XCTAssertEqual(DeviceStreamCaptureSpec.componentTokens(of: "multi:device:BuiltInMic+app:com.apple.Music"),
                        ["device:BuiltInMic", "app:com.apple.Music"])
     }
+
+    // MARK: Channels of a device
+
+    private let desk = InputAudioDeviceInfo(uid: "Desk+1", name: "Desk", inputChannels: 6, nominalSampleRate: 48000)
+    private let stereo = InputAudioDeviceInfo(uid: "USB", name: "USB", inputChannels: 2, nominalSampleRate: 48000)
+
+    func testADeviceOffersItsLaterPairsThenEachChannel() {
+        let presets = DeviceStreamCaptureSpec.channelChoices(for: desk).compactMap { spec -> InputChannelPreset? in
+            guard case .deviceChannels(_, let preset) = spec else { return nil }
+            return preset
+        }
+        XCTAssertEqual(presets, [
+            .stereoPair(first: 3, second: 4), .stereoPair(first: 5, second: 6),
+            .mono(channel: 1), .mono(channel: 2), .mono(channel: 3),
+            .mono(channel: 4), .mono(channel: 5), .mono(channel: 6),
+        ])
+    }
+
+    func testAStereoDeviceOffersNoChannelLines() {
+        XCTAssertTrue(DeviceStreamCaptureSpec.channelChoices(for: stereo).isEmpty)
+    }
+
+    func testAnOddChannelCountLeavesTheLastChannelSingle() {
+        let device = InputAudioDeviceInfo(uid: "Odd", name: "Odd", inputChannels: 3, nominalSampleRate: 48000)
+        XCTAssertFalse(DeviceStreamCaptureSpec.channelChoices(for: device)
+            .contains(.deviceChannels(device, .stereoPair(first: 3, second: 4))))
+    }
+
+    func testTwoPairsOfOneDeviceCombineAndSurviveTheirToken() throws {
+        let first = DeviceStreamCaptureSpec.deviceChannels(desk, .stereoPair(first: 3, second: 4))
+        let second = DeviceStreamCaptureSpec.deviceChannels(desk, .mono(channel: 5))
+        let combined = try XCTUnwrap(DeviceStreamCaptureSpec.combining([.inputDevice(desk), first, second]))
+        guard case .combined(let parts, _) = combined else { return XCTFail("expected a combination") }
+        XCTAssertEqual(parts, [.inputDevice(desk), first, second])
+        XCTAssertEqual(DeviceStreamCaptureSpec.componentTokens(of: combined.persistenceToken),
+                       parts.map(\.persistenceToken))
+    }
+
+    func testAChosenChannelKeepsItsOwnNameAndToken() {
+        let spec = DeviceStreamCaptureSpec.deviceChannels(desk, .stereoPair(first: 3, second: 4))
+        XCTAssertNotEqual(spec.persistenceToken, DeviceStreamCaptureSpec.inputDevice(desk).persistenceToken)
+        XCTAssertTrue(spec.displayName.hasPrefix("Desk"), spec.displayName)
+        XCTAssertTrue(spec.displayName.contains("3"), spec.displayName)
+    }
 }

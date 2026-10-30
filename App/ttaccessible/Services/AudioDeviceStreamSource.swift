@@ -24,6 +24,9 @@ enum AudioDeviceStreamSourceError: Error {
 enum DeviceStreamCaptureSpec: Equatable {
     /// A CoreAudio input device (the original "Stream Audio Device" source).
     case inputDevice(InputAudioDeviceInfo)
+    /// Chosen channels of a device with more than two (`.stereoPair` or `.mono`), which
+    /// `.inputDevice` leaves at its first two. See `channelChoices(for:)`.
+    case deviceChannels(InputAudioDeviceInfo, InputChannelPreset)
     /// The audio output of a set of processes (an application's audio, or
     /// VoiceOver's). Captured via CoreAudio process taps on macOS 14.2+ and
     /// ScreenCaptureKit audio on macOS 13.0–14.1; unavailable on macOS 12.
@@ -53,6 +56,8 @@ enum DeviceStreamCaptureSpec: Equatable {
     var displayName: String {
         switch self {
         case .inputDevice(let device): return device.name
+        case .deviceChannels(let device, let preset):
+            return L10n.format("mediaStream.device.source.deviceChannels", device.name, Self.channelsTitle(preset))
         case .processes(let selection): return selection.displayName
         case .combined(_, let displayName): return displayName
         }
@@ -62,10 +67,36 @@ enum DeviceStreamCaptureSpec: Equatable {
     var persistenceToken: String {
         switch self {
         case .inputDevice(let device): return "device:\(device.uid)"
+        case .deviceChannels(let device, let preset): return "device:\(device.uid)#\(preset.identifier)"
         case .processes(let selection): return selection.persistenceToken
         case .combined(let parts, _):
             // One flat "multi:" token, so restoring it rebuilds every part blind.
             return Self.multiPersistenceToken(parts.flatMap { Self.componentTokens(of: $0.persistenceToken) })
+        }
+    }
+
+    /// The channel lines a device offers under its own: the odd-even pairs after the first,
+    /// which is what the device's own line streams, then each channel alone. None for a
+    /// device with nothing beyond that first pair.
+    static func channelChoices(for device: InputAudioDeviceInfo) -> [DeviceStreamCaptureSpec] {
+        guard device.inputChannels > 2 else { return [] }
+        let pairs = stride(from: 3, to: device.inputChannels, by: 2).map {
+            DeviceStreamCaptureSpec.deviceChannels(device, .stereoPair(first: $0, second: $0 + 1))
+        }
+        let singles = (1...device.inputChannels).map {
+            DeviceStreamCaptureSpec.deviceChannels(device, .mono(channel: $0))
+        }
+        return pairs + singles
+    }
+
+    private static func channelsTitle(_ preset: InputChannelPreset) -> String {
+        switch preset {
+        case .mono(let channel):
+            return L10n.format("mediaStream.device.source.channel", channel)
+        case .stereoPair(let first, let second), .monoMix(let first, let second):
+            return L10n.format("mediaStream.device.source.channelPair", first, second)
+        case .auto:
+            return L10n.format("mediaStream.device.source.channelPair", 1, 2)
         }
     }
 
@@ -163,7 +194,7 @@ enum DeviceStreamCaptureSpec: Equatable {
         var applications: [DeviceStreamCaptureSpec] = []
         for spec in flat {
             switch spec {
-            case .inputDevice:
+            case .inputDevice, .deviceChannels:
                 if devices.contains(spec) == false { devices.append(spec) }
             case .processes(let selection) where selection.capturesEntireSystem:
                 systemAudio = spec
@@ -328,6 +359,8 @@ final class AudioDeviceStreamSource {
         switch spec {
         case .inputDevice(let device):
             return DeviceInputCaptureBackend(device: device, ring: ring)
+        case .deviceChannels(let device, let preset):
+            return DeviceInputCaptureBackend(device: device, channelPreset: preset, ring: ring)
         case .processes(let selection):
             if #available(macOS 14.2, *) {
                 return ProcessTapCaptureBackend(
