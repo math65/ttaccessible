@@ -136,6 +136,7 @@
 "connectedServer.audio.microphone.disable" = "Mikrofonu Kapat";
 "connectedServer.audio.inputGain.label" = "Giriş kazancı";
 "connectedServer.audio.inputGain.accessibilityLabel" = "Mikrofon giriş kazancı";
+"connectedServer.audio.inputGain.setByChannel" = "Kanal tarafından ayarlandı";
 "connectedServer.audio.outputGain.label" = "Çıkış ses düzeyi";
 "connectedServer.audio.outputGain.accessibilityLabel" = "Ana çıkış ses düzeyi";
 "connectedServer.audio.mediaGain.label" = "Medya ses düzeyi";

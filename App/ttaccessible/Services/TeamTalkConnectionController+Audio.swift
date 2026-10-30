@@ -213,6 +213,7 @@ extension TeamTalkConnectionController {
     /// is armed hot (silent, gated) for instant PTT; in always-on / push-to-talk
     /// it restores the last transmit state, as before.
     func armMicrophoneEngineOnJoinLocked(instance: UnsafeMutableRawPointer) {
+        refreshChannelInputGainLocked(instance: instance)
         guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else { return }
         // An engine carried over from the channel we just left still holds that
         // channel's target format, and neither arming path below rebuilds a
@@ -613,12 +614,36 @@ extension TeamTalkConnectionController {
     func applyInputGainDB(_ value: Double) {
         let clamped = AppPreferences.clampGainDB(value)
         queue.async { [weak self] in
-            guard let self else {
+            guard let self, self.channelInputGainDB == nil else {
                 return
             }
 
             self.advancedMicrophoneEngine.updateInputGainDB(clamped)
         }
+    }
+
+    /// The channel's level (`AudioConfig.nGainLevel`, 0–32000) as a gain, on the
+    /// official clients' scale: `WEBRTC_GAINCONTROLLER2_FIXEDGAIN_MAX` dB at the top.
+    /// Held to the slider's range: past it our gain stage, which has no limiter,
+    /// would only clip. Nil when the channel leaves the gain to the user.
+    static func channelInputGainDB(enabled: Bool, level: Int32) -> Double? {
+        guard enabled else { return nil }
+        let fraction = min(max(Double(level) / 32000, 0), 1)
+        return AppPreferences.clampGainDB(Double(WEBRTC_GAINCONTROLLER2_FIXEDGAIN_MAX) * fraction)
+    }
+
+    /// Follows our channel's gain. The user's own value stays in the preferences,
+    /// so it comes back in a channel that imposes none.
+    func refreshChannelInputGainLocked(instance: UnsafeMutableRawPointer) {
+        var channel = Channel()
+        let channelID = TT_GetMyChannelID(instance)
+        let gain = channelID > 0 && TT_GetChannel(instance, channelID, &channel) != 0
+            ? Self.channelInputGainDB(enabled: channel.audiocfg.bEnableAGC != 0, level: channel.audiocfg.nGainLevel)
+            : nil
+        guard gain != channelInputGainDB else { return }
+        channelInputGainDB = gain
+        AudioLogger.log("Channel gain: %@", gain.map { String(format: "%.1f dB", $0) } ?? "none")
+        advancedMicrophoneEngine.updateInputGainDB(gain ?? preferencesStore.preferences.inputGainDB)
     }
 
     /// Gain of the media bus (every media-file stream, remote or our own monitored
@@ -803,7 +828,7 @@ extension TeamTalkConnectionController {
             let configuration = AdvancedMicrophoneAudioConfiguration(
                 device: deviceInfo,
                 preset: effectivePreferences.preset,
-                inputGainDB: preferencesStore.preferences.inputGainDB,
+                inputGainDB: channelInputGainDB ?? preferencesStore.preferences.inputGainDB,
                 targetFormat: targetFormat,
                 echoCancellationEnabled: aecEnabled,
                 noiseSuppressionEnabled: effectivePreferences.noiseSuppressionEnabled

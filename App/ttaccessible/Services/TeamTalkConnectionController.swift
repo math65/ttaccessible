@@ -147,6 +147,8 @@ final class TeamTalkConnectionController {
     var appliedAdvancedInputAudio: AdvancedInputAudioPreferences?
     var voiceTransmissionEnabled = false
     var pushToTalkPressed = false
+    /// The gain our channel imposes on the microphone, in place of the user's own.
+    var channelInputGainDB: Double?
     /// Queue-side caches of the hotkey-relevant preferences: the per-chunk
     /// transmit gate must not read the @Published preferences struct across
     /// threads. Seeded at init, updated via applyMicrophoneHotkeySettings.

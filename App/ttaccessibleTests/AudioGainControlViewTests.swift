@@ -88,4 +88,20 @@ final class AudioGainControlViewTests: XCTestCase {
         XCTAssertTrue(window.firstResponder === second,
                       "Tab from one level went to \(String(describing: window.firstResponder)), not the next level")
     }
+
+    func testALockedLevelDoesNotMoveAndSaysWhy() {
+        var changes = 0
+        let view = AudioGainControlView(title: "Input", accessibilityLabel: "Input") { _ in changes += 1 }
+        view.setValue(6)
+        view.lockedReason = "Set by the channel"
+
+        let spoken = view.apply(.step(up: true))
+
+        XCTAssertEqual(view.valueDB, 6)
+        XCTAssertEqual(changes, 0)
+        XCTAssertTrue(spoken.hasSuffix("Set by the channel"), spoken)
+        XCTAssertTrue(view.acceptsFirstResponder)
+        XCTAssertFalse(view.resetToZeroAccessibilityAction())
+        XCTAssertEqual(view.valueDB, 6)
+    }
 }

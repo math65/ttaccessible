@@ -69,6 +69,9 @@ extension TeamTalkConnectionController {
             lastKnownChannelPath = channelPathLocked(instance: instance, channelID: myChannelID)
         }
 
+        // Here, because every way a channel can change ends in a publish.
+        refreshChannelInputGainLocked(instance: instance)
+
         let snapshot = makeSessionSnapshotLocked(instance: instance, record: record, invalidation: invalidation)
         lastBuiltSessionSnapshot = snapshot
 
@@ -372,7 +375,8 @@ extension TeamTalkConnectionController {
             isNicknameLocked: isNicknameLocked,
             isStatusLocked: isStatusLocked,
             audioStatusText: makeAudioStatusText(),
-            inputGainDB: preferences.inputGainDB,
+            inputGainDB: channelInputGainDB ?? preferences.inputGainDB,
+            inputGainSetByChannel: channelInputGainDB != nil,
             outputGainDB: preferences.outputGainDB,
             recordingActive: recordingMuxedActive || recordingSeparateActive,
             mediaStreamingActive: mediaStreamingActive,
