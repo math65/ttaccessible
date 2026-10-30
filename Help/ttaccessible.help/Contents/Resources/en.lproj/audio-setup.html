@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Set up your audio devices</title>
 <meta name="description" content="Choose your input and output devices, remove echo and background noise, and test your microphone.">
-<meta name="keywords" content="audio device, input, output, echo cancellation, AEC, noise reduction, preview, channels, headphones">
+<meta name="keywords" content="audio device, input, output, echo cancellation, AEC, noise reduction, preview, channels, output channels, interface, headphones">
 <meta name="robots" content="index, anchors">
 <link rel="stylesheet" href="../css/help.css">
 </head>
@@ -22,6 +22,19 @@
 </ol>
 <p>If you plug in or unplug a device and it doesn't appear, click <strong>Refresh Devices</strong>. tt-Accessible also notices device changes on its own and restarts its audio engine, so headphones connected during a session are picked up without action from you.</p>
 <p>A device you chose that is unplugged stays in its menu, marked <em>not connected</em>, and stays your choice. Meanwhile, sound plays through the system default output and the microphone is off; both go back to your device as soon as it is plugged in again. A microphone that was on comes back on, with its sound, as long as the session is still open and you haven't meanwhile turned it on or off yourself or chosen another microphone.</p>
+<h2 id="choose-which-outputs-of-your-device-are-used">Choose which outputs of your device are used</h2>
+<p>On an audio interface or a mixing desk with more than one pair of outputs, tt-Accessible does not have to play on outputs 1 and 2.</p>
+<ol type="1">
+<li>Open Preferences, then click Audio.</li>
+<li>Click the <strong>Output channels</strong> pop-up menu, then choose one of the following:
+<ul>
+<li><strong>Auto (outputs 1 and 2)</strong> — the device's first pair, which is what tt-Accessible used before this setting existed.</li>
+<li><strong>Outputs 3 and 4</strong>, <strong>Outputs 5 and 6</strong>, and so on — play in stereo on that pair.</li>
+<li><strong>Output 7 mono</strong>, and so on — sum the channel to mono and play it on that single output.</li>
+</ul></li>
+</ol>
+<p>The menu lists the stereo pairs first, then the single outputs, so on a large interface the pair you usually want is a short trip from the top.</p>
+<p>The menu appears only for devices with more than one pair of outputs — there is nothing to choose on a headset or the built-in speakers. Your choice is remembered per device, so each interface comes back on the outputs you left it on, and a routing change is heard immediately without interrupting the audio. If you later use the device in a smaller mode, or replace it with a stereo one, the setting shows Auto again; plug the larger device back in and your choice returns.</p>
 <h2 id="remove-echo-and-background-noise">Remove echo and background noise</h2>
 <ol type="1">
 <li>Open Preferences, then click Audio.</li>
@@ -34,7 +47,7 @@
 </ol>
 <p>Echo cancellation is what lets you work without headphones: without it, everyone hears themselves come back through your microphone. On macOS 14.2 and later, tt-Accessible uses the sound your Mac actually produces as its reference, so VoiceOver and system sounds are cancelled along with the voices of the channel. On earlier versions, only TeamTalk audio can be cancelled.</p>
 <h2 id="choose-which-inputs-of-your-device-are-used">Choose which inputs of your device are used</h2>
-<p>Click the <strong>Input channels</strong> pop-up menu, then choose <strong>Auto</strong>, a single mono input, a stereo pair, or a mono mix of two inputs. This matters with audio interfaces, where the microphone is rarely on input 1.</p>
+<p>Click the <strong>Input channels</strong> pop-up menu, just below the Input device menu, then choose <strong>Auto</strong>, a single mono input, a stereo pair, or a mono mix of two inputs. This matters with audio interfaces, where the microphone is rarely on input 1.</p>
 <p>If you change device and the preset no longer fits, tt-Accessible falls back to Auto and tells you.</p>
 <h2 id="test-your-microphone">Test your microphone</h2>
 <ol type="1">

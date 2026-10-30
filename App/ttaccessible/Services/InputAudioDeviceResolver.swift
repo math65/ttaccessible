@@ -69,6 +69,92 @@ enum InputAudioDeviceResolver {
         return options
     }
 
+    /// Output-channel options for a device: Auto, then the odd/even stereo pairs
+    /// interfaces actually pair their outputs into (1-2, 3-4, …), then one entry
+    /// per single (mono) channel.
+    ///
+    /// Pairs come before the monos deliberately, unlike `availablePresetOptions`
+    /// on the input side. A stereo pair is what almost everyone wants, and on a
+    /// 24-output interface putting the 24 monos first buries the 12 pairs behind
+    /// two dozen arrow presses.
+    nonisolated static func availableOutputChannelOptions(channelCount: Int) -> [OutputChannelSelectionOption] {
+        var options = [OutputChannelSelectionOption(selection: .auto, title: outputChannelTitle(for: .auto))]
+        guard channelCount > 0 else { return options }
+
+        var firstChannel = 1
+        while firstChannel + 1 <= channelCount {
+            let selection = OutputChannelSelection.stereoPair(first: firstChannel, second: firstChannel + 1)
+            options.append(OutputChannelSelectionOption(selection: selection, title: outputChannelTitle(for: selection)))
+            firstChannel += 2
+        }
+
+        for channel in 1...channelCount {
+            let selection = OutputChannelSelection.mono(channel: channel)
+            options.append(OutputChannelSelectionOption(selection: selection, title: outputChannelTitle(for: selection)))
+        }
+
+        return options
+    }
+
+    nonisolated static func outputChannelTitle(for selection: OutputChannelSelection) -> String {
+        switch selection {
+        case .auto:
+            return L10n.text("preferences.audio.outputChannels.auto")
+        case .mono(let channel):
+            return L10n.format("preferences.audio.outputChannels.mono", channel)
+        case .stereoPair(let first, let second):
+            return L10n.format("preferences.audio.outputChannels.stereoPair", first, second)
+        }
+    }
+
+    /// What the output-routing picker should show for an output device that has
+    /// already been resolved — the options to offer, and which one is chosen.
+    ///
+    /// This is the half of `AudioSettingsStore.refreshOutputChannelState` that
+    /// the picker-visibility bug actually lived in, kept pure so it is testable
+    /// with no CoreAudio device present: feed it the wrong device's UID or
+    /// channel count and it answers for the wrong device, which is exactly what
+    /// the stale `@Published` value used to cause. Resolving the device from a
+    /// preference is the only part that needs CoreAudio, and the bug was never
+    /// in that part.
+    ///
+    /// A stored routing that no longer fits the device as it is RIGHT NOW
+    /// (interface in a smaller mode, or gone) reports as `.auto`, matching what
+    /// the render engine falls back to. The caller deliberately does not write
+    /// that back: the stored intent for that UID survives, so the routing
+    /// returns when the device does.
+    nonisolated static func outputChannelPickerState(
+        storedSelections: [String: OutputChannelSelection],
+        deviceUID: String?,
+        channelCount: Int
+    ) -> OutputChannelPickerState {
+        // Two channels or fewer is a single pair: nothing to choose between.
+        let options = channelCount > 2
+            ? availableOutputChannelOptions(channelCount: channelCount)
+            : []
+
+        guard let deviceUID, deviceUID.isEmpty == false else {
+            return OutputChannelPickerState(options: options, selection: .auto)
+        }
+
+        let stored = storedSelections[deviceUID] ?? .auto
+        return OutputChannelPickerState(
+            options: options,
+            selection: contains(stored, channelCount: channelCount) ? stored : .auto
+        )
+    }
+
+    nonisolated static func contains(_ selection: OutputChannelSelection, channelCount: Int) -> Bool {
+        switch selection {
+        case .auto:
+            return true
+        case .mono(let channel):
+            return channel >= 1 && channel <= channelCount
+        case .stereoPair(let first, let second):
+            return first >= 1 && second == first + 1 && second <= channelCount
+        }
+    }
+
     nonisolated static func normalizedPreferences(
         _ preferences: AdvancedInputAudioPreferences,
         for device: InputAudioDeviceInfo?
@@ -162,6 +248,9 @@ enum InputAudioDeviceResolver {
         let uid: String
         let name: String
         let nominalSampleRate: Double
+        /// Physical output channels. More than two means the device can carry
+        /// TeamTalk audio on a pair other than 1/2 — see OutputChannelSelection.
+        let outputChannels: Int
     }
 
     /// Resolve the user's selected output device to a CoreAudio device so preview
@@ -222,7 +311,8 @@ enum InputAudioDeviceResolver {
     }
 
     private nonisolated static func makeOutputDeviceInfo(for objectID: AudioObjectID) -> OutputAudioDeviceInfo? {
-        guard outputChannelCount(for: objectID) > 0,
+        let channelCount = outputChannelCount(for: objectID)
+        guard channelCount > 0,
               let name = stringProperty(objectID: objectID, selector: kAudioObjectPropertyName, scope: kAudioObjectPropertyScopeGlobal),
               let uid = stringProperty(objectID: objectID, selector: kAudioDevicePropertyDeviceUID, scope: kAudioObjectPropertyScopeGlobal) else {
             return nil
@@ -232,7 +322,13 @@ enum InputAudioDeviceResolver {
             selector: kAudioDevicePropertyNominalSampleRate,
             scope: kAudioObjectPropertyScopeGlobal
         ) ?? 48_000
-        return OutputAudioDeviceInfo(deviceID: objectID, uid: uid, name: name, nominalSampleRate: sampleRate)
+        return OutputAudioDeviceInfo(
+            deviceID: objectID,
+            uid: uid,
+            name: name,
+            nominalSampleRate: sampleRate,
+            outputChannels: channelCount
+        )
     }
 
     private nonisolated static func outputChannelCount(for objectID: AudioObjectID) -> Int {

@@ -444,6 +444,10 @@
 "preferences.audio.title" = "Audio";
 "preferences.audio.outputDevice" = "Output device";
 "preferences.audio.inputDevice" = "Input device";
+"preferences.audio.outputChannels" = "Output channels";
+"preferences.audio.outputChannels.auto" = "Auto (outputs 1 and 2)";
+"preferences.audio.outputChannels.mono" = "Output %d mono";
+"preferences.audio.outputChannels.stereoPair" = "Outputs %1$d and %2$d";
 "preferences.audio.systemDefault" = "System default";
 "preferences.audio.noOutput" = "No output device";
 "preferences.audio.device.notConnected" = "%@ (not connected)";
@@ -668,6 +672,7 @@
 "mediaStream.device.prompt.message" = "Choose what to stream into the channel. Check any devices and applications to stream them together. All audio from this Mac already contains every application, so it goes with devices only. The stream keeps going even while the source is silent.";
 "mediaStream.device.cleared.applications" = "Applications unchecked.";
 "mediaStream.device.cleared.systemAudio" = "All audio from this Mac unchecked.";
+"mediaStream.device.cleared.channels" = "Its channels were unchecked.";
 "mediaStream.device.source.checked" = "%@, checked.";
 "mediaStream.device.source.unchecked" = "%@, unchecked.";
 "mediaStream.device.added.application" = "%@ added and selected.";
@@ -679,6 +684,9 @@
 "mediaStream.device.error.startFailed" = "Failed to start streaming the audio device.";
 "mediaStream.device.prompt.muteSource" = "Mute this source on this Mac while streaming";
 "mediaStream.device.source.voiceOver" = "VoiceOver";
+"mediaStream.device.source.channel" = "Channel %d";
+"mediaStream.device.source.channelPair" = "Channels %1$d and %2$d";
+"mediaStream.device.source.deviceChannels" = "%1$@, %2$@";
 "mediaStream.device.source.systemAudio" = "All audio from this Mac";
 "mediaStream.device.source.andOthers" = "%1$@ and %2$ld others";
 "mediaStream.device.source.applicationMenu" = "Application";
