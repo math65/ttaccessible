@@ -13,10 +13,11 @@ import XCTest
 
 final class EmbeddedPythonTests: XCTestCase {
 
-    func testTheBundledYtDlpLoadsInsideTheApp() async throws {
+    func testYtDlpLoadsInsideTheApp() async throws {
         let version = await EmbeddedPython.shared.ytdlpVersion()
         XCTAssertNotNil(version, "Python or yt-dlp didn't start inside the app")
-        XCTAssertEqual(version, EmbeddedPython.bundledYtDlpVersion)
+        // The bundled copy, unless the app has already updated itself on this Mac.
+        XCTAssertTrue([EmbeddedPython.bundledYtDlpVersion, YtDlpUpdater.currentVersion()].contains(version))
     }
 
     func testAYouTubePageResolvesToItsAudio() async throws {
