@@ -71,6 +71,11 @@ as an unplugged device, is left out.
 If the app you picked isn't producing any sound, tt-Accessible answers *The selected source has no
 audio to capture right now.*
 
+A device with more than two channels opens like a group: press Right Arrow on its line to see its
+channels. Its own line streams channels 1 and 2. Below it, check a later pair, or a single channel,
+which plays in the center. You can check several, from one device or several, and they stream
+together.
+
 ## Control a running broadcast
 
 While a stream is running, the main window shows a block of controls under the sound sliders: the

@@ -683,6 +683,9 @@
 "mediaStream.device.error.startFailed" = "Impossible de démarrer la diffusion du périphérique audio.";
 "mediaStream.device.prompt.muteSource" = "Couper le son de cette source sur ce Mac pendant la diffusion";
 "mediaStream.device.source.voiceOver" = "VoiceOver";
+"mediaStream.device.source.channel" = "Canal %d";
+"mediaStream.device.source.channelPair" = "Canaux %1$d et %2$d";
+"mediaStream.device.source.deviceChannels" = "%1$@, %2$@";
 "mediaStream.device.source.systemAudio" = "Tout le son de ce Mac";
 "mediaStream.device.source.andOthers" = "%1$@ et %2$ld autres";
 "mediaStream.device.source.applicationMenu" = "Application";

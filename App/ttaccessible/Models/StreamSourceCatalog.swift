@@ -28,6 +28,8 @@ struct StreamSourceCatalog: Equatable {
     var recent: [DeviceStreamCaptureSpec]
     var devices: [DeviceStreamCaptureSpec]
     var applications: [DeviceStreamCaptureSpec]
+    /// The channel lines under the devices, for finding a remembered or checked one.
+    var deviceChannels: [DeviceStreamCaptureSpec] = []
 
     /// What is left once `query` is applied: all system audio when its name matches, and
     /// each group narrowed to its matches, a group with none left out. An empty query keeps
@@ -88,7 +90,7 @@ struct StreamSourceCatalog: Equatable {
         var groups = open
         for spec in checked where spec != systemAudio {
             if groups.contains(.recent), recent.contains(spec) { continue }
-            if devices.contains(spec) {
+            if devices.contains(spec) || deviceChannels.contains(spec) {
                 groups.insert(.devices)
             } else if applications.contains(spec) {
                 groups.insert(.applications)

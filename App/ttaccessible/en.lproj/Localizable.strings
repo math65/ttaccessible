@@ -683,6 +683,9 @@
 "mediaStream.device.error.startFailed" = "Failed to start streaming the audio device.";
 "mediaStream.device.prompt.muteSource" = "Mute this source on this Mac while streaming";
 "mediaStream.device.source.voiceOver" = "VoiceOver";
+"mediaStream.device.source.channel" = "Channel %d";
+"mediaStream.device.source.channelPair" = "Channels %1$d and %2$d";
+"mediaStream.device.source.deviceChannels" = "%1$@, %2$@";
 "mediaStream.device.source.systemAudio" = "All audio from this Mac";
 "mediaStream.device.source.andOthers" = "%1$@ and %2$ld others";
 "mediaStream.device.source.applicationMenu" = "Application";

@@ -683,6 +683,9 @@
 "mediaStream.device.error.startFailed" = "Ses aygıtının aktarımı başlatılamadı.";
 "mediaStream.device.prompt.muteSource" = "Aktarım sürerken bu kaynağın sesini bu Mac'te kapat";
 "mediaStream.device.source.voiceOver" = "VoiceOver";
+"mediaStream.device.source.channel" = "Kanal %d";
+"mediaStream.device.source.channelPair" = "Kanal %1$d ve %2$d";
+"mediaStream.device.source.deviceChannels" = "%1$@, %2$@";
 "mediaStream.device.source.systemAudio" = "Bu Mac'teki tüm ses";
 "mediaStream.device.source.andOthers" = "%1$@ ve %2$ld tane daha";
 "mediaStream.device.source.applicationMenu" = "Uygulama";

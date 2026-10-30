@@ -16,6 +16,10 @@ import Foundation
 final class DeviceInputCaptureBackend: DeviceStreamCaptureBackend {
 
     private let device: InputAudioDeviceInfo
+    /// Which of the device's channels to broadcast (mirrors the microphone's
+    /// InputChannelPreset). Resolved into concrete indices once the AUHAL
+    /// reports the real channel count — see `resolveChannelSelection`.
+    private let channelPreset: InputChannelPreset
     private let ring: AudioDeviceStreamSource.PCMRing
 
     // Capture state (mutated on start/stop only; callback reads via unmanaged self).
@@ -24,6 +28,12 @@ final class DeviceInputCaptureBackend: DeviceStreamCaptureBackend {
     private var captureBufferCapacity: Int = 0
     private var captureSampleRate: Double = 48_000
     private var captureChannels: Int = 2
+    /// Resolved source channel indices for the broadcast stereo pair (equal for a
+    /// single-channel selection), plus whether the two are summed to mono.
+    /// Written on start only; read by the RT callback.
+    private var captureLeftIndex: Int = 0
+    private var captureRightIndex: Int = 1
+    private var captureSumsToMono = false
     /// Pre-allocated stereo scratch reused by the RT input callback (sized to the
     /// AUHAL's max frames), so `handleInput` doesn't heap-allocate per callback.
     private var captureStereoScratch = [Int16]()
@@ -35,8 +45,13 @@ final class DeviceInputCaptureBackend: DeviceStreamCaptureBackend {
     /// live loopback). Plain Bool: a one-buffer-late transition is inaudible.
     private var isMuted = false
 
-    init(device: InputAudioDeviceInfo, ring: AudioDeviceStreamSource.PCMRing) {
+    init(
+        device: InputAudioDeviceInfo,
+        channelPreset: InputChannelPreset = .auto,
+        ring: AudioDeviceStreamSource.PCMRing
+    ) {
         self.device = device
+        self.channelPreset = channelPreset
         self.ring = ring
     }
 
@@ -130,6 +145,7 @@ final class DeviceInputCaptureBackend: DeviceStreamCaptureBackend {
         captureBufferCapacity = byteCapacity
         captureSampleRate = sampleRate
         captureChannels = channelCount
+        resolveChannelSelection(channelCount: channelCount)
         captureStereoScratch = [Int16](repeating: 0, count: Int(maxFrames) * 2)
         // Worst case the device runs below 48 kHz, so resampling grows the frame
         // count; size the scratch for that ceiling (+ margin) once, up front.
@@ -157,8 +173,40 @@ final class DeviceInputCaptureBackend: DeviceStreamCaptureBackend {
             throw fail()
         }
         audioUnit = au
-        AudioLogger.log("device stream: capture started device=%@ rate=%d ch=%d",
-                        device.name, Int(sampleRate.rounded()), channelCount)
+        AudioLogger.log("device stream: capture started device=%@ rate=%d ch=%d broadcasting=%d/%d%@",
+                        device.name, Int(sampleRate.rounded()), channelCount,
+                        captureLeftIndex + 1, captureRightIndex + 1,
+                        captureSumsToMono ? " summed" : "")
+    }
+
+    /// Map the user's channel preset onto concrete source indices for this
+    /// device's actual channel count. Out-of-range selections (device swapped
+    /// for one with fewer inputs) clamp instead of reading past the buffer.
+    private func resolveChannelSelection(channelCount: Int) {
+        let lastIndex = max(channelCount - 1, 0)
+        func clamp(_ channel: Int) -> Int { min(max(channel - 1, 0), lastIndex) }
+
+        switch channelPreset {
+        case .auto:
+            captureLeftIndex = 0
+            captureRightIndex = channelCount >= 2 ? 1 : 0
+            captureSumsToMono = false
+        case .mono(let channel):
+            // Single channel: the same source sample feeds both sides, so the
+            // broadcast is centered rather than hard-panned to one side.
+            let index = clamp(channel)
+            captureLeftIndex = index
+            captureRightIndex = index
+            captureSumsToMono = false
+        case .stereoPair(let first, let second):
+            captureLeftIndex = clamp(first)
+            captureRightIndex = clamp(second)
+            captureSumsToMono = false
+        case .monoMix(let first, let second):
+            captureLeftIndex = clamp(first)
+            captureRightIndex = clamp(second)
+            captureSumsToMono = true
+        }
     }
 
     private func stopCapture() {
@@ -202,19 +250,32 @@ final class DeviceInputCaptureBackend: DeviceStreamCaptureBackend {
         }
         let input = rawData.assumingMemoryBound(to: Int16.self)
 
-        // Map to stereo into the pre-allocated scratch (no RT-thread allocation):
-        // mono duplicates, >2 channels keep the first two.
+        // Map the selected channels to stereo in the pre-allocated scratch (no
+        // RT-thread allocation). The indices were resolved (and clamped) at start
+        // from the user's channel preset, so a 32-channel desk can broadcast 5/6
+        // — or channel 11 alone, centered — instead of always outputs 1/2.
         guard frames * 2 <= captureStereoScratch.count else { return }
+        let leftIndex = captureLeftIndex
+        let rightIndex = captureRightIndex
         if channels == 1 {
             for frame in 0..<frames {
                 let sample = input[frame]
                 captureStereoScratch[frame * 2] = sample
                 captureStereoScratch[frame * 2 + 1] = sample
             }
+        } else if captureSumsToMono {
+            for frame in 0..<frames {
+                let base = frame * channels
+                let sum = (Int32(input[base + leftIndex]) + Int32(input[base + rightIndex])) / 2
+                let sample = Int16(clamping: sum)
+                captureStereoScratch[frame * 2] = sample
+                captureStereoScratch[frame * 2 + 1] = sample
+            }
         } else {
             for frame in 0..<frames {
-                captureStereoScratch[frame * 2] = input[frame * channels]
-                captureStereoScratch[frame * 2 + 1] = input[frame * channels + 1]
+                let base = frame * channels
+                captureStereoScratch[frame * 2] = input[base + leftIndex]
+                captureStereoScratch[frame * 2 + 1] = input[base + rightIndex]
             }
         }
 
