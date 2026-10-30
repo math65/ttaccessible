@@ -539,6 +539,7 @@
 "preferences.historyEvent.fileAdded" = "File added";
 "preferences.historyEvent.fileRemoved" = "File removed";
 "preferences.historyEvent.transmissionBlocked" = "Transmission blocked";
+"preferences.historyEvent.transmissionAllowed" = "Transmission allowed";
 "preferences.historyEvent.mediaStreamingStarted" = "Media streaming started";
 "preferences.historyEvent.mediaStreamingFinished" = "Media streaming finished";
 "preferences.accessibility.help" = "These settings only affect announcements, not the displayed content.";
@@ -660,6 +661,7 @@
 "mediaStream.announced.finished" = "Streaming finished";
 "mediaStream.announced.error" = "Streaming failed";
 "mediaStream.error.startFailed" = "Failed to start streaming.";
+"mediaStream.error.notAllowedInChannel" = "You can't stream in this channel.";
 "mediaStream.error.unsupportedFormat" = "This media format is not supported for streaming.";
 "mediaStream.error.unsupportedFormat.detail" = "This file cannot be streamed in TeamTalk. %@";
 "mediaStream.error.reason.sdkUnsupported" = "TeamTalk cannot open this file format.";
@@ -759,6 +761,7 @@
 "history.fileAdded" = "%@ added the file %@.";
 "history.fileRemoved" = "%@ removed the file %@.";
 "history.transmissionBlocked" = "Transmission blocked by the channel operator.";
+"history.transmissionAllowed" = "Transmission allowed by the channel operator.";
 "history.microphoneStalled" = "Your microphone had stopped being transmitted. It has been restarted.";
 "history.microphoneStalledFailed" = "Your microphone had stopped being transmitted and could not be restarted. Turn the microphone off and on again.";
 "history.unknownUser" = "an unknown user";
