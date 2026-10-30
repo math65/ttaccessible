@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		94PYTH013B941A8E00C0PYTH /* Python.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94PYTH003B941A8E00C0PYTH /* Python.xcframework */; };
+		94PYTH023B941A8E00C0PYTH /* Python.xcframework in Embed Python */ = {isa = PBXBuildFile; fileRef = 94PYTH003B941A8E00C0PYTH /* Python.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		94PYTH043B941A8E00C0PYTH /* PythonSupport in Resources */ = {isa = PBXBuildFile; fileRef = 94PYTH033B941A8E00C0PYTH /* PythonSupport */; };
 		94A4A5F73B941A8E00C01234 /* libTeamTalk5.dylib in Embed TeamTalk */ = {isa = PBXBuildFile; fileRef = 94A4A5F63B941A8E00C01234 /* libTeamTalk5.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		94A4A5F93B941A8E00C01234 /* libTeamTalk5.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 94A4A5F63B941A8E00C01234 /* libTeamTalk5.dylib */; };
 		94BABE0100000000000000A1 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 94BABE0300000000000000A3 /* Sparkle */; };
@@ -36,6 +39,17 @@
 			name = "Embed TeamTalk";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		94PYTH053B941A8E00C0PYTH /* Embed Python */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				94PYTH023B941A8E00C0PYTH /* Python.xcframework in Embed Python */,
+			);
+			name = "Embed Python";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
@@ -57,6 +71,8 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXFileReference section */
+		94PYTH003B941A8E00C0PYTH /* Python.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = Python.xcframework; path = ../Vendor/Python/Python.xcframework; sourceTree = SOURCE_ROOT; };
+		94PYTH033B941A8E00C0PYTH /* PythonSupport */ = {isa = PBXFileReference; explicitFileType = folder; name = PythonSupport; path = ../Vendor/Python/PythonSupport; sourceTree = SOURCE_ROOT; };
 		94SIGN003B941A8E00C0SIGN /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
 		941A588C2FE8718F00C08287 /* ttaccessibleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ttaccessibleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		943281C62F68C35A00682D6B /* ttaccessible.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ttaccessible.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -93,6 +109,7 @@
 				94A4A5F93B941A8E00C01234 /* libTeamTalk5.dylib in Frameworks */,
 				94WEBRTC013B941A8E00C0AB /* libwebrtc-audio-processing.a in Frameworks */,
 				94BABE0100000000000000A1 /* Sparkle in Frameworks */,
+				94PYTH013B941A8E00C0PYTH /* Python.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -125,6 +142,8 @@
 				94A4A5F63B941A8E00C01234 /* libTeamTalk5.dylib */,
 				94WEBRTC003B941A8E00C0AB /* libwebrtc-audio-processing.a */,
 				94HELP003B941A8E00C0HELP /* ttaccessible.help */,
+				94PYTH003B941A8E00C0PYTH /* Python.xcframework */,
+				94PYTH033B941A8E00C0PYTH /* PythonSupport */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -163,6 +182,7 @@
 				943281C22F68C35A00682D6B /* Sources */,
 				943281C32F68C35A00682D6B /* Frameworks */,
 				94A4A5F83B941A8E00C01234 /* Embed TeamTalk */,
+				94PYTH053B941A8E00C0PYTH /* Embed Python */,
 				943281C42F68C35A00682D6B /* Resources */,
 			);
 			buildRules = (
@@ -236,6 +256,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				94HELP013B941A8E00C0HELP /* ttaccessible.help in Resources */,
+				94PYTH043B941A8E00C0PYTH /* PythonSupport in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

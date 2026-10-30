@@ -653,6 +653,7 @@
 "mediaStream.url.prompt.title" = "Diffuser une URL";
 "mediaStream.url.prompt.message" = "Saisissez l'URL d'un flux audio (radio internet, http, rtmp, rtsp).";
 "mediaStream.url.prompt.placeholder" = "https://stream.exemple.com/radio.mp3";
+"mediaStream.url.resolving" = "Recherche sur %@…";
 "mediaStream.url.prompt.accessibilityLabel" = "URL du flux audio";
 "mediaStream.url.prompt.start" = "Diffuser";
 "mediaStream.url.error.invalid.title" = "URL invalide";

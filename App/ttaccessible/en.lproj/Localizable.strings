@@ -653,6 +653,7 @@
 "mediaStream.url.prompt.title" = "Stream URL";
 "mediaStream.url.prompt.message" = "Enter the URL of an audio stream (internet radio, http, rtmp, rtsp).";
 "mediaStream.url.prompt.placeholder" = "https://stream.example.com/radio.mp3";
+"mediaStream.url.resolving" = "Looking up %@…";
 "mediaStream.url.prompt.accessibilityLabel" = "Audio stream URL";
 "mediaStream.url.prompt.start" = "Stream";
 "mediaStream.url.error.invalid.title" = "Invalid URL";

@@ -653,6 +653,7 @@
 "mediaStream.url.prompt.title" = "URL Aktar";
 "mediaStream.url.prompt.message" = "Bir ses akışının adresini girin (internet radyosu, http, rtmp, rtsp).";
 "mediaStream.url.prompt.placeholder" = "https://stream.example.com/radio.mp3";
+"mediaStream.url.resolving" = "%@ aranıyor…";
 "mediaStream.url.prompt.accessibilityLabel" = "Ses akışı adresi";
 "mediaStream.url.prompt.start" = "Kanala Aktar";
 "mediaStream.url.error.invalid.title" = "Geçersiz URL";
