@@ -594,13 +594,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handlePushToTalkPress() {
-        connectionController.setPushToTalkPressed(true)
-        playPushToTalkBeep()
+        connectionController.pressPushToTalk { [weak self] allowed in
+            guard let self else { return }
+            if allowed {
+                self.playPushToTalkBeep()
+            } else {
+                self.announceWithVoiceOver(L10n.text("connectedServer.audio.voiceNotAllowedInChannel"))
+            }
+        }
     }
 
     private func handlePushToTalkRelease() {
-        connectionController.setPushToTalkPressed(false)
-        playPushToTalkBeep()
+        connectionController.releasePushToTalk { [weak self] pressed in
+            if pressed {
+                self?.playPushToTalkBeep()
+            }
+        }
     }
 
     private func playPushToTalkBeep() {
