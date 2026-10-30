@@ -136,6 +136,7 @@
 "connectedServer.audio.microphone.disable" = "Couper le micro";
 "connectedServer.audio.inputGain.label" = "Volume d'entrée";
 "connectedServer.audio.inputGain.accessibilityLabel" = "Volume d'entrée du microphone";
+"connectedServer.audio.inputGain.setByChannel" = "Réglé par le canal";
 "connectedServer.audio.outputGain.label" = "Volume de sortie";
 "connectedServer.audio.outputGain.accessibilityLabel" = "Volume général de sortie";
 "connectedServer.audio.mediaGain.label" = "Volume des médias";
