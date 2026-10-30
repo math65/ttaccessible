@@ -72,6 +72,15 @@ extension TeamTalkConnectionController {
                     return
                 }
 
+                guard self.canStreamMediaInCurrentChannelLocked(instance: instance) else {
+                    securityScopedURL?.stopAccessingSecurityScopedResource()
+                    self.finishOnMain(
+                        .failure(TeamTalkConnectionError.internalError(L10n.text("mediaStream.error.notAllowedInChannel"))),
+                        completion: completion
+                    )
+                    return
+                }
+
                 if self.mediaStreamingActive {
                     self.stopStreamingMediaFileLocked(instance: instance)
                 }
@@ -217,6 +226,15 @@ extension TeamTalkConnectionController {
                     source.stopAsynchronously()
                     self.healStaleSessionIfNeededLocked()
                     self.finishOnMain(.failure(self.sessionUnavailableErrorLocked()), completion: completion)
+                    return
+                }
+
+                guard self.canStreamMediaInCurrentChannelLocked(instance: instance) else {
+                    source.stopAsynchronously()
+                    self.finishOnMain(
+                        .failure(TeamTalkConnectionError.internalError(L10n.text("mediaStream.error.notAllowedInChannel"))),
+                        completion: completion
+                    )
                     return
                 }
 

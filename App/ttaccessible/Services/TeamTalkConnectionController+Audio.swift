@@ -80,24 +80,50 @@ extension TeamTalkConnectionController {
         }
     }
 
-    func setPushToTalkPressed(_ pressed: Bool) {
+    /// Presses push-to-talk unless the channel would drop the voice. `completion`
+    /// gets whether the press went through, on the main thread: the check needs the
+    /// SDK, so it runs on `queue` rather than making the key wait for it there.
+    func pressPushToTalk(completion: @escaping (Bool) -> Void) {
         queue.async { [weak self] in
             guard let self else { return }
-            let wasPressed = self.pushToTalkPressed
-            guard wasPressed != pressed else { return }
-            self.pushToTalkPressed = pressed
-            // Both mode: releasing PTT closes the always-on gate — the mic goes
-            // silent (stays silent until ⌘⇧A reopens it or PTT is held again),
-            // matching the "PTT takes over" behavior.
-            if self.currentMicrophoneMode == .both, wasPressed, pressed == false, self.bothGateOpen {
-                self.bothGateOpen = false
+            let allowed = self.instance.map { self.canTransmitVoiceInCurrentChannelLocked(instance: $0) } ?? true
+            self.pushToTalkPressBlocked = allowed == false
+            if allowed {
+                self.setPushToTalkPressedLocked(true)
             }
-            // Publish on EVERY press/release transition: the snapshot's own
-            // isTalking tracks isEffectivelyTransmittingLocked, so VoiceOver's
-            // talking state must refresh with the key, not only on gate closes.
-            if let instance = self.instance, let record = self.connectedRecord {
-                self.publishSessionLocked(instance: instance, record: record)
+            DispatchQueue.main.async { completion(allowed) }
+        }
+    }
+
+    /// Releases push-to-talk. `completion` gets whether there was a press to end:
+    /// one that was refused transmitted nothing and has no release to sound.
+    func releasePushToTalk(completion: @escaping (Bool) -> Void) {
+        queue.async { [weak self] in
+            guard let self else { return }
+            let wasBlocked = self.pushToTalkPressBlocked
+            self.pushToTalkPressBlocked = false
+            if wasBlocked == false {
+                self.setPushToTalkPressedLocked(false)
             }
+            DispatchQueue.main.async { completion(wasBlocked == false) }
+        }
+    }
+
+    private func setPushToTalkPressedLocked(_ pressed: Bool) {
+        let wasPressed = pushToTalkPressed
+        guard wasPressed != pressed else { return }
+        pushToTalkPressed = pressed
+        // Both mode: releasing PTT closes the always-on gate — the mic goes
+        // silent (stays silent until ⌘⇧A reopens it or PTT is held again),
+        // matching the "PTT takes over" behavior.
+        if currentMicrophoneMode == .both, wasPressed, pressed == false, bothGateOpen {
+            bothGateOpen = false
+        }
+        // Publish on EVERY press/release transition: the snapshot's own
+        // isTalking tracks isEffectivelyTransmittingLocked, so VoiceOver's
+        // talking state must refresh with the key, not only on gate closes.
+        if let instance, let record = connectedRecord {
+            publishSessionLocked(instance: instance, record: record)
         }
     }
 
@@ -213,6 +239,7 @@ extension TeamTalkConnectionController {
     /// is armed hot (silent, gated) for instant PTT; in always-on / push-to-talk
     /// it restores the last transmit state, as before.
     func armMicrophoneEngineOnJoinLocked(instance: UnsafeMutableRawPointer) {
+        lastVoiceRight = (TT_GetMyChannelID(instance), canTransmitVoiceInCurrentChannelLocked(instance: instance))
         guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else { return }
         // An engine carried over from the channel we just left still holds that
         // channel's target format, and neither arming path below rebuilds a

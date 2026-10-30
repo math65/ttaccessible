@@ -218,6 +218,13 @@ extension TeamTalkConnectionController {
         )
     }
 
+    func appendTransmissionAllowedHistoryLocked() {
+        appendHistoryLocked(
+            kind: .transmissionAllowed,
+            message: L10n.text("history.transmissionAllowed")
+        )
+    }
+
     func appendBroadcastSentHistoryLocked(senderName: String, content: String, userID: Int32?) {
         appendHistoryLocked(
             kind: .broadcastSent,
