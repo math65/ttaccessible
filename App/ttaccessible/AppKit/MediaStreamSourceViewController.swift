@@ -529,11 +529,16 @@ final class MediaStreamSourceViewController: NSViewController {
                 if selectedDevices.contains(device) == false { selectedDevices.append(device) }
             } else {
                 selectedDevices.removeAll { $0 == device }
+                if selectedDeviceChannels.contains(where: { $0.channelDevice == device }) {
+                    clearedMessages.append(L10n.text("mediaStream.device.cleared.channels"))
+                    selectedDeviceChannels.removeAll { $0.channelDevice == device }
+                }
             }
 
-        case .deviceChannels:
+        case .deviceChannels(let device, _):
             if selected {
                 if selectedDeviceChannels.contains(spec) == false { selectedDeviceChannels.append(spec) }
+                if selectedDevices.contains(device) == false { selectedDevices.append(device) }
             } else {
                 selectedDeviceChannels.removeAll { $0 == spec }
             }
@@ -598,7 +603,7 @@ final class MediaStreamSourceViewController: NSViewController {
     /// The single spec the capture backends consume, or nil when nothing is ticked.
     private var resolvedSpec: DeviceStreamCaptureSpec? {
         DeviceStreamCaptureSpec.combining(
-            selectedDevices.map { DeviceStreamCaptureSpec.inputDevice($0) } + selectedDeviceChannels
+            DeviceStreamCaptureSpec.devicesToStream(devices: selectedDevices, channels: selectedDeviceChannels)
                 + (systemAudioSelected ? [.systemAudio()] : selectedApplications)
         )
     }
