@@ -59,7 +59,7 @@ final class YtDlpUpdaterTests: XCTestCase {
     }
 
     func testABrokenUpdateLeavesTheWorkingYtDlpLoaded() async throws {
-        _ = await EmbeddedPython.shared.ytdlpVersion()
+        let working = await EmbeddedPython.shared.ytdlpVersion()
         let bogus = FileManager.default.temporaryDirectory.appendingPathComponent("not-yt-dlp-\(UUID()).zip")
         try Data("not a zip".utf8).write(to: bogus)
         defer { try? FileManager.default.removeItem(at: bogus) }
@@ -67,7 +67,7 @@ final class YtDlpUpdaterTests: XCTestCase {
         let result = await EmbeddedPython.shared.switchYtDlp(to: bogus)
         guard case .failed = result else { return XCTFail("expected a failure, got \(result)") }
         let version = await EmbeddedPython.shared.ytdlpVersion()
-        XCTAssertEqual(version, EmbeddedPython.bundledYtDlpVersion)
+        XCTAssertEqual(version, working)
     }
 
     // MARK: The real release (network)
