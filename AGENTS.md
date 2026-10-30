@@ -357,6 +357,8 @@ Three sound packs bundled: **Default** (root of `Sounds/`), **Majorly-G**, **Old
 
 **Mute state tracking**: The outline view's `item(atRow:)` returns stale `ServerTreeNode` values after `reloadData(forRowIndexes:)` (audio runtime updates don't replace items). User mute state is tracked via `localMuteState: [Int32: Bool]` dictionary on `ConnectedServerViewController`, cleared on new session. `TT_PumpMessage(CLIENTEVENT_USER_STATECHANGE)` must be called after `TT_SetUserMute` (same pattern as Qt client).
 
+**Transmit rights**: `canTransmitVoiceInCurrentChannelLocked` is the server's rule. `pressPushToTalk` runs it on the SDK queue, so the key never waits on the main thread; a refused press announces, plays no beep on press or release, and doesn't show us talking. `reportVoiceRightChangeLocked` compares it on each channel update, in both event loops, and reports an operator's change through the Transmission blocked and Transmission allowed events. Streams go through `canStreamMediaInCurrentChannelLocked`, the same list for `STREAMTYPE_MEDIAFILE_AUDIO`.
+
 **Volume dialog**: Real-time via `VolumeSliderHandler` (NSObject target/action on slider). Uses the geometric volume curve (see User Volume Curve section). `setUserVoiceVolumeImmediate` applies to SDK without persisting to `UserVolumeStore`. Cancel reverts to original volume and stereo state.
 
 ### Preferences Organization
