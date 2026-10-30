@@ -8,7 +8,7 @@ DERIVED_DATA="/tmp/ttaccessible-build"
 APP_NAME="ttaccessible"
 OUTPUT_DIR="$(dirname "$0")/BuildArtifacts"
 SIGN_IDENTITY="Developer ID Application: Mathieu Martin (633EG76YX5)"
-NOTARY_PROFILE="ttaccessible-notary"
+NOTARY_PROFILE="appstoreconnect-notary"   # App Store Connect API key (notarytool store-credentials)
 ENTITLEMENTS="App/ttaccessible/ttaccessible.entitlements"
 
 NOTARIZE=0
