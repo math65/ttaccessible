@@ -77,6 +77,9 @@ Pour régler le niveau d'une seule personne, consultez
 [Régler ce que vous entendez de chaque personne](users.html) et
 [Équilibrer un canal avec le mixeur](mixer.html).
 
+Certains canaux règlent eux-mêmes le niveau du micro. Le volume d'entrée y affiche *Réglé par le
+canal* et ne peut pas être modifié. Votre réglage revient dans un canal qui n'en impose pas.
+
 ## Vérifier qu'on vous entend
 
 - Pour entendre votre propre voix par le canal, appuyez sur Maj + Commande + H. Si vous vous

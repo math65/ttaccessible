@@ -72,6 +72,9 @@ To mute or unmute everything at once, press Command-M.
 To set the level of one person, see [Adjust what you hear from each person](users.html) and
 [Balance a channel with the mixer](mixer.html).
 
+Some channels set the microphone level themselves. There, Input volume reads *Set by the channel*
+and can't be moved. Your own level comes back in a channel that doesn't set one.
+
 ## Check that people can hear you
 
 - To hear your own voice through the channel, press Shift-Command-H. If you can hear yourself,

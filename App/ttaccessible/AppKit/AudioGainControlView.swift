@@ -13,6 +13,14 @@ final class AudioGainControlView: NSView {
     let slider = AccessibleSlider(value: 50, minValue: 0, maxValue: 100, target: nil, action: nil)
     var valueDB: Double = 0
     var onChange: ((Double) -> Void)?
+    /// Why this level can't be changed, read with its value. The view stays a keyboard
+    /// stop, so VoiceOver can still reach it and say so.
+    var lockedReason: String? {
+        didSet {
+            slider.isEnabled = lockedReason == nil
+            setValue(valueDB)
+        }
+    }
 
     init(title: String, accessibilityLabel: String, onChange: @escaping (Double) -> Void) {
         self.onChange = onChange
@@ -79,8 +87,13 @@ final class AudioGainControlView: NSView {
         let text = Self.format(percent: slider.doubleValue)
         valueLabel.stringValue = text
         setAccessibilityValue(slider.doubleValue)
-        setAccessibilityValueDescription(text)
+        setAccessibilityValueDescription(spokenValue)
         NSAccessibility.post(element: self, notification: .valueChanged)
+    }
+
+    private var spokenValue: String {
+        let value = Self.format(percent: slider.doubleValue)
+        return lockedReason.map { "\(value), \($0)" } ?? value
     }
 
     override var acceptsFirstResponder: Bool {
@@ -133,6 +146,7 @@ final class AudioGainControlView: NSView {
 
     @objc
     func resetToZeroAccessibilityAction() -> Bool {
+        guard lockedReason == nil else { return false }
         setValue(0)
         onChange?(0)
         return true
@@ -148,6 +162,10 @@ final class AudioGainControlView: NSView {
     /// Move this level and return the value to speak.
     @discardableResult
     func apply(_ move: MixerLevelMove) -> String {
+        guard lockedReason == nil else {
+            NSAccessibility.post(element: self, notification: .valueChanged)
+            return spokenValue
+        }
         setAndNotify(Self.gainDB(forPercent: move.apply(to: slider.doubleValue)))
         return Self.format(percent: slider.doubleValue)
     }

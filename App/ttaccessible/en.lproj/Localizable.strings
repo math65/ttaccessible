@@ -136,6 +136,7 @@
 "connectedServer.audio.microphone.disable" = "Mute microphone";
 "connectedServer.audio.inputGain.label" = "Input volume";
 "connectedServer.audio.inputGain.accessibilityLabel" = "Microphone input volume";
+"connectedServer.audio.inputGain.setByChannel" = "Set by the channel";
 "connectedServer.audio.outputGain.label" = "Output volume";
 "connectedServer.audio.outputGain.accessibilityLabel" = "Master output volume";
 "connectedServer.audio.mediaGain.label" = "Media volume";
