@@ -82,6 +82,12 @@ débranché, n'y apparaît pas.
 Si l'app choisie ne produit aucun son, tt-Accessible répond *La source sélectionnée n'a aucun audio
 à capturer pour le moment.*
 
+Un périphérique à plus de deux canaux s'ouvre comme un groupe : appuyez sur Flèche droite sur sa
+ligne pour voir ses canaux. Cochez une paire, ou un canal seul, qui s'entend au centre : seul ce que
+vous y cochez est diffusé, et cocher un canal coche aussi le périphérique. Vous pouvez en cocher
+plusieurs, d'un même périphérique ou de plusieurs, et ils sont diffusés ensemble. Un périphérique
+coché sans canal coché en dessous diffuse les canaux 1 et 2.
+
 ## Contrôler une diffusion en cours
 
 Pendant une diffusion, la fenêtre principale affiche un bloc de commandes sous les curseurs de son :

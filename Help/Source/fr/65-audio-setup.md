@@ -1,7 +1,7 @@
 ---
 title: Configurer vos périphériques audio
 description: Choisir vos périphériques d'entrée et de sortie, supprimer l'écho et le bruit de fond, et tester votre micro.
-keywords: périphérique audio, entrée, sortie, annulation d'écho, AEC, réduction de bruit, aperçu, canaux, casque
+keywords: périphérique audio, entrée, sortie, annulation d'écho, AEC, réduction de bruit, aperçu, canaux, canaux de sortie, interface, casque
 anchor: audio-setup
 ---
 
@@ -29,6 +29,29 @@ Si votre micro était activé, il se réactive lui aussi, avec le son habituel, 
 vous êtes toujours connecté au même serveur, vous ne l'avez ni activé ni coupé entre-temps, et vous
 n'avez pas choisi un autre micro.
 
+## Choisir les sorties utilisées
+
+Sur une interface audio ou une console possédant plus d'une paire de sorties, tt-Accessible n'est
+pas obligé de jouer sur les sorties 1 et 2.
+
+1. Ouvrez les Préférences, puis cliquez sur Audio.
+2. Cliquez sur le menu local **Canaux de sortie**, puis choisissez l'une des options suivantes :
+   - **Auto (sorties 1 et 2)** — la première paire du périphérique, ce que tt-Accessible utilisait
+     avant l'existence de ce réglage.
+   - **Sorties 3 et 4**, **Sorties 5 et 6**, et ainsi de suite — jouer en stéréo sur cette paire.
+   - **Sortie 7 mono**, et ainsi de suite — additionner les canaux en mono et les jouer sur cette
+     seule sortie.
+
+Le menu présente d'abord les paires stéréo, puis les sorties seules : sur une grande interface, la
+paire que vous voulez reste donc à quelques éléments du début.
+
+Le menu n'apparaît que pour les périphériques offrant plus d'une paire de sorties — il n'y a rien à
+choisir sur un casque ou sur les haut-parleurs intégrés. Votre choix est retenu par périphérique :
+chaque interface revient donc sur les sorties que vous lui aviez données, et un changement de
+routage s'entend immédiatement, sans interrompre l'audio. Si vous utilisez ensuite le périphérique
+dans un mode plus réduit, ou si vous le remplacez par un périphérique stéréo, le réglage réaffiche
+Auto ; rebranchez le périphérique et votre choix revient.
+
 ## Supprimer l'écho et le bruit de fond
 
 1. Ouvrez les Préférences, puis cliquez sur Audio.
@@ -45,8 +68,8 @@ que les voix du canal. Sur les versions antérieures, seul l'audio de TeamTalk p
 
 ## Choisir les entrées utilisées
 
-Cliquez sur le menu local **Canaux d'entrée**, puis choisissez **Auto**, une entrée mono, une paire
-stéréo, ou une somme mono de deux entrées. Ce réglage compte avec une interface audio, où le micro
+Cliquez sur le menu local **Canaux d'entrée**, juste sous le menu Périphérique d'entrée, puis
+choisissez **Auto**, une entrée mono, une paire stéréo, ou une somme mono de deux entrées. Ce réglage compte avec une interface audio, où le micro
 est rarement sur l'entrée 1.
 
 Si vous changez de périphérique et que la configuration ne convient plus, tt-Accessible revient sur

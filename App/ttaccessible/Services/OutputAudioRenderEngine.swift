@@ -300,6 +300,17 @@ final class OutputAudioRenderEngine {
     private let gainCell = UnsafeMutablePointer<Float>.allocate(capacity: 1)   // master linear gain
     private let muteCell = UnsafeMutablePointer<Int32>.allocate(capacity: 1)
     private let primedCell = UnsafeMutablePointer<Int32>.allocate(capacity: 1)
+    /// Which physical device channels the stereo mix lands on, packed into ONE
+    /// word so the render thread reads a coherent pair without a lock:
+    /// `(left << 16) | right`, with `right == monoSentinel` meaning "sum to mono
+    /// on `left`". Written on engineQueue (a device switch or a preference
+    /// change), read every render callback. Single-word = benign, like gain/mute.
+    private let planeMapCell = UnsafeMutablePointer<Int32>.allocate(capacity: 1)
+    private static let monoSentinel: Int32 = 0xFFFF
+
+    /// The user's selection for the CURRENT device (engineQueue). Kept so a
+    /// device switch can re-resolve it against the new device's channel count.
+    private var channelSelection: OutputChannelSelection = .auto
 
     // MARK: RT-only state
     private let mixChannels = 2                     // the ring is always stereo
@@ -312,6 +323,15 @@ final class OutputAudioRenderEngine {
     private var rtPlanesCapacity = 0
     private var currentGain: Float = 1
     private var gainSmoothCoeff: Float = 0.01
+    /// The mapping the render thread is currently rendering, and the one it is
+    /// fading away from. RT-only: `planeMapCell` is what the engine queue
+    /// publishes, these are what the callback has acted on.
+    private var rtActiveMap: Int32 = 0
+    private var rtPreviousMap: Int32 = 0
+    /// Frames left in the crossfade between `rtPreviousMap` and `rtActiveMap`,
+    /// and its full length. Zero means steady state.
+    private var rtFadeRemaining = 0
+    private var rtFadeFrames = 0
 
     private var underflowCount = 0
 
@@ -330,6 +350,7 @@ final class OutputAudioRenderEngine {
         gainCell.initialize(to: 1)
         muteCell.initialize(to: 0)
         primedCell.initialize(to: 0)
+        planeMapCell.initialize(to: Self.packedMapping(left: 0, right: 1))
     }
 
     deinit {
@@ -337,6 +358,7 @@ final class OutputAudioRenderEngine {
         gainCell.deallocate()
         muteCell.deallocate()
         primedCell.deallocate()
+        planeMapCell.deallocate()
     }
 
     var isRunning: Bool { auhal != nil }
@@ -463,8 +485,20 @@ final class OutputAudioRenderEngine {
         self.rtPlanesC?.initialize(repeating: nil, count: rtPlanesCapacity)
         self.currentGain = gainCell.pointee
         self.gainSmoothCoeff = Float(1.0 - exp(-1.0 / (0.008 * devRate)))
+        // ~6 ms: long enough that a remap has no step in it, short enough that
+        // the routing still lands on the buffer the user's selection reaches.
+        self.rtFadeFrames = max(Int(0.006 * devRate), 32)
+        self.rtFadeRemaining = 0
         self.underflowCount = 0
         primedCell.pointee = 0
+        // Re-resolve the routing against THIS device's channel count (deviceChannels
+        // was just set above) — a switch to a device with fewer outputs must fall
+        // back to 1/2 instead of rendering nowhere.
+        publishChannelMappingLocked()
+        // Whatever that resolved to is where this device STARTS rendering, so
+        // the first callback must not mistake it for a remap and fade it in.
+        self.rtActiveMap = planeMapCell.pointee
+        self.rtPreviousMap = self.rtActiveMap
 
         // Publish the RT render state written just above (rtPull / rtPullCapacity /
         // rtPlanePtrs / rtDeviceChannels / currentGain / ring) with a release fence,
@@ -542,6 +576,46 @@ final class OutputAudioRenderEngine {
             guard self.isRunning else { return }
             try self.startImpl(deviceID: deviceID)
         }
+    }
+
+    // MARK: - Output channel routing
+
+    /// Choose which physical channels of the current device carry the mix.
+    ///
+    /// No AudioUnit rebind: just a new plane mapping the next render callback
+    /// picks up. That callback crossfades it in over ~6 ms rather than swapping
+    /// mid-waveform — an instant swap drops the old pair from whatever sample it
+    /// was on straight to zero and starts the new pair at full amplitude, and
+    /// that step is an audible click on both pairs. The master gain smoothing
+    /// does not cover it: the discontinuity is in which plane is being written,
+    /// not in the gain.
+    func setChannelSelection(_ selection: OutputChannelSelection) {
+        engineQueue.async { [weak self] in
+            guard let self else { return }
+            self.channelSelection = selection
+            self.publishChannelMappingLocked()
+        }
+    }
+
+    /// engineQueue only. Resolves the selection against the CURRENT device's
+    /// channel count (a 32-out interface swapped for built-in stereo falls back
+    /// to 1/2 rather than going silent) and publishes it to the render thread.
+    private func publishChannelMappingLocked() {
+        let channels = deviceChannels > 0 ? deviceChannels : 2
+        let indices = channelSelection.planeIndices(deviceChannels: channels)
+        planeMapCell.pointee = Self.packedMapping(left: indices.left, right: indices.right)
+    }
+
+    private static func packedMapping(left: Int, right: Int?) -> Int32 {
+        let rightValue = right.map { Int32($0) & 0xFFFF } ?? monoSentinel
+        return (Int32(left) & 0xFFFF) << 16 | rightValue
+    }
+
+    /// The inverse of `packedMapping`, in the form the C renderer takes:
+    /// a negative right plane means "sum to mono on left".
+    private static func unpackedMapping(_ packed: Int32) -> (left: Int32, right: Int32) {
+        let right = packed & 0xFFFF
+        return ((packed >> 16) & 0xFFFF, right == monoSentinel ? -1 : right)
     }
 
     // MARK: - Master gain / mute (serial queue)
@@ -816,11 +890,51 @@ final class OutputAudioRenderEngine {
         // Per-frame conversion + gain smoothing in the C hot loop (RT-safe in
         // every build configuration; -Onone Swift measurably missed deadlines).
         let target: Float = (muteCell.pointee != 0) ? 0 : gainCell.pointee
-        currentGain = ttac_render_planes(
-            planes, Int32(devCh), pull,
-            Int32(framesAvailable), Int32(frameCount),
-            currentGain, target, gainSmoothCoeff
-        )
+
+        // A mapping the callback has not acted on yet is a remap: crossfade to it
+        // instead of swapping planes mid-waveform (see setChannelSelection). A
+        // second remap arriving mid-fade restarts from where the engine is now.
+        let publishedMap = planeMapCell.pointee
+        if publishedMap != rtActiveMap {
+            rtPreviousMap = rtActiveMap
+            rtActiveMap = publishedMap
+            rtFadeRemaining = rtFadeFrames
+        }
+        let (leftPlane, rightPlane) = Self.unpackedMapping(rtActiveMap)
+
+        if rtFadeRemaining > 0 {
+            let (prevLeft, prevRight) = Self.unpackedMapping(rtPreviousMap)
+            let fadedFrames = min(frameCount, rtFadeRemaining)
+            let done = Float(rtFadeFrames - rtFadeRemaining)
+            let start = done / Float(rtFadeFrames)
+            let end = (done + Float(fadedFrames)) / Float(rtFadeFrames)
+
+            // Both pairs carry the same mix, one falling and one rising, so each
+            // plane stays continuous and the total never dips.
+            ttac_clear_planes(planes, Int32(devCh), Int32(frameCount))
+            _ = ttac_mix_into_planes(
+                planes, Int32(devCh), pull,
+                Int32(framesAvailable), Int32(frameCount),
+                currentGain, target, gainSmoothCoeff,
+                prevLeft, prevRight, 1 - start, 1 - end
+            )
+            // Same starting gain and the same recurrence as the call above, so
+            // this return value is the one the smoothing continues from.
+            currentGain = ttac_mix_into_planes(
+                planes, Int32(devCh), pull,
+                Int32(framesAvailable), Int32(frameCount),
+                currentGain, target, gainSmoothCoeff,
+                leftPlane, rightPlane, start, end
+            )
+            rtFadeRemaining -= fadedFrames
+        } else {
+            currentGain = ttac_render_planes(
+                planes, Int32(devCh), pull,
+                Int32(framesAvailable), Int32(frameCount),
+                currentGain, target, gainSmoothCoeff,
+                leftPlane, rightPlane
+            )
+        }
 
         return noErr
     }

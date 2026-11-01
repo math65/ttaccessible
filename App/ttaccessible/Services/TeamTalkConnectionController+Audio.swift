@@ -569,6 +569,11 @@ extension TeamTalkConnectionController {
             // only takes effect after the user manually stops & restarts transmission.
             let micProcessingChanged = self.advancedMicrophoneProcessingChangedLocked(preferences: preferences)
 
+            // Output channel routing (which physical outputs carry the mix) is a
+            // plane remap inside our render engine — no device reopen, no gap —
+            // so it is pushed unconditionally rather than gated behind a reinit.
+            self.applyOutputChannelSelectionLocked(preferences: preferences)
+
             guard outputChanged || inputChanged || micProcessingChanged else {
                 self.appliedOutputPreference = preferences.preferredOutputDevice
                 self.appliedInputPreference = preferences.preferredInputDevice
@@ -897,6 +902,12 @@ extension TeamTalkConnectionController {
             // all our code, fast, and no SDK audio mutex involved. Master gain/mute
             // persist in the engine across the switch.
             if let device = resolveOutputEngineDeviceLocked() {
+                // Push the new device's channel routing BEFORE the rebind, so the
+                // very first render on the new device already lands on the right
+                // outputs (the engine re-resolves it against the new channel count).
+                outputRenderEngine.setChannelSelection(
+                    preferencesStore.outputChannelSelection(for: device.uid)
+                )
                 if outputRenderEngine.isRunning {
                     AudioLogger.log("reinit: switching output engine to %@", device.name)
                     try outputRenderEngine.switchDevice(device.deviceID)
@@ -990,10 +1001,44 @@ extension TeamTalkConnectionController {
     /// Resolve the CoreAudio output device the render engine should bind to,
     /// honoring the user's explicit preference and falling back to the system
     /// default output.
-    func resolveOutputEngineDeviceLocked() -> InputAudioDeviceResolver.OutputAudioDeviceInfo? {
+    ///
+    /// `preference` defaults to the live store, but a caller working from a
+    /// snapshot must pass that snapshot's value: resolving against the store
+    /// while deciding from a parameter is two sources of truth for one answer.
+    func resolveOutputEngineDeviceLocked(
+        preference: AudioDevicePreference? = nil
+    ) -> InputAudioDeviceResolver.OutputAudioDeviceInfo? {
         InputAudioDeviceResolver.outputEngineDevice(
-            for: preferencesStore.preferences.preferredOutputDevice,
+            for: preference ?? preferencesStore.preferences.preferredOutputDevice,
             in: InputAudioDeviceResolver.availableOutputDevices()
+        )
+    }
+
+    /// Push the stored channel routing for whichever output device is currently
+    /// bound. Safe to call when the engine is idle — the selection is stored and
+    /// re-resolved the next time it starts.
+    ///
+    /// This runs on every `applyAudioPreferences`, including the calls its early
+    /// return drops, and it cannot simply move below that guard: a routing-only
+    /// change leaves every device preference equal, so the guard would drop the
+    /// one call that was meant to apply it. The same is true when the preference
+    /// is "system default" and macOS switches the default device underneath us —
+    /// nothing in the preferences changes, but the routing to push does.
+    ///
+    /// So the cost is skipped where it provably cannot matter instead: with no
+    /// routing stored for any device the answer is `.auto` whatever the device
+    /// turns out to be, and `updateOutputChannelSelection` only ever writes
+    /// entries, so an empty table means no device has ever been routed. That is
+    /// every user who has not touched this setting, which is the case the
+    /// enumeration was being paid for.
+    func applyOutputChannelSelectionLocked(preferences: AppPreferences) {
+        guard preferences.preferredOutputDevice.usesNoOutput == false,
+              preferences.outputChannelSelections.isEmpty == false,
+              let device = resolveOutputEngineDeviceLocked(
+                  preference: preferences.preferredOutputDevice
+              ) else { return }
+        outputRenderEngine.setChannelSelection(
+            preferences.outputChannelSelections[device.uid] ?? .auto
         )
     }
 
@@ -1007,6 +1052,9 @@ extension TeamTalkConnectionController {
         outputRenderEngine.setMasterGainDB(preferencesStore.preferences.outputGainDB)
         outputRenderEngine.setMediaBusGainDB(preferencesStore.preferences.mediaGainDB)
         outputRenderEngine.setMuted(masterMuted)
+        outputRenderEngine.setChannelSelection(
+            preferencesStore.outputChannelSelection(for: device.uid)
+        )
         do {
             try outputRenderEngine.start(deviceID: device.deviceID)
             AudioLogger.log("outputRenderEngine: started on %@", device.name)

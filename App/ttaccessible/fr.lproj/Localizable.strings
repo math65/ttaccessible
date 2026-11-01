@@ -444,6 +444,10 @@
 "preferences.audio.title" = "Audio";
 "preferences.audio.outputDevice" = "Périphérique de sortie";
 "preferences.audio.inputDevice" = "Périphérique d'entrée";
+"preferences.audio.outputChannels" = "Canaux de sortie";
+"preferences.audio.outputChannels.auto" = "Auto (sorties 1 et 2)";
+"preferences.audio.outputChannels.mono" = "Sortie %d mono";
+"preferences.audio.outputChannels.stereoPair" = "Sorties %1$d et %2$d";
 "preferences.audio.systemDefault" = "Par défaut du système";
 "preferences.audio.noOutput" = "Aucune sortie audio";
 "preferences.audio.device.notConnected" = "%@ (non connecté)";
@@ -668,6 +672,7 @@
 "mediaStream.device.prompt.message" = "Choisissez ce que vous voulez diffuser dans le canal. Vous pouvez cocher ensemble des périphériques et des applications. « Tout le son de ce Mac » comprend déjà toutes les applications : il ne se combine qu'avec des périphériques. La diffusion continue même quand la source est silencieuse.";
 "mediaStream.device.cleared.applications" = "Applications décochées.";
 "mediaStream.device.cleared.systemAudio" = "Tout le son de ce Mac décoché.";
+"mediaStream.device.cleared.channels" = "Ses canaux ont été décochés.";
 "mediaStream.device.source.checked" = "%@, coché.";
 "mediaStream.device.source.unchecked" = "%@, décoché.";
 "mediaStream.device.added.application" = "%@ ajoutée et sélectionnée.";
@@ -679,6 +684,9 @@
 "mediaStream.device.error.startFailed" = "Impossible de démarrer la diffusion du périphérique audio.";
 "mediaStream.device.prompt.muteSource" = "Couper le son de cette source sur ce Mac pendant la diffusion";
 "mediaStream.device.source.voiceOver" = "VoiceOver";
+"mediaStream.device.source.channel" = "Canal %d";
+"mediaStream.device.source.channelPair" = "Canaux %1$d et %2$d";
+"mediaStream.device.source.deviceChannels" = "%1$@, %2$@";
 "mediaStream.device.source.systemAudio" = "Tout le son de ce Mac";
 "mediaStream.device.source.andOthers" = "%1$@ et %2$ld autres";
 "mediaStream.device.source.applicationMenu" = "Application";
