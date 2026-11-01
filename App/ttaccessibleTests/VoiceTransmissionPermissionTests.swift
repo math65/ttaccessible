@@ -62,4 +62,44 @@ final class VoiceTransmissionPermissionTests: XCTestCase {
             isClassroom: false, listedForVoice: true, freeForAllForVoice: true
         ))
     }
+
+    // MARK: Changes while we sit in the channel
+
+    func testAnOperatorTakingTheFloorIsALoss() {
+        XCTAssertEqual(TeamTalkConnectionController.voiceRightChange(
+            previous: (channelID: 5, allowed: true), channelID: 5, allowed: false), .lost)
+    }
+
+    func testAnOperatorGivingTheFloorIsARegain() {
+        XCTAssertEqual(TeamTalkConnectionController.voiceRightChange(
+            previous: (channelID: 5, allowed: false), channelID: 5, allowed: true), .regained)
+    }
+
+    func testJoiningAnotherChannelIsNotAChange() {
+        XCTAssertEqual(TeamTalkConnectionController.voiceRightChange(
+            previous: (channelID: 5, allowed: true), channelID: 6, allowed: false), .none)
+        XCTAssertEqual(TeamTalkConnectionController.voiceRightChange(
+            previous: nil, channelID: 6, allowed: false), .none)
+    }
+
+    func testAnUpdateThatLeavesTheRightAloneIsNotAChange() {
+        XCTAssertEqual(TeamTalkConnectionController.voiceRightChange(
+            previous: (channelID: 5, allowed: true), channelID: 5, allowed: true), .none)
+    }
+
+    // MARK: Stream types
+
+    func testTheListIsReadPerStreamType() {
+        var channel = Channel()
+        withUnsafeMutableBytes(of: &channel.transmitUsers) { raw in
+            let entries = raw.bindMemory(to: Int32.self)
+            entries[Int(TT_TRANSMITUSERS_USERID_INDEX)] = 7
+            entries[Int(TT_TRANSMITUSERS_STREAMTYPE_INDEX)] = Int32(STREAMTYPE_VOICE.rawValue)
+        }
+        let voice = UInt32(STREAMTYPE_VOICE.rawValue)
+        let media = UInt32(STREAMTYPE_MEDIAFILE_AUDIO.rawValue)
+        XCTAssertTrue(TeamTalkConnectionController.transmitUsersAllow(voice, in: &channel, userID: 7))
+        XCTAssertFalse(TeamTalkConnectionController.transmitUsersAllow(media, in: &channel, userID: 7))
+        XCTAssertFalse(TeamTalkConnectionController.transmitUsersAllow(voice, in: &channel, userID: 8))
+    }
 }

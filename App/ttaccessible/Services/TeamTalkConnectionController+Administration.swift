@@ -713,6 +713,61 @@ extension TeamTalkConnectionController {
         )
     }
 
+    enum VoiceRightChange: Equatable {
+        case none
+        case lost
+        case regained
+    }
+
+    /// What a new reading of the right to speak means. Only a change inside one
+    /// channel counts: joining a channel where we can't speak says so on its own.
+    static func voiceRightChange(
+        previous: (channelID: Int32, allowed: Bool)?,
+        channelID: Int32,
+        allowed: Bool
+    ) -> VoiceRightChange {
+        guard let previous, previous.channelID == channelID, previous.allowed != allowed else { return .none }
+        return allowed ? .regained : .lost
+    }
+
+    /// An operator can give or take the floor while we sit in the channel, and
+    /// nothing else tells us: the channel just updates.
+    func reportVoiceRightChangeLocked(instance: UnsafeMutableRawPointer) {
+        let channelID = TT_GetMyChannelID(instance)
+        let allowed = canTransmitVoiceInCurrentChannelLocked(instance: instance)
+        switch Self.voiceRightChange(previous: lastVoiceRight, channelID: channelID, allowed: allowed) {
+        case .none:
+            break
+        case .lost:
+            appendTransmissionBlockedHistoryLocked()
+        case .regained:
+            appendTransmissionAllowedHistoryLocked()
+        }
+        lastVoiceRight = (channelID, allowed)
+    }
+
+    /// Whether we may stream a media file's audio into our channel: the account's
+    /// right, then the same list voice goes through, for the media stream type.
+    /// Returns true when not in a channel, so the caller's other guards decide, and
+    /// on an empty rights mask, for the reason given on the voice check.
+    func canStreamMediaInCurrentChannelLocked(instance: UnsafeMutableRawPointer) -> Bool {
+        let rights = TT_GetMyUserRights(instance)
+        if rights != UInt32(USERRIGHT_NONE.rawValue),
+           (rights & UInt32(USERRIGHT_TRANSMIT_MEDIAFILE_AUDIO.rawValue)) == 0 {
+            return false
+        }
+        let channelID = TT_GetMyChannelID(instance)
+        guard channelID > 0 else { return true }
+        var channel = Channel()
+        guard TT_GetChannel(instance, channelID, &channel) != 0 else { return true }
+        let mediaBit = UInt32(STREAMTYPE_MEDIAFILE_AUDIO.rawValue)
+        return Self.isVoiceTransmissionAllowed(
+            isClassroom: (channel.uChannelType & UInt32(CHANNEL_CLASSROOM.rawValue)) != 0,
+            listedForVoice: Self.transmitUsersAllow(mediaBit, in: &channel, userID: TT_GetMyUserID(instance)),
+            freeForAllForVoice: Self.transmitUsersAllow(mediaBit, in: &channel, userID: Int32(TT_CLASSROOM_FREEFORALL))
+        )
+    }
+
     /// The server's rule, on its own so a test can pin it down: the same list means
     /// opposite things either side of `CHANNEL_CLASSROOM` — an allow list in a
     /// classroom, a block list everywhere else. It reads like a bug and isn't one,
@@ -730,15 +785,19 @@ extension TeamTalkConnectionController {
     /// stream type. The array is a C `INT32[128][2]` — a nested tuple once imported —
     /// terminated by a zero user ID, as the Qt client's `isFreeForAll` reads it too.
     private static func transmitUsersAllowVoice(in channel: inout Channel, userID: Int32) -> Bool {
-        let voiceBit = UInt32(STREAMTYPE_VOICE.rawValue)
-        return withUnsafeBytes(of: &channel.transmitUsers) { raw in
+        transmitUsersAllow(UInt32(STREAMTYPE_VOICE.rawValue), in: &channel, userID: userID)
+    }
+
+    /// `transmitUsersAllowVoice` for any stream type.
+    static func transmitUsersAllow(_ streamType: UInt32, in channel: inout Channel, userID: Int32) -> Bool {
+        withUnsafeBytes(of: &channel.transmitUsers) { raw in
             let entries = raw.bindMemory(to: Int32.self)
             for entry in stride(from: 0, to: entries.count - 1, by: 2) {
                 let entryUserID = entries[entry + Int(TT_TRANSMITUSERS_USERID_INDEX)]
                 guard entryUserID != 0 else { return false }
                 guard entryUserID == userID else { continue }
                 let streamTypes = UInt32(bitPattern: entries[entry + Int(TT_TRANSMITUSERS_STREAMTYPE_INDEX)])
-                return (streamTypes & voiceBit) != 0
+                return (streamTypes & streamType) != 0
             }
             return false
         }

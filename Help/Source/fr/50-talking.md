@@ -37,6 +37,10 @@ Deux autres options se trouvent juste en dessous, toutes deux activées par déf
 - **Le push-to-talk fonctionne même quand une autre app est au premier plan**. Le raccourci
   d'activation du micro a la même option, désactivée par défaut.
 
+Dans un canal où vous n'avez pas le droit de parler, la touche de prise de parole vous le dit et ne
+joue aucun son. Si un opérateur vous retire la parole ou vous la rend pendant que vous êtes dans le
+canal, vous en êtes averti aussi.
+
 ## Utiliser votre micro depuis une autre app
 
 Quand l'une de ces options est activée, le raccourci répond où que vous soyez : dans votre

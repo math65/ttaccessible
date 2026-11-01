@@ -539,6 +539,7 @@
 "preferences.historyEvent.fileAdded" = "Dosya eklendi";
 "preferences.historyEvent.fileRemoved" = "Dosya silindi";
 "preferences.historyEvent.transmissionBlocked" = "İletim engellendi";
+"preferences.historyEvent.transmissionAllowed" = "İletime izin verildi";
 "preferences.historyEvent.mediaStreamingStarted" = "Medya akışı başladı";
 "preferences.historyEvent.mediaStreamingFinished" = "Medya akışı bitti";
 "preferences.accessibility.help" = "Bu ayarlar yalnızca duyuruları etkiler, ekranda görünen içeriği değiştirmez.";
@@ -660,6 +661,7 @@
 "mediaStream.announced.finished" = "Akış sona erdi";
 "mediaStream.announced.error" = "Akış başarısız oldu";
 "mediaStream.error.startFailed" = "Akış başlatılamadı.";
+"mediaStream.error.notAllowedInChannel" = "Bu kanalda akış yapamazsınız.";
 "mediaStream.error.unsupportedFormat" = "Bu medya biçimi akış için desteklenmiyor.";
 "mediaStream.error.unsupportedFormat.detail" = "Bu dosya TeamTalk ile aktarılamıyor. %@";
 "mediaStream.error.reason.sdkUnsupported" = "TeamTalk bu dosya biçimini açamıyor.";
@@ -759,6 +761,7 @@
 "history.fileAdded" = "%@, %@ adlı dosyayı ekledi.";
 "history.fileRemoved" = "%@, %@ adlı dosyayı sildi.";
 "history.transmissionBlocked" = "İletim, kanal operatörü tarafından engellendi.";
+"history.transmissionAllowed" = "İletime kanal operatörü tarafından izin verildi.";
 "history.microphoneStalled" = "Mikrofonunuz artık iletilmiyordu. Yeniden başlatıldı.";
 "history.microphoneStalledFailed" = "Mikrofonunuz artık iletilmiyordu ve yeniden başlatılamadı. Mikrofonu kapatıp yeniden açın.";
 "history.unknownUser" = "bilinmeyen bir kullanıcı";

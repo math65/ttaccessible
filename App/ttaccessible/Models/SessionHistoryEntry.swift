@@ -32,6 +32,7 @@ struct SessionHistoryEntry: Equatable, Identifiable {
         case fileAdded
         case fileRemoved
         case transmissionBlocked
+        case transmissionAllowed
         case mediaStreamingStarted
         case mediaStreamingFinished
         case webcamStarted
@@ -67,7 +68,7 @@ struct SessionHistoryEntry: Equatable, Identifiable {
             Group(id: "userPresence", localizationKey: "preferences.historyEvents.group.userPresence",
                   kinds: [.userLoggedIn, .userLoggedOut, .userJoinedChannel, .userLeftChannel]),
             Group(id: "moderation", localizationKey: "preferences.historyEvents.group.moderation",
-                  kinds: [.kickedFromServer, .kickedFromChannel, .transmissionBlocked]),
+                  kinds: [.kickedFromServer, .kickedFromChannel, .transmissionBlocked, .transmissionAllowed]),
             Group(id: "status", localizationKey: "preferences.historyEvents.group.status",
                   kinds: [.autoAwayActivated, .autoAwayDeactivated, .microphoneStalled]),
             Group(id: "subscriptions", localizationKey: "preferences.historyEvents.group.subscriptions",

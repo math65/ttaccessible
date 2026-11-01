@@ -1228,6 +1228,9 @@ extension TeamTalkConnectionController {
                         || message.nClientEvent == CLIENTEVENT_CMD_CHANNEL_UPDATE {
                         refreshAdvancedMicrophoneTargetIfNeededLocked(instance: instance)
                     }
+                    if message.nClientEvent == CLIENTEVENT_CMD_CHANNEL_UPDATE {
+                        reportVoiceRightChangeLocked(instance: instance)
+                    }
                     publishInvalidation = .all
                 }
             default:
@@ -1277,6 +1280,8 @@ extension TeamTalkConnectionController {
         // Forget where we stood in a speaking queue, or reconnecting into a
         // solo-transmit channel would announce the end of a turn nobody took.
         lastTransmitQueuePosition = nil
+        lastVoiceRight = nil
+        pushToTalkPressBlocked = false
         // The instance is going away with its input session; the next turn on a
         // fresh connection must not reuse an ID the old server may have retired.
         voiceInputSessionActive = false
@@ -1644,6 +1649,7 @@ extension TeamTalkConnectionController {
                     // a command would otherwise leave the capture out of step.
                     if message.nClientEvent == CLIENTEVENT_CMD_CHANNEL_UPDATE {
                         refreshAdvancedMicrophoneTargetIfNeededLocked(instance: instance)
+                        reportVoiceRightChangeLocked(instance: instance)
                     }
                     publishSessionLocked(instance: instance, record: connectedRecord)
                 }
