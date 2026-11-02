@@ -1052,8 +1052,8 @@
 "accounts.rights.updateServerProperties" = "Изменять свойства сервера";
 "accounts.rights.transmitVoice" = "Передавать голос";
 "accounts.rights.transmitVideoCapture" = "Передавать видео";
-"accounts.rights.transmitDesktop" = "Демонстрировать рабочий стол";
-"accounts.rights.transmitDesktopInput" = "Управлять рабочим столом удалённо";
+"accounts.rights.transmitDesktop" = "Демонстрировать экран";
+"accounts.rights.transmitDesktopInput" = "Управлять экраном удалённо";
 "accounts.rights.transmitMediaFileAudio" = "Транслировать аудиофайл";
 "accounts.rights.transmitMediaFileVideo" = "Транслировать видеофайл";
 "accounts.rights.lockedNickname" = "Заблокированный никнейм";
