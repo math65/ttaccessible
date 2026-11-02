@@ -10,6 +10,7 @@ catalogue was drafted, not reviewed by a Turkish speaker. Corrections are welcom
 - Ellipsis: `…` (one character).
 - Percentages: the sign comes first, « %50 ».
 - Menu items and window titles are in title case: « Kanal Oluştur », « Kaydedilmiş Sunucular ».
+- The Return key is « Return »: « Return tuşuna basın ».
 
 ## Terms
 

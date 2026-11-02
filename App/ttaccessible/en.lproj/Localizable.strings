@@ -3,7 +3,7 @@
 "savedServers.subtitle" = "Select a server, then press Return to connect.";
 "savedServers.hint" = "Shortcuts: Return or F2 to connect, Command-N to add, Command-E to edit, Delete to remove.";
 "savedServers.table.accessibilityLabel" = "Saved TeamTalk servers";
-"savedServers.table.help" = "Use the arrow keys to browse servers and press Enter to connect.";
+"savedServers.table.help" = "Use the arrow keys to browse servers and press Return to connect.";
 "savedServers.table.emptyHelp" = "No saved servers. Press Command-N to add one.";
 "savedServers.column.name" = "Name";
 "savedServers.column.host" = "Host";

@@ -1,9 +1,9 @@
 "savedServers.window.title" = "Serveurs TeamTalk";
 "savedServers.title" = "Serveurs enregistrés";
-"savedServers.subtitle" = "Sélectionnez un serveur, puis appuyez sur Entrée pour ouvrir la session.";
-"savedServers.hint" = "Commandes: Entrée ou F2 pour se connecter, Cmd-N pour ajouter, Cmd-E pour modifier, Suppr pour supprimer.";
+"savedServers.subtitle" = "Sélectionnez un serveur, puis appuyez sur Retour pour ouvrir la session.";
+"savedServers.hint" = "Commandes: Retour ou F2 pour se connecter, Cmd-N pour ajouter, Cmd-E pour modifier, Suppr pour supprimer.";
 "savedServers.table.accessibilityLabel" = "Serveurs TeamTalk enregistrés";
-"savedServers.table.help" = "Utilisez les flèches pour parcourir les serveurs et appuyez sur Entrée pour vous connecter.";
+"savedServers.table.help" = "Utilisez les flèches pour parcourir les serveurs et appuyez sur Retour pour vous connecter.";
 "savedServers.table.emptyHelp" = "Aucun serveur enregistré. Utilisez Commande N pour ajouter un serveur.";
 "savedServers.column.name" = "Nom";
 "savedServers.column.host" = "Hôte";

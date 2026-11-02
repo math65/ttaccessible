@@ -11,6 +11,7 @@ Catalogue: `App/ttaccessible/fr.lproj/Localizable.strings`. Reviewer: Mathieu Ma
 - Ellipsis: `…` (one character), not three dots.
 - Percentages: a space before the sign, « 50 % ».
 - Menu items and window titles take a capital on the first word only: « Créer un canal ».
+- The Return key is « Retour », as in Apple's French documentation and the help book; « Entrée » means an audio input.
 
 ## Terms
 

@@ -3,7 +3,7 @@
 "savedServers.subtitle" = "Bir sunucu seçin, sonra bağlanmak için Return tuşuna basın.";
 "savedServers.hint" = "Kısayollar: bağlanmak için Return veya F2 tuşu, eklemek için Command + N, düzenlemek için Command + E, kaldırmak için Delete tuşu.";
 "savedServers.table.accessibilityLabel" = "Kaydedilmiş TeamTalk sunucuları";
-"savedServers.table.help" = "Sunucular arasında gezinmek için ok tuşlarını kullanın, bağlanmak için Enter tuşuna basın.";
+"savedServers.table.help" = "Sunucular arasında gezinmek için ok tuşlarını kullanın, bağlanmak için Return tuşuna basın.";
 "savedServers.table.emptyHelp" = "Kaydedilmiş sunucu yok. Eklemek için Command + N tuşlarına basın.";
 "savedServers.column.name" = "Ad";
 "savedServers.column.host" = "Sunucu adresi";

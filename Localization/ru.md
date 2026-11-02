@@ -57,17 +57,5 @@ pull request #51.
 
 ## Open items
 
-Two places in the merged catalogue disagree with the rules above. One is now a small change
-of its own, #53; the copy verbs above are not one of them, they follow the rule on purpose.
-
-- `savedServers.table.help` says «Enter — подключиться» where the same screen says
-  «нажмите Return» (`savedServers.subtitle`, `savedServers.hint`). The English catalogue
-  has the same split: "press Enter" there, "press Return" in the other two. So the
-  disagreement comes from English, and it should be settled there first; Russian then
-  follows the outcome.
-- «рабочий стол» is used on two lines in the permissions list
-  (`accounts.rights.transmitDesktop`, `accounts.rights.transmitDesktopInput`), against
-  seven «экран» in the rest of the catalogue — and `serverProperties.form.maxDesktopTx`
-  already says «демонстрации экрана», using the same verb with the other noun. One word
-  for one thing: «Демонстрировать экран», «Управлять экраном удалённо». That change is
-  pull request #53.
+None. Both earlier items are settled: `savedServers.table.help` now says Return, in English
+and in every catalogue, and the two «рабочий стол» lines became «экран» in #53.

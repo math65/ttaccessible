@@ -3,7 +3,7 @@
 "savedServers.subtitle" = "Выберите сервер и нажмите Return, чтобы подключиться.";
 "savedServers.hint" = "Горячие клавиши: Return или F2 — подключиться, Command-N — добавить, Command-E — изменить, Delete — удалить.";
 "savedServers.table.accessibilityLabel" = "Сохранённые серверы TeamTalk";
-"savedServers.table.help" = "Стрелками просматривайте серверы, Enter — подключиться.";
+"savedServers.table.help" = "Стрелками просматривайте серверы, Return — подключиться.";
 "savedServers.table.emptyHelp" = "Нет сохранённых серверов. Нажмите Command-N, чтобы добавить.";
 "savedServers.column.name" = "Название";
 "savedServers.column.host" = "Хост";
