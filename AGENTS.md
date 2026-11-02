@@ -49,7 +49,8 @@ what it reports (`PressActionTextFieldTests`, `AudioGainControlViewTests`,
 their chords from it, so they hold on any layout. `DeviceStreamSourceTests` is a live check: it
 opens a real input device and runs the SDK's media probe on the loopback stream, and skips when no
 input opens. `ProcessTapUpdateTests` creates a real private process tap in the test host (macOS
-14.2+) and skips when it can't.
+14.2+), and is off unless `TEST_RUNNER_TTAC_LIVE_TAP_TEST=1`: writing a tap's description makes
+coreaudiod wait on the audio-capture permission, so an unanswered prompt silences the whole Mac.
 Verify the UI, the audio path and the SDK in a real session by building and running the app.
 
 ## Language

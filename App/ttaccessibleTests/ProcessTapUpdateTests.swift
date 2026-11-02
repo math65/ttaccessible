@@ -7,6 +7,11 @@
 //  aggregate device holds that tap by its UID — so rewriting it must not change the UID.
 //  Skips when the tap can't be created (older macOS, no audio-capture permission).
 //
+//  Off unless TEST_RUNNER_TTAC_LIVE_TAP_TEST=1 is set: rewriting a tap makes coreaudiod check
+//  the audio-capture permission and wait for the answer. A Debug build isn't the signature the
+//  permission was granted to, so it asks, and until someone answers every app on the Mac,
+//  VoiceOver included, is silent (see `rebuildIfMatchedSetChanged`).
+//
 
 import CoreAudio
 import XCTest
@@ -38,6 +43,9 @@ final class ProcessTapUpdateTests: XCTestCase {
 
     func testEditingTheTapsOwnDescriptionKeepsItsUID() throws {
         guard #available(macOS 14.2, *) else { throw XCTSkip("process taps need macOS 14.2") }
+        guard ProcessInfo.processInfo.environment["TTAC_LIVE_TAP_TEST"] == "1" else {
+            throw XCTSkip("can silence every app on this Mac until a permission prompt is answered")
+        }
         let processes = ProcessTapCaptureBackend.ownAudioProcessObjectIDs()
         let created = CATapDescription(stereoMixdownOfProcesses: processes)
         created.name = "ttaccessible-test-tap"

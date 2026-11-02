@@ -55,6 +55,9 @@ final class ProcessTapCaptureBackend: DeviceStreamCaptureBackend {
     private var processListListenerInstalled = false
     private var rebuildPending = false
     private var isMuted = false
+    /// A tap delivers silence until macOS grants audio capture, so a sample that isn't zero
+    /// proves the grant. One word, written by the IO proc and read off it, as `isMuted` is.
+    private var captureProvenAllowed = false
 
     private var capturedSampleRate: Double = 48_000
     private var capturedChannels: Int = 2
@@ -308,7 +311,14 @@ final class ProcessTapCaptureBackend: DeviceStreamCaptureBackend {
         // took ~0.6 s (measured 2026-09-13) — a hole in the stream each time a helper process,
         // a Quick Look preview say, started or stopped playing. The rebuild below stays as
         // the fallback if the HAL refuses the update.
-        if ioProcID != nil, updateTapProcessesLocked(matched) {
+        //
+        // Only once audio has arrived, though. Writing a tap's description makes coreaudiod
+        // check the audio-capture permission itself, synchronously: with a prompt on screen it
+        // waits for the answer, and every client with it, VoiceOver included — so nobody hears
+        // the prompt that would release it. Measured 2026-10-30 (`HALS_Tap::SetPropertyData` →
+        // `CheckTCCAndThrow`, tccd in `CFUserNotificationReceiveResponse`). Before the first
+        // audio a rebuild has nothing to interrupt, and creating a tap doesn't block that way.
+        if ioProcID != nil, captureProvenAllowed, updateTapProcessesLocked(matched) {
             AudioLogger.log("process tap: matched process set changed (%d → %d) — updated in place",
                             tappedObjectIDs.count, matchedIDs.count)
             tappedObjectIDs = matchedIDs
@@ -579,6 +589,13 @@ final class ProcessTapCaptureBackend: DeviceStreamCaptureBackend {
                 let right = max(-1.0, min(1.0, floatPtr[frame * channels + 1]))
                 stereoScratch[frame * 2] = Int16(left * 32767)
                 stereoScratch[frame * 2 + 1] = Int16(right * 32767)
+            }
+        }
+
+        if captureProvenAllowed == false {
+            for index in 0..<(frames * 2) where stereoScratch[index] != 0 {
+                captureProvenAllowed = true
+                break
             }
         }
 
