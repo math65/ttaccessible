@@ -47,11 +47,17 @@ pull request #51.
 
 ## Open items
 
-Three places in the merged catalogue disagree with the rules above. They are worth one
-small change of their own:
+Two places in the merged catalogue disagree with the rules above. They are worth one
+small change of their own; the copy verbs above are not one of them, they follow the
+rule on purpose.
 
 - `savedServers.table.help` says «Enter — подключиться» where the same screen says
-  «нажмите Return».
-- `connectedUsers.action.copy` and `edit.menu.copy` are bare commands, while the other
-  copy strings carry an object.
-- «рабочий стол» appears once, against seven «экран».
+  «нажмите Return» (`savedServers.subtitle`, `savedServers.hint`). The English catalogue
+  has the same split: "press Enter" there, "press Return" in the other two. So the
+  disagreement comes from English, and it should be settled there first; Russian then
+  follows the outcome.
+- «рабочий стол» is used on two lines in the permissions list
+  (`accounts.rights.transmitDesktop`, `accounts.rights.transmitDesktopInput`), against
+  seven «экран» in the rest of the catalogue — and `serverProperties.form.maxDesktopTx`
+  already says «демонстрации экрана», using the same verb with the other noun. One word
+  for one thing: «Демонстрировать экран», «Управлять экраном удалённо».
