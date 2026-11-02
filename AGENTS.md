@@ -59,7 +59,7 @@ The user speaks French. Respond in French when communicating. Code, comments, an
 
 ## Architecture
 
-**macOS AppKit app** with SwiftUI preference panes. Built for accessibility (VoiceOver). Localized in English, French and Turkish.
+**macOS AppKit app** with SwiftUI preference panes. Built for accessibility (VoiceOver). Localized in English, French, Turkish and Russian.
 
 ### TeamTalk SDK
 
@@ -209,7 +209,11 @@ L10n.text("key")              // NSLocalizedString wrapper
 L10n.format("key", arg1, ...) // String(format:) wrapper
 ```
 
-String files: `App/ttaccessible/en.lproj/Localizable.strings`, `App/ttaccessible/fr.lproj/Localizable.strings`, `App/ttaccessible/tr.lproj/Localizable.strings` — all three carry the same keys.
+String files: `App/ttaccessible/{en,fr,tr,ru}.lproj/Localizable.strings` — all four carry the same keys.
+
+**Every new key goes into every catalogue in the same change.** There is no per-key fallback to English: a key missing from the active language is shown, and read by VoiceOver, as the raw key, whether the language comes from the system or from Preferences > General > Language (`L10n.configure` points a `Bundle` at that one `.lproj`).
+
+Glossaries and the translation workflow live in `Localization/` (one file per language, outside `App/ttaccessible` so they are not bundled). Drafts follow the glossary; each language's reviewer reads them before merge, as a flat list (key, English, draft), never a `.strings` diff. Russian is reviewed by Georgy Aliabyev.
 
 ### Help Book (user guide)
 
