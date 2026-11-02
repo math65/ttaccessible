@@ -13,11 +13,11 @@
 	<key>CFBundlePackageType</key>
 	<string>BNDL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.13.0-beta.6</string>
+	<string>1.13.0-beta.7</string>
 	<key>CFBundleSignature</key>
 	<string>hbwr</string>
 	<key>CFBundleVersion</key>
-	<string>62</string>
+	<string>63</string>
 	<key>HPDBookAccessPath</key>
 	<string>index.html</string>
 	<key>HPDBookCSIndexPath</key>

@@ -21,7 +21,7 @@ of the seven panes in the sidebar. Press Escape to close the window.
 | **Away message** | empty |
 | **Use relative timestamps**, such as "2 min ago" | off |
 | **Automatically detect the TeamTalk file format during import** | on |
-| **Language** — System Default, English, French or Turkish | System Default |
+| **Language** — System Default, English, French, Turkish or Russian | System Default |
 
 Automatic away sets your status to Away once you stop using the keyboard or the mouse for the number
 of minutes you choose, and clears it as soon as you really use them again. Announcements from
