@@ -412,6 +412,7 @@
 "preferences.general.language.english" = "İngilizce";
 "preferences.general.language.french" = "Fransızca";
 "preferences.general.language.turkish" = "Türkçe";
+"preferences.general.language.russian" = "Rusça";
 "preferences.general.language.help" = "Başka bir dil seçmediğiniz sürece uygulama sistem dilini kullanmayı sürdürür. Değişikliğin her yerde geçerli olması için ttaccessible'ı yeniden başlatın.";
 "preferences.general.userNameDisplayStyle.label" = "Kişileri şöyle göster";
 "preferences.general.userNameDisplayStyle.both" = "Her ikisi";
