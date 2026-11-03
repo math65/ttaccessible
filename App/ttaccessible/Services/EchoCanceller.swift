@@ -57,11 +57,14 @@ final class EchoCanceller {
     // Resampling buffer for rate conversion.
     private var resampleBuffer: [Int16] = []
 
+    // Channel-count conversion buffer (reference fed with a different channel count).
+    private var remixBuffer: [Int16] = []
+
     // Diagnostics (non-RT safe counters, only written from their respective threads).
     private var referenceFramesFed: Int = 0
     private var captureFramesProcessed: Int = 0
     private var lastDiagnosticTime: CFAbsoluteTime = 0
-    private var didLogChannelMismatch = false
+    private var didLogChannelRemix = false
 
     init?(configuration: Configuration) {
         self.config = configuration
@@ -90,14 +93,65 @@ final class EchoCanceller {
     /// Feed decoded far-end audio (what is played through speakers).
     /// Accepts any number of interleaved Int16 samples; internally chunks into 10ms frames.
     /// If `sampleRate` differs from the configured rate, linear interpolation is used to resample.
+    /// If `channels` differs from the configured count (e.g. the stereo speaker tap
+    /// feeding an AEC configured for a mono channel), the reference is remixed first.
     func feedReference(_ samples: UnsafePointer<Int16>, count: Int, channels: Int, sampleRate: Int = 0) {
-        let frameSamples = config.frameSamplesPerChannel * config.channels
+        guard count > 0, channels > 0 else { return }
 
         guard channels == config.channels else {
-            logChannelMismatchOnce(feedChannels: channels)
+            logChannelRemixOnce(feedChannels: channels)
+            EchoCanceller.remix(samples, frames: count, from: channels, to: config.channels, into: &remixBuffer)
+            remixBuffer.withUnsafeBufferPointer { buffer in
+                appendReference(buffer.baseAddress!, count: count, sampleRate: sampleRate)
+            }
+            logDiagnosticsIfNeeded(refRate: sampleRate > 0 ? sampleRate : config.sampleRate, refChannels: channels)
             return
         }
 
+        appendReference(samples, count: count, sampleRate: sampleRate)
+        logDiagnosticsIfNeeded(refRate: sampleRate > 0 ? sampleRate : config.sampleRate, refChannels: channels)
+    }
+
+    /// Converts interleaved Int16 audio from one channel count to another.
+    /// To mono: average of all channels. From mono: the channel is duplicated.
+    /// Otherwise each output channel takes input channel `c % from`.
+    /// `output` is grown if needed; on return its first `frames * to` samples hold the result.
+    static func remix(
+        _ input: UnsafePointer<Int16>,
+        frames: Int,
+        from inChannels: Int,
+        to outChannels: Int,
+        into output: inout [Int16]
+    ) {
+        let outSamples = frames * outChannels
+        if output.count < outSamples {
+            output = [Int16](repeating: 0, count: outSamples)
+        }
+        if outChannels == 1 {
+            for frame in 0..<frames {
+                var sum: Int32 = 0
+                let base = frame * inChannels
+                for ch in 0..<inChannels {
+                    sum += Int32(input[base + ch])
+                }
+                output[frame] = Int16(clamping: sum / Int32(inChannels))
+            }
+        } else {
+            for frame in 0..<frames {
+                let inBase = frame * inChannels
+                let outBase = frame * outChannels
+                for ch in 0..<outChannels {
+                    output[outBase + ch] = input[inBase + ch % inChannels]
+                }
+            }
+        }
+    }
+
+    /// Appends reference audio already at `config.channels`, resampling to the
+    /// configured rate if needed, then feeds every complete 10 ms frame to AEC3.
+    private func appendReference(_ samples: UnsafePointer<Int16>, count: Int, sampleRate: Int) {
+        let channels = config.channels
+        let frameSamples = config.frameSamplesPerChannel * channels
         let effectiveRate = sampleRate > 0 ? sampleRate : config.sampleRate
 
         if effectiveRate != config.sampleRate {
@@ -142,15 +196,13 @@ final class EchoCanceller {
             referenceFramesFed += 1
             renderAccumulator.removeFirst(frameSamples)
         }
-
-        logDiagnosticsIfNeeded(refRate: effectiveRate, refChannels: channels)
     }
 
-    private func logChannelMismatchOnce(feedChannels: Int) {
-        guard didLogChannelMismatch == false else { return }
-        didLogChannelMismatch = true
+    private func logChannelRemixOnce(feedChannels: Int) {
+        guard didLogChannelRemix == false else { return }
+        didLogChannelRemix = true
         AudioLogger.log(
-            "AEC: reference channel mismatch feed=%d config=%d — reference ignored",
+            "AEC: reference remixed feed=%d -> config=%d channels",
             feedChannels,
             config.channels
         )
