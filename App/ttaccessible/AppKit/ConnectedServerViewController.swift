@@ -21,6 +21,11 @@ final class ServerTreeRowView: NSTableRowView {
 // rejoindre un serveur / un salon.
 final class PressActionTextField: NSTextField {
     var onPress: (() -> Void)?
+    var onShowMenu: (() -> Bool)?
+
+    override func accessibilityPerformShowMenu() -> Bool {
+        onShowMenu?() ?? super.accessibilityPerformShowMenu()
+    }
 
     /// Whether VoiceOver hears the tooltip as help. Off where the tooltip only repeats
     /// the accessibility label: the channel tree sets both to the row's full text, so a
