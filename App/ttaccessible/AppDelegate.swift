@@ -122,6 +122,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let muteHotkeyMonitor = HotkeyMonitor()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Hosted unit tests must not present first-run dialogs, connect to a saved
+        // server, or open audio devices before XCTest establishes its session.
+        if NSClassFromString("XCTestCase") != nil { return }
         ProfileInstanceLock.acquire(for: ProfileContext.current)
         AudioLogger.clear()
         let sdkVersion = String(cString: TT_GetVersion())
