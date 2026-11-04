@@ -118,11 +118,24 @@ extension ConnectedServerViewController: NSOutlineViewDelegate {
             textField.lineBreakMode = .byTruncatingTail
         }
 
-        // VO-Espace effectue l'action par défaut sur CE nœud (rejoindre/quitter un salon,
-        // ouvrir un message privé), comme la touche Entrée — indépendamment de la
-        // sélection, car sans interaction l'arbre n'a aucune ligne sélectionnée.
-        textField.onPress = { [weak self] in
-            self?.performDefaultAction(for: node)
+        let defaultActionName: String
+        switch node {
+        case .channel(let channel):
+            defaultActionName = L10n.text(channel.isCurrentChannel
+                ? "connectedServer.voAction.leave" : "connectedServer.voAction.join")
+        case .user:
+            defaultActionName = L10n.text("connectedServer.voAction.privateMessage")
+        }
+        let defaultAction = rowAccessibilityAction(name: defaultActionName, node: node) { controller, current in
+            controller.performDefaultAction(for: current)
+        }
+        textField.onPress = { _ = defaultAction.handler?() }
+        let serverID = session.savedServer.id
+        textField.onShowMenu = { [weak self] in
+            guard let self, self.session.savedServer.id == serverID,
+                  let current = self.currentAccessibilityNode(matching: node),
+                  self.selectNode(matching: self.selectionKey(for: current)) else { return false }
+            return self.outlineView.accessibilityPerformShowMenu()
         }
 
         let accessLabel = accessibilityText(for: node)
@@ -156,23 +169,14 @@ extension ConnectedServerViewController: NSOutlineViewDelegate {
                 textField.attributedStringValue = attr
                 textField.maximumNumberOfLines = 2
             }
-            let joinActionName = channel.isCurrentChannel
-                ? L10n.text("connectedServer.voAction.leave")
-                : L10n.text("connectedServer.voAction.join")
-            var channelActions: [NSAccessibilityCustomAction] = [
-                NSAccessibilityCustomAction(name: joinActionName) { [weak self] in
-                    self?.performDefaultAction(); return true
-                }
-            ]
+            var channelActions: [NSAccessibilityCustomAction] = [defaultAction]
             if !channel.users.isEmpty, canMoveUsers(from: channel) {
-                // Capture the ID and re-resolve at invoke time: this action
-                // belongs to THIS row (the VoiceOver cursor's), and the row's
-                // occupants may have changed since the cell was built.
-                let channelID = channel.id
-                channelActions.append(NSAccessibilityCustomAction(name: L10n.text("connectedServer.voAction.moveChannelUsers")) { [weak self] in
-                    guard let self, let target = self.session.findChannelByID(channelID) else { return false }
-                    self.presentMoveUsers(in: target)
-                    return true
+                channelActions.append(rowAccessibilityAction(
+                    name: L10n.text("connectedServer.voAction.moveChannelUsers"), node: node
+                ) { controller, current in
+                    guard case .channel(let target) = current,
+                          controller.canMoveUsers(from: target) else { return }
+                    controller.presentMoveUsers(in: target)
                 })
             }
             textField.setAccessibilityCustomActions(channelActions)
@@ -182,33 +186,35 @@ extension ConnectedServerViewController: NSOutlineViewDelegate {
                 : .systemFont(ofSize: NSFont.systemFontSize)
             textField.stringValue = visualUserText(for: user)
             textField.maximumNumberOfLines = 1
-            var actions: [NSAccessibilityCustomAction] = [
-                NSAccessibilityCustomAction(name: L10n.text("connectedServer.voAction.privateMessage")) { [weak self] in
-                    self?.openPrivateConversation(nil); return true
-                }
-            ]
+            var actions: [NSAccessibilityCustomAction] = [defaultAction]
             if !user.isCurrentUser {
                 let isMuted = localMuteState[user.id] ?? user.isMuted
-                let muteTitle = isMuted
-                    ? L10n.text("connectedServer.menu.unmuteUser")
-                    : L10n.text("connectedServer.menu.muteUser")
-                actions.append(NSAccessibilityCustomAction(name: muteTitle) { [weak self] in
-                    self?.toggleMuteUserAction(); return true
+                let muteTitle = L10n.text(isMuted
+                    ? "connectedServer.menu.unmuteUser" : "connectedServer.menu.muteUser")
+                actions.append(rowAccessibilityAction(name: muteTitle, node: node) { controller, current in
+                    guard case .user(let target) = current else { return }
+                    controller.performToggleMute(target, presentingWindow: controller.view.window)
                 })
-                let isMediaFileMuted = localMediaFileMuteState[user.id] ?? user.isMediaFileMuted
-                let mediaFileMuteTitle = isMediaFileMuted
-                    ? L10n.text("connectedServer.menu.unmuteMediaFile")
-                    : L10n.text("connectedServer.menu.muteMediaFile")
-                actions.append(NSAccessibilityCustomAction(name: mediaFileMuteTitle) { [weak self] in
-                    self?.toggleMuteUserMediaFileAction(); return true
+                let mediaMuted = localMediaFileMuteState[user.id] ?? user.isMediaFileMuted
+                let mediaTitle = L10n.text(mediaMuted
+                    ? "connectedServer.menu.unmuteMediaFile" : "connectedServer.menu.muteMediaFile")
+                actions.append(rowAccessibilityAction(name: mediaTitle, node: node) { controller, current in
+                    guard case .user(let target) = current else { return }
+                    controller.performToggleMuteMediaFile(target, presentingWindow: controller.view.window)
                 })
                 let me = session.currentUser
                 if me?.isAdministrator == true || me?.isChannelOperator == true {
-                    actions.append(NSAccessibilityCustomAction(name: L10n.text("connectedServer.menu.kickUser")) { [weak self] in
-                        self?.kickUserAction(nil); return true
+                    actions.append(rowAccessibilityAction(
+                        name: L10n.text("connectedServer.menu.kickUser"), node: node
+                    ) { controller, current in
+                        guard case .user(let target) = current else { return }
+                        controller.performKick(target, fromServer: false, presentingWindow: controller.view.window)
                     })
-                    actions.append(NSAccessibilityCustomAction(name: L10n.text("connectedServer.menu.moveUser")) { [weak self] in
-                        self?.moveUserAction(nil); return true
+                    actions.append(rowAccessibilityAction(
+                        name: L10n.text("connectedServer.menu.moveUser"), node: node
+                    ) { controller, current in
+                        guard case .user(let target) = current else { return }
+                        controller.performMove([target], presentingWindow: controller.view.window)
                     })
                 }
             }

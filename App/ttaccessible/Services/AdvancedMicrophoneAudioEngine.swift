@@ -127,6 +127,7 @@ final class AdvancedMicrophoneAudioEngine {
     private var selectedBuffer = [Float]()
     private var adaptedBuffer = [Float]()
     private var int16Buffer = [Int16]()
+    private let captureResampler = AudioPCMResampler.Stream()
 
     /// Echo canceller instance, created when AEC is enabled.
     var echoCanceller: EchoCanceller?
@@ -170,6 +171,7 @@ final class AdvancedMicrophoneAudioEngine {
 
     private func startLocked(configuration: AdvancedMicrophoneAudioConfiguration) throws -> Int32 {
         stopLocked()
+        captureResampler.reset()
 
         guard configuration.device.inputChannels > 0 else {
             throw AdvancedMicrophoneAudioEngineError.deviceUnavailable
@@ -851,18 +853,12 @@ final class AdvancedMicrophoneAudioEngine {
             workingFrameCount = workingSamples.count / outputChannels
         }
 
-        let resampled: AudioPCMResampler.Result
-        if abs(captureRate - outputRate) >= 0.5 {
-            resampled = AudioPCMResampler.resampleInterleaved(
-                workingSamples,
-                frameCount: workingFrameCount,
-                channels: outputChannels,
-                inputRate: captureRate,
-                outputRate: outputRate
-            )
-        } else {
-            resampled = AudioPCMResampler.Result(samples: workingSamples, frameCount: workingFrameCount)
-        }
+        let resampled = captureResampler.process(
+            workingSamples, frameCount: workingFrameCount, channels: outputChannels,
+            inputRate: captureRate, outputRate: outputRate
+        )
+
+        guard resampled.frameCount > 0 else { return }
 
         let peak = resampled.samples.reduce(Int32(0)) { partial, sample in
             max(partial, abs(Int32(sample)))
