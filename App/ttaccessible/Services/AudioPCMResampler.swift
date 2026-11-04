@@ -12,6 +12,67 @@ enum AudioPCMResampler {
         let frameCount: Int
     }
 
+    /// Keeps fractional source position across capture callbacks. Rounding each
+    /// callback independently changes the stream duration and resets its phase.
+    /// One source frame is retained so interpolation crosses callback boundaries.
+    final class Stream {
+        private var inputRate: Double = 0
+        private var outputRate: Double = 0
+        private var channels = 0
+        private var previousFrame: [Int16] = []
+        private var nextPosition: Double = 0
+
+        func reset() {
+            previousFrame.removeAll(keepingCapacity: true)
+            nextPosition = 0
+            inputRate = 0
+            outputRate = 0
+            channels = 0
+        }
+
+        func process(_ samples: [Int16], frameCount: Int, channels: Int,
+                     inputRate: Double, outputRate: Double) -> Result {
+            guard frameCount > 0, channels > 0, frameCount <= samples.count / channels,
+                  inputRate.isFinite, outputRate.isFinite,
+                  inputRate > 0, outputRate > 0 else {
+                return Result(samples: [], frameCount: 0)
+            }
+            if self.inputRate != inputRate || self.outputRate != outputRate || self.channels != channels {
+                reset()
+                self.inputRate = inputRate
+                self.outputRate = outputRate
+                self.channels = channels
+            }
+            if abs(inputRate - outputRate) < 0.5 {
+                return Result(samples: samples.count == frameCount * channels
+                    ? samples : Array(samples.prefix(frameCount * channels)), frameCount: frameCount)
+            }
+
+            let hasPrevious = !previousFrame.isEmpty
+            let availableFrames = frameCount + (hasPrevious ? 1 : 0)
+            let step = inputRate / outputRate
+            var output = [Int16]()
+            output.reserveCapacity(Int(ceil(Double(frameCount) / step)) * channels)
+            func sample(_ frame: Int, _ channel: Int) -> Int16 {
+                if hasPrevious && frame == 0 { return previousFrame[channel] }
+                return samples[(frame - (hasPrevious ? 1 : 0)) * channels + channel]
+            }
+            while nextPosition < Double(availableFrames - 1) {
+                let index = Int(nextPosition)
+                let fraction = nextPosition - Double(index)
+                for channel in 0..<channels {
+                    let first = Double(sample(index, channel))
+                    let second = Double(sample(index + 1, channel))
+                    output.append(Int16(clamping: Int((first + fraction * (second - first)).rounded())))
+                }
+                nextPosition += step
+            }
+            nextPosition -= Double(availableFrames - 1)
+            previousFrame = Array(samples[(frameCount - 1) * channels..<frameCount * channels])
+            return Result(samples: output, frameCount: output.count / channels)
+        }
+    }
+
     static func resampleInterleaved(
         _ samples: [Int16],
         frameCount: Int,
