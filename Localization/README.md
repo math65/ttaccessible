@@ -13,6 +13,7 @@ bundled into the app.
 | [fr.md](fr.md) | French | Mathieu Martin |
 | [tr.md](tr.md) | Turkish | none yet: drafted, not reviewed by a native speaker |
 | [ru.md](ru.md) | Russian | Georgy Aliabyev |
+| [zh-Hans.md](zh-Hans.md) | Simplified Chinese | draft; user/VoiceOver review pending |
 
 ## Adding a string
 

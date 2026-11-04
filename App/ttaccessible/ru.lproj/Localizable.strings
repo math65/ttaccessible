@@ -1283,3 +1283,5 @@
 
 // A chat line: who said it, then what they said
 "chat.line.senderMessage" = "%1$@: %2$@";
+
+"preferences.general.language.simplifiedChinese" = "Китайский (упрощённый)";
