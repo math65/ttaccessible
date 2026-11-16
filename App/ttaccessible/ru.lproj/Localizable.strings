@@ -136,6 +136,7 @@
 "connectedServer.audio.microphone.disable" = "Выключить микрофон";
 "connectedServer.audio.inputGain.label" = "Громкость входа";
 "connectedServer.audio.inputGain.accessibilityLabel" = "Громкость микрофона";
+"connectedServer.audio.inputGain.setByChannel" = "Задаётся каналом";
 "connectedServer.audio.outputGain.label" = "Громкость вывода";
 "connectedServer.audio.outputGain.accessibilityLabel" = "Общая громкость вывода";
 "connectedServer.audio.mediaGain.label" = "Громкость медиа";

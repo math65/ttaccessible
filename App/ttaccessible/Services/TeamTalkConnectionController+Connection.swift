@@ -1277,7 +1277,12 @@ extension TeamTalkConnectionController {
         // Forget where we stood in a speaking queue, or reconnecting into a
         // solo-transmit channel would announce the end of a turn nobody took.
         lastTransmitQueuePosition = nil
-        channelInputGainDB = nil
+        // The engine is rebuilt from the preferences on its next start anyway; telling
+        // it now keeps the two from disagreeing in between.
+        if channelInputGainDB != nil {
+            channelInputGainDB = nil
+            advancedMicrophoneEngine.updateInputGainDB(preferencesStore.preferences.inputGainDB)
+        }
         // The instance is going away with its input session; the next turn on a
         // fresh connection must not reuse an ID the old server may have retired.
         voiceInputSessionActive = false
