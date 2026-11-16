@@ -41,6 +41,7 @@ final class ChannelMixerKeyboardController {
     private let mediaVolumeAdjust: (MixerLevelMove) -> String?
 
     private var monitor: Any?
+    private var resignObserver: NSObjectProtocol?
     private let keyHandler = KeyCommandHandler()
     private let keyRepeat = ArrowRepeatHandler()
 
@@ -54,33 +55,48 @@ final class ChannelMixerKeyboardController {
 
     func start() {
         stop()
+        keyRepeat.announce = { [weak self] text in self?.announce(text) }
         monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp]) { [weak self] event in
             guard let self else { return event }
             return self.handle(event) ? nil : event
+        }
+        // A key released while another app is in front sends its key-up there, never
+        // to this monitor: leaving the app ends any repeat.
+        resignObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didResignActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.keyRepeat.stop() }
         }
     }
 
     func stop() {
         if let monitor { NSEvent.removeMonitor(monitor) }
         monitor = nil
+        if let resignObserver { NotificationCenter.default.removeObserver(resignObserver) }
+        resignObserver = nil
         keyRepeat.stop()
     }
 
-    deinit { if let monitor { NSEvent.removeMonitor(monitor) } }
+    deinit {
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        if let resignObserver { NotificationCenter.default.removeObserver(resignObserver) }
+    }
 
     // MARK: Dispatch
 
     private func handle(_ event: NSEvent) -> Bool {
         guard NSApp.isActive else { keyRepeat.stop(); return false }
-        // Never intercept while typing in a text field.
-        if NSApp.keyWindow?.firstResponder is NSTextView { return false }
-
         let key = mixerKey(from: event)
 
+        // A key-up always ends its repeat, even if focus has moved into a text field
+        // since the key went down: checked before the text-field guard below, or the
+        // repeat would never hear its key-up.
         if event.type == .keyUp {
             if let key { keyRepeat.stop(key: key) }
             return false
         }
+        // Never intercept while typing in a text field.
+        if NSApp.keyWindow?.firstResponder is NSTextView { keyRepeat.stop(); return false }
         guard event.type == .keyDown else { return false }
 
         let mods = event.modifierFlags
@@ -100,8 +116,8 @@ final class ChannelMixerKeyboardController {
             guard !key.hasListMeaning || findFocusedStrip() != nil else {
                 keyRepeat.stop(); return false
             }
-            keyRepeat.start(key: key) { [weak self] in
-                if let text = self?.mediaVolumeAdjust(move) { self?.announce(text) }
+            keyRepeat.start(key: key, keyCode: event.keyCode) { [weak self] in
+                self?.mediaVolumeAdjust(move)
             }
             return true
         }
@@ -113,13 +129,12 @@ final class ChannelMixerKeyboardController {
            let key, let move {
             let strip = findFocusedStrip()
             if let uid = strip {
-                keyRepeat.start(key: key) { [weak self] in
-                    guard let self, let c = self.coordinator else { return }
-                    self.announce(c.nudgeMedia(uid, move: move))
+                keyRepeat.start(key: key, keyCode: event.keyCode) { [weak self] in
+                    self?.coordinator?.nudgeMedia(uid, move: move)
                 }
             } else if !key.hasListMeaning {
-                keyRepeat.start(key: key) { [weak self] in
-                    if let text = self?.masterVolumeAdjust(move) { self?.announce(text) }
+                keyRepeat.start(key: key, keyCode: event.keyCode) { [weak self] in
+                    self?.masterVolumeAdjust(move)
                 }
             } else {
                 // Cmd+Home/End/Page off a strip: the list under the cursor keeps them.
@@ -134,9 +149,8 @@ final class ChannelMixerKeyboardController {
         if cmd, !shift, !mods.contains(.option), !mods.contains(.control),
            let key, key == .left || key == .right {
             guard let uid = findFocusedStrip() else { keyRepeat.stop(); return false }
-            keyRepeat.start(key: key) { [weak self] in
-                guard let self, let c = self.coordinator else { return }
-                self.announce(c.nudgeMediaPan(uid, right: key == .right))
+            keyRepeat.start(key: key, keyCode: event.keyCode) { [weak self] in
+                self?.coordinator?.nudgeMediaPan(uid, right: key == .right)
             }
             return true
         }
@@ -169,15 +183,12 @@ final class ChannelMixerKeyboardController {
         }
 
         if plain, let key {
-            keyRepeat.start(key: key) { [weak self] in
-                guard let self, let c = self.coordinator else { return }
-                let text: String
+            keyRepeat.start(key: key, keyCode: event.keyCode) { [weak self] in
+                guard let c = self?.coordinator else { return nil }
                 if let move = key.levelMove {
-                    text = c.nudgeVoice(uid, move: move)
-                } else {
-                    text = c.nudgeVoicePan(uid, right: key == .right)
+                    return c.nudgeVoice(uid, move: move)
                 }
-                self.announce(text)
+                return c.nudgeVoicePan(uid, right: key == .right)
             }
             return true
         }
@@ -354,34 +365,83 @@ final class KeyCommandHandler {
 /// Key-repeat for the arrow and page keys (0.3s initial delay, then 0.15s). A key that
 /// doesn't repeat (Home, End) still counts as held until its keyUp, so the system's own
 /// auto-repeat keyDowns are swallowed instead of re-running the action.
+///
+/// The repeat ends three ways, so it can never run on by itself:
+/// - the key's keyUp (the normal case);
+/// - the key no longer being down when a tick fires (`CGEventSource.keyState`), which
+///   covers a keyUp that went elsewhere — another app in front, a text field, VoiceOver;
+/// - the level reaching its end: a tick whose announcement is the same as the last one
+///   changed nothing, so it stops and says nothing (as in Rocco's Mixer app). The key
+///   stays held, so the system's auto-repeat can't restart it either.
+/// Without these, a lost keyUp left the timer stepping and announcing forever ("left,
+/// left, left…" with the pan pinned hard left, and the opposite arrow couldn't stop it).
 @MainActor
 final class ArrowRepeatHandler {
+    /// Speaks each step's result. Set by the owner.
+    var announce: (String) -> Void = { _ in }
+    /// Reads whether a key is physically down. Replaceable for tests. Reading another
+    /// key than a modifier may take Input Monitoring; without it the answer can't be
+    /// trusted, so the key counts as down and the other two ways still end the repeat.
+    var isKeyDown: (CGKeyCode) -> Bool = { code in
+        guard CGPreflightListenEventAccess() else { return true }
+        return CGEventSource.keyState(.combinedSessionState, key: code)
+    }
+
     private var pending: DispatchWorkItem?
     private var timer: Timer?
     private var activeKey: MixerKey?
-    private let initialDelay: TimeInterval = 0.3
-    private let repeatInterval: TimeInterval = 0.15
+    private var lastText: String?
+    private let initialDelay: TimeInterval
+    private let repeatInterval: TimeInterval
 
-    func start(key: MixerKey, action: @escaping () -> Void) {
+    init(initialDelay: TimeInterval = 0.3, repeatInterval: TimeInterval = 0.15) {
+        self.initialDelay = initialDelay
+        self.repeatInterval = repeatInterval
+    }
+
+    var isRepeating: Bool { pending != nil || timer != nil }
+
+    /// `step` moves the level once and returns what to announce (nil: nothing moved).
+    func start(key: MixerKey, keyCode: UInt16, step: @escaping () -> String?) {
         if activeKey == key { return }
         stop()
         activeKey = key
-        action()
+        let first = step()
+        if let first { announce(first) }
+        lastText = first
         guard activeKey == key, key.repeats else { return }
         let work = DispatchWorkItem { [weak self] in
             guard let self else { return }
-            self.timer = Timer.scheduledTimer(withTimeInterval: self.repeatInterval, repeats: true) { _ in action() }
+            self.pending = nil
+            self.timer = Timer.scheduledTimer(withTimeInterval: self.repeatInterval, repeats: true) { [weak self] _ in
+                MainActor.assumeIsolated { self?.tick(keyCode: keyCode, step: step) }
+            }
         }
         pending = work
         DispatchQueue.main.asyncAfter(deadline: .now() + initialDelay, execute: work)
     }
 
+    func tick(keyCode: UInt16, step: () -> String?) {
+        guard isKeyDown(CGKeyCode(keyCode)) else { stop(); return }
+        let text = step()
+        guard let text, text != lastText else { haltAtEnd(); return }
+        lastText = text
+        announce(text)
+    }
+
+    /// Stops stepping but keeps the key held, so its own auto-repeat stays swallowed
+    /// until the keyUp.
+    private func haltAtEnd() {
+        pending?.cancel(); pending = nil
+        timer?.invalidate(); timer = nil
+    }
+
     func stop(key: MixerKey) { guard activeKey == key else { return }; stop() }
 
     func stop() {
-        pending?.cancel(); pending = nil
-        timer?.invalidate(); timer = nil
+        haltAtEnd()
         activeKey = nil
+        lastText = nil
     }
 }
 #endif
