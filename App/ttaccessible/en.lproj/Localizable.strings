@@ -652,8 +652,9 @@
 "mediaStream.panel.message" = "Choose an audio or video file to stream into the channel. Video support depends on what TeamTalk can open on your Mac. 10-bit video is not supported.";
 "mediaStream.panel.choose" = "Stream";
 "mediaStream.url.prompt.title" = "Stream URL";
-"mediaStream.url.prompt.message" = "Enter the URL of an audio stream (internet radio, http, rtmp, rtsp).";
+"mediaStream.url.prompt.message" = "Enter the address of an audio stream, or of a web page with audio or video, like YouTube.";
 "mediaStream.url.prompt.placeholder" = "https://stream.example.com/radio.mp3";
+"mediaStream.url.resolving" = "Looking up %@…";
 "mediaStream.url.prompt.accessibilityLabel" = "Audio stream URL";
 "mediaStream.url.prompt.start" = "Stream";
 "mediaStream.url.error.invalid.title" = "Invalid URL";

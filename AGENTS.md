@@ -30,6 +30,9 @@ open ~/Library/Developer/Xcode/DerivedData/ttaccessible-*/Build/Products/Debug/t
 # Regenerate the Apple Help Book after editing Help/Source/**.md
 ./scripts/build-help-book.sh <marketing-version> <build-number>
 ./scripts/build-help-book.sh --dev     # timestamp version, defeats the helpd cache
+
+# Fetch the embedded Python, yt-dlp and CA bundle into Vendor/Python/ (git-ignored; the app links it)
+./scripts/download-python.sh
 ```
 
 `build.sh` re-signs the Xcode-built .app with the `Developer ID Application` cert (the project itself still builds with Apple Development for convenience). Requires the notarytool keychain profile `ttaccessible-notary` to be stored (see notarization setup memory).
@@ -51,6 +54,9 @@ opens a real input device and runs the SDK's media probe on the loopback stream,
 input opens. `ProcessTapUpdateTests` creates a real private process tap in the test host (macOS
 14.2+), and is off unless `TEST_RUNNER_TTAC_LIVE_TAP_TEST=1`: writing a tap's description makes
 coreaudiod wait on the audio-capture permission, so an unanswered prompt silences the whole Mac.
+`EmbeddedPythonTests` and `YtDlpUpdaterTests` are live too: they start the embedded Python inside
+the test host and need the network (a YouTube page; yt-dlp's latest release, downloaded into a
+temporary folder).
 Verify the UI, the audio path and the SDK in a real session by building and running the app.
 
 ## Language
@@ -286,6 +292,17 @@ The app talks to Mathieu's shared Go backend (`https://mathieumartin.ovh`, repo 
 - **Integration**: `WebRTCEchoCanceller.h` (C API, in `Vendor/WebRTC/`) + `WebRTCEchoCanceller.mm` (ObjC++ impl in `App/ttaccessible/Services/`) + bridging header. Linked with `-lc++`.
 
 **Note**: The TeamTalk SDK also bundles WebRTC audio processing internally, but it only works with `TT_InitSoundDuplexDevices()` (real sound devices in duplex mode). It does NOT work with `TT_InsertAudioBlock` / virtual device. That's why we run our own AEC3 instance.
+
+### Embedded Python and yt-dlp (Vendor)
+
+Stream URL looks web pages up (YouTube and the other sites yt-dlp supports) through yt-dlp, running in a CPython embedded in the app, in-process: no helper executable for the sandbox to launch, nothing for the user to install.
+- **Download**: `./scripts/download-python.sh` puts BeeWare's Python-Apple-support build of CPython 3.14 (`Python.xcframework`), a pinned yt-dlp zipapp and certifi's CA bundle in `Vendor/Python/` (git-ignored, like the TeamTalk SDK), each checked against its published SHA-256, and strips the standard library's test suite, IDLE, turtle demos, ensurepip and `config-3.14-darwin` (it only builds extensions, and its `python.o` would fail notarization unsigned). Change a version and its checksum together.
+- **Xcode**: `Python.xcframework` is linked and copied by an **`Embed Python`** phase (CodeSignOnCopy); `Vendor/Python/PythonSupport` (`yt-dlp.zip`, `yt-dlp.version`, `cacert.pem`) is a folder reference in *Recovered References*, copied by `Resources` like the Help Book. No run-script phase.
+- **`PythonShim.c` / `PythonShim.h`** (`Services/`) — five plain C calls (`ttac_py_start`, `ttac_py_resolve`, `ttac_py_switch_ytdlp`, `ttac_py_ytdlp_version`, `ttac_py_free`), so Swift never includes `Python.h`: only `PythonShim.h` is in the bridging header. The interpreter is isolated (no environment, no user site-packages, no bytecode written into the signed bundle), and the yt-dlp logic is a short Python bootstrap inside the shim. Each call takes the GIL itself. OpenSSL still reads `SSL_CERT_FILE` (the bundled CA list); `EmbeddedPython.prepareEnvironment()` sets it once in `applicationWillFinishLaunching`, before the SDK and audio threads exist, because `setenv` races a `getenv` on another thread.
+- **`EmbeddedPython`** (`Services/`) — starts Python on first use, on its own queue, never the main thread; loads the newest downloaded yt-dlp first and the bundled one if that won't import.
+- **`YtDlpUpdater`** (`Services/`, an actor) — a minute after launch, at most once a day, and when a page fails to resolve (`checkAfterFailure`: unless any check ran within the hour), asks GitHub for yt-dlp's latest release. A newer `yt-dlp` asset is checked against the release's `SHA2-256SUMS`, kept in `Application Support/ttaccessible/yt-dlp/<version>/` (one copy for every profile) and switched into the running interpreter; one that won't import is forgotten and the previous copy reloaded. Independent of the app-update (Sparkle) preference.
+- **Stream URL**: `AppDelegate.looksLikeWebPage` decides what is looked up — an http(s) address without an audio, video or playlist extension. Anything else goes straight to the SDK as before, and a page yt-dlp can't read is streamed as typed. An address yt-dlp's Generic extractor only hands back (an Icecast mount without an extension, `isPlainStream`) streams under the host's name, as before. "Looking up…" is spoken only if the lookup takes over a second (`resolvingAnnouncementDelay`). yt-dlp updates are verified by SHA-256 from the release's own `SHA2-256SUMS`, as yt-dlp's `-U` does; its `SHA2-256SUMS.sig` is not checked. The recent-URL list keeps the page as typed, never the media link behind it, which expires. yt-dlp's `http_headers` are not passed on (the TeamTalk streamer takes only a URL), so a site whose media needs them may still fail.
+- **Release signing**: `build.sh --notarize` also signs the framework's `*.so` extension modules (shipped ad-hoc signed) and walks with `find -depth`, so a framework is signed after its contents. Not yet proven against a real Developer ID notarization.
 
 ### Original TeamTalk Reference
 

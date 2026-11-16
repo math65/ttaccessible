@@ -19,10 +19,13 @@ extension TeamTalkConnectionController {
         )
     }
 
-    func startStreamingMediaURL(_ url: URL, completion: @escaping (Result<Void, Error>) -> Void) {
+    /// `displayName`: what the stream is called — a web page's title, when Stream URL looked
+    /// the page up; the host otherwise.
+    func startStreamingMediaURL(_ url: URL, displayName: String? = nil,
+                                completion: @escaping (Result<Void, Error>) -> Void) {
         startStreamingMedia(
             path: url.absoluteString,
-            displayName: url.host ?? url.absoluteString,
+            displayName: displayName ?? url.host ?? url.absoluteString,
             sourceKind: .url,
             securityScopedURL: nil,
             sourceURL: nil,
