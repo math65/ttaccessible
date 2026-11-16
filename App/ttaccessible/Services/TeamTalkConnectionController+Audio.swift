@@ -240,6 +240,7 @@ extension TeamTalkConnectionController {
     /// it restores the last transmit state, as before.
     func armMicrophoneEngineOnJoinLocked(instance: UnsafeMutableRawPointer) {
         lastVoiceRight = (TT_GetMyChannelID(instance), canTransmitVoiceInCurrentChannelLocked(instance: instance))
+        voiceRightLossAnnouncedChannelID = nil
         guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else { return }
         // An engine carried over from the channel we just left still holds that
         // channel's target format, and neither arming path below rebuilds a
@@ -1586,7 +1587,11 @@ extension TeamTalkConnectionController {
             voiceTransmissionEnabled = false
             bothGateOpen = false
             SoundPlayer.shared.play(.voxMeDisable)
-            appendTransmissionBlockedHistoryLocked()
+            // An operator taking the floor was announced when the channel changed;
+            // the mic closing here is the same news.
+            if voiceRightLossAnnouncedChannelID != TT_GetMyChannelID(instance) {
+                appendTransmissionBlockedHistoryLocked()
+            }
             if let connectedRecord {
                 publishSessionLocked(instance: instance, record: connectedRecord)
             }

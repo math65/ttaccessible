@@ -713,7 +713,7 @@ extension TeamTalkConnectionController {
         )
     }
 
-    enum VoiceRightChange: Equatable {
+    nonisolated enum VoiceRightChange: Equatable {
         case none
         case lost
         case regained
@@ -740,8 +740,10 @@ extension TeamTalkConnectionController {
             break
         case .lost:
             appendTransmissionBlockedHistoryLocked()
+            voiceRightLossAnnouncedChannelID = channelID
         case .regained:
             appendTransmissionAllowedHistoryLocked()
+            voiceRightLossAnnouncedChannelID = nil
         }
         lastVoiceRight = (channelID, allowed)
     }
