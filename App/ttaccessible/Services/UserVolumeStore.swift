@@ -27,6 +27,17 @@ import Foundation
 /// and fall back to the 50% default — intentional, as those values are exactly the
 /// cross-server-polluted data the scoping fixes.
 final class UserVolumeStore {
+    /// The name a user's levels are remembered under: the account's username, or, for a
+    /// guest (an anonymous login has none), the nickname, so a guest's volume and pan come
+    /// back too. Marked with U+001E, which a TeamTalk username can't contain, so a guest
+    /// named "Bob" never shares an entry with an account named "Bob". Two guests with the
+    /// same nickname on one server do share one; a guest who changes nickname starts over.
+    nonisolated static func memoryName(username: String, nickname: String) -> String {
+        if username.isEmpty == false { return username }
+        let nickname = nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+        return nickname.isEmpty ? "" : "\u{1E}" + nickname
+    }
+
     typealias MemoryMode = AppPreferences.UserVolumeMemoryMode
 
     private let key = "userVoiceVolumeByUsername"

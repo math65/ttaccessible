@@ -166,27 +166,27 @@ final class ChannelMixerCoordinator: ObservableObject {
     private func voicePercent(_ id: Int32) -> Double {
         if let cached = voicePctCache[id] { return cached }
         guard let controller, let user = user(for: id) else { return 0 }
-        let v = controller.userVolumeStore.volume(forUsername: user.username) ?? user.volumeVoice
+        let v = controller.userVolumeStore.volume(forUsername: user.volumeMemoryName) ?? user.volumeVoice
         return Double(TeamTalkConnectionController.percentFromUserVolume(v))
     }
 
     private func mediaPercent(_ id: Int32) -> Double {
         if let cached = mediaPctCache[id] { return cached }
         guard let controller, let user = user(for: id) else { return 0 }
-        let v = controller.userVolumeStore.mediaFileVolume(forUsername: user.username) ?? user.volumeMediaFile
+        let v = controller.userVolumeStore.mediaFileVolume(forUsername: user.volumeMemoryName) ?? user.volumeMediaFile
         return Double(TeamTalkConnectionController.percentFromUserVolume(v))
     }
 
     private func voicePanValue(_ id: Int32) -> Double {
         if let cached = voicePanCache[id] { return cached }
         guard let controller, let user = user(for: id) else { return 0 }
-        return Double(controller.userVolumeStore.voicePan(forUsername: user.username) ?? 0)
+        return Double(controller.userVolumeStore.voicePan(forUsername: user.volumeMemoryName) ?? 0)
     }
 
     private func mediaPanValue(_ id: Int32) -> Double {
         if let cached = mediaPanCache[id] { return cached }
         guard let controller, let user = user(for: id) else { return 0 }
-        return Double(controller.userVolumeStore.mediaPan(forUsername: user.username) ?? 0)
+        return Double(controller.userVolumeStore.mediaPan(forUsername: user.volumeMemoryName) ?? 0)
     }
 
     private func isMutedFromSession(_ id: Int32) -> Bool {
@@ -291,7 +291,7 @@ final class ChannelMixerCoordinator: ObservableObject {
         guard let controller, let user = user(for: id) else { return }
         let clamped = min(100, max(0, percent))
         voicePctCache[id] = clamped
-        controller.setUserVoiceVolume(userID: id, username: user.username,
+        controller.setUserVoiceVolume(userID: id, username: user.volumeMemoryName,
                                       volume: TeamTalkConnectionController.userVolumeFromPercent(clamped))
         refreshDisplay()
     }
@@ -300,7 +300,7 @@ final class ChannelMixerCoordinator: ObservableObject {
         guard let controller, let user = user(for: id) else { return }
         let clamped = min(100, max(0, percent))
         mediaPctCache[id] = clamped
-        controller.setUserMediaFileVolume(userID: id, username: user.username,
+        controller.setUserMediaFileVolume(userID: id, username: user.volumeMemoryName,
                                           volume: TeamTalkConnectionController.userVolumeFromPercent(clamped))
         refreshDisplay()
     }
@@ -309,7 +309,7 @@ final class ChannelMixerCoordinator: ObservableObject {
         guard let controller, let user = user(for: id) else { return }
         let clamped = Double(min(1, max(-1, value)))
         voicePanCache[id] = clamped
-        controller.setUserVoicePan(userID: id, username: user.username, pan: Float(clamped), engineMuted: soloMuted(id))
+        controller.setUserVoicePan(userID: id, username: user.volumeMemoryName, pan: Float(clamped), engineMuted: soloMuted(id))
         refreshDisplay()
     }
 
@@ -317,7 +317,7 @@ final class ChannelMixerCoordinator: ObservableObject {
         guard let controller, let user = user(for: id) else { return }
         let clamped = Double(min(1, max(-1, value)))
         mediaPanCache[id] = clamped
-        controller.setUserMediaPan(userID: id, username: user.username, pan: Float(clamped), engineMuted: soloMuted(id))
+        controller.setUserMediaPan(userID: id, username: user.volumeMemoryName, pan: Float(clamped), engineMuted: soloMuted(id))
         refreshDisplay()
     }
 
@@ -340,9 +340,9 @@ final class ChannelMixerCoordinator: ObservableObject {
         guard let controller else { return }
         for u in usersInChannel() {
             let muted = soloMuted(u.id)
-            controller.setUserVoicePan(userID: u.id, username: u.username,
+            controller.setUserVoicePan(userID: u.id, username: u.volumeMemoryName,
                                        pan: Float(currentVoicePan(u.id)), engineMuted: muted)
-            controller.setUserMediaPan(userID: u.id, username: u.username,
+            controller.setUserMediaPan(userID: u.id, username: u.volumeMemoryName,
                                        pan: Float(currentMediaPan(u.id)), engineMuted: muted)
         }
     }
