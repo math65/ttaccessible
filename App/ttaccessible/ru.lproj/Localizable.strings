@@ -652,8 +652,9 @@
 "mediaStream.panel.message" = "Выберите аудио- или видеофайл для трансляции в канал. Поддержка видео зависит от того, что TeamTalk может открыть на этом Mac. 10-битное видео не поддерживается.";
 "mediaStream.panel.choose" = "Транслировать";
 "mediaStream.url.prompt.title" = "Трансляция по URL";
-"mediaStream.url.prompt.message" = "Введите URL аудиопотока (интернет-радио, http, rtmp, rtsp).";
+"mediaStream.url.prompt.message" = "Введите адрес аудиопотока или веб-страницы со звуком или видео, например YouTube.";
 "mediaStream.url.prompt.placeholder" = "https://stream.example.com/radio.mp3";
+"mediaStream.url.resolving" = "Ищу %@…";
 "mediaStream.url.prompt.accessibilityLabel" = "URL аудиопотока";
 "mediaStream.url.prompt.start" = "Транслировать";
 "mediaStream.url.error.invalid.title" = "Некорректный URL";

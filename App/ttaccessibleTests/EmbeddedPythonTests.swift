@@ -21,8 +21,15 @@ final class EmbeddedPythonTests: XCTestCase {
     }
 
     func testAYouTubePageResolvesToItsAudio() async throws {
-        let media = try await EmbeddedPython.shared.resolve(
-            URL(string: "https://www.youtube.com/watch?v=jNQXAC9IVRw")!)
+        let media: EmbeddedPython.ResolvedMedia
+        do {
+            media = try await EmbeddedPython.shared.resolve(
+                URL(string: "https://www.youtube.com/watch?v=jNQXAC9IVRw")!)
+        } catch EmbeddedPython.Failure.unresolved(let message) {
+            // Offline, or YouTube changed under this yt-dlp, which is what the updater is
+            // for: not a fault of the app. A runtime that won't start still fails.
+            throw XCTSkip("YouTube didn't resolve: \(message)")
+        }
         XCTAssertEqual(media.title, "Me at the zoo")
         XCTAssertTrue(media.url.hasPrefix("https://"), media.url)
         XCTAssertEqual(media.extractor, "Youtube")

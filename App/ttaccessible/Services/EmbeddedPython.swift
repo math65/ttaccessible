@@ -65,6 +65,16 @@ nonisolated final class EmbeddedPython: @unchecked Sendable {
         return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// Points OpenSSL, inside the embedded Python, at the bundled CA list. OpenSSL reads
+    /// SSL_CERT_FILE itself, so Python's isolated configuration can't hide it. Called once at
+    /// launch, before the audio and SDK threads exist: setenv isn't safe against a getenv
+    /// running on another thread, and Python starts much later, on its own queue.
+    static func prepareEnvironment() {
+        guard let caFile = supportDirectory?.appendingPathComponent("cacert.pem"),
+              FileManager.default.fileExists(atPath: caFile.path) else { return }
+        setenv("SSL_CERT_FILE", caFile.path, 1)
+    }
+
     /// Resolves a web page — YouTube, or any site yt-dlp knows — to its media.
     func resolve(_ page: URL, timeoutSeconds: Int = 20) async throws -> ResolvedMedia {
         try await withCheckedThrowingContinuation { continuation in
@@ -127,12 +137,12 @@ nonisolated final class EmbeddedPython: @unchecked Sendable {
 
     /// resolve(_:), except that a page yt-dlp can't read first makes sure yt-dlp is current —
     /// sites change and yt-dlp catches up within days — and is tried once more only if a newer
-    /// yt-dlp actually arrived.
+    /// yt-dlp actually arrived. That check runs at most once an hour (`checkAfterFailure`).
     func resolveUpdatingIfNeeded(_ page: URL) async throws -> ResolvedMedia {
         do {
             return try await resolve(page)
         } catch Failure.unresolved(let message) {
-            guard await YtDlpUpdater.shared.checkNow(reason: "a page failed to resolve") != nil else {
+            guard await YtDlpUpdater.shared.checkAfterFailure() != nil else {
                 throw Failure.unresolved(message)
             }
             return try await resolve(page)
@@ -144,13 +154,11 @@ nonisolated final class EmbeddedPython: @unchecked Sendable {
     private func startIfNeeded() throws {
         guard started == false else { return }
         guard let home = Self.pythonHome,
-              let support = Self.supportDirectory,
               let bundled = Self.bundledYtDlp,
               FileManager.default.fileExists(atPath: home.path),
               FileManager.default.fileExists(atPath: bundled.path) else {
             throw Failure.unavailable("the Python runtime is not part of this build")
         }
-        let caFile = support.appendingPathComponent("cacert.pem")
         var candidates = [bundled]
         if let updated = YtDlpUpdater.preferredZip()?.url {
             candidates.insert(updated, at: 0)
@@ -158,7 +166,7 @@ nonisolated final class EmbeddedPython: @unchecked Sendable {
         var lastError = "Python failed to start"
         for zip in candidates {
             var error: UnsafeMutablePointer<CChar>?
-            if ttac_py_start(home.path, caFile.path, zip.path, &error) == 0 {
+            if ttac_py_start(home.path, zip.path, &error) == 0 {
                 started = true
                 AudioLogger.log("embedded python: started, yt-dlp %@", Self.take(ttac_py_ytdlp_version()) ?? "?")
                 return

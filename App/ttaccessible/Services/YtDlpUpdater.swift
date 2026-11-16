@@ -42,6 +42,10 @@ actor YtDlpUpdater {
     }
 
     nonisolated static let checkInterval: TimeInterval = 24 * 60 * 60
+    /// How soon after any check a page that fails to resolve may check again. A typo or a
+    /// radio that refuses yt-dlp's request must not cost a GitHub request every time; a site
+    /// that changed under yt-dlp still gets its fix within the hour.
+    nonisolated static let failureCheckInterval: TimeInterval = 60 * 60
 
     // MARK: - Rules (pure, tested)
 
@@ -141,6 +145,13 @@ actor YtDlpUpdater {
     func checkIfDue() async -> String? {
         guard Self.isCheckDue(lastCheck: Self.loadState().lastCheck, now: Date()) else { return nil }
         return await checkNow(reason: "daily check")
+    }
+
+    /// A page failed to resolve: checks GitHub, unless any check ran within the last hour.
+    func checkAfterFailure() async -> String? {
+        guard Self.isCheckDue(lastCheck: Self.loadState().lastCheck, now: Date(),
+                              interval: Self.failureCheckInterval) else { return nil }
+        return await checkNow(reason: "a page failed to resolve")
     }
 
     /// Checks GitHub now. Returns the new version when yt-dlp was updated, nil otherwise.

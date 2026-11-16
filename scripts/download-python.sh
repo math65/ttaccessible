@@ -54,7 +54,10 @@ tar -xzf "$TEMP_DIR/python.tar.gz" -C "$TEMP_DIR" Python.xcframework
 STDLIB="$TEMP_DIR/Python.xcframework/macos-arm64_x86_64/Python.framework/Versions/3.14/lib/python3.14"
 # Developer-only parts of the standard library: CPython's own test suite (37 MB), IDLE, the
 # turtle demos and pip's bootstrapper. Nothing the app runs imports them.
-rm -rf "$STDLIB/test" "$STDLIB/idlelib" "$STDLIB/turtledemo" "$STDLIB/ensurepip"
+# config-3.14-darwin (Makefile, python.o, libpython3.14.a) only builds extensions, and its
+# python.o is neither a .so nor a .dylib, so build.sh never signs it and notarization fails.
+rm -rf "$STDLIB/test" "$STDLIB/idlelib" "$STDLIB/turtledemo" "$STDLIB/ensurepip" \
+       "$STDLIB/config-3.14-darwin"
 rm -rf "$VENDOR_DIR/Python.xcframework"
 mv "$TEMP_DIR/Python.xcframework" "$VENDOR_DIR/"
 

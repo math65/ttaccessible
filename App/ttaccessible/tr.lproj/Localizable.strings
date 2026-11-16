@@ -652,7 +652,7 @@
 "mediaStream.panel.message" = "Kanala aktarmak istediğiniz ses veya video dosyasını seçin. Video desteği, TeamTalk'un Mac'inizde açabildiği biçimlere bağlıdır. 10 bit video desteklenmiyor.";
 "mediaStream.panel.choose" = "Kanala Aktar";
 "mediaStream.url.prompt.title" = "URL Aktar";
-"mediaStream.url.prompt.message" = "Bir ses akışının adresini girin (internet radyosu, http, rtmp, rtsp).";
+"mediaStream.url.prompt.message" = "Bir ses akışının ya da YouTube gibi ses veya video içeren bir web sayfasının adresini girin.";
 "mediaStream.url.prompt.placeholder" = "https://stream.example.com/radio.mp3";
 "mediaStream.url.resolving" = "%@ aranıyor…";
 "mediaStream.url.prompt.accessibilityLabel" = "Ses akışı adresi";

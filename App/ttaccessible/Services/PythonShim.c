@@ -24,7 +24,13 @@ static const char *kBootstrap =
     "        sys.path.remove(_ttac_path)\n"
     "    sys.path.insert(0, path)\n"
     "    importlib.invalidate_caches()\n"
-    "    import yt_dlp\n"
+    "    try:\n"
+    "        import yt_dlp\n"
+    "    except BaseException:\n"
+    "        # A copy that won't import leaves nothing behind on sys.path.\n"
+    "        if path in sys.path:\n"
+    "            sys.path.remove(path)\n"
+    "        raise\n"
     "    _ttac_path = path\n"
     "    return yt_dlp.version.__version__\n"
     "\n"
@@ -106,10 +112,10 @@ static char *callBootstrap(const char *function, PyObject *arguments, char **err
     return text;
 }
 
-int ttac_py_start(const char *home, const char *caFile, const char *ytdlpZip, char **errorOut) {
+int ttac_py_start(const char *home, const char *ytdlpZip, char **errorOut) {
     if (!Py_IsInitialized()) {
-        // OpenSSL reads this itself, so the isolated configuration can't hide it.
-        setenv("SSL_CERT_FILE", caFile, 1);
+        // SSL_CERT_FILE is set once at launch (EmbeddedPython.prepareEnvironment), never here:
+        // setenv on this queue would race the audio and SDK threads' getenv.
         PyConfig config;
         PyConfig_InitIsolatedConfig(&config);
         config.write_bytecode = 0;           // the framework sits in the signed, read-only bundle

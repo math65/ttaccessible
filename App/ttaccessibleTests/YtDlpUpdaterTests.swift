@@ -73,11 +73,23 @@ final class YtDlpUpdaterTests: XCTestCase {
     // MARK: The real release (network)
 
     func testTheCurrentReleaseDownloadsAndVerifies() async throws {
-        let release = try await YtDlpUpdater.fetchLatestRelease()
+        let release: YtDlpUpdater.Release
+        do {
+            release = try await YtDlpUpdater.fetchLatestRelease()
+        } catch let error as URLError {
+            throw XCTSkip("GitHub unreachable: \(error.localizedDescription)")
+        } catch YtDlpUpdater.UpdateError.badResponse(let status) {
+            throw XCTSkip("GitHub answered \(status)")    // rate limit, outage
+        }
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("yt-dlp-test-\(UUID())")
         defer { try? FileManager.default.removeItem(at: folder) }
 
-        let zip = try await YtDlpUpdater.download(release, into: folder)
+        let zip: URL
+        do {
+            zip = try await YtDlpUpdater.download(release, into: folder)
+        } catch let error as URLError {
+            throw XCTSkip("download interrupted: \(error.localizedDescription)")
+        }
         XCTAssertEqual(zip.deletingLastPathComponent().lastPathComponent, release.version)
         let size = try XCTUnwrap(try zip.resourceValues(forKeys: [.fileSizeKey]).fileSize)
         XCTAssertGreaterThan(size, 1_000_000, "the zipapp is about 3 MB")

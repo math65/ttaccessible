@@ -13,10 +13,10 @@
 #define PythonShim_h
 
 /// Starts the interpreter — isolated: no environment variables, no user site-packages — with
-/// `home` as its prefix, trusting `caFile` for HTTPS, and imports yt-dlp from `ytdlpZip`.
+/// `home` as its prefix, and imports yt-dlp from `ytdlpZip`.
 /// Returns 0, or -1 with *errorOut set (free it with ttac_py_free). Safe to call again after a
 /// failure.
-int ttac_py_start(const char *home, const char *caFile, const char *ytdlpZip, char **errorOut);
+int ttac_py_start(const char *home, const char *ytdlpZip, char **errorOut);
 
 /// Resolves a web page to something the media streamer can open. Returns a JSON object (title,
 /// url, protocol, headers, is_live, extractor, duration), or NULL with *errorOut set.

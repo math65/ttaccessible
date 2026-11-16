@@ -652,9 +652,9 @@
 "mediaStream.panel.message" = "Choisissez un fichier audio ou vidéo à diffuser dans le canal. La prise en charge vidéo dépend des formats que TeamTalk peut décoder sur votre Mac. La vidéo 10 bits n'est pas prise en charge.";
 "mediaStream.panel.choose" = "Diffuser";
 "mediaStream.url.prompt.title" = "Diffuser une URL";
-"mediaStream.url.prompt.message" = "Saisissez l'URL d'un flux audio (radio internet, http, rtmp, rtsp).";
+"mediaStream.url.prompt.message" = "Saisissez l'adresse d'un flux audio, ou d'une page web qui propose du son ou de la vidéo, comme YouTube.";
 "mediaStream.url.prompt.placeholder" = "https://stream.exemple.com/radio.mp3";
-"mediaStream.url.resolving" = "Recherche sur %@…";
+"mediaStream.url.resolving" = "Recherche du média sur %@…";
 "mediaStream.url.prompt.accessibilityLabel" = "URL du flux audio";
 "mediaStream.url.prompt.start" = "Diffuser";
 "mediaStream.url.error.invalid.title" = "URL invalide";

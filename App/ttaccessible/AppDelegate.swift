@@ -121,6 +121,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let pushToTalkMonitor = HotkeyMonitor()
     private let muteHotkeyMonitor = HotkeyMonitor()
 
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        // First, before the SDK and the audio engines start their threads (see there).
+        EmbeddedPython.prepareEnvironment()
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         ProfileInstanceLock.acquire(for: ProfileContext.current)
         AudioLogger.clear()
@@ -2056,10 +2061,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             completion(url, nil)
             return
         }
-        announceWithVoiceOver(L10n.format("mediaStream.url.resolving", url.host ?? url.absoluteString))
+        // Said only if the lookup takes a while: a web radio without an extension in its
+        // address is looked up too, answers within a second, and should start as quietly
+        // as it always did. A YouTube page takes several seconds and gets it.
+        let resolving = L10n.format("mediaStream.url.resolving", url.host ?? url.absoluteString)
+        let announcement = DispatchWorkItem { [weak self] in self?.announceWithVoiceOver(resolving) }
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.resolvingAnnouncementDelay, execute: announcement)
         Task {
+            defer { announcement.cancel() }
             do {
                 let media = try await EmbeddedPython.shared.resolveUpdatingIfNeeded(url)
+                if Self.isPlainStream(media, typed: url) {
+                    // yt-dlp found nothing but the address itself: a stream, named as before.
+                    AudioLogger.log("stream url: %@ is a plain stream", url.host ?? "?")
+                    completion(url, nil)
+                    return
+                }
                 if let streamURL = URL(string: media.url) {
                     AudioLogger.log("stream url: %@ resolved by yt-dlp (%@): %@",
                                     url.host ?? "?", media.extractor, media.title)
@@ -2074,9 +2091,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    static let resolvingAnnouncementDelay: TimeInterval = 1
+
+    /// yt-dlp's Generic extractor handing back the very address that was typed: not a page
+    /// with media behind it, just a stream (an Icecast mount without an extension). Its
+    /// "title" is only the last path segment, so the stream keeps the name it always had.
+    static func isPlainStream(_ media: EmbeddedPython.ResolvedMedia, typed url: URL) -> Bool {
+        guard media.extractor.caseInsensitiveCompare("Generic") == .orderedSame,
+              let resolved = URL(string: media.url) else { return false }
+        return resolved.absoluteString == url.absoluteString
+    }
+
     /// Whether an address might be a page to look up. One that is already a stream — by its
     /// scheme (rtmp, rtsp, mms) or by an audio, video or playlist file extension — never is,
-    /// so a web radio starts exactly as fast as it always did.
+    /// so such a radio starts exactly as fast as it always did. A radio whose address has no
+    /// extension is looked up: about a second, and it keeps its name (`isPlainStream`).
     static func looksLikeWebPage(_ url: URL) -> Bool {
         guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else { return false }
         let streamExtensions: Set<String> = ["mp3", "aac", "m4a", "ogg", "oga", "opus", "flac", "wav",

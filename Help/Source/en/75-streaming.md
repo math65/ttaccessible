@@ -25,10 +25,11 @@ a file carries video, the Video panel of the main window shows it.
 
 You can also enter the address of a web page that plays audio or video: YouTube, and the many other
 sites supported by [yt-dlp](https://github.com/yt-dlp/yt-dlp), which tt-Accessible carries inside it.
-tt-Accessible says *Looking up* followed by the site's name, finds the media behind the page and
-streams it under the page's title. An address that is already a stream, such as a radio's `.mp3` or
-`.m3u8` link, starts straight away as before, and a page yt-dlp can't read is streamed as typed. The
-list below keeps the page's address, not the media link behind it, which stops working within hours.
+tt-Accessible finds the media behind the page and streams it under the page's title; if finding it
+takes a moment, it says *Looking up* followed by the site's name. An address that is already a
+stream, such as a radio's `.mp3` or `.m3u8` link, starts straight away as before, and a page yt-dlp
+can't read is streamed as typed. The recent addresses keep the page's address, not the media link
+behind it, which stops working within hours.
 
 The last address you streamed is offered straight away: press Return to start it again as it is.
 Earlier addresses are on the Down arrow, and typing the first few characters of one completes it.
