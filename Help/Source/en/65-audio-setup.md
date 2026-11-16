@@ -64,6 +64,8 @@ In the Audio pane, under **Per-user volume memory**, select one of the following
 - **This session only** — levels are forgotten when you quit.
 - **Always** — levels are remembered from one launch to the next.
 
-Levels are kept per server, so a level you set on one server never carries over to another.
+Levels are kept per server, so a level you set on one server never carries over to another. They
+follow each person's account; someone logged in as a guest, without an account, is remembered by
+nickname, so two guests with the same nickname share their levels.
 
 **See also:** [Talk in a channel](talking.html) · [If something doesn't work](troubleshooting.html)

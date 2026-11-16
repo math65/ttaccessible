@@ -266,3 +266,10 @@ struct ConnectedServerAudioRuntimeUpdate: Equatable {
     let inputAudioReady: Bool
     let outputAudioReady: Bool
 }
+
+extension ConnectedServerUser {
+    /// What `UserVolumeStore` remembers this user's volume and pan under (see `memoryName`).
+    var volumeMemoryName: String {
+        UserVolumeStore.memoryName(username: username, nickname: nickname)
+    }
+}

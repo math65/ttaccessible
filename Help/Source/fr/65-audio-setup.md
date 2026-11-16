@@ -71,7 +71,8 @@ options suivantes :
 - **Toujours** — les niveaux sont mémorisés d'un lancement à l'autre.
 
 Les niveaux sont propres à chaque serveur : un réglage fait sur l'un ne se reporte jamais sur les
-autres.
+autres. Ils suivent le compte de chaque personne ; une personne connectée en invité, sans compte,
+est reconnue à son pseudo, si bien que deux invités portant le même pseudo partagent leurs niveaux.
 
 **Voir aussi :** [Parler dans un canal](talking.html) ·
 [Si quelque chose ne fonctionne pas](troubleshooting.html)

@@ -171,7 +171,7 @@ User volume uses a **geometric (perceptually-uniform / dB-linear) curve** anchor
 - Percent and volume are both clamped to range, then rounded
 - Slider range: 0–100 (matching Qt client)
 - Functions: `TeamTalkConnectionController.userVolumeFromPercent()` / `percentFromUserVolume()` (in `+Audio`, `nonisolated static`)
-- User volumes are persisted per-username in `UserVolumeStore` (UserDefaults) and restored on user join.
+- User volumes are persisted per-username in `UserVolumeStore` (UserDefaults) and restored on user join. A guest (anonymous login, no username) is keyed by nickname instead, marked with U+001E so it can't meet an account's entry (`UserVolumeStore.memoryName`, `ConnectedServerUser.volumeMemoryName`); before, guests' levels were never saved.
 
 ### CPU Performance
 

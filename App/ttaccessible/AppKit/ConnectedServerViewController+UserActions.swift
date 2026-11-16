@@ -16,8 +16,8 @@ extension ConnectedServerViewController {
     func performAdjustVolume(_ user: ConnectedServerUser, presentingWindow window: NSWindow?) {
         guard let host = sheetHostWindow(window) else { return }
 
-        let storedVoiceVolume = connectionController.userVolumeStore.volume(forUsername: user.username)
-        let storedMediaFileVolume = connectionController.userVolumeStore.mediaFileVolume(forUsername: user.username)
+        let storedVoiceVolume = connectionController.userVolumeStore.volume(forUsername: user.volumeMemoryName)
+        let storedMediaFileVolume = connectionController.userVolumeStore.mediaFileVolume(forUsername: user.volumeMemoryName)
         let effectiveVoiceVolume = storedVoiceVolume ?? user.volumeVoice
         let effectiveMediaFileVolume = storedMediaFileVolume ?? user.volumeMediaFile
         let currentVoicePercent = TeamTalkConnectionController.percentFromUserVolume(effectiveVoiceVolume)
@@ -90,8 +90,8 @@ extension ConnectedServerViewController {
                 if response == .alertFirstButtonReturn {
                     let voiceVolume = TeamTalkConnectionController.userVolumeFromPercent(voiceSlider.doubleValue)
                     let mediaFileVolume = TeamTalkConnectionController.userVolumeFromPercent(mediaFileSlider.doubleValue)
-                    self.connectionController.setUserVoiceVolume(userID: user.id, username: user.username, volume: voiceVolume)
-                    self.connectionController.setUserMediaFileVolume(userID: user.id, username: user.username, volume: mediaFileVolume)
+                    self.connectionController.setUserVoiceVolume(userID: user.id, username: user.volumeMemoryName, volume: voiceVolume)
+                    self.connectionController.setUserMediaFileVolume(userID: user.id, username: user.volumeMemoryName, volume: mediaFileVolume)
                     let newLeft = leftCheck.state == .on
                     let newRight = rightCheck.state == .on
                     self.connectionController.setUserStereo(
@@ -101,7 +101,7 @@ extension ConnectedServerViewController {
                     )
                     self.connectionController.userVolumeStore.setStereoBalance(
                         UserVolumeStore.StereoBalance(left: newLeft, right: newRight),
-                        forUsername: user.username
+                        forUsername: user.volumeMemoryName
                     )
                 } else {
                     self.connectionController.setUserVoiceVolumeImmediate(userID: user.id, volume: originalVoiceVolume)
