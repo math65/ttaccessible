@@ -125,6 +125,10 @@ final class AdvancedMicrophoneAudioEngine {
     // Pre-allocated buffers reused across audio callbacks to avoid heap allocations on the real-time thread.
     private var interleavedBuffer = [Float]()
     private var selectedBuffer = [Float]()
+    /// Keeps the gained signal under full scale (see `limitInPlace`). Touched only by the
+    /// capture thread, rebuilt when the channel count, the rate or the capture changes.
+    private var inputLimiter: PeakLimiter?
+    private var inputLimiterKey: (channels: Int, sampleRate: Double, streamID: Int32)?
     private var adaptedBuffer = [Float]()
     private var int16Buffer = [Int16]()
 
@@ -759,6 +763,8 @@ final class AdvancedMicrophoneAudioEngine {
 
         // Apply input gain (simple multiply, no DSP state needed).
         applyInputGainInPlace(to: &selectedBuffer, count: selectedCount, gainDB: configuration.inputGainDB)
+        limitInPlace(&selectedBuffer, frames: frameCount, channels: selection.outputChannels,
+                     sampleRate: configuration.targetFormat.sampleRate, streamID: snapshot.streamID)
 
         // Adapt channel count.
         let targetChannels = max(configuration.targetFormat.channels, 1)
@@ -950,6 +956,29 @@ final class AdvancedMicrophoneAudioEngine {
     }
 
     // MARK: - Gain
+
+    /// A gain above 0 dB, the user's own or a channel's (the Qt client's default of 9600 is
+    /// +15 dB), pushes a loud voice past full scale, where the conversion to Int16 used to
+    /// clip it hard. The Qt client runs its fixed gain inside WebRTC's GainController2, whose
+    /// limiter follows it; this is the same idea with the app's own look-ahead limiter. Below
+    /// the ceiling (-0.1 dBFS) it changes nothing but a fixed 2 ms delay. It always runs, so
+    /// that delay never jumps when the gain crosses 0 dB.
+    private func limitInPlace(_ samples: inout [Float], frames: Int, channels: Int, sampleRate: Double, streamID: Int32) {
+        guard frames > 0, channels > 0 else { return }
+        let rate = sampleRate > 0 ? sampleRate : 48_000
+        let key = inputLimiterKey
+        if key == nil || key?.channels != channels || key?.sampleRate != rate || key?.streamID != streamID {
+            inputLimiter = PeakLimiter(channels: channels, sampleRate: rate)
+            inputLimiterKey = (channels, rate, streamID)
+        }
+        guard let limiter = inputLimiter else { return }
+        // PeakLimiter works on the Int16 scale.
+        let count = frames * channels
+        let up = Float(32_767), down = 1 / Float(32_767)
+        for i in 0 ..< count { samples[i] *= up }
+        limiter.process(&samples, frames: frames)
+        for i in 0 ..< count { samples[i] *= down }
+    }
 
     private func applyInputGainInPlace(to samples: inout [Float], count: Int, gainDB: Double) {
         guard count > 0, gainDB != 0 else { return }

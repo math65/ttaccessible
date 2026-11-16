@@ -624,8 +624,9 @@ extension TeamTalkConnectionController {
 
     /// The channel's level (`AudioConfig.nGainLevel`, 0–32000) as a gain, on the
     /// official clients' scale: `WEBRTC_GAINCONTROLLER2_FIXEDGAIN_MAX` dB at the top.
-    /// Held to the slider's range: past it our gain stage, which has no limiter,
-    /// would only clip. Nil when the channel leaves the gain to the user.
+    /// Held to the slider's range, the most the user's own slider can set; the limiter
+    /// after the gain stage keeps a loud voice from clipping at that level. Nil when the
+    /// channel leaves the gain to the user.
     static func channelInputGainDB(enabled: Bool, level: Int32) -> Double? {
         guard enabled else { return nil }
         let fraction = min(max(Double(level) / 32000, 0), 1)
