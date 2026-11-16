@@ -153,4 +153,103 @@ final class ServerCertificateVerificationTests: XCTestCase {
             from: "-----BEGIN CERTIFICATE-----\n!!!!\n-----END CERTIFICATE-----"
         ))
     }
+
+    // MARK: - Import keeps what it was given
+
+    private static let caPEM = "-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----"
+    private static let keyPEM = "-----BEGIN PRIVATE KEY-----\nBBBB\n-----END PRIVATE KEY-----"
+
+    private func record(
+        id: UUID = UUID(),
+        encryption: ServerEncryptionSettings = ServerEncryptionSettings()
+    ) -> SavedServerRecord {
+        SavedServerRecord(
+            id: id,
+            name: "Secure",
+            host: "tt.example.com",
+            tcpPort: 10333,
+            udpPort: 10333,
+            encrypted: true,
+            nickname: "Someone",
+            username: "someone",
+            encryption: encryption
+        )
+    }
+
+    /// `withID` rebuilt the record field by field and forgot this one, so every
+    /// import came out encrypted but unverified.
+    func testWithIDKeepsEncryptionSettings() {
+        let settings = ServerEncryptionSettings(verifyServerCertificate: true, caCertificatePEM: Self.caPEM)
+        let copy = record(encryption: settings).withID(UUID())
+        XCTAssertEqual(copy.encryption, settings)
+        XCTAssertTrue(copy.encryption.isActive)
+    }
+
+    /// A Qt INI or plist config never carries a CA: re-importing one over a
+    /// verified server must not switch its verification off.
+    func testReimportWithoutTLSMaterialKeepsTheExistingSettings() {
+        let settings = ServerEncryptionSettings(verifyServerCertificate: true, caCertificatePEM: Self.caPEM)
+        let existing = record(encryption: settings)
+
+        let replaced = record().replacing(existing)
+
+        XCTAssertEqual(replaced.id, existing.id)
+        XCTAssertEqual(replaced.encryption, settings)
+    }
+
+    func testReimportWithTLSMaterialReplacesTheExistingSettings() {
+        let existing = record(encryption: ServerEncryptionSettings(verifyServerCertificate: true, caCertificatePEM: Self.caPEM))
+        let newer = ServerEncryptionSettings(
+            verifyServerCertificate: false,
+            caCertificatePEM: "-----BEGIN CERTIFICATE-----\nCCCC\n-----END CERTIFICATE-----"
+        )
+
+        let replaced = record(encryption: newer).replacing(existing)
+
+        XCTAssertEqual(replaced.id, existing.id)
+        XCTAssertEqual(replaced.encryption, newer)
+    }
+
+    /// The whole path Rocco traced: a .tt file with a trusted certificate,
+    /// exported then imported, keeps its authority, its verify flag and its key.
+    func testTTFileImportKeepsVerificationAndKey() throws {
+        let settings = ServerEncryptionSettings(verifyServerCertificate: true, caCertificatePEM: Self.caPEM)
+        let data = try XCTUnwrap(TTFileService().generateFileContents(
+            record: record(encryption: settings),
+            password: "secret",
+            clientPrivateKeyPEM: Self.keyPEM
+        ))
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("tls-import-\(UUID().uuidString).tt")
+        try data.write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let imported = try XCTUnwrap(TeamTalkConfigImporter().loadServers(from: url).first)
+        let saved = imported.record.withID(UUID())
+        let resaved = imported.record.replacing(record())
+
+        XCTAssertEqual(saved.encryption, settings)
+        XCTAssertTrue(saved.encryption.isActive)
+        XCTAssertEqual(resaved.encryption, settings)
+        XCTAssertEqual(imported.clientPrivateKeyPEM, Self.keyPEM)
+    }
+
+    /// `EncryptionContext` has no passphrase field: both encrypted PEM forms
+    /// must be caught before they reach OpenSSL.
+    func testPassphraseProtectedKeysAreRecognised() {
+        let pkcs8 = "-----BEGIN ENCRYPTED PRIVATE KEY-----\nAAAA\n-----END ENCRYPTED PRIVATE KEY-----"
+        let legacy = """
+        -----BEGIN RSA PRIVATE KEY-----
+        Proc-Type: 4,ENCRYPTED
+        DEK-Info: AES-128-CBC,00112233445566778899AABBCCDDEEFF
+
+        AAAA
+        -----END RSA PRIVATE KEY-----
+        """
+
+        XCTAssertTrue(ServerEncryptionSettings.isPassphraseProtected(pkcs8))
+        XCTAssertTrue(ServerEncryptionSettings.isPassphraseProtected(legacy))
+        XCTAssertFalse(ServerEncryptionSettings.isPassphraseProtected(Self.keyPEM))
+        XCTAssertTrue(ServerEncryptionSettings.containsPrivateKey(legacy))
+    }
 }

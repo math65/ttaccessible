@@ -1320,7 +1320,10 @@
 "savedServer.form.encryption.error.unreadable" = "Dosya okunamadı. Sertifika, tire satırıyla başlayan bir metin dosyası olan PEM biçiminde olmalıdır.";
 "savedServer.form.encryption.error.notACertificate" = "Bu dosya sertifika içermiyor. İlk satırında tireler arasında BEGIN CERTIFICATE yazan bir PEM dosyası bekleniyor.";
 "savedServer.form.encryption.error.notAPrivateKey" = "Bu dosya özel anahtar içermiyor. İlk satırında tireler arasında BEGIN PRIVATE KEY yazan bir PEM dosyası bekleniyor.";
+"savedServer.form.encryption.error.passphraseProtectedKey" = "Bu özel anahtar bir parola ifadesiyle korunuyor ve tt-Accessible bunu kullanamaz. Anahtarı parola ifadesi olmadan yeniden dışa aktarın, sonra bu kopyayı içe aktarın.";
 "teamtalk.connection.error.encryptionFailed" = "Güvenli bağlantı reddedildi. Sertifika doğrulamasını açtıysanız, sunucu içe aktardığınız yetkilinin vermediği bir sertifika sunuyor olabilir.";
 "teamtalk.connection.error.encryptionFailedDetail" = "Güvenli bağlantı reddedildi: %@. Sertifika doğrulamasını açtıysanız, sunucu içe aktardığınız yetkilinin vermediği bir sertifika sunuyor olabilir.";
 "teamtalk.connection.error.encryptionMaterializeFailed" = "Bu sunucunun sertifikaları hazırlanamadı. Bağlantı, doğrulama olmadan sürdürülmek yerine durduruldu.";
 "teamtalk.connection.error.encryptionContextRejected" = "Bu sunucunun sertifikaları reddedildi. İçe aktarılan dosyaların gerçekten PEM sertifikası olduğunu denetleyin.";
+"teamtalk.connection.error.encryptionKeyUnreadable" = "Bu sunucunun özel anahtarı Anahtar Zincirinden okunamadı. Bağlantı, anahtar olmadan sürdürülmek yerine durduruldu.\n\n%@";
+"teamtalk.connection.error.encryptionKeyPassphrase" = "Bu sunucunun özel anahtarı bir parola ifadesiyle korunuyor ve tt-Accessible bunu kullanamaz. Sunucuyu düzenleyin ve anahtarın parola ifadesi olmayan bir kopyasını içe aktarın.";

@@ -320,8 +320,7 @@ struct SavedServerFormView: View {
     private func importCertificateAuthority() {
         importPEM(
             panelMessage: L10n.text("savedServer.form.encryption.ca.panelMessage"),
-            validate: ServerEncryptionSettings.containsCertificate,
-            invalidMessage: L10n.text("savedServer.form.encryption.error.notACertificate")
+            validate: { ServerEncryptionSettings.containsCertificate($0) ? nil : L10n.text("savedServer.form.encryption.error.notACertificate") },
         ) { text in
             draft.encryption.caCertificatePEM = text
             announceRow(
@@ -352,8 +351,7 @@ struct SavedServerFormView: View {
     private func importClientCertificate() {
         importPEM(
             panelMessage: L10n.text("savedServer.form.encryption.client.certificate.panelMessage"),
-            validate: ServerEncryptionSettings.containsCertificate,
-            invalidMessage: L10n.text("savedServer.form.encryption.error.notACertificate")
+            validate: { ServerEncryptionSettings.containsCertificate($0) ? nil : L10n.text("savedServer.form.encryption.error.notACertificate") },
         ) { text in
             draft.encryption.clientCertificatePEM = text
             announceRow(
@@ -377,8 +375,15 @@ struct SavedServerFormView: View {
     private func importClientPrivateKey() {
         importPEM(
             panelMessage: L10n.text("savedServer.form.encryption.client.key.panelMessage"),
-            validate: ServerEncryptionSettings.containsPrivateKey,
-            invalidMessage: L10n.text("savedServer.form.encryption.error.notAPrivateKey")
+            validate: { text in
+                guard ServerEncryptionSettings.containsPrivateKey(text) else {
+                    return L10n.text("savedServer.form.encryption.error.notAPrivateKey")
+                }
+                guard ServerEncryptionSettings.isPassphraseProtected(text) == false else {
+                    return L10n.text("savedServer.form.encryption.error.passphraseProtectedKey")
+                }
+                return nil
+            }
         ) { text in
             draft.clientPrivateKeyPEM = text
             announceRow(
@@ -418,8 +423,7 @@ struct SavedServerFormView: View {
 
     private func importPEM(
         panelMessage: String,
-        validate: (String) -> Bool,
-        invalidMessage: String,
+        validate: (String) -> String?,
         assign: (String) -> Void
     ) {
         let panel = NSOpenPanel()
@@ -440,8 +444,8 @@ struct SavedServerFormView: View {
             presentImportError(L10n.text("savedServer.form.encryption.error.unreadable"))
             return
         }
-        guard validate(text) else {
-            presentImportError(invalidMessage)
+        if let problem = validate(text) {
+            presentImportError(problem)
             return
         }
         assign(text)

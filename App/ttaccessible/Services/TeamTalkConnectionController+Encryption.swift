@@ -17,6 +17,8 @@ extension TeamTalkConnectionController {
     enum EncryptionContextError: LocalizedError {
         case materializationFailed
         case sdkRejectedContext
+        case clientKeyUnreadable(String)
+        case clientKeyPassphraseProtected
 
         var errorDescription: String? {
             switch self {
@@ -24,6 +26,10 @@ extension TeamTalkConnectionController {
                 return L10n.text("teamtalk.connection.error.encryptionMaterializeFailed")
             case .sdkRejectedContext:
                 return L10n.text("teamtalk.connection.error.encryptionContextRejected")
+            case .clientKeyUnreadable(let reason):
+                return L10n.format("teamtalk.connection.error.encryptionKeyUnreadable", reason)
+            case .clientKeyPassphraseProtected:
+                return L10n.text("teamtalk.connection.error.encryptionKeyPassphrase")
             }
         }
     }
@@ -47,7 +53,7 @@ extension TeamTalkConnectionController {
         // here keeps the connect path off it entirely for the common case.
         let settings = record.encrypted ? record.encryption : ServerEncryptionSettings()
         let privateKey = record.encrypted
-            ? (options.clientPrivateKeyOverride ?? (try? passwordStore.clientPrivateKey(for: record.id)) ?? "")
+            ? try clientPrivateKeyLocked(for: record, options: options)
             : ""
 
         var context = EncryptionContext()
@@ -105,6 +111,35 @@ extension TeamTalkConnectionController {
         }
 
         try setEncryptionContextLocked(instance: instance, context: &context, verifying: settings.isActive)
+    }
+
+    /// The client key for this connection: the one riding along with a `.tt` file
+    /// opened without being saved, else the keychain's. A keychain that fails to
+    /// answer stops the connect: going ahead without the key would only trade a
+    /// clear "the key could not be read" for a handshake failure that names
+    /// neither the key nor the keychain. A missing entry is not an error, it
+    /// comes back empty.
+    private func clientPrivateKeyLocked(
+        for record: SavedServerRecord,
+        options: TeamTalkConnectOptions
+    ) throws -> String {
+        let key: String
+        if let override = options.clientPrivateKeyOverride {
+            key = override
+        } else {
+            do {
+                key = try passwordStore.clientPrivateKey(for: record.id) ?? ""
+            } catch {
+                AudioLogger.log("encryption: cannot read the client key from the keychain: %@", error.localizedDescription)
+                throw EncryptionContextError.clientKeyUnreadable(error.localizedDescription)
+            }
+        }
+        // The form refuses these, but a .tt file can still bring one in.
+        if ServerEncryptionSettings.isPassphraseProtected(key) {
+            AudioLogger.log("encryption: the client key needs a passphrase, which EncryptionContext cannot carry")
+            throw EncryptionContextError.clientKeyPassphraseProtected
+        }
+        return key
     }
 
     private func setEncryptionContextLocked(

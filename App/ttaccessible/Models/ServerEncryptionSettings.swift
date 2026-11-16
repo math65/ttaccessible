@@ -27,7 +27,7 @@ import Security
 /// authority) is thus genuinely strong, because only that issuer is trusted;
 /// pointing this at a public root bundle would not be, since any certificate
 /// from any public CA would satisfy the chain check.
-struct ServerEncryptionSettings: Codable, Equatable {
+nonisolated struct ServerEncryptionSettings: Codable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case verifyServerCertificate
         case caCertificatePEM
@@ -95,6 +95,16 @@ struct ServerEncryptionSettings: Codable, Equatable {
             || text.contains("-----BEGIN RSA PRIVATE KEY-----")
             || text.contains("-----BEGIN EC PRIVATE KEY-----")
             || text.contains("-----BEGIN ENCRYPTED PRIVATE KEY-----")
+    }
+
+    /// A key that needs a passphrase: PKCS#8 `ENCRYPTED PRIVATE KEY`, or the
+    /// legacy OpenSSL form, whose `RSA`/`EC PRIVATE KEY` block opens with a
+    /// `Proc-Type: 4,ENCRYPTED` header. `EncryptionContext` has no passphrase
+    /// field, so such a key can never be loaded; it is refused up front rather
+    /// than left to fail the handshake with an unrelated-sounding error.
+    static func isPassphraseProtected(_ text: String) -> Bool {
+        text.contains("-----BEGIN ENCRYPTED PRIVATE KEY-----")
+            || text.contains("Proc-Type: 4,ENCRYPTED")
     }
 }
 

@@ -1320,7 +1320,10 @@
 "savedServer.form.encryption.error.unreadable" = "The file could not be read. A certificate must be in PEM format, a text file starting with a line of dashes.";
 "savedServer.form.encryption.error.notACertificate" = "This file contains no certificate. Expected a PEM file, whose first line reads BEGIN CERTIFICATE between dashes.";
 "savedServer.form.encryption.error.notAPrivateKey" = "This file contains no private key. Expected a PEM file, whose first line reads BEGIN PRIVATE KEY between dashes.";
+"savedServer.form.encryption.error.passphraseProtectedKey" = "This private key is protected by a passphrase, which tt-Accessible cannot use. Export the key again without a passphrase, then import that copy.";
 "teamtalk.connection.error.encryptionFailed" = "The secure connection was refused. If you enabled certificate verification, the server may be presenting a certificate that was not issued by the authority you imported.";
 "teamtalk.connection.error.encryptionFailedDetail" = "The secure connection was refused: %@. If you enabled certificate verification, the server may be presenting a certificate that was not issued by the authority you imported.";
 "teamtalk.connection.error.encryptionMaterializeFailed" = "The certificates for this server could not be prepared. The connection was stopped rather than continuing without verification.";
 "teamtalk.connection.error.encryptionContextRejected" = "The certificates for this server were refused. Check that the imported files really are PEM certificates.";
+"teamtalk.connection.error.encryptionKeyUnreadable" = "The private key for this server could not be read from the keychain, so the connection was stopped rather than going ahead without it.\n\n%@";
+"teamtalk.connection.error.encryptionKeyPassphrase" = "The private key for this server is protected by a passphrase, which tt-Accessible cannot use. Edit the server and import a copy of the key without a passphrase.";

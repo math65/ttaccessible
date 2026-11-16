@@ -236,6 +236,9 @@ extension TeamTalkConnectionController {
             ? channelPathLocked(instance: instance, channelID: liveChannelID)
             : lastKnownChannelPath
         let lastChanPassword = channelPasswords[lastChan] ?? ""
+        // A server opened from a .tt file and never saved has no keychain entry:
+        // its client key only lives in the options, so it must ride along.
+        let clientPrivateKeyOverride = reconnectOptions.clientPrivateKeyOverride
         destroyLocked()
 
         guard willReconnect, let record, let password else {
@@ -252,7 +255,8 @@ extension TeamTalkConnectionController {
         self.reconnectPassword = password
         self.reconnectOptions = TeamTalkConnectOptions(
             initialChannelPath: record.initialChannelPath,
-            initialChannelPassword: record.initialChannelPassword
+            initialChannelPassword: record.initialChannelPassword,
+            clientPrivateKeyOverride: clientPrivateKeyOverride
         )
         reconnectAttempt = 0
         scheduleNextReconnectAttemptLocked()

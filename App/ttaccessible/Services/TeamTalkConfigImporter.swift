@@ -42,7 +42,8 @@ final class TeamTalkConfigImporter {
         }
     }
 
-    private struct ImportedServer {
+    /// Internal rather than private so the tests can follow an import through.
+    struct ImportedServer {
         let record: SavedServerRecord
         let password: String
         let channelPassword: String
@@ -61,6 +62,20 @@ final class TeamTalkConfigImporter {
             self.channelPassword = channelPassword
             self.clientPrivateKeyPEM = clientPrivateKeyPEM
         }
+    }
+
+    /// An empty key means the source carried none (an INI or plist config never
+    /// does), not that the user asked for it to be removed: `setClientPrivateKey`
+    /// reads an empty string as a deletion, so it is only called with a real key.
+    private func storeClientPrivateKeyIfPresent(
+        _ key: String,
+        for id: UUID,
+        in passwordStore: ServerPasswordStore
+    ) throws {
+        guard key.isEmpty == false else {
+            return
+        }
+        try passwordStore.setClientPrivateKey(key, for: id)
     }
 
     private struct CandidateSource {
@@ -130,10 +145,10 @@ final class TeamTalkConfigImporter {
         for importedServer in importedServers {
             if let existingIndex = existingRecords.firstIndex(where: { $0.matchesImportIdentity(of: importedServer.record) }) {
                 let existingID = existingRecords[existingIndex].id
-                existingRecords[existingIndex] = importedServer.record.withID(existingID)
+                existingRecords[existingIndex] = importedServer.record.replacing(existingRecords[existingIndex])
                 try passwordStore.setPassword(importedServer.password, for: existingID)
                 try passwordStore.setChannelPassword(importedServer.channelPassword, for: existingID)
-                try passwordStore.setClientPrivateKey(importedServer.clientPrivateKeyPEM, for: existingID)
+                try storeClientPrivateKeyIfPresent(importedServer.clientPrivateKeyPEM, for: existingID, in: passwordStore)
                 importedCount += 1
                 importedServerNames.append(importedServer.record.name)
                 continue
@@ -146,10 +161,10 @@ final class TeamTalkConfigImporter {
                 }
 
                 let existingID = existingRecords[existingIndex].id
-                existingRecords[existingIndex] = importedServer.record.withID(existingID)
+                existingRecords[existingIndex] = importedServer.record.replacing(existingRecords[existingIndex])
                 try passwordStore.setPassword(importedServer.password, for: existingID)
                 try passwordStore.setChannelPassword(importedServer.channelPassword, for: existingID)
-                try passwordStore.setClientPrivateKey(importedServer.clientPrivateKeyPEM, for: existingID)
+                try storeClientPrivateKeyIfPresent(importedServer.clientPrivateKeyPEM, for: existingID, in: passwordStore)
                 importedCount += 1
                 importedServerNames.append(importedServer.record.name)
                 continue
@@ -159,7 +174,7 @@ final class TeamTalkConfigImporter {
             existingRecords.append(newRecord)
             try passwordStore.setPassword(importedServer.password, for: newRecord.id)
             try passwordStore.setChannelPassword(importedServer.channelPassword, for: newRecord.id)
-            try passwordStore.setClientPrivateKey(importedServer.clientPrivateKeyPEM, for: newRecord.id)
+            try storeClientPrivateKeyIfPresent(importedServer.clientPrivateKeyPEM, for: newRecord.id, in: passwordStore)
             importedCount += 1
             importedServerNames.append(newRecord.name)
         }
@@ -225,7 +240,7 @@ final class TeamTalkConfigImporter {
         ]
     }
 
-    private func loadServers(from url: URL) throws -> [ImportedServer] {
+    func loadServers(from url: URL) throws -> [ImportedServer] {
         switch url.pathExtension.lowercased() {
         case "ini":
             return try parseINI(at: url)
@@ -411,8 +426,22 @@ extension SavedServerRecord {
             username: username,
             useWebLogin: useWebLogin,
             initialChannelPath: initialChannelPath,
-            initialChannelPassword: initialChannelPassword
+            initialChannelPassword: initialChannelPassword,
+            encryption: encryption
         )
+    }
+
+    /// This imported record, saved over `existing`: it takes the existing ID, and
+    /// keeps the existing TLS settings when the source brought none. A Qt INI or
+    /// plist config never carries a CA, and a `.tt` file may simply predate it;
+    /// either way, re-importing must not silently turn verification off.
+    /// A source that does carry TLS material replaces the old one outright.
+    func replacing(_ existing: SavedServerRecord) -> SavedServerRecord {
+        var record = withID(existing.id)
+        if encryption.isConfigured == false {
+            record.encryption = existing.encryption
+        }
+        return record
     }
 
     func matchesImportIdentity(of other: SavedServerRecord) -> Bool {

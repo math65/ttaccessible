@@ -1318,7 +1318,10 @@
 "savedServer.form.encryption.error.unreadable" = "Le fichier n'a pas pu être lu. Un certificat doit être au format PEM, un fichier texte qui commence par une ligne de tirets.";
 "savedServer.form.encryption.error.notACertificate" = "Ce fichier ne contient aucun certificat. Il faut un fichier PEM, dont la première ligne indique BEGIN CERTIFICATE entre des tirets.";
 "savedServer.form.encryption.error.notAPrivateKey" = "Ce fichier ne contient aucune clé privée. Il faut un fichier PEM, dont la première ligne indique BEGIN PRIVATE KEY entre des tirets.";
+"savedServer.form.encryption.error.passphraseProtectedKey" = "Cette clé privée est protégée par une phrase de passe, que tt-Accessible ne sait pas utiliser. Exportez la clé sans phrase de passe, puis importez cette copie.";
 "teamtalk.connection.error.encryptionFailed" = "La connexion sécurisée a été refusée. Si vous avez activé la vérification du certificat, le serveur présente peut-être un certificat qui n'a pas été délivré par l'autorité que vous avez importée.";
 "teamtalk.connection.error.encryptionFailedDetail" = "La connexion sécurisée a été refusée : %@. Si vous avez activé la vérification du certificat, le serveur présente peut-être un certificat qui n'a pas été délivré par l'autorité que vous avez importée.";
 "teamtalk.connection.error.encryptionMaterializeFailed" = "Les certificats de ce serveur n'ont pas pu être préparés. La connexion a été interrompue plutôt que de se poursuivre sans vérification.";
 "teamtalk.connection.error.encryptionContextRejected" = "Les certificats de ce serveur ont été refusés. Vérifiez que les fichiers importés sont bien des certificats au format PEM.";
+"teamtalk.connection.error.encryptionKeyUnreadable" = "La clé privée de ce serveur n'a pas pu être lue dans le trousseau : la connexion a été interrompue plutôt que de se poursuivre sans elle.\n\n%@";
+"teamtalk.connection.error.encryptionKeyPassphrase" = "La clé privée de ce serveur est protégée par une phrase de passe, que tt-Accessible ne sait pas utiliser. Modifiez le serveur et importez une copie de la clé sans phrase de passe.";

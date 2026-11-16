@@ -1196,11 +1196,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let savedRecord = existingRecord.map { record.withID($0.id) } ?? record
+        // A tt:// link carries no TLS material, so whatever the form holds came from
+        // the user; when the form is empty, the server being replaced keeps its own.
+        let savedRecord = existingRecord.map { record.replacing($0) } ?? record
 
         do {
             try passwordStore.setPassword(result.password, for: savedRecord.id)
             try passwordStore.setChannelPassword(result.initialChannelPassword, for: savedRecord.id)
+            if result.clientPrivateKeyPEM.isEmpty == false {
+                try passwordStore.setClientPrivateKey(result.clientPrivateKeyPEM, for: savedRecord.id)
+            }
             if existingRecord == nil {
                 store.add(savedRecord)
             } else {
