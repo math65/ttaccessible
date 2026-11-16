@@ -14,7 +14,7 @@
 
 import Foundation
 
-enum OutputChannelSelection: Codable, Hashable {
+nonisolated enum OutputChannelSelection: Codable, Hashable {
     /// The device's first stereo pair (or its single channel on a mono device) —
     /// the behavior that shipped before this setting existed.
     case auto

@@ -445,6 +445,10 @@
 "preferences.audio.title" = "Звук";
 "preferences.audio.outputDevice" = "Устройство вывода";
 "preferences.audio.inputDevice" = "Устройство ввода";
+"preferences.audio.outputChannels" = "Каналы вывода";
+"preferences.audio.outputChannels.auto" = "Авто (выходы 1 и 2)";
+"preferences.audio.outputChannels.mono" = "Выход %d, моно";
+"preferences.audio.outputChannels.stereoPair" = "Выходы %1$d и %2$d";
 "preferences.audio.systemDefault" = "Системное по умолчанию";
 "preferences.audio.noOutput" = "Без устройства вывода";
 "preferences.audio.device.notConnected" = "%@ (не подключено)";
@@ -669,6 +673,7 @@
 "mediaStream.device.prompt.message" = "Выберите, что транслировать в канал. Отметьте устройства и приложения, чтобы транслировать их вместе. Пункт «Весь звук с этого Mac» уже включает все приложения, поэтому он сочетается только с устройствами. Трансляция продолжается, даже когда источник молчит.";
 "mediaStream.device.cleared.applications" = "Отметки с приложений сняты.";
 "mediaStream.device.cleared.systemAudio" = "Отметка «Весь звук с этого Mac» снята.";
+"mediaStream.device.cleared.channels" = "Отметки с каналов устройства сняты.";
 "mediaStream.device.source.checked" = "%@, отмечено.";
 "mediaStream.device.source.unchecked" = "%@, не отмечено.";
 "mediaStream.device.added.application" = "%@ добавлено и выбрано.";
@@ -680,6 +685,9 @@
 "mediaStream.device.error.startFailed" = "Не удалось начать трансляцию с аудиоустройства.";
 "mediaStream.device.prompt.muteSource" = "Выключить звук этого источника на этом Mac во время трансляции";
 "mediaStream.device.source.voiceOver" = "VoiceOver";
+"mediaStream.device.source.channel" = "Канал %d";
+"mediaStream.device.source.channelPair" = "Каналы %1$d и %2$d";
+"mediaStream.device.source.deviceChannels" = "%1$@, %2$@";
 "mediaStream.device.source.systemAudio" = "Весь звук с этого Mac";
 "mediaStream.device.source.andOthers" = "%1$@ и ещё %2$ld";
 "mediaStream.device.source.applicationMenu" = "Приложение";

@@ -485,8 +485,10 @@ final class OutputAudioRenderEngine {
         self.rtPlanesC?.initialize(repeating: nil, count: rtPlanesCapacity)
         self.currentGain = gainCell.pointee
         self.gainSmoothCoeff = Float(1.0 - exp(-1.0 / (0.008 * devRate)))
-        // ~6 ms: long enough that a remap has no step in it, short enough that
-        // the routing still lands on the buffer the user's selection reaches.
+        // At least ~6 ms: long enough that a remap has no step in it, short enough
+        // that the routing still lands on the buffer the user's selection reaches.
+        // The envelope moves once per buffer, so a buffer longer than this (512
+        // frames at 44.1 kHz) stretches the fade to the whole buffer, ~11.6 ms.
         self.rtFadeFrames = max(Int(0.006 * devRate), 32)
         self.rtFadeRemaining = 0
         self.underflowCount = 0
@@ -583,7 +585,8 @@ final class OutputAudioRenderEngine {
     /// Choose which physical channels of the current device carry the mix.
     ///
     /// No AudioUnit rebind: just a new plane mapping the next render callback
-    /// picks up. That callback crossfades it in over ~6 ms rather than swapping
+    /// picks up. That callback crossfades it in over ~6 ms (or one buffer, if
+    /// that is longer) rather than swapping
     /// mid-waveform — an instant swap drops the old pair from whatever sample it
     /// was on straight to zero and starts the new pair at full amplitude, and
     /// that step is an audible click on both pairs. The master gain smoothing

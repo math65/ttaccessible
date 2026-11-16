@@ -310,11 +310,35 @@ enum InputAudioDeviceResolver {
         return deviceIDs.compactMap(makeOutputDeviceInfo(for:))
     }
 
+    /// System-plumbing devices are not user-facing, in either direction: coreaudiod spawns
+    /// "CADefaultDeviceAggregate-<pid>-<n>" when a process (including us, via the tap/AEC
+    /// infrastructure, or AVAudioEngine) wraps the default device, and hidden devices ask
+    /// not to be listed. Neither belongs in a picker, nor in a lookup that feeds one.
+    private nonisolated static func isSystemPlumbing(objectID: AudioObjectID, name: String, uid: String) -> Bool {
+        if name.hasPrefix("CADefaultDeviceAggregate") || uid.hasPrefix("CADefaultDeviceAggregate") {
+            return true
+        }
+        var hiddenAddress = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyIsHidden,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var isHidden: UInt32 = 0
+        var hiddenSize = UInt32(MemoryLayout<UInt32>.size)
+        return AudioObjectGetPropertyData(objectID, &hiddenAddress, 0, nil, &hiddenSize, &isHidden) == noErr
+            && isHidden != 0
+    }
+
     private nonisolated static func makeOutputDeviceInfo(for objectID: AudioObjectID) -> OutputAudioDeviceInfo? {
         let channelCount = outputChannelCount(for: objectID)
         guard channelCount > 0,
               let name = stringProperty(objectID: objectID, selector: kAudioObjectPropertyName, scope: kAudioObjectPropertyScopeGlobal),
               let uid = stringProperty(objectID: objectID, selector: kAudioDevicePropertyDeviceUID, scope: kAudioObjectPropertyScopeGlobal) else {
+            return nil
+        }
+        // The same list the Preferences show. Without this, a test host's own
+        // CADefaultDeviceAggregate (4 outputs) passed for a multi-channel interface.
+        if isSystemPlumbing(objectID: objectID, name: name, uid: uid) {
             return nil
         }
         let sampleRate = doubleProperty(
@@ -419,22 +443,7 @@ enum InputAudioDeviceResolver {
             return nil
         }
 
-        // System-plumbing aggregates are not user-facing inputs: coreaudiod
-        // spawns "CADefaultDeviceAggregate-<pid>-<n>" when a process (including
-        // us, via the tap/AEC infrastructure) wraps the default device, and
-        // hidden devices ask not to be listed. Neither belongs in a picker.
-        if name.hasPrefix("CADefaultDeviceAggregate") || uid.hasPrefix("CADefaultDeviceAggregate") {
-            return nil
-        }
-        var hiddenAddress = AudioObjectPropertyAddress(
-            mSelector: kAudioDevicePropertyIsHidden,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
-        var isHidden: UInt32 = 0
-        var hiddenSize = UInt32(MemoryLayout<UInt32>.size)
-        if AudioObjectGetPropertyData(objectID, &hiddenAddress, 0, nil, &hiddenSize, &isHidden) == noErr,
-           isHidden != 0 {
+        if isSystemPlumbing(objectID: objectID, name: name, uid: uid) {
             return nil
         }
 

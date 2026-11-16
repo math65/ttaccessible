@@ -31,26 +31,24 @@ n'avez pas choisi un autre micro.
 
 ## Choisir les sorties utilisées
 
-Sur une interface audio ou une console possédant plus d'une paire de sorties, tt-Accessible n'est
-pas obligé de jouer sur les sorties 1 et 2.
+Sur une interface audio ou une console qui possède plusieurs paires de sorties, vous pouvez faire
+jouer tt-Accessible sur une autre paire que les sorties 1 et 2.
 
 1. Ouvrez les Préférences, puis cliquez sur Audio.
-2. Cliquez sur le menu local **Canaux de sortie**, puis choisissez l'une des options suivantes :
-   - **Auto (sorties 1 et 2)** — la première paire du périphérique, ce que tt-Accessible utilisait
-     avant l'existence de ce réglage.
-   - **Sorties 3 et 4**, **Sorties 5 et 6**, et ainsi de suite — jouer en stéréo sur cette paire.
-   - **Sortie 7 mono**, et ainsi de suite — additionner les canaux en mono et les jouer sur cette
-     seule sortie.
+2. Cliquez sur le menu local **Canaux de sortie**, puis choisissez une option :
+   - **Auto (sorties 1 et 2)** : la première paire du périphérique, comme dans les versions
+     précédentes.
+   - **Sorties 3 et 4**, **Sorties 5 et 6**, etc. : le son est joué en stéréo sur cette paire.
+   - **Sortie 7 mono**, etc. : le son est ramené en mono et joué sur cette seule sortie.
 
-Le menu présente d'abord les paires stéréo, puis les sorties seules : sur une grande interface, la
-paire que vous voulez reste donc à quelques éléments du début.
+Les paires stéréo sont en haut du menu et les sorties seules en dessous : même sur une grande
+interface, la paire voulue se trouve vite.
 
-Le menu n'apparaît que pour les périphériques offrant plus d'une paire de sorties — il n'y a rien à
-choisir sur un casque ou sur les haut-parleurs intégrés. Votre choix est retenu par périphérique :
-chaque interface revient donc sur les sorties que vous lui aviez données, et un changement de
-routage s'entend immédiatement, sans interrompre l'audio. Si vous utilisez ensuite le périphérique
-dans un mode plus réduit, ou si vous le remplacez par un périphérique stéréo, le réglage réaffiche
-Auto ; rebranchez le périphérique et votre choix revient.
+Le menu n'apparaît que si le périphérique a plus de deux sorties ; un casque ou les haut-parleurs
+intégrés n'en ont pas besoin. tt-Accessible retient votre choix pour chaque périphérique et
+l'applique aussitôt, sans couper le son. Si le périphérique passe dans un mode qui offre moins de
+sorties, ou si vous le remplacez par un périphérique stéréo, le menu revient sur Auto ; votre choix
+réapparaît quand vous rebranchez le périphérique d'origine.
 
 ## Supprimer l'écho et le bruit de fond
 

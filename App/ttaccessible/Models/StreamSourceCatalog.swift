@@ -11,7 +11,7 @@
 import Foundation
 
 struct StreamSourceCatalog: Equatable {
-    enum Group: Equatable, CaseIterable {
+    nonisolated enum Group: Equatable, CaseIterable {
         case recent, devices, applications
     }
 
