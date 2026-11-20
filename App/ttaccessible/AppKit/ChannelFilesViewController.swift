@@ -154,6 +154,7 @@ final class ChannelFilesViewController: NSViewController {
             isStatusLocked: session.isStatusLocked,
             audioStatusText: session.audioStatusText,
             inputGainDB: session.inputGainDB,
+            inputGainSetByChannel: session.inputGainSetByChannel,
             outputGainDB: session.outputGainDB,
             recordingActive: session.recordingActive,
             mediaStreamingActive: session.mediaStreamingActive,

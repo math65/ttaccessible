@@ -792,6 +792,7 @@ final class ConnectedServerViewController: NSViewController {
             isStatusLocked: session.isStatusLocked,
             audioStatusText: update.audioStatusText,
             inputGainDB: session.inputGainDB,
+            inputGainSetByChannel: session.inputGainSetByChannel,
             outputGainDB: session.outputGainDB,
             recordingActive: session.recordingActive,
             mediaStreamingActive: session.mediaStreamingActive,
@@ -888,6 +889,9 @@ final class ConnectedServerViewController: NSViewController {
         // read the title at all. The status stays where it belongs, in that line and on F9;
         // every route, the button included, announces "Microphone enabled/muted" itself
         // (toggleMicrophone(_:)).
+        inputGainControl.lockedReason = session.inputGainSetByChannel
+            ? L10n.text("connectedServer.audio.inputGain.setByChannel")
+            : nil
         inputGainControl.setValue(session.inputGainDB)
         outputGainControl.setValue(session.outputGainDB)
         soundEffectsGainControl.setValue(preferencesStore.preferences.soundEffectsGainDB)
@@ -1056,6 +1060,7 @@ final class ConnectedServerViewController: NSViewController {
             isStatusLocked: session.isStatusLocked,
             audioStatusText: session.audioStatusText,
             inputGainDB: normalized,
+            inputGainSetByChannel: session.inputGainSetByChannel,
             outputGainDB: session.outputGainDB,
             recordingActive: session.recordingActive,
             mediaStreamingActive: session.mediaStreamingActive,
@@ -1097,6 +1102,7 @@ final class ConnectedServerViewController: NSViewController {
             isStatusLocked: session.isStatusLocked,
             audioStatusText: session.audioStatusText,
             inputGainDB: session.inputGainDB,
+            inputGainSetByChannel: session.inputGainSetByChannel,
             outputGainDB: normalized,
             recordingActive: session.recordingActive,
             mediaStreamingActive: session.mediaStreamingActive,

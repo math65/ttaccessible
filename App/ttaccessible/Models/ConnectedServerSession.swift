@@ -244,6 +244,7 @@ struct ConnectedServerSession: Equatable {
     let isStatusLocked: Bool
     let audioStatusText: String
     let inputGainDB: Double
+    let inputGainSetByChannel: Bool
     let outputGainDB: Double
     let recordingActive: Bool
     let mediaStreamingActive: Bool

@@ -87,7 +87,7 @@ The app wraps the TeamTalk 5 C library (`Vendor/TeamTalk/libTeamTalk5.dylib`) vi
 
 The audio pipeline with optional echo cancellation:
 ```
-Microphone → [AVAudioEngine OR standalone AUHAL] → Float32 PCM → interleave → gain → Int16 PCM → [WebRTC AEC3] → TT_InsertAudioBlock → TeamTalk SDK
+Microphone → [AVAudioEngine OR standalone AUHAL] → Float32 PCM → interleave → gain → ceiling limiter → Int16 PCM → [WebRTC AEC3] → TT_InsertAudioBlock → TeamTalk SDK
                                                                                                         ↑
                                                                                           TT_MUXED_USERID speaker reference (resampled to capture rate)
 ```
@@ -117,7 +117,7 @@ Microphone → [AVAudioEngine OR standalone AUHAL] → Float32 PCM → interleav
 
 **`TT_EnableAudioBlockEventEx` does NOT work**: Tried migrating to the Ex variant with `AudioFormat` for SDK-side resampling. Failed because `effectiveSampleRate` returned the codec rate (48000) instead of the hardware rate (44100) at call time. Reverted to `TT_EnableAudioBlockEvent` for the fallback path.
 
-**No custom DSP, no Audio Unit plugins** — gate/expander/limiter and AU chain were removed intentionally. The user preferred a clean passthrough (AEC excepted).
+**No custom DSP, no Audio Unit plugins** — gate/expander/limiter and AU chain were removed intentionally. The user preferred a clean passthrough (AEC excepted). One exception: a ceiling `PeakLimiter` right after the input gain, which does nothing below −0.1 dBFS (a fixed 2 ms delay) and only replaces the hard clip of the Int16 conversion when a gain above 0 dB, the user's or a channel's, pushes a peak past full scale.
 
 **App audio capture** — an application's audio, VoiceOver's, or the whole Mac's can be streamed into the channel: CoreAudio process taps (`ProcessTapCaptureBackend`, macOS 14.2+) or ScreenCaptureKit audio (`SCKAudioCaptureBackend`, macOS 13.0–14.1), feeding the ring in `AudioDeviceStreamSource`. Any mix of input devices plus the chosen applications (or the whole Mac) streams together as `DeviceStreamCaptureSpec.combined`: `MixingCaptureBackend` runs each part's backend into a ring of its own and mixes them on a 10 ms wall-clock beat, and `StreamMixer` follows each source's clock by nudging its rate (at most 0.5 %) rather than dropping or padding audio. A look-ahead `PeakLimiter` (2 ms, −0.1 dBFS) keeps the sum under full scale instead of hard-clipping it; below the ceiling it is only a delay. Sources are picked in `MediaStreamSourceViewController`, a searchable checkbox outline (Recently used, Devices, Applications; list logic in `StreamSourceCatalog`). macOS 12 can stream input devices only.
 
@@ -361,6 +361,8 @@ Three sound packs bundled: **Default** (root of `Sounds/`), **Majorly-G**, **Old
 **Skip kick confirmation**: `skipKickConfirmation` preference (off by default, Preferences > Connection). When enabled, Cmd+K and Cmd+Shift+K execute immediately without a confirmation dialog. Kick & Ban always shows confirmation regardless.
 
 **Mute state tracking**: The outline view's `item(atRow:)` returns stale `ServerTreeNode` values after `reloadData(forRowIndexes:)` (audio runtime updates don't replace items). User mute state is tracked via `localMuteState: [Int32: Bool]` dictionary on `ConnectedServerViewController`, cleared on new session. `TT_PumpMessage(CLIENTEVENT_USER_STATECHANGE)` must be called after `TT_SetUserMute` (same pattern as Qt client).
+
+**Channel gain**: a channel with `audiocfg.bEnableAGC` imposes the microphone gain. `channelInputGainDB(enabled:level:)` reads `nGainLevel` on the official clients' scale (0–32000, up to `WEBRTC_GAINCONTROLLER2_FIXEDGAIN_MAX` dB) and holds it to the slider's +24 dB, the most the user's own slider can set. The gain stage is followed by a `PeakLimiter` (2 ms look-ahead, −0.1 dBFS), as the Qt client's fixed gain is followed by GainController2's limiter, so a loud voice at a high gain is squashed rather than clipped. `publishSessionLocked` follows it, since every way a channel can change ends in a publish. The user's value stays in the preferences; `AudioGainControlView.lockedReason` keeps the slider a keyboard stop that can't move and says why. The channel dialog has no field for it yet.
 
 **Volume dialog**: Real-time via `VolumeSliderHandler` (NSObject target/action on slider). Uses the geometric volume curve (see User Volume Curve section). `setUserVoiceVolumeImmediate` applies to SDK without persisting to `UserVolumeStore`. Cancel reverts to original volume and stereo state.
 
