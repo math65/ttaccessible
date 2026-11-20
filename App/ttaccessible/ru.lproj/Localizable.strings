@@ -540,6 +540,7 @@
 "preferences.historyEvent.fileAdded" = "Файл добавлен";
 "preferences.historyEvent.fileRemoved" = "Файл удалён";
 "preferences.historyEvent.transmissionBlocked" = "Передача заблокирована";
+"preferences.historyEvent.transmissionAllowed" = "Передача разрешена";
 "preferences.historyEvent.mediaStreamingStarted" = "Трансляция медиа начата";
 "preferences.historyEvent.mediaStreamingFinished" = "Трансляция медиа завершена";
 "preferences.accessibility.help" = "Эти настройки влияют только на озвучивание, а не на отображаемое содержимое.";
@@ -661,6 +662,7 @@
 "mediaStream.announced.finished" = "Трансляция завершена";
 "mediaStream.announced.error" = "Ошибка трансляции";
 "mediaStream.error.startFailed" = "Не удалось начать трансляцию.";
+"mediaStream.error.notAllowedInChannel" = "В этом канале транслировать нельзя.";
 "mediaStream.error.unsupportedFormat" = "Этот формат медиа не поддерживается для трансляции.";
 "mediaStream.error.unsupportedFormat.detail" = "Этот файл нельзя транслировать в TeamTalk. %@";
 "mediaStream.error.reason.sdkUnsupported" = "TeamTalk не может открыть этот формат файла.";
@@ -760,6 +762,7 @@
 "history.fileAdded" = "%@ добавил файл %@.";
 "history.fileRemoved" = "%@ удалил файл %@.";
 "history.transmissionBlocked" = "Передача заблокирована оператором канала.";
+"history.transmissionAllowed" = "Передача разрешена оператором канала.";
 "history.microphoneStalled" = "Передача с микрофона остановилась. Микрофон перезапущен.";
 "history.microphoneStalledFailed" = "Передача с микрофона остановилась, и перезапустить его не удалось. Выключите микрофон и включите снова.";
 "history.unknownUser" = "неизвестный пользователь";

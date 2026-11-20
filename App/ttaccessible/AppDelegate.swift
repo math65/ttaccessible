@@ -594,13 +594,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handlePushToTalkPress() {
-        connectionController.setPushToTalkPressed(true)
-        playPushToTalkBeep()
+        connectionController.pressPushToTalk { [weak self] allowed in
+            guard let self else { return }
+            if allowed {
+                self.playPushToTalkBeep()
+            } else {
+                // The key is a global hotkey, often pressed from another app, where
+                // VoiceOver doesn't speak our announcements: there it goes the way
+                // the user chose for events in the background.
+                self.announceInForegroundOrBackground(L10n.text("connectedServer.audio.voiceNotAllowedInChannel"))
+            }
+        }
     }
 
     private func handlePushToTalkRelease() {
-        connectionController.setPushToTalkPressed(false)
-        playPushToTalkBeep()
+        connectionController.releasePushToTalk { [weak self] pressed in
+            if pressed {
+                self?.playPushToTalkBeep()
+            }
+        }
     }
 
     private func playPushToTalkBeep() {
@@ -649,6 +661,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 NSAccessibility.NotificationUserInfoKey.priority: NSAccessibilityPriorityLevel.high.rawValue
             ]
         )
+    }
+
+    /// VoiceOver when the app is in front; otherwise the background announcement mode
+    /// chosen for events, as a background history entry would be.
+    private func announceInForegroundOrBackground(_ message: String) {
+        guard NSApp.isActive == false else {
+            announceWithVoiceOver(message)
+            return
+        }
+        let type: BackgroundMessageAnnouncementType = .sessionHistory
+        switch preferencesStore.preferences.backgroundAnnouncementMode(for: type) {
+        case .nativeVoiceOver, .systemNotification:
+            sendNotification(
+                title: L10n.text(type.systemNotificationTitleLocalizationKey),
+                body: message,
+                identifier: "bg-ptt-\(Date().timeIntervalSince1970)"
+            )
+        case .macOSTextToSpeech:
+            macOSTextToSpeechAnnouncementService.announce(
+                message,
+                voiceIdentifier: preferencesStore.preferences.macOSTTSVoiceIdentifier,
+                speechRate: preferencesStore.preferences.macOSTTSSpeechRate,
+                volume: preferencesStore.preferences.macOSTTSVolume
+            )
+        case .voiceOverAppleScript:
+            voiceOverAppleScriptAnnouncementService.announce(message)
+        }
     }
 
     private func handleBackgroundIncomingTextMessage(_ event: IncomingTextMessageEvent) {

@@ -147,6 +147,14 @@ final class TeamTalkConnectionController {
     var appliedAdvancedInputAudio: AdvancedInputAudioPreferences?
     var voiceTransmissionEnabled = false
     var pushToTalkPressed = false
+    /// The key is held on a press the channel refused (see `pressPushToTalk`).
+    var pushToTalkPressBlocked = false
+    /// Whether we could speak in our channel when last checked, to tell an
+    /// operator's change from simply being in a channel where we can't.
+    var lastVoiceRight: (channelID: Int32, allowed: Bool)?
+    /// The channel where losing the floor was just announced, so the stall guard,
+    /// which closes the mic a moment later for the same reason, doesn't say it twice.
+    var voiceRightLossAnnouncedChannelID: Int32?
     /// Queue-side caches of the hotkey-relevant preferences: the per-chunk
     /// transmit gate must not read the @Published preferences struct across
     /// threads. Seeded at init, updated via applyMicrophoneHotkeySettings.

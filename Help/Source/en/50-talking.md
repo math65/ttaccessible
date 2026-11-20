@@ -37,6 +37,12 @@ Two related options sit just below:
 - **Push-to-talk works when another app is in front**, which is on. A matching option exists for the
   microphone toggle, and is off.
 
+In a channel where you aren't allowed to speak, pressing the push-to-talk key says so and plays no
+sound. When tt-Accessible isn't the app in front, you hear it the way you chose for events in the
+background. If an operator takes the floor from you or gives it back while you're in the channel, you
+hear that too; a microphone or a stream that is on stays on, but the channel doesn't hear it until
+the floor is given back.
+
 ## Use your microphone from another app
 
 With either of those options on, the shortcut answers wherever you are — in your browser, in your
